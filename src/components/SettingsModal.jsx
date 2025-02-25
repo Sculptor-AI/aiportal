@@ -84,6 +84,43 @@ const SettingGroup = styled.div`
   }
 `;
 
+const ApiTokenInput = styled.div`
+  margin-bottom: 16px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const TokenLabel = styled.label`
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+`;
+
+const TokenInput = styled.input`
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid ${props => props.theme.border};
+  background-color: ${props => props.theme.background};
+  color: ${props => props.theme.text};
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.primary};
+  }
+`;
+
+const TokenNote = styled.p`
+  font-size: 0.8rem;
+  color: ${props => props.theme.text}80;
+  margin-top: 4px;
+  margin-bottom: 0;
+`;
+
 const SettingLabel = styled.h4`
   margin: 0 0 10px 0;
   font-size: 1rem;
@@ -377,6 +414,50 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                 </RadioOption>
               </RadioGroup>
             </SettingGroup>
+          </SettingsSection>
+          
+          <SettingsSection>
+            <SectionTitle>API Tokens</SectionTitle>
+            <p style={{ fontSize: '0.9rem', marginBottom: '15px' }}>
+              Add your own API tokens to use with the different AI models.
+              These will be securely stored in your account.
+            </p>
+            
+            <ApiTokenInput>
+              <TokenLabel htmlFor="openai-api-token">OpenAI API Key</TokenLabel>
+              <TokenInput
+                id="openai-api-token"
+                type="password"
+                placeholder="sk-..."
+                value={localSettings.openaiApiKey || ''}
+                onChange={(e) => handleChange('openaiApiKey', e.target.value)}
+              />
+              <TokenNote>Used for ChatGPT models</TokenNote>
+            </ApiTokenInput>
+            
+            <ApiTokenInput>
+              <TokenLabel htmlFor="anthropic-api-token">Anthropic API Key</TokenLabel>
+              <TokenInput
+                id="anthropic-api-token"
+                type="password"
+                placeholder="sk-ant-..."
+                value={localSettings.anthropicApiKey || ''}
+                onChange={(e) => handleChange('anthropicApiKey', e.target.value)}
+              />
+              <TokenNote>Used for Claude models</TokenNote>
+            </ApiTokenInput>
+            
+            <ApiTokenInput>
+              <TokenLabel htmlFor="google-api-token">Google AI API Key</TokenLabel>
+              <TokenInput
+                id="google-api-token"
+                type="password"
+                placeholder="AIzaSy..."
+                value={localSettings.googleApiKey || ''}
+                onChange={(e) => handleChange('googleApiKey', e.target.value)}
+              />
+              <TokenNote>Used for Gemini models</TokenNote>
+            </ApiTokenInput>
           </SettingsSection>
         </ModalBody>
       </ModalContent>

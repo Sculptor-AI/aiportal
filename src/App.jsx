@@ -3,8 +3,11 @@ import styled, { ThemeProvider } from 'styled-components';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
 import SettingsModal from './components/SettingsModal';
+import LoginModal from './components/LoginModal';
+import ProfileModal from './components/ProfileModal';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const AppContainer = styled.div`
   display: flex;
@@ -14,7 +17,20 @@ const AppContainer = styled.div`
   color: ${props => props.theme.text};
 `;
 
-const App = () => {
+// App wrapper with authentication context
+const AppWithAuth = () => {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+};
+
+// Main app component
+const AppContent = () => {
+  const { user, updateSettings: updateUserSettings } = useAuth();
+  
+  // Chat state
   const [chats, setChats] = useState(() => {
     try {
       const savedChats = localStorage.getItem('chats');
@@ -40,6 +56,7 @@ const App = () => {
     return savedActiveChat ? JSON.parse(savedActiveChat) : chats[0]?.id;
   });
 
+  // Models
   const [availableModels, setAvailableModels] = useState([
     { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
@@ -51,7 +68,14 @@ const App = () => {
     return savedModel || 'gemini-2-flash';
   });
   
+  // Settings - from user account or localStorage
   const [settings, setSettings] = useState(() => {
+    // If logged in, use user settings
+    if (user && user.settings) {
+      return user.settings;
+    }
+    
+    // Otherwise, use localStorage
     const savedSettings = localStorage.getItem('settings');
     return savedSettings ? JSON.parse(savedSettings) : {
       theme: 'light',
@@ -60,11 +84,24 @@ const App = () => {
       showTimestamps: true,
       showModelIcons: true,
       messageAlignment: 'left',
-      codeHighlighting: true
+      codeHighlighting: true,
+      openaiApiKey: '',
+      anthropicApiKey: '',
+      googleApiKey: ''
     };
   });
   
+  // Modal states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Update settings when user changes
+  useEffect(() => {
+    if (user && user.settings) {
+      setSettings(user.settings);
+    }
+  }, [user]);
 
   // Save chats to localStorage whenever they change
   useEffect(() => {
@@ -80,9 +117,12 @@ const App = () => {
     localStorage.setItem('selectedModel', selectedModel);
   }, [selectedModel]);
   
+  // Only save settings to localStorage if not logged in
   useEffect(() => {
-    localStorage.setItem('settings', JSON.stringify(settings));
-  }, [settings]);
+    if (!user) {
+      localStorage.setItem('settings', JSON.stringify(settings));
+    }
+  }, [settings, user]);
 
   const createNewChat = () => {
     const newChat = {
@@ -98,35 +138,35 @@ const App = () => {
     const updatedChats = chats.filter(chat => chat.id !== chatId);
     setChats(updatedChats);
     
-    if (activeChat === chatId) {
-      setActiveChat(updatedChats[0]?.id || null);
+    // If the deleted chat was the active one, set a new active chat
+    if (chatId === activeChat) {
+      setActiveChat(updatedChats.length > 0 ? updatedChats[0].id : null);
     }
   };
-
+  
   const updateChatTitle = (chatId, newTitle) => {
-    const updatedChats = chats.map(chat => 
-      chat.id === chatId ? { ...chat, title: newTitle } : chat
-    );
-    setChats(updatedChats);
-  };
-
-  const addMessage = (chatId, message) => {
-    // First ensure we work with the latest state
-    setChats(currentChats => {
-      // Find the current chat to update
-      const updatedChats = currentChats.map(chat => {
+    setChats(prevChats => {
+      return prevChats.map(chat => {
         if (chat.id === chatId) {
-          // Make a deep copy to ensure React detects the change
+          return { ...chat, title: newTitle };
+        }
+        return chat;
+      });
+    });
+  };
+  
+  const addMessage = (chatId, message) => {
+    setChats(prevChats => {
+      const updatedChats = prevChats.map(chat => {
+        if (chat.id === chatId) {
           const updatedChat = {
             ...chat,
-            messages: [...chat.messages, message]
+            messages: [...chat.messages, message],
+            // If this is the first user message, set the chat title to the first few words
+            title: chat.title === 'New Chat' && message.role === 'user' 
+              ? message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
+              : chat.title
           };
-          
-          // Update title only for the first user message
-          if (chat.messages.length === 0 && message.role === 'user') {
-            updatedChat.title = message.content.substring(0, 30) + (message.content.length > 30 ? '...' : '');
-          }
-          
           console.log('Adding message to chat:', updatedChat);
           return updatedChat;
         }
@@ -144,12 +184,31 @@ const App = () => {
     return chats.find(chat => chat.id === activeChat) || null;
   };
 
+  // Modal toggles
   const toggleSettings = () => {
     setIsSettingsOpen(!isSettingsOpen);
   };
   
+  const toggleLogin = () => {
+    setIsLoginOpen(!isLoginOpen);
+  };
+  
+  const toggleProfile = () => {
+    if (user) {
+      setIsProfileOpen(!isProfileOpen);
+    } else {
+      setIsLoginOpen(true);
+    }
+  };
+  
+  // Update settings
   const updateSettings = (newSettings) => {
     setSettings(newSettings);
+    
+    // If logged in, also update user settings
+    if (user) {
+      updateUserSettings(newSettings);
+    }
   };
   
   return (
@@ -166,6 +225,9 @@ const App = () => {
           selectedModel={selectedModel}
           setSelectedModel={setSelectedModel}
           toggleSettings={toggleSettings}
+          toggleProfile={toggleProfile}
+          isLoggedIn={!!user}
+          username={user?.username}
         />
         <ChatWindow 
           chat={getCurrentChat()}
@@ -174,11 +236,25 @@ const App = () => {
           updateChatTitle={updateChatTitle}
           settings={settings}
         />
+        
+        {/* Modals */}
         {isSettingsOpen && (
           <SettingsModal 
             settings={settings}
             updateSettings={updateSettings}
-            closeModal={toggleSettings}
+            closeModal={() => setIsSettingsOpen(false)}
+          />
+        )}
+        
+        {isLoginOpen && (
+          <LoginModal 
+            closeModal={() => setIsLoginOpen(false)}
+          />
+        )}
+        
+        {isProfileOpen && (
+          <ProfileModal 
+            closeModal={() => setIsProfileOpen(false)}
           />
         )}
       </AppContainer>
@@ -186,4 +262,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default AppWithAuth;

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Get API keys from environment variables
+// Get API keys from environment variables (fallback)
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const CLAUDE_API_KEY = import.meta.env.VITE_CLAUDE_API_KEY;
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
@@ -83,6 +83,34 @@ const MODEL_CONFIGS = {
   }
 };
 
+// Helper to get API keys, prioritizing user-provided keys
+const getApiKeys = () => {
+  // Try to get user's API keys from settings in localStorage
+  let userSettings = {};
+  try {
+    // Check if user is logged in
+    const userJSON = sessionStorage.getItem('ai_portal_current_user');
+    if (userJSON) {
+      const user = JSON.parse(userJSON);
+      userSettings = user.settings || {};
+    } else {
+      // If not logged in, try to get settings from localStorage
+      const settingsJSON = localStorage.getItem('settings');
+      if (settingsJSON) {
+        userSettings = JSON.parse(settingsJSON);
+      }
+    }
+  } catch (e) {
+    console.error('Error getting user settings:', e);
+  }
+
+  return {
+    openai: userSettings.openaiApiKey || OPENAI_API_KEY,
+    anthropic: userSettings.anthropicApiKey || CLAUDE_API_KEY,
+    google: userSettings.googleApiKey || GEMINI_API_KEY
+  };
+};
+
 export const sendMessage = async (message, modelId, history) => {
   console.log(`sendMessage called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`);
@@ -100,22 +128,36 @@ export const sendMessage = async (message, modelId, history) => {
     throw new Error(`Unsupported model: ${modelId}`);
   }
 
+  // Get API keys, prioritizing user-provided keys
+  const apiKeys = getApiKeys();
+  
   // Check if we have the required API key for the selected model
-  const useRealAPI = (modelId === 'gemini-2-flash' && GEMINI_API_KEY) || 
-                    (modelId === 'claude-3.7-sonnet' && CLAUDE_API_KEY) ||
-                    (modelId === 'chatgpt-4o' && OPENAI_API_KEY);
+  let hasApiKey = false;
+  let apiKeySource = '';
+  
+  if (modelId === 'gemini-2-flash' && apiKeys.google) {
+    hasApiKey = true;
+    apiKeySource = apiKeys.google === GEMINI_API_KEY ? '.env file' : 'user settings';
+  } else if (modelId === 'claude-3.7-sonnet' && apiKeys.anthropic) {
+    hasApiKey = true;
+    apiKeySource = apiKeys.anthropic === CLAUDE_API_KEY ? '.env file' : 'user settings';
+  } else if (modelId === 'chatgpt-4o' && apiKeys.openai) {
+    hasApiKey = true;
+    apiKeySource = apiKeys.openai === OPENAI_API_KEY ? '.env file' : 'user settings';
+  }
   
   // Only use simulation if no API key is available
-  if (!useRealAPI) {
+  if (!hasApiKey) {
     console.log(`No API key available for ${modelId}, using simulation`);
     return new Promise(resolve => {
       setTimeout(() => {
-        const response = `I need a valid API key to connect to the ${modelId} service. Please add your API key to the .env file as follows:
+        const response = `I need a valid API key to connect to the ${modelId} service. You can add your API key in Settings -> API Tokens.
         
-For ${modelId === 'gemini-2-flash' ? 'Gemini' : modelId === 'claude-3.7-sonnet' ? 'Claude' : 'ChatGPT'}, add:
-${modelId === 'gemini-2-flash' ? 'VITE_GEMINI_API_KEY=your_api_key_here' : 
-  modelId === 'claude-3.7-sonnet' ? 'VITE_CLAUDE_API_KEY=your_api_key_here' : 
-  'VITE_OPENAI_API_KEY=your_api_key_here'}
+For ${modelId === 'gemini-2-flash' ? 'Gemini' : modelId === 'claude-3.7-sonnet' ? 'Claude' : 'ChatGPT'}, you'll need to provide ${
+          modelId === 'gemini-2-flash' ? 'a Google AI API key' : 
+          modelId === 'claude-3.7-sonnet' ? 'an Anthropic API key' : 
+          'an OpenAI API key'
+        }.
 
 Without a valid API key, I cannot connect to the actual AI service.
 
@@ -127,7 +169,7 @@ Without a valid API key, I cannot connect to the actual AI service.
   
   // Use real API when we have keys
   try {
-    console.log(`Using real API for ${modelId}`);
+    console.log(`Using real API for ${modelId} (source: ${apiKeySource})`);
     // Prepare the request based on the selected model
     const requestData = modelConfig.prepareRequest(message, history);
   
@@ -136,14 +178,14 @@ Without a valid API key, I cannot connect to the actual AI service.
     let url = modelConfig.baseUrl;
 
     if (modelId === 'gemini-2-flash') {
-      url = `${modelConfig.baseUrl}?key=${GEMINI_API_KEY}`;
+      url = `${modelConfig.baseUrl}?key=${apiKeys.google}`;
     } else if (modelId === 'claude-3.7-sonnet') {
-      headers['x-api-key'] = CLAUDE_API_KEY;
+      headers['x-api-key'] = apiKeys.anthropic;
       headers['anthropic-version'] = '2023-06-01';
       // Required for CORS in browser environment
       headers['Content-Type'] = 'application/json';
     } else if (modelId === 'chatgpt-4o') {
-      headers['Authorization'] = `Bearer ${OPENAI_API_KEY}`;
+      headers['Authorization'] = `Bearer ${apiKeys.openai}`;
     }
 
     const response = await axios.post(url, requestData, { headers });
