@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import ModelIcon from './ModelIcon';
 
@@ -9,6 +9,31 @@ const SidebarContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    height: auto;
+    min-height: 60px;
+    border-right: none;
+    border-bottom: 1px solid ${props => props.theme.border};
+    max-height: ${props => props.isExpanded ? '40vh' : '60px'};
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+  }
+`;
+
+const TopBarContainer = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  
+  @media (max-width: 768px) {
+    padding: 10px;
+    width: 100%;
+    justify-content: space-between;
+  }
 `;
 
 const NewChatButton = styled.button`
@@ -17,12 +42,12 @@ const NewChatButton = styled.button`
   border: none;
   padding: 10px 15px;
   border-radius: 5px;
-  margin: 15px;
   font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background-color 0.2s;
+  flex: 1;
 
   &:hover {
     background-color: ${props => props.theme.secondary};
@@ -31,12 +56,34 @@ const NewChatButton = styled.button`
   svg {
     margin-right: 8px;
   }
+  
+  @media (max-width: 768px) {
+    margin-right: 10px;
+  }
+`;
+
+const ScrollableContent = styled.div`
+  @media (max-width: 768px) {
+    display: ${props => props.isExpanded ? 'flex' : 'none'};
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: calc(40vh - 60px);
+  }
+  
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 `;
 
 const ChatList = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 0 10px;
+  
+  @media (max-width: 768px) {
+    max-height: none;
+  }
 `;
 
 const ChatItem = styled.div`
@@ -81,6 +128,11 @@ const DeleteButton = styled.button`
 const BottomSection = styled.div`
   padding: 15px;
   border-top: 1px solid ${props => props.theme.border};
+  
+  @media (max-width: 768px) {
+    border-top: none;
+    padding-top: 5px;
+  }
 `;
 
 const Select = styled.select`
@@ -161,6 +213,30 @@ const ProfileButton = styled(SidebarButton)`
   }
 `;
 
+// Mobile dropdown toggle button
+const MobileToggleButton = styled.button`
+  display: none;
+  background-color: transparent;
+  border: none;
+  color: ${props => props.theme.text};
+  padding: 5px;
+  margin-left: 5px;
+  cursor: pointer;
+  
+  @media (max-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  svg {
+    transition: transform 0.3s ease;
+    transform: ${props => props.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};
+  }
+`;
+
+// Removed unused MobileButtonsContainer
+
 const Sidebar = ({ 
   chats, 
   activeChat, 
@@ -175,82 +251,102 @@ const Sidebar = ({
   isLoggedIn,
   username
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded);
+  };
+  
   return (
-    <SidebarContainer>
-      <NewChatButton onClick={createNewChat}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        New Chat
-      </NewChatButton>
+    <SidebarContainer isExpanded={isExpanded}>
+      <TopBarContainer>
+        <NewChatButton onClick={createNewChat}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          New Chat
+        </NewChatButton>
+        
+        <MobileToggleButton onClick={toggleExpanded} isExpanded={isExpanded}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </MobileToggleButton>
+      </TopBarContainer>
       
-      <ChatList>
-        {chats.map(chat => (
-          <ChatItem 
-            key={chat.id} 
-            active={activeChat === chat.id}
-            onClick={() => setActiveChat(chat.id)}
-          >
-            <ChatTitle>{chat.title}</ChatTitle>
-            <DeleteButton 
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteChat(chat.id);
-              }}
+      <ScrollableContent isExpanded={isExpanded}>
+        <ChatList>
+          {chats.map(chat => (
+            <ChatItem 
+              key={chat.id} 
+              active={activeChat === chat.id}
+              onClick={() => setActiveChat(chat.id)}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </DeleteButton>
-          </ChatItem>
-        ))}
-      </ChatList>
-      
-      <BottomSection>
-        <ModelOptionContainer>
-          {availableModels.map(model => (
-            <ModelOption 
-              key={model.id} 
-              isSelected={selectedModel === model.id}
-              onClick={() => setSelectedModel(model.id)}
-            >
-              <ModelIcon modelId={model.id} size="small" />
-              <ModelInfo>
-                <ModelName isSelected={selectedModel === model.id}>
-                  {model.name}
-                </ModelName>
-                <ModelDescription>
-                  {model.id === 'gemini-2-flash' ? 'Google AI' : 
-                   model.id === 'claude-3.7-sonnet' ? 'Anthropic' : 
-                   'OpenAI'}
-                </ModelDescription>
-              </ModelInfo>
-            </ModelOption>
+              <ChatTitle>{chat.title}</ChatTitle>
+              <DeleteButton 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteChat(chat.id);
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </DeleteButton>
+            </ChatItem>
           ))}
-        </ModelOptionContainer>
+        </ChatList>
         
-        <ProfileButton 
-          onClick={toggleProfile} 
-          isLoggedIn={isLoggedIn}
-          marginBottom
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-          {isLoggedIn ? username : 'Sign In'}
-        </ProfileButton>
-        
-        <SidebarButton onClick={toggleSettings}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-          Settings
-        </SidebarButton>
-      </BottomSection>
+        <BottomSection>
+          {/* Model selection options */}
+          <ModelOptionContainer>
+            {availableModels.map(model => (
+              <ModelOption 
+                key={model.id} 
+                isSelected={selectedModel === model.id}
+                onClick={() => setSelectedModel(model.id)}
+              >
+                <ModelIcon modelId={model.id} size="small" />
+                <ModelInfo>
+                  <ModelName isSelected={selectedModel === model.id}>
+                    {model.name}
+                  </ModelName>
+                  <ModelDescription>
+                    {model.id === 'gemini-2-flash' ? 'Google AI' : 
+                     model.id === 'claude-3.7-sonnet' ? 'Anthropic' : 
+                     'OpenAI'}
+                  </ModelDescription>
+                </ModelInfo>
+              </ModelOption>
+            ))}
+          </ModelOptionContainer>
+          
+          {/* Profile and settings buttons */}
+          <ProfileButton 
+            onClick={toggleProfile} 
+            isLoggedIn={isLoggedIn}
+            marginBottom
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            {isLoggedIn ? username : 'Sign In'}
+          </ProfileButton>
+          
+          <SidebarButton onClick={toggleSettings}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            Settings
+          </SidebarButton>
+        </BottomSection>
+      </ScrollableContent>
     </SidebarContainer>
   );
 };

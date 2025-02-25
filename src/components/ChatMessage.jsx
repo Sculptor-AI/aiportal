@@ -147,6 +147,11 @@ const Content = styled.div`
     font-size: 0.85em;
     text-align: right;
   }
+  
+  @media (max-width: 768px) {
+    max-width: 100%;
+    padding: 10px 12px;
+  }
 `;
 
 const Timestamp = styled.div`

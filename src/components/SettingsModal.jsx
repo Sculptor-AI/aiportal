@@ -23,6 +23,11 @@ const ModalContent = styled.div`
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 4px 12px ${props => props.theme.shadow};
+  
+  @media (max-width: 768px) {
+    max-width: 95%;
+    width: 95%;
+  }
 `;
 
 const ModalHeader = styled.div`
@@ -131,6 +136,10 @@ const RadioGroup = styled.div`
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    gap: 8px;
+  }
 `;
 
 const RadioOption = styled.label`
@@ -220,6 +229,11 @@ const ThemeOption = styled(RadioOption)`
     color: white;
     border-color: ${props => props.isSelected ? '#D60270' : '#9B4F96'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  
+  @media (max-width: 768px) {
+    width: 80px;
+    padding: 8px;
   }
 `;
 

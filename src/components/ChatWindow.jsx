@@ -45,6 +45,10 @@ const InputContainer = styled.div`
   border-top: 1px solid ${props => props.theme.border};
   padding: 15px;
   display: flex;
+  
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
 `;
 
 const MessageInput = styled.textarea`
@@ -64,6 +68,11 @@ const MessageInput = styled.textarea`
   &:focus {
     outline: none;
     border-color: ${props => props.theme.primary};
+  }
+  
+  @media (max-width: 768px) {
+    padding: 8px;
+    min-height: 40px;
   }
 `;
 

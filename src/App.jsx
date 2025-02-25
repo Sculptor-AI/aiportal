@@ -15,6 +15,10 @@ const AppContainer = styled.div`
   overflow: hidden;
   background-color: ${props => props.theme.background};
   color: ${props => props.theme.text};
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 // App wrapper with authentication context
