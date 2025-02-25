@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getCurrentUser, loginUser, logoutUser, registerUser, updateUserSettings } from '../services/authService';
+import { getCurrentUser, loginUser, logoutUser, registerUser, updateUserSettings, verifyToken } from '../services/authService';
 
 // Create the Auth Context
 const AuthContext = createContext();
@@ -19,11 +19,24 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkUser = async () => {
       try {
+        // Get user from session storage first
         const currentUser = getCurrentUser();
         setUser(currentUser);
+        
+        // Verify token with server
+        if (currentUser) {
+          const result = await verifyToken();
+          if (result.valid && result.user) {
+            setUser(result.user);
+          } else {
+            // Token is invalid, clear user
+            setUser(null);
+          }
+        }
       } catch (err) {
         console.error('Authentication error:', err);
         setError(err.message);
+        setUser(null);
       } finally {
         setLoading(false);
       }

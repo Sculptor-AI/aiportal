@@ -139,7 +139,10 @@ const LoginModal = ({ closeModal }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, register } = useAuth();
+  const { login, register, user } = useAuth();
+  
+  // Determine if authentication is required (can't close modal if not authenticated)
+  const authRequired = !user;
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -173,6 +176,11 @@ const LoginModal = ({ closeModal }) => {
   };
   
   const handleOutsideClick = (e) => {
+    // If authentication is required, don't allow closing the modal by clicking outside
+    if (authRequired) {
+      return;
+    }
+    
     if (e.target === e.currentTarget) {
       closeModal();
     }
@@ -183,7 +191,7 @@ const LoginModal = ({ closeModal }) => {
       <ModalContent>
         <ModalHeader>
           <ModalTitle>{isLogin ? 'Log In' : 'Create Account'}</ModalTitle>
-          <CloseButton onClick={closeModal}>&times;</CloseButton>
+          {!authRequired && <CloseButton onClick={closeModal}>&times;</CloseButton>}
         </ModalHeader>
         <ModalBody>
           <Form onSubmit={handleSubmit}>

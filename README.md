@@ -5,8 +5,10 @@ A multi-model AI chat interface that connects to multiple LLM APIs including Ope
 ## Features
 
 - Connect to ChatGPT, Claude, and Gemini APIs
-- User account system with secure authentication
-- Persistent chat history
+- **Required user account system with secure server-side authentication**
+- **Secure server-side storage of user API tokens**
+- **Server-side AI API proxy to keep API keys secure**
+- Persistent chat history saved to server
 - Multiple theme options including light, dark, and bisexual themes
 - Code syntax highlighting
 - Personal API key management
@@ -25,20 +27,45 @@ cd aiportal
 npm install
 ```
 
-### Configuration
+### Cloudflare Configuration
 
-Create a `.env` file with your API keys (optional, as users can add their own in settings):
+This application requires Cloudflare KV namespaces and environment variables for secure authentication and data storage.
 
-```bash
-cp .env.example .env
+#### Step 1: Create KV Namespaces
+
+Create two KV namespaces in the Cloudflare dashboard:
+
+1. `USERS` - For storing user account data
+2. `USER_CHATS` - For storing user chat history
+
+#### Step 2: Configure Environment Variables
+
+Edit the `wrangler.toml` file and add secure values for:
+
+1. `JWT_SECRET` - A secure random string for JWT token signing (must be at least 32 characters)
+2. `ENCRYPTION_KEY` - A secure random string for encrypting API keys (must be 32 bytes / 64 hex characters)
+
+Example:
+```toml
+[vars]
+JWT_SECRET = "your-very-long-secure-random-string-here"
+ENCRYPTION_KEY = "your-32-byte-hex-key-for-encryption"
 ```
 
-Edit the `.env` file to add your API keys:
+#### Step 3: Update KV Namespace IDs
 
-```
-VITE_OPENAI_API_KEY=your_openai_key_here
-VITE_CLAUDE_API_KEY=your_anthropic_key_here
-VITE_GEMINI_API_KEY=your_google_key_here
+After creating your KV namespaces, update the IDs in `wrangler.toml`:
+
+```toml
+[[kv_namespaces]]
+binding = "USERS"
+id = "your-users-namespace-id"
+preview_id = "your-users-preview-namespace-id"
+
+[[kv_namespaces]]
+binding = "USER_CHATS"
+id = "your-chats-namespace-id"
+preview_id = "your-chats-preview-namespace-id"
 ```
 
 ## Development
@@ -46,10 +73,11 @@ VITE_GEMINI_API_KEY=your_google_key_here
 Start the development server:
 
 ```bash
-npm run dev
+# Start local development with Cloudflare Worker support
+npm run wrangler:dev
 ```
 
-This will start the app on [http://localhost:3009](http://localhost:3009).
+This will start the app with Cloudflare Worker support for server-side functionality.
 
 ## Building for Production
 
@@ -97,9 +125,18 @@ npx wrangler deploy
 npm run wrangler:dev
 ```
 
-## API Keys
+## User Authentication and API Keys
 
-Users can provide their own API keys in the application's Settings → API Tokens section. These keys will be stored in their account and will be used instead of any environment variables.
+This app requires users to create an account to use the service. API keys are securely stored on the server (encrypted in Cloudflare KV) and are never exposed on the client. The server acts as a proxy for all AI API requests, keeping API keys secure.
+
+## Security Features
+
+- JWT-based authentication with token expiration
+- Server-side AES-GCM encryption of API keys
+- Password hashing using SHA-256
+- API tokens are never sent to the client
+- All API requests are authenticated
+- CORS protection for API endpoints
 
 ## License
 
