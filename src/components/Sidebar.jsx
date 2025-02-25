@@ -24,6 +24,31 @@ const SidebarContainer = styled.div`
   }
 `;
 
+const LogoContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 10px 5px;
+  
+  img {
+    height: 40px;
+    width: auto;
+    margin-right: 8px;
+  }
+  
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const LogoText = styled.span`
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+  color: ${props => props.theme.text};
+`;
+
 const TopBarContainer = styled.div`
   display: flex;
   align-items: center;
@@ -34,6 +59,29 @@ const TopBarContainer = styled.div`
     width: 100%;
     justify-content: space-between;
   }
+`;
+
+const MobileLogoContainer = styled.div`
+  display: none;
+  align-items: center;
+  margin-right: 10px;
+  
+  img {
+    height: 30px;
+    margin-right: 5px;
+  }
+  
+  @media (max-width: 768px) {
+    display: flex;
+  }
+`;
+
+const MobileLogoText = styled.span`
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  color: ${props => props.theme.text};
 `;
 
 const NewChatButton = styled.button`
@@ -259,7 +307,15 @@ const Sidebar = ({
   
   return (
     <SidebarContainer isExpanded={isExpanded}>
+      <LogoContainer>
+        <img src="/images/sculptor.svg" alt="Sculptor AI" />
+        <LogoText>Sculptor</LogoText>
+      </LogoContainer>
       <TopBarContainer>
+        <MobileLogoContainer>
+          <img src="/images/sculptor.svg" alt="Sculptor AI" />
+          <MobileLogoText>Sculptor</MobileLogoText>
+        </MobileLogoContainer>
         <NewChatButton onClick={createNewChat}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19"></line>
