@@ -528,7 +528,8 @@ const Sidebar = ({
         </ChatList>
         
         <BottomSection collapsed={collapsed}>
-          {/* Model dropdown selection */}
+          {/* Remove the model dropdown selection section - start */}
+          {/* 
           <ModelDropdownContainer>
             <ModelDropdownButton onClick={toggleModelDropdown} collapsed={collapsed}>
               <ModelIcon modelId={selectedModel} size="small" />
@@ -564,6 +565,8 @@ const Sidebar = ({
               ))}
             </ModelDropdownContent>
           </ModelDropdownContainer>
+          */}
+          {/* Remove the model dropdown selection section - end */}
           
           {/* Profile and settings buttons */}
           <ProfileButton 

@@ -63,14 +63,14 @@ export const oledTheme = {
   cardBackground: 'rgba(15, 15, 15, 0.7)'
 };
 
-// Add this new theme definition
+// Update the oceanTheme sidebar style
 export const oceanTheme = {
   name: 'ocean',
   background: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1484291470158-b8f8d608850d?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")',
   backgroundAttachment: 'fixed',
   backgroundSize: 'cover',
   backgroundPosition: 'center',
-  sidebar: 'rgba(226, 210, 162, 0.7)', // Sand color with transparency
+  sidebar: 'linear-gradient(rgba(10, 30, 50, 0.8), rgba(10, 40, 60, 0.85))', // Deep blue transparent gradient
   chat: 'rgba(10, 30, 50, 0.6)', // Dark blue with transparency
   text: '#ffffff',
   border: 'rgba(255, 255, 255, 0.1)',
@@ -88,14 +88,14 @@ export const oceanTheme = {
   cardBackground: 'rgba(15, 45, 65, 0.7)'
 };
 
-// Add this forest theme after the ocean theme definition
+// Update the forestTheme sidebar style
 export const forestTheme = {
   name: 'forest',
   background: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1558022103-603c34ab10ce?q=80&w=3542&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")',
   backgroundAttachment: 'fixed',
   backgroundSize: 'cover',
   backgroundPosition: 'center',
-  sidebar: 'rgba(60, 80, 40, 0.7)', // Forest green with transparency
+  sidebar: 'linear-gradient(rgba(20, 35, 15, 0.85), rgba(25, 45, 20, 0.9))', // Dark green gradient that matches forest
   chat: 'rgba(20, 30, 15, 0.6)', // Dark green with transparency
   text: '#ffffff',
   border: 'rgba(255, 255, 255, 0.1)',

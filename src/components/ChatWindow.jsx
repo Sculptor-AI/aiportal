@@ -26,12 +26,20 @@ const ChatWindowContainer = styled.div`
 const ChatHeader = styled.div`
   padding: 15px 20px;
   display: flex;
-  align-items: center;
+  align-items: flex-start; // Change from center to flex-start for better alignment
   justify-content: space-between;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   z-index: 5;
   position: relative;
+`;
+
+const ChatTitleSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px; // Use gap instead of margin for more consistent spacing
+  padding-left: 5px; // Add padding to shift title right to align with the logo
 `;
 
 const ChatTitle = styled.h2`
@@ -40,9 +48,17 @@ const ChatTitle = styled.h2`
   margin: 0;
   color: ${props => props.theme.text};
   flex: 1;
+  line-height: 1.4; // Improve line height for better visual balance
 `;
 
-// Removed ModelSelector styled component as we now use the component
+const ModelSelectorWrapper = styled.div`
+  // Remove the margin-top and use the parent's gap instead
+  max-width: 240px;
+  
+  @media (max-width: 768px) {
+    max-width: 100%;
+  }
+`;
 
 const MessageList = styled.div`
   flex: 1;
@@ -195,11 +211,14 @@ const EmptyState = styled.div`
   }
 `;
 
-const ChatWindow = ({ chat, addMessage, selectedModel, updateChatTitle, settings }) => {
+const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, updateChatTitle, settings }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
   const messagesEndRef = useRef(null);
-  
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(chat?.title || 'New Conversation');
+
   // Find the current model data for display
   const modelDisplay = {
     'gemini-2-flash': { name: 'Gemini 2 Flash', provider: 'Google AI' },
@@ -210,6 +229,12 @@ const ChatWindow = ({ chat, addMessage, selectedModel, updateChatTitle, settings
   useEffect(() => {
     scrollToBottom();
   }, [chat?.messages]);
+  
+  useEffect(() => {
+    if (initialSelectedModel && initialSelectedModel !== selectedModel) {
+      setSelectedModel(initialSelectedModel);
+    }
+  }, [initialSelectedModel]);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -291,7 +316,33 @@ const ChatWindow = ({ chat, addMessage, selectedModel, updateChatTitle, settings
       handleSendMessage();
     }
   };
-  
+
+  const handleStartEditing = () => {
+    setIsEditingTitle(true);
+    setEditedTitle(chat?.title || 'New Conversation');
+  };
+
+  const handleTitleChange = (e) => {
+    setEditedTitle(e.target.value);
+  };
+
+  const handleTitleSave = () => {
+    if (editedTitle.trim()) {
+      updateChatTitle(chat.id, editedTitle.trim());
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleTitleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTitleSave();
+    } else if (e.key === 'Escape') {
+      setIsEditingTitle(false);
+      setEditedTitle(chat?.title || 'New Conversation');
+    }
+  };
+
   if (!chat) {
     return (
       <ChatWindowContainer fontSize={settings?.fontSize}>
@@ -324,12 +375,45 @@ const ChatWindow = ({ chat, addMessage, selectedModel, updateChatTitle, settings
   return (
     <ChatWindowContainer fontSize={settings?.fontSize}>
       <ChatHeader>
-        <ChatTitle>{chat.title}</ChatTitle>
-        <ModelSelector 
-          selectedModel={selectedModel} 
-          models={availableModels}
-          onChange={handleModelChange}
-        />
+        <ChatTitleSection>
+          <ChatTitle>
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={handleTitleChange}
+                onBlur={handleTitleSave}
+                onKeyDown={handleTitleKeyDown}
+                autoFocus
+                style={{ 
+                  fontSize: '1.2rem', 
+                  fontWeight: '500', 
+                  width: '100%', 
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: `1px solid ${props => props.theme.border}`,
+                  color: 'inherit'
+                }}
+              />
+            ) : (
+              <div onClick={handleStartEditing} style={{ cursor: 'pointer' }}>
+                {chat?.title || 'New Conversation'}
+              </div>
+            )}
+          </ChatTitle>
+        </ChatTitleSection>
+        
+        {/* Move ModelSelector back to the top right */}
+        <ModelSelectorWrapper>
+          <ModelSelector 
+            selectedModel={selectedModel} 
+            models={availableModels}
+            onChange={(modelId) => {
+              setSelectedModel(modelId);
+              handleModelChange(modelId);
+            }}
+          />
+        </ModelSelectorWrapper>
       </ChatHeader>
       
       {chatIsEmpty ? (

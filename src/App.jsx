@@ -35,6 +35,33 @@ const AppContainer = styled.div`
   }
 `;
 
+// Add this styled component for the floating hamburger button
+const FloatingMenuButton = styled.button`
+  position: absolute;
+  left: 20px;
+  top: 20px; // Aligned with chat title height
+  z-index: 100;
+  background: transparent;
+  border: none;
+  color: ${props => props.theme.text};
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
 // App wrapper with authentication context
 const AppWithAuth = () => {
   return (
@@ -113,6 +140,7 @@ const AppContent = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   // Update settings when user changes
   useEffect(() => {
@@ -228,11 +256,25 @@ const AppContent = () => {
       updateUserSettings(newSettings);
     }
   };
+
+  const handleModelChange = (modelId) => {
+    setSelectedModel(modelId);
+    // Any other actions needed when model changes, like saving to storage
+  };
   
   return (
     <ThemeProvider theme={getTheme(settings.theme)}>
       <GlobalStyles />
       <AppContainer>
+        {collapsed && (
+          <FloatingMenuButton onClick={() => setCollapsed(false)}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </FloatingMenuButton>
+        )}
         <Sidebar 
           chats={chats}
           activeChat={activeChat}
@@ -246,6 +288,9 @@ const AppContent = () => {
           toggleProfile={toggleProfile}
           isLoggedIn={!!user}
           username={user?.username}
+          onModelChange={handleModelChange}
+          collapsed={collapsed}
+          setCollapsed={setCollapsed}
         />
         <ChatWindow 
           chat={getCurrentChat()}
@@ -253,6 +298,7 @@ const AppContent = () => {
           selectedModel={selectedModel}
           updateChatTitle={updateChatTitle}
           settings={settings}
+          onModelChange={handleModelChange}
         />
         
         {/* Modals */}
