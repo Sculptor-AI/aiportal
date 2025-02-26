@@ -41,26 +41,38 @@ export const darkTheme = {
   buttonHoverGradient: 'linear-gradient(145deg, #38B0FF, #0A84FF)',
 };
 
-// Bisexual theme using the bisexual flag colors with glass effect:
+// Bisexual theme using the bisexual flag colors with glass effect and gradients:
 // Pink: #D60270, Purple: #9B4F96, Blue: #0038A8
 export const bisexualTheme = {
   name: 'bisexual',
-  background: 'linear-gradient(145deg, #33005a, #2d004e)',
-  sidebar: 'rgba(61, 0, 102, 0.7)',
-  chat: 'rgba(45, 0, 78, 0.7)',
+  // Background with all three colors from bi flag in a gradient
+  background: 'linear-gradient(145deg, rgba(20, 20, 30, 0.9), rgba(25, 25, 35, 0.95)), linear-gradient(to bottom right, #D60270, #9B4F96, #0038A8)',
+  // Solid dark color for sidebar with slight transparency
+  sidebar: 'rgba(25, 25, 35, 0.8)',
+  // Slightly transparent for the chat area
+  chat: 'rgba(28, 28, 38, 0.7)',
   text: '#ffffff',
   border: 'rgba(155, 79, 150, 0.3)',
-  messageUser: 'rgba(214, 2, 112, 0.8)',  // Pink for user messages
-  messageAi: 'rgba(0, 56, 168, 0.8)',   // Blue for AI messages
-  hover: 'rgba(155, 79, 150, 0.9)',      // Purple for hover effects
-  primary: 'linear-gradient(145deg, #D60270, #cc0267)',
-  secondary: 'linear-gradient(145deg, #0038A8, #0044cc)',
+  // Gradients for messages
+  messageUser: 'linear-gradient(145deg, rgba(214, 2, 112, 0.2), rgba(214, 2, 112, 0.1))',  // Pink gradient for user
+  messageAi: 'linear-gradient(145deg, rgba(0, 56, 168, 0.2), rgba(0, 56, 168, 0.1))',   // Blue gradient for AI
+  hover: 'linear-gradient(145deg, rgba(155, 79, 150, 0.3), rgba(155, 79, 150, 0.2))',  // Purple gradient for hover
+  // Pink to purple gradient for primary elements
+  primary: 'linear-gradient(145deg, #D60270, #9B4F96)',
+  // Purple to blue gradient for secondary elements
+  secondary: 'linear-gradient(145deg, #9B4F96, #0038A8)',
   shadow: 'rgba(155, 79, 150, 0.3)',  // Purple-tinted shadow
   glassBlur: '10px',
   glassEffect: 'blur(10px) saturate(180%)',
-  inputBackground: 'rgba(61, 0, 102, 0.7)',
-  buttonGradient: 'linear-gradient(145deg, #D60270, #cc0267)',
-  buttonHoverGradient: 'linear-gradient(145deg, #cc0267, #D60270)',
+  inputBackground: 'rgba(25, 25, 35, 0.6)',
+  // Bold pink to purple gradient for buttons
+  buttonGradient: 'linear-gradient(145deg, #D60270, #9B4F96)',
+  // Bold purple to blue gradient for button hover state
+  buttonHoverGradient: 'linear-gradient(145deg, #9B4F96, #0038A8)',
+  // Additional bi flag specific gradients
+  accentGradient: 'linear-gradient(to right, #D60270, #9B4F96, #0038A8)',
+  modelSelectorBackground: 'linear-gradient(145deg, rgba(25, 25, 35, 0.9), rgba(40, 40, 60, 0.7))',
+  highlightBorder: 'linear-gradient(to right, #D60270, #9B4F96, #0038A8)',
 };
 
 // Custom theme for the model icons with enhanced gradients

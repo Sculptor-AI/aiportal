@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import { sendMessage } from '../services/aiService';
-import ModelIcon from './ModelIcon';
+import ModelSelector from './ModelSelector';
 
 const ChatWindowContainer = styled.div`
   flex: 1;
@@ -42,27 +42,7 @@ const ChatTitle = styled.h2`
   flex: 1;
 `;
 
-const ModelSelector = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  background: ${props => props.theme.inputBackground};
-  border-radius: 20px;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  transition: all 0.2s ease;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-  
-  span {
-    margin-left: 8px;
-    font-weight: 500;
-    font-size: 0.9rem;
-  }
-`;
+// Removed ModelSelector styled component as we now use the component
 
 const MessageList = styled.div`
   flex: 1;
@@ -324,14 +304,31 @@ const ChatWindow = ({ chat, addMessage, selectedModel, updateChatTitle, settings
   
   const chatIsEmpty = chat.messages.length === 0;
   
+  // Models array to pass to the ModelSelector component
+  const availableModels = [
+    { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
+    { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
+    { id: 'chatgpt-4o', name: 'ChatGPT 4o' }
+  ];
+  
+  // Handle model change
+  const handleModelChange = (modelId) => {
+    // This would need to be lifted up to the parent component
+    // For now, we'll just log it
+    console.log(`Model changed to: ${modelId}`);
+    // In a real implementation, you would call a function passed as props
+    // E.g.: onModelChange(modelId);
+  };
+
   return (
     <ChatWindowContainer fontSize={settings?.fontSize}>
       <ChatHeader>
         <ChatTitle>{chat.title}</ChatTitle>
-        <ModelSelector>
-          <ModelIcon modelId={selectedModel} size="small" />
-          <span>{modelDisplay.name}</span>
-        </ModelSelector>
+        <ModelSelector 
+          selectedModel={selectedModel} 
+          models={availableModels}
+          onChange={handleModelChange}
+        />
       </ChatHeader>
       
       {chatIsEmpty ? (

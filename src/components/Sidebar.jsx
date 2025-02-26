@@ -209,6 +209,23 @@ const ChatItem = styled.div`
   -webkit-backdrop-filter: ${props => props.active ? props.theme.glassEffect : 'none'};
   box-shadow: ${props => props.active ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'};
   transition: all 0.2s ease;
+  
+  /* Special styling for bisexual theme active items */
+  ${props => props.theme.name === 'bisexual' && props.active && `
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: ${props.theme.accentGradient};
+      border-top-left-radius: 12px;
+      border-bottom-left-radius: 12px;
+    }
+  `}
 
   &:hover {
     background: ${props => !props.active && `linear-gradient(145deg, ${props.theme.hover}, rgba(255,255,255,0.05))`};

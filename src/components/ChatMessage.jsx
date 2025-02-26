@@ -322,6 +322,27 @@ const Content = styled.div`
   -webkit-backdrop-filter: blur(5px);
   border: 1px solid ${props => props.theme.border};
   
+  /* Special border for bisexual theme */
+  ${props => props.theme.name === 'bisexual' && `
+    border: none;
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: -1px;
+      right: -1px;
+      bottom: -1px;
+      background: ${props.role === 'user' ? 
+        'linear-gradient(145deg, #D60270, #9B4F96)' : 
+        'linear-gradient(145deg, #9B4F96, #0038A8)'};
+      border-radius: 19px;
+      z-index: -1;
+      opacity: 0.3;
+    }
+  `}
+  
   /* Force code blocks to stay within container width */
   & > ${CodeBlock} {
     max-width: 100%;
@@ -336,6 +357,12 @@ const Content = styled.div`
     text-align: right;
     font-style: normal;
     color: ${props => props.theme.text}aa;
+    ${props => props.theme.name === 'bisexual' && `
+      background: ${props.theme.accentGradient};
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      opacity: 0.9;
+    `}
   }
   
   @media (max-width: 768px) {
