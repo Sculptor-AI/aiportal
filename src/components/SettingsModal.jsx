@@ -205,23 +205,59 @@ const Slider = styled.span`
   }
 `;
 
-const ThemeOption = styled(RadioOption)`
-  padding: 12px;
+const ThemeOption = styled.label`
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  border: 2px solid ${props => props.isSelected ? props.theme.primary : props.theme.border};
+  background: ${props => props.isSelected ? props.theme.cardBackground : 'transparent'};
+  cursor: pointer;
+  transition: all 0.2s ease;
   width: 90px;
   justify-content: center;
+  position: relative;
   
+  /* Make bisexual theme option wider */
+  &.bisexual-theme {
+    width: 110px;
+  }
+  
+  input {
+    position: relative;
+    opacity: 1;
+    margin-right: 6px;
+    width: 16px;
+    height: 16px;
+  }
+  
+  &:hover {
+    background: ${props => props.theme.cardBackground};
+    border-color: ${props => props.theme.primary};
+  }
+  
+  /* Light theme option - always light */
   &.light-theme {
-    background-color: ${props => props.isSelected ? '#0366d620' : '#f8f9fa'};
-    color: #212529;
-    border-color: ${props => props.isSelected ? '#0366d6' : '#e1e4e8'};
+    background: ${props => props.isSelected ? '#ffffff' : '#f0f0f0'};
+    color: #222222;
+    border-color: ${props => props.isSelected ? '#0078d7' : '#cccccc'};
   }
   
+  /* Dark theme option - always dark */
   &.dark-theme {
-    background-color: ${props => props.isSelected ? '#68b5f620' : '#2a2a2a'};
-    color: #e4e6eb;
-    border-color: ${props => props.isSelected ? '#68b5f6' : '#444444'};
+    background: ${props => props.isSelected ? '#222222' : '#333333'};
+    color: #ffffff;
+    border-color: ${props => props.isSelected ? '#0078d7' : '#555555'};
   }
   
+  /* OLED theme option - true black */
+  &.oled-theme {
+    background: ${props => props.isSelected ? '#000000' : '#0a0a0a'};
+    color: #ffffff;
+    border-color: ${props => props.isSelected ? '#0078d7' : '#333333'};
+  }
+  
+  /* Keep existing theme-specific styles */
   &.bisexual-theme {
     background: ${props => props.isSelected ? 
       'linear-gradient(135deg, #D60270, #9B4F96, #0038A8)' : 
@@ -233,7 +269,11 @@ const ThemeOption = styled(RadioOption)`
   
   @media (max-width: 768px) {
     width: 80px;
-    padding: 8px;
+    
+    /* Keep bisexual theme wider on mobile too */
+    &.bisexual-theme {
+      width: 100px;
+    }
   }
 `;
 
@@ -291,6 +331,19 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     onChange={() => handleChange('theme', 'dark')}
                   />
                   Dark
+                </ThemeOption>
+                <ThemeOption 
+                  isSelected={localSettings.theme === 'oled'}
+                  className="oled-theme"
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value="oled"
+                    checked={localSettings.theme === 'oled'}
+                    onChange={() => handleChange('theme', 'oled')}
+                  />
+                  OLED
                 </ThemeOption>
                 <ThemeOption 
                   isSelected={localSettings.theme === 'bisexual'}

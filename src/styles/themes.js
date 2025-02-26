@@ -41,6 +41,28 @@ export const darkTheme = {
   buttonHoverGradient: 'linear-gradient(145deg, #38B0FF, #0A84FF)',
 };
 
+// Add a new OLED theme definition after the darkTheme
+export const oledTheme = {
+  name: 'oled',
+  background: '#000000', // True black background
+  sidebar: 'rgba(10, 10, 10, 0.7)',
+  chat: 'rgba(5, 5, 5, 0.6)',
+  text: '#f0f2f5',
+  border: 'rgba(255, 255, 255, 0.06)',
+  messageUser: 'rgba(30, 30, 30, 0.8)',
+  messageAi: 'rgba(15, 15, 15, 0.8)',
+  hover: 'rgba(40, 40, 40, 0.5)',
+  primary: 'linear-gradient(145deg, #007AFF, #1E90FF)',
+  secondary: 'linear-gradient(145deg, #05a3ff, #0099e6)',
+  shadow: 'rgba(0, 0, 0, 0.3)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(120%)',
+  inputBackground: 'rgba(20, 20, 20, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
+  buttonHoverGradient: 'linear-gradient(145deg, #1E90FF, #007AFF)',
+  cardBackground: 'rgba(15, 15, 15, 0.7)'
+};
+
 // Bisexual theme using the bisexual flag colors with glass effect and gradients:
 // Pink: #D60270, Purple: #9B4F96, Blue: #0038A8
 export const bisexualTheme = {
@@ -97,6 +119,7 @@ export const modelThemes = {
 export const getTheme = (themeName) => {
   switch (themeName) {
     case 'dark': return darkTheme;
+    case 'oled': return oledTheme;
     case 'bisexual': return bisexualTheme;
     default: return lightTheme;
   }
