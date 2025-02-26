@@ -60,10 +60,10 @@ const LogoText = styled.span`
 
 const CollapseButton = styled.button`
   position: absolute;
-  right: -10px;
+  right: -12px;
   top: 20px;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: ${props => props.theme.buttonGradient};
   border: none;
   border-radius: 50%;
@@ -73,10 +73,13 @@ const CollapseButton = styled.button`
   justify-content: center;
   cursor: pointer;
   z-index: 20;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
   
   &:hover {
     background: ${props => props.theme.buttonHoverGradient};
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
   }
   
   @media (max-width: 768px) {
@@ -393,17 +396,27 @@ const ProfileButton = styled(SidebarButton)`
 // Mobile dropdown toggle button
 const MobileToggleButton = styled.button`
   display: none;
-  background: transparent;
+  background: ${props => props.theme.buttonGradient};
   border: none;
-  color: ${props => props.theme.text};
-  padding: 5px;
-  margin-left: 5px;
+  color: white;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  margin-left: 8px;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
   
   @media (max-width: 768px) {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  
+  &:hover {
+    background: ${props => props.theme.buttonHoverGradient};
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
   }
   
   svg {
@@ -453,7 +466,11 @@ const Sidebar = ({
   return (
     <SidebarContainer isExpanded={isExpanded} collapsed={collapsed}>
       <CollapseButton onClick={toggleCollapsed}>
-        {collapsed ? '>' : '<'}
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {collapsed 
+            ? <polyline points="13 17 18 12 13 7"></polyline> 
+            : <polyline points="11 17 6 12 11 7"></polyline>}
+        </svg>
       </CollapseButton>
       
       <LogoContainer collapsed={collapsed}>
@@ -476,10 +493,11 @@ const Sidebar = ({
         </NewChatButton>
         
         <MobileToggleButton onClick={toggleExpanded} isExpanded={isExpanded}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {isExpanded 
+              ? <polyline points="18 15 12 9 6 15"></polyline>
+              : <polyline points="6 9 12 15 18 9"></polyline>
+            }
           </svg>
         </MobileToggleButton>
       </TopBarContainer>

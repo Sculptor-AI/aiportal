@@ -145,8 +145,9 @@ const SendButton = styled.button`
   width: 38px;
   height: 38px;
   position: absolute;
-  right: 6px;
-  bottom: 6px;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -155,7 +156,7 @@ const SendButton = styled.button`
   
   &:hover:not(:disabled) {
     background: ${props => props.theme.buttonHoverGradient};
-    transform: translateY(-1px);
+    transform: translateY(-50%) scale(1.05);
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
   
