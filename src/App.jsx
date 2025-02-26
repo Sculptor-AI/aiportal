@@ -32,26 +32,10 @@ const AppWithAuth = () => {
 
 // Main app component
 const AppContent = () => {
-  const { user, updateSettings: updateUserSettings, loading } = useAuth();
-  
-  // Show loading state while checking authentication
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  
-  // Show login modal if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      setIsLoginOpen(true);
-    }
-  }, [loading, user]);
+  const { user, updateSettings: updateUserSettings } = useAuth();
   
   // Chat state
   const [chats, setChats] = useState(() => {
-    // If not logged in, return empty state that will be replaced when logged in
-    if (!user) {
-      const defaultChat = { id: uuidv4(), title: 'New Chat', messages: [] };
-      return [defaultChat];
-    }
-    
     try {
       const savedChats = localStorage.getItem('chats');
       if (savedChats) {
@@ -113,7 +97,7 @@ const AppContent = () => {
   
   // Modal states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  // isLoginOpen is already defined above
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Update settings when user changes
@@ -123,55 +107,12 @@ const AppContent = () => {
     }
   }, [user]);
 
-  // Load chats from server when user logs in
+  // Save chats to localStorage whenever they change
   useEffect(() => {
-    if (user) {
-      // Try to load chats from server
-      const loadChatsFromServer = async () => {
-        try {
-          const { getUserChats } = await import('./services/authService');
-          const serverChats = await getUserChats();
-          
-          if (serverChats && Array.isArray(serverChats) && serverChats.length > 0) {
-            console.log("Loaded chats from server:", serverChats);
-            setChats(serverChats);
-            setActiveChat(serverChats[0].id);
-          }
-        } catch (err) {
-          console.error("Error loading chats from server:", err);
-          // If there's an error, we'll just use what's in state already
-        }
-      };
-      
-      loadChatsFromServer();
-    }
-  }, [user]);
-  
-  // Save chats to server when they change and user is logged in
-  useEffect(() => {
-    if (user && chats.length > 0) {
-      console.log("Saving chats to server:", chats);
-      
-      const saveChatsToServer = async () => {
-        try {
-          const { saveUserChats } = await import('./services/authService');
-          await saveUserChats(chats);
-        } catch (err) {
-          console.error("Error saving chats to server:", err);
-          // Continue without showing error to user
-        }
-      };
-      
-      // Use a debounce to avoid too many API calls
-      const timeoutId = setTimeout(() => {
-        saveChatsToServer();
-      }, 1000);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [chats, user]);
+    console.log("Saving chats to localStorage:", chats);
+    localStorage.setItem('chats', JSON.stringify(chats));
+  }, [chats]);
 
-  // Still save some basic preferences in localStorage for convenience
   useEffect(() => {
     localStorage.setItem('activeChat', JSON.stringify(activeChat));
   }, [activeChat]);
@@ -253,10 +194,6 @@ const AppContent = () => {
   };
   
   const toggleLogin = () => {
-    // If user is not authenticated, don't allow closing the login modal
-    if (!user && isLoginOpen) {
-      return;
-    }
     setIsLoginOpen(!isLoginOpen);
   };
   

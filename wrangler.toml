@@ -6,11 +6,11 @@ compatibility_date = "2024-02-24"
 [site]
 bucket = "./dist"
 
-# Set environment variables for authentication and encryption
-# IMPORTANT: These are placeholders and must be set to secure values in the Cloudflare dashboard
+# Set environment variables (you'll need to replace these with your actual API keys in the Cloudflare dashboard)
 [vars]
-JWT_SECRET = "REPLACE_WITH_SECURE_RANDOM_STRING_IN_DASHBOARD"
-ENCRYPTION_KEY = "REPLACE_WITH_SECURE_32_BYTE_KEY_IN_DASHBOARD"
+VITE_OPENAI_API_KEY = ""
+VITE_CLAUDE_API_KEY = ""
+VITE_GEMINI_API_KEY = ""
 
 # Configure deployment to Workers
 [build]
@@ -19,16 +19,3 @@ command = "npm run build"
 # Enable static asset hosting for your React app - this handles SPA routing
 [site.static]
 spa = true
-
-# KV Namespaces for storing user data and chats securely
-# You'll need to create these KV namespaces in the Cloudflare dashboard
-# and then update the binding IDs here
-[[kv_namespaces]]
-binding = "USERS"
-id = "CREATE_AND_REPLACE_IN_DASHBOARD"
-preview_id = "CREATE_AND_REPLACE_IN_DASHBOARD"
-
-[[kv_namespaces]]
-binding = "USER_CHATS"
-id = "CREATE_AND_REPLACE_IN_DASHBOARD"
-preview_id = "CREATE_AND_REPLACE_IN_DASHBOARD"
