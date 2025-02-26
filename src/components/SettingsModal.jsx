@@ -277,6 +277,50 @@ const ThemeOption = styled.label`
   }
 `;
 
+const AboutSection = styled.div`
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid ${props => props.theme.border}80;
+  text-align: center;
+  font-size: 0.9rem;
+`;
+
+const VersionText = styled.div`
+  margin-bottom: 8px;
+  opacity: 0.8;
+`;
+
+const RainbowText = styled.span`
+  background: ${props => props.theme.name === 'bisexual' ? 
+    'linear-gradient(to right, #D60270, #9B4F96, #0038A8, #9B4F96, #D60270)' : 
+    'linear-gradient(to right, #ff0000, #ff9900, #ffff00, #33cc33, #3399ff, #9933ff, #ff33cc, #ff0000)'
+  };
+  background-size: 400% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: ${props => props.theme.name === 'bisexual' ? 'bisexualPride' : 'rainbow'} 8s linear infinite;
+  font-weight: 600;
+  
+  @keyframes rainbow { 
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 400% center;
+    }
+  }
+  
+  @keyframes bisexualPride { 
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 400% center;
+    }
+  }
+`;
+
 const SettingsModal = ({ settings, updateSettings, closeModal }) => {
   const [localSettings, setLocalSettings] = useState(settings);
   
@@ -526,6 +570,10 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               <TokenNote>Used for Gemini models</TokenNote>
             </ApiTokenInput>
           </SettingsSection>
+          <AboutSection>
+            <VersionText>Version : 0.1.0</VersionText>
+            <div>Made with <RainbowText>Pride</RainbowText></div>
+          </AboutSection>
         </ModalBody>
       </ModalContent>
     </ModalOverlay>
