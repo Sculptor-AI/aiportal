@@ -257,6 +257,26 @@ const ThemeOption = styled.label`
     border-color: ${props => props.isSelected ? '#0078d7' : '#333333'};
   }
   
+  /* Ocean theme option */
+  &.ocean-theme {
+    background: ${props => props.isSelected ? 
+      'linear-gradient(135deg, #0277bd, #039be5, #4fc3f7)' : 
+      'linear-gradient(135deg, #0277bd80, #039be580, #4fc3f780)'};
+    color: white;
+    border-color: ${props => props.isSelected ? '#0277bd' : '#039be5'};
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  
+  /* Forest theme option */
+  &.forest-theme {
+    background: ${props => props.isSelected ? 
+      'linear-gradient(135deg, #2e7d32, #388e3c, #4caf50)' : 
+      'linear-gradient(135deg, #2e7d3280, #388e3c80, #4caf5080)'};
+    color: white;
+    border-color: ${props => props.isSelected ? '#2e7d32' : '#388e3c'};
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  
   /* Keep existing theme-specific styles */
   &.bisexual-theme {
     background: ${props => props.isSelected ? 
@@ -265,6 +285,26 @@ const ThemeOption = styled.label`
     color: white;
     border-color: ${props => props.isSelected ? '#D60270' : '#9B4F96'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  
+  /* Pride theme option */
+  &.pride-theme {
+    background: ${props => props.isSelected ? 
+      'linear-gradient(135deg, #ff0000, #ff9900, #ffff00, #33cc33, #3399ff, #9933ff)' : 
+      'linear-gradient(135deg, #ff000080, #ff990080, #ffff0080, #33cc3380, #3399ff80, #9933ff80)'};
+    color: white;
+    border-color: ${props => props.isSelected ? '#ff0000' : '#9933ff'};
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  
+  /* Trans theme option */
+  &.trans-theme {
+    background: ${props => props.isSelected ? 
+      'linear-gradient(135deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)' : 
+      'linear-gradient(135deg, #5BCEFA80, #F5A9B880, #FFFFFF80, #F5A9B880, #5BCEFA80)'};
+    color: #333;
+    border-color: ${props => props.isSelected ? '#5BCEFA' : '#F5A9B8'};
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
   }
   
   @media (max-width: 768px) {
@@ -291,15 +331,24 @@ const VersionText = styled.div`
 `;
 
 const RainbowText = styled.span`
-  background: ${props => props.theme.name === 'bisexual' ? 
-    'linear-gradient(to right, #D60270, #9B4F96, #0038A8, #9B4F96, #D60270)' : 
-    'linear-gradient(to right, #ff0000, #ff9900, #ffff00, #33cc33, #3399ff, #9933ff, #ff33cc, #ff0000)'
-  };
+  background: ${props => {
+    if (props.theme.name === 'bisexual') {
+      return 'linear-gradient(to right, #D60270, #9B4F96, #0038A8, #9B4F96, #D60270)';
+    } else if (props.theme.name === 'trans') {
+      return 'linear-gradient(to right, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)';
+    } else {
+      return 'linear-gradient(to right, #ff0000, #ff9900, #ffff00, #33cc33, #3399ff, #9933ff, #ff33cc, #ff0000)';
+    }
+  }};
   background-size: 400% auto;
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
-  animation: ${props => props.theme.name === 'bisexual' ? 'bisexualPride' : 'rainbow'} 8s linear infinite;
+  animation: ${props => {
+    if (props.theme.name === 'bisexual') return 'bisexualPride';
+    else if (props.theme.name === 'trans') return 'transPride';
+    else return 'rainbow';
+  }} 8s linear infinite;
   font-weight: 600;
   
   @keyframes rainbow { 
@@ -312,6 +361,15 @@ const RainbowText = styled.span`
   }
   
   @keyframes bisexualPride { 
+    0% {
+      background-position: 0% center;
+    }
+    100% {
+      background-position: 400% center;
+    }
+  }
+  
+  @keyframes transPride { 
     0% {
       background-position: 0% center;
     }
@@ -388,6 +446,58 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     onChange={() => handleChange('theme', 'oled')}
                   />
                   OLED
+                </ThemeOption>
+                <ThemeOption 
+                  isSelected={localSettings.theme === 'ocean'}
+                  className="ocean-theme"
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value="ocean"
+                    checked={localSettings.theme === 'ocean'}
+                    onChange={() => handleChange('theme', 'ocean')}
+                  />
+                  Ocean
+                </ThemeOption>
+                <ThemeOption 
+                  isSelected={localSettings.theme === 'forest'}
+                  className="forest-theme"
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value="forest"
+                    checked={localSettings.theme === 'forest'}
+                    onChange={() => handleChange('theme', 'forest')}
+                  />
+                  Forest
+                </ThemeOption>
+                <ThemeOption 
+                  isSelected={localSettings.theme === 'pride'}
+                  className="pride-theme"
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value="pride"
+                    checked={localSettings.theme === 'pride'}
+                    onChange={() => handleChange('theme', 'pride')}
+                  />
+                  Pride
+                </ThemeOption>
+                <ThemeOption 
+                  isSelected={localSettings.theme === 'trans'}
+                  className="trans-theme"
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value="trans"
+                    checked={localSettings.theme === 'trans'}
+                    onChange={() => handleChange('theme', 'trans')}
+                  />
+                  Trans
                 </ThemeOption>
                 <ThemeOption 
                   isSelected={localSettings.theme === 'bisexual'}

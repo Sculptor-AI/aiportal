@@ -63,6 +63,56 @@ export const oledTheme = {
   cardBackground: 'rgba(15, 15, 15, 0.7)'
 };
 
+// Add this new theme definition
+export const oceanTheme = {
+  name: 'ocean',
+  background: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1484291470158-b8f8d608850d?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")',
+  backgroundAttachment: 'fixed',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  sidebar: 'rgba(226, 210, 162, 0.7)', // Sand color with transparency
+  chat: 'rgba(10, 30, 50, 0.6)', // Dark blue with transparency
+  text: '#ffffff',
+  border: 'rgba(255, 255, 255, 0.1)',
+  messageUser: 'rgba(25, 55, 85, 0.8)',
+  messageAi: 'rgba(10, 30, 50, 0.8)',
+  hover: 'rgba(40, 105, 160, 0.5)',
+  primary: '#039be5',
+  secondary: '#4fc3f7',
+  shadow: 'rgba(0, 0, 0, 0.4)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(120%)',
+  inputBackground: 'rgba(10, 40, 60, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, #039be5, #0277bd)',
+  buttonHoverGradient: 'linear-gradient(145deg, #0277bd, #039be5)',
+  cardBackground: 'rgba(15, 45, 65, 0.7)'
+};
+
+// Add this forest theme after the ocean theme definition
+export const forestTheme = {
+  name: 'forest',
+  background: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1558022103-603c34ab10ce?q=80&w=3542&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")',
+  backgroundAttachment: 'fixed',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  sidebar: 'rgba(60, 80, 40, 0.7)', // Forest green with transparency
+  chat: 'rgba(20, 30, 15, 0.6)', // Dark green with transparency
+  text: '#ffffff',
+  border: 'rgba(255, 255, 255, 0.1)',
+  messageUser: 'rgba(40, 60, 30, 0.8)', // Medium green for user messages
+  messageAi: 'rgba(25, 40, 20, 0.8)', // Darker green for AI messages
+  hover: 'rgba(70, 90, 50, 0.5)', // Lighter green for hover states
+  primary: '#2e7d32', // Forest green
+  secondary: '#4caf50', // Medium green
+  shadow: 'rgba(0, 0, 0, 0.4)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(120%)',
+  inputBackground: 'rgba(30, 45, 20, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, #2e7d32, #388e3c)',
+  buttonHoverGradient: 'linear-gradient(145deg, #388e3c, #2e7d32)',
+  cardBackground: 'rgba(35, 50, 25, 0.7)'
+};
+
 // Bisexual theme using the bisexual flag colors with glass effect and gradients:
 // Pink: #D60270, Purple: #9B4F96, Blue: #0038A8
 export const bisexualTheme = {
@@ -97,6 +147,49 @@ export const bisexualTheme = {
   highlightBorder: 'linear-gradient(to right, #D60270, #9B4F96, #0038A8)',
 };
 
+export const prideTheme = {
+  name: 'pride',
+  background: 'radial-gradient(circle, #111111, #000000)',
+  sidebar: 'rgba(20, 20, 30, 0.8)',
+  chat: 'rgba(10, 10, 15, 0.7)',
+  text: '#ffffff',
+  border: 'rgba(255, 255, 255, 0.1)',
+  borderGlow: '0 0 5px rgba(255, 0, 0, 0.6), 0 0 10px rgba(255, 165, 0, 0.3), 0 0 15px rgba(255, 255, 0, 0.2), 0 0 20px rgba(0, 128, 0, 0.2), 0 0 25px rgba(0, 0, 255, 0.2), 0 0 30px rgba(75, 0, 130, 0.3)',
+  messageUser: 'linear-gradient(145deg, rgba(80, 80, 120, 0.7), rgba(60, 60, 100, 0.7))',
+  messageAi: 'linear-gradient(145deg, rgba(40, 40, 60, 0.7), rgba(30, 30, 50, 0.7))',
+  hover: 'rgba(80, 80, 120, 0.4)',
+  primary: 'linear-gradient(145deg, rgba(255, 0, 0, 0.7), rgba(255, 165, 0, 0.7), rgba(255, 255, 0, 0.7), rgba(0, 128, 0, 0.7), rgba(0, 0, 255, 0.7), rgba(75, 0, 130, 0.7))',
+  secondary: 'rgba(255, 165, 0, 0.7)',
+  shadow: 'rgba(0, 0, 0, 0.4)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(120%)',
+  inputBackground: 'rgba(30, 30, 40, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, rgba(255, 0, 0, 0.6), rgba(255, 165, 0, 0.6), rgba(255, 255, 0, 0.6), rgba(0, 128, 0, 0.6), rgba(0, 0, 255, 0.6), rgba(75, 0, 130, 0.6))',
+  buttonHoverGradient: 'linear-gradient(145deg, rgba(75, 0, 130, 0.6), rgba(0, 0, 255, 0.6), rgba(0, 128, 0, 0.6), rgba(255, 255, 0, 0.6), rgba(255, 165, 0, 0.6), rgba(255, 0, 0, 0.6))',
+  cardBackground: 'rgba(25, 25, 35, 0.7)'
+};
+
+export const transTheme = {
+  name: 'trans',
+  background: 'radial-gradient(circle, #111111, #000000)',
+  sidebar: 'rgba(91, 206, 250, 0.15)',
+  chat: 'rgba(10, 10, 15, 0.7)',
+  text: '#ffffff',
+  border: 'rgba(255, 255, 255, 0.1)',
+  messageUser: 'linear-gradient(145deg, rgba(91, 206, 250, 0.3), rgba(70, 160, 200, 0.3))',
+  messageAi: 'linear-gradient(145deg, rgba(245, 169, 184, 0.3), rgba(200, 140, 150, 0.3))',
+  hover: 'rgba(91, 206, 250, 0.2)',
+  primary: '#5BCEFA',
+  secondary: '#F5A9B8',
+  shadow: 'rgba(0, 0, 0, 0.4)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(120%)',
+  inputBackground: 'rgba(30, 30, 40, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, #5BCEFA, #F5A9B8)',
+  buttonHoverGradient: 'linear-gradient(145deg, #F5A9B8, #5BCEFA)',
+  cardBackground: 'rgba(25, 25, 35, 0.7)'
+};
+
 // Custom theme for the model icons with enhanced gradients
 export const modelThemes = {
   'gemini-2-flash': {
@@ -120,6 +213,10 @@ export const getTheme = (themeName) => {
   switch (themeName) {
     case 'dark': return darkTheme;
     case 'oled': return oledTheme;
+    case 'ocean': return oceanTheme;
+    case 'forest': return forestTheme;
+    case 'pride': return prideTheme;
+    case 'trans': return transTheme;
     case 'bisexual': return bisexualTheme;
     default: return lightTheme;
   }
@@ -164,4 +261,32 @@ export const GlobalStyles = createGlobalStyle`
     border: 1px solid rgba(255, 255, 255, 0.18);
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
   }
+  
+  /* Pride theme rainbow effects */
+  ${props => props.theme.name === 'pride' && `
+    /* Add subtle rainbow glow to interactive elements */
+    button, 
+    input:focus,
+    textarea:focus,
+    select:focus {
+      box-shadow: ${props.theme.borderGlow};
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Add rainbow glow to cards and sections */
+    .card,
+    .chat-message,
+    .modal-content,
+    .settings-section {
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: ${props.theme.borderGlow};
+    }
+    
+    /* Highlight active elements with rainbow */
+    .active-item,
+    .selected {
+      box-shadow: ${props.theme.borderGlow};
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+  `}
 `;
