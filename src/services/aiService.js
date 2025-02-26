@@ -8,7 +8,7 @@ const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 // Map updated model IDs to their respective API endpoints and formats
 const MODEL_CONFIGS = {
   'gemini-2-flash': {
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2-flash:generateContent',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     prepareRequest: (message, history) => {
       // Format request for Gemini API - ensure we're using gemini-2-flash model
       const formattedMessages = history.map(msg => ({
@@ -179,7 +179,7 @@ Without a valid API key, I cannot connect to the actual AI service.
 
     if (modelId === 'gemini-2-flash') {
       // Ensure we're explicitly using the correct model
-      url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2-flash:generateContent' + `?key=${apiKeys.google}`;
+      url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent' + `?key=${apiKeys.google}`;
     } else if (modelId === 'claude-3.7-sonnet') {
       headers['x-api-key'] = apiKeys.anthropic;
       headers['anthropic-version'] = '2023-06-01';
