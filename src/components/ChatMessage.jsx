@@ -45,36 +45,40 @@ const formatContentWithCodeHighlighting = (content) => {
 };
 
 const CodeBlock = styled.div`
-  background-color: ${props => props.theme.name === 'light' ? '#f6f8fa' : '#1e1e1e'};
-  border-radius: 6px;
-  margin: 10px 0;
+  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-radius: 12px;
+  margin: 12px 0;
   overflow: hidden;
   border: 1px solid ${props => props.theme.border};
   max-width: 100%;
   width: 100%;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 `;
 
 const CodeHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  padding: 8px 12px;
-  background-color: ${props => props.theme.name === 'light' ? '#f0f0f0' : '#2d2d2d'};
+  padding: 10px 14px;
+  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
   border-bottom: 1px solid ${props => props.theme.border};
 `;
 
 const CodeLanguage = styled.div`
-  font-size: 0.8rem;
-  font-weight: bold;
+  font-size: 0.85rem;
+  font-weight: 600;
   color: ${props => props.theme.text};
 `;
 
 const CopyButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.primary};
-  font-size: 0.8rem;
+  color: ${props => props.theme.primary.split(',')[0].replace('linear-gradient(145deg', '').trim()};
+  font-size: 0.85rem;
   cursor: pointer;
   padding: 0;
+  font-weight: 500;
   
   &:hover {
     text-decoration: underline;
@@ -83,56 +87,79 @@ const CopyButton = styled.button`
 
 const Pre = styled.pre`
   margin: 0;
-  padding: 12px;
+  padding: 14px;
   overflow-x: auto;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 0.9rem;
-  line-height: 1.4;
+  line-height: 1.5;
   max-width: 100%;
   word-wrap: normal;
   white-space: pre;
   text-overflow: ellipsis;
+  
+  /* Stylish scrollbar */
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border};
+    border-radius: 3px;
+  }
 `;
 
 const Message = styled.div`
   display: flex;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   align-items: flex-start;
   max-width: 100%;
   width: 100%;
 `;
 
 const Avatar = styled.div`
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: ${props => props.useModelIcon ? '0' : '50%'};
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
-  font-weight: bold;
+  margin-right: 14px;
+  font-weight: 600;
   flex-shrink: 0;
-  background-color: ${props => props.useModelIcon ? 'transparent' : (props.role === 'user' ? props.theme.primary : props.theme.secondary)};
+  background: ${props => props.useModelIcon 
+    ? 'transparent' 
+    : (props.role === 'user' 
+        ? props.theme.buttonGradient 
+        : props.theme.secondary)};
   color: white;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   
   &:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
   }
 `;
 
 const Content = styled.div`
-  padding: 12px 16px;
-  border-radius: 8px;
-  max-width: 95%;
+  padding: 15px 18px;
+  border-radius: 18px;
+  max-width: 90%;
   width: fit-content;
   white-space: pre-wrap;
-  background-color: ${props => props.role === 'user' ? props.theme.messageUser : props.theme.messageAi};
+  background: ${props => props.role === 'user' ? props.theme.messageUser : props.theme.messageAi};
   color: ${props => props.theme.text};
-  box-shadow: 0 1px 2px ${props => props.theme.shadow};
-  line-height: 1.5;
+  box-shadow: 0 2px 10px ${props => props.theme.shadow};
+  line-height: 1.6;
   overflow: hidden;
   flex: 1;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border: 1px solid ${props => props.theme.border};
   
   /* Force code blocks to stay within container width */
   & > ${CodeBlock} {
@@ -142,28 +169,30 @@ const Content = styled.div`
   /* Style for AI model signatures */
   & > em:last-child {
     display: block;
-    margin-top: 10px;
+    margin-top: 12px;
     opacity: 0.7;
     font-size: 0.85em;
     text-align: right;
+    font-style: normal;
+    color: ${props => props.theme.text}aa;
   }
   
   @media (max-width: 768px) {
     max-width: 100%;
-    padding: 10px 12px;
+    padding: 12px 14px;
   }
 `;
 
 const Timestamp = styled.div`
-  font-size: 0.7rem;
-  color: ${props => props.theme.text === '#e4e6eb' ? '#aaa' : '#888'};
-  margin-top: 4px;
+  font-size: 0.75rem;
+  color: ${props => props.theme.text}80;
+  margin-top: 6px;
   text-align: right;
 `;
 
 const ErrorMessage = styled(Content)`
-  background-color: #ffebee;
-  border: 1px solid #ffcdd2;
+  background: rgba(255, 240, 240, 0.8);
+  border: 1px solid rgba(255, 200, 200, 0.4);
 `;
 
 const pulse = keyframes`

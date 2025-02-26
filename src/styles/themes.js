@@ -1,54 +1,69 @@
 import { createGlobalStyle } from 'styled-components';
 
-// Standard themes
+// Apple-inspired themes with glassmorphism and gradients
 export const lightTheme = {
   name: 'light',
-  background: '#f8f9fa',
-  sidebar: '#ffffff',
-  chat: '#ffffff',
+  background: 'linear-gradient(145deg, #f0f2f5, #e6e9ee)',
+  sidebar: 'rgba(255, 255, 255, 0.7)',
+  chat: 'rgba(255, 255, 255, 0.6)',
   text: '#212529',
-  border: '#e1e4e8',
-  messageUser: '#f1f3f5',
-  messageAi: '#e3f2fd',
-  hover: '#f0f2f5',
-  primary: '#0366d6',
-  secondary: '#05a3ff',
-  shadow: 'rgba(0, 0, 0, 0.05)',
+  border: 'rgba(0, 0, 0, 0.06)',
+  messageUser: 'rgba(255, 255, 255, 0.8)',
+  messageAi: 'rgba(236, 246, 254, 0.8)',
+  hover: 'rgba(255, 255, 255, 0.9)',
+  primary: 'linear-gradient(145deg, #007AFF, #1E90FF)',
+  secondary: 'linear-gradient(145deg, #05a3ff, #0099e6)',
+  shadow: 'rgba(0, 0, 0, 0.08)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(180%)',
+  inputBackground: 'rgba(255, 255, 255, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
+  buttonHoverGradient: 'linear-gradient(145deg, #1E90FF, #007AFF)',
 };
 
 export const darkTheme = {
   name: 'dark',
-  background: '#1a1a1a',
-  sidebar: '#2a2a2a',
-  chat: '#2d2d2d',
-  text: '#e4e6eb',
-  border: '#444444',
-  messageUser: '#3a3a3a',
-  messageAi: '#213547',
-  hover: '#3d3d3d',
-  primary: '#68b5f6',
-  secondary: '#38bdf8',
+  background: 'linear-gradient(145deg, #141414, #1e1e1e)',
+  sidebar: 'rgba(30, 30, 30, 0.7)',
+  chat: 'rgba(35, 35, 35, 0.6)',
+  text: '#f0f2f5',
+  border: 'rgba(255, 255, 255, 0.06)',
+  messageUser: 'rgba(50, 50, 50, 0.8)',
+  messageAi: 'rgba(35, 45, 60, 0.8)',
+  hover: 'rgba(60, 60, 60, 0.9)',
+  primary: 'linear-gradient(145deg, #0A84FF, #38B0FF)',
+  secondary: 'linear-gradient(145deg, #38B0FF, #50C8FF)',
   shadow: 'rgba(0, 0, 0, 0.2)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(180%)',
+  inputBackground: 'rgba(40, 40, 40, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, #0A84FF, #38B0FF)',
+  buttonHoverGradient: 'linear-gradient(145deg, #38B0FF, #0A84FF)',
 };
 
-// Bisexual theme using the bisexual flag colors:
+// Bisexual theme using the bisexual flag colors with glass effect:
 // Pink: #D60270, Purple: #9B4F96, Blue: #0038A8
 export const bisexualTheme = {
   name: 'bisexual',
-  background: '#2d004e',
-  sidebar: '#3d0066',
-  chat: '#2d004e',
+  background: 'linear-gradient(145deg, #33005a, #2d004e)',
+  sidebar: 'rgba(61, 0, 102, 0.7)',
+  chat: 'rgba(45, 0, 78, 0.7)',
   text: '#ffffff',
-  border: '#9B4F96',
-  messageUser: '#D60270',  // Pink for user messages
-  messageAi: '#0038A8',   // Blue for AI messages
-  hover: '#9B4F96',      // Purple for hover effects
-  primary: '#D60270',    // Pink for primary actions
-  secondary: '#0038A8',  // Blue for secondary actions
+  border: 'rgba(155, 79, 150, 0.3)',
+  messageUser: 'rgba(214, 2, 112, 0.8)',  // Pink for user messages
+  messageAi: 'rgba(0, 56, 168, 0.8)',   // Blue for AI messages
+  hover: 'rgba(155, 79, 150, 0.9)',      // Purple for hover effects
+  primary: 'linear-gradient(145deg, #D60270, #cc0267)',
+  secondary: 'linear-gradient(145deg, #0038A8, #0044cc)',
   shadow: 'rgba(155, 79, 150, 0.3)',  // Purple-tinted shadow
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(180%)',
+  inputBackground: 'rgba(61, 0, 102, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, #D60270, #cc0267)',
+  buttonHoverGradient: 'linear-gradient(145deg, #cc0267, #D60270)',
 };
 
-// Custom theme for the model icons
+// Custom theme for the model icons with enhanced gradients
 export const modelThemes = {
   'gemini-2-flash': {
     primary: '#1B72E8',     // Google blue 
@@ -76,10 +91,22 @@ export const getTheme = (themeName) => {
 };
 
 export const GlobalStyles = createGlobalStyle`
+  * {
+    box-sizing: border-box;
+  }
+  
   body {
-    background-color: ${props => props.theme.background};
+    background: ${props => props.theme.background};
     color: ${props => props.theme.text};
-    transition: all 0.2s ease-in-out;
+    transition: all 0.3s ease-in-out;
+    font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  button, input, textarea, select {
+    font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
+    border-radius: 10px;
   }
   
   .font-size-small {
@@ -92,5 +119,14 @@ export const GlobalStyles = createGlobalStyle`
   
   .font-size-large {
     font-size: 1.1rem;
+  }
+  
+  /* Helper classes for glassmorphism */
+  .glass {
+    backdrop-filter: ${props => props.theme.glassEffect};
+    -webkit-backdrop-filter: ${props => props.theme.glassEffect};
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
   }
 `;

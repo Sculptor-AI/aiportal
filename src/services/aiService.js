@@ -8,9 +8,9 @@ const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 // Map updated model IDs to their respective API endpoints and formats
 const MODEL_CONFIGS = {
   'gemini-2-flash': {
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2-flash:generateContent',
     prepareRequest: (message, history) => {
-      // Format request for Gemini API
+      // Format request for Gemini API - ensure we're using gemini-2-flash model
       const formattedMessages = history.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.content }]
@@ -178,7 +178,8 @@ Without a valid API key, I cannot connect to the actual AI service.
     let url = modelConfig.baseUrl;
 
     if (modelId === 'gemini-2-flash') {
-      url = `${modelConfig.baseUrl}?key=${apiKeys.google}`;
+      // Ensure we're explicitly using the correct model
+      url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2-flash:generateContent' + `?key=${apiKeys.google}`;
     } else if (modelId === 'claude-3.7-sonnet') {
       headers['x-api-key'] = apiKeys.anthropic;
       headers['anthropic-version'] = '2023-06-01';
@@ -195,13 +196,18 @@ Without a valid API key, I cannot connect to the actual AI service.
     
     // Provide a helpful error message
     if (error.response) {
-      return `Error from the ${modelId} API: ${error.response.status} ${error.response.statusText}
+      let errorMsg = `Error from the ${modelId} API: ${error.response.status} ${error.response.statusText}
       
 Details: ${JSON.stringify(error.response.data)}
 
-Please check your API key and ensure it has the correct permissions.
+Please check your API key and ensure it has the correct permissions.`;
+
+      // Add specific information for Gemini model errors
+      if (modelId === 'gemini-2-flash' && error.response.data?.error?.message?.includes('gemini-pro')) {
+        errorMsg += `\n\nImportant: The error mentions 'gemini-pro' but you're using the 'gemini-2-flash' model. Make sure your Google AI API key has access to the latest Gemini models.`;
+      }
       
-\n\n- Error from ${modelId}`;
+      return errorMsg + `\n\n- Error from ${modelId}`;
     } else if (error.request) {
       return `Network error connecting to the ${modelId} API. No response was received.
       

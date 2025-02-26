@@ -13,8 +13,22 @@ const AppContainer = styled.div`
   display: flex;
   height: 100vh;
   overflow: hidden;
-  background-color: ${props => props.theme.background};
+  background: ${props => props.theme.background};
   color: ${props => props.theme.text};
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.08) 0%, transparent 70%),
+                radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.06) 0%, transparent 60%);
+    z-index: 0;
+    pointer-events: none;
+  }
   
   @media (max-width: 768px) {
     flex-direction: column;

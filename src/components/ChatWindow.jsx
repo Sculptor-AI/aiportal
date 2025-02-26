@@ -1,14 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import { sendMessage } from '../services/aiService';
+import ModelIcon from './ModelIcon';
 
 const ChatWindowContainer = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: ${props => props.theme.chat};
+  background: ${props => props.theme.chat};
+  backdrop-filter: ${props => props.theme.glassEffect};
+  -webkit-backdrop-filter: ${props => props.theme.glassEffect};
   font-size: ${props => {
     switch(props.fontSize) {
       case 'small': return '0.9rem';
@@ -16,19 +19,49 @@ const ChatWindowContainer = styled.div`
       default: return '1rem';
     }
   }};
+  position: relative;
+  overflow: hidden;
 `;
 
 const ChatHeader = styled.div`
-  padding: 15px;
-  border-bottom: 1px solid ${props => props.theme.border};
+  padding: 15px 20px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 5;
+  position: relative;
 `;
 
 const ChatTitle = styled.h2`
   font-size: 1.2rem;
   font-weight: 500;
   margin: 0;
+  color: ${props => props.theme.text};
+  flex: 1;
+`;
+
+const ModelSelector = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: ${props => props.theme.inputBackground};
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  
+  span {
+    margin-left: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
 `;
 
 const MessageList = styled.div`
@@ -39,24 +72,65 @@ const MessageList = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
-`;
-
-const InputContainer = styled.div`
-  border-top: 1px solid ${props => props.theme.border};
-  padding: 15px;
-  display: flex;
   
-  @media (max-width: 768px) {
-    padding: 10px;
+  /* Stylish scrollbar */
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border};
+    border-radius: 10px;
   }
 `;
 
-const MessageInput = styled.textarea`
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const InputContainer = styled.div`
+  padding: ${props => props.isEmpty ? '15px 10% 40px' : '15px'};
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: ${props => props.isEmpty ? 'absolute' : 'relative'};
+  bottom: ${props => props.isEmpty ? '5%' : '0'};
+  width: 100%;
+  z-index: 10;
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: ${props => props.isEmpty ? fadeIn : 'none'} 0.5s ease;
+  backdrop-filter: ${props => !props.isEmpty && 'blur(5px)'};
+  -webkit-backdrop-filter: ${props => !props.isEmpty && 'blur(5px)'};
+  
+  @media (max-width: 768px) {
+    padding: ${props => props.isEmpty ? '10px 5% 40px' : '10px'};
+  }
+`;
+
+const MessageInputWrapper = styled.div`
+  position: relative;
   flex: 1;
-  padding: 12px;
-  border-radius: 8px;
+  max-width: ${props => props.isEmpty ? '700px' : '100%'};
+  transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+`;
+
+const MessageInput = styled.textarea`
+  width: 100%;
+  padding: 14px 50px 14px 18px;
+  border-radius: 24px;
   border: 1px solid ${props => props.theme.border};
-  background-color: ${props => props.theme.background};
+  background: ${props => props.theme.inputBackground};
   color: ${props => props.theme.text};
   font-family: inherit;
   font-size: inherit;
@@ -64,37 +138,54 @@ const MessageInput = styled.textarea`
   min-height: 50px;
   max-height: 150px;
   overflow-y: auto;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
   
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.primary};
+    border-color: rgba(0, 122, 255, 0.5);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
   }
   
   @media (max-width: 768px) {
-    padding: 8px;
-    min-height: 40px;
+    padding: 12px 45px 12px 15px;
+    min-height: 45px;
   }
 `;
 
 const SendButton = styled.button`
-  background-color: ${props => props.theme.primary};
+  background: ${props => props.disabled 
+    ? '#ccc' 
+    : props.theme.buttonGradient};
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 0 15px;
-  margin-left: 10px;
+  border-radius: 50%;
+  width: 38px;
+  height: 38px;
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   
-  &:hover {
-    background-color: ${props => props.theme.secondary};
+  &:hover:not(:disabled) {
+    background: ${props => props.theme.buttonHoverGradient};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
   
   &:disabled {
-    background-color: #ccc;
     cursor: not-allowed;
+  }
+  
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
@@ -104,16 +195,22 @@ const EmptyState = styled.div`
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #666;
+  color: ${props => props.theme.text}aa;
   text-align: center;
   padding: 20px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   
   h3 {
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    font-weight: 500;
+    font-size: 1.5rem;
   }
   
   p {
     max-width: 500px;
+    line-height: 1.6;
+    font-size: 1rem;
   }
 `;
 
@@ -121,6 +218,13 @@ const ChatWindow = ({ chat, addMessage, selectedModel, updateChatTitle, settings
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
+  
+  // Find the current model data for display
+  const modelDisplay = {
+    'gemini-2-flash': { name: 'Gemini 2 Flash', provider: 'Google AI' },
+    'claude-3.7-sonnet': { name: 'Claude 3.7 Sonnet', provider: 'Anthropic' },
+    'chatgpt-4o': { name: 'ChatGPT 4o', provider: 'OpenAI' }
+  }[selectedModel] || { name: selectedModel, provider: 'AI' };
   
   useEffect(() => {
     scrollToBottom();
@@ -218,13 +322,19 @@ const ChatWindow = ({ chat, addMessage, selectedModel, updateChatTitle, settings
     );
   }
   
+  const chatIsEmpty = chat.messages.length === 0;
+  
   return (
     <ChatWindowContainer fontSize={settings?.fontSize}>
       <ChatHeader>
         <ChatTitle>{chat.title}</ChatTitle>
+        <ModelSelector>
+          <ModelIcon modelId={selectedModel} size="small" />
+          <span>{modelDisplay.name}</span>
+        </ModelSelector>
       </ChatHeader>
       
-      {chat.messages.length === 0 ? (
+      {chatIsEmpty ? (
         <EmptyState>
           <h3>Start a conversation</h3>
           <p>Send a message to start chatting with the AI assistant. You can ask questions, get information, or just have a casual conversation.</p>
@@ -251,23 +361,25 @@ const ChatWindow = ({ chat, addMessage, selectedModel, updateChatTitle, settings
         </MessageList>
       )}
       
-      <InputContainer>
-        <MessageInput 
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your message here..."
-          disabled={isLoading}
-        />
-        <SendButton 
-          onClick={handleSendMessage}
-          disabled={isLoading || !inputMessage.trim()}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </SendButton>
+      <InputContainer isEmpty={chatIsEmpty}>
+        <MessageInputWrapper isEmpty={chatIsEmpty}>
+          <MessageInput 
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your message here..."
+            disabled={isLoading}
+          />
+          <SendButton 
+            onClick={handleSendMessage}
+            disabled={isLoading || !inputMessage.trim()}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 2L11 13"></path>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </SendButton>
+        </MessageInputWrapper>
       </InputContainer>
     </ChatWindowContainer>
   );
