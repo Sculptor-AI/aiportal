@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+
+// Fade in animation
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+`;
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -7,22 +19,39 @@ const ModalOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: ${fadeIn} 0.3s ease;
 `;
 
 const ModalContent = styled.div`
   background-color: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
-  border-radius: 8px;
-  width: 500px;
+  border-radius: 16px;
+  width: 520px;
   max-width: 90%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 4px 12px ${props => props.theme.shadow};
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  position: relative;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border};
+    border-radius: 10px;
+  }
   
   @media (max-width: 768px) {
     max-width: 95%;
@@ -34,17 +63,20 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 20px 24px;
   border-bottom: 1px solid ${props => props.theme.border};
   position: sticky;
   top: 0;
   background-color: ${props => props.theme.sidebar};
   z-index: 1;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px 16px 0 0;
 `;
 
 const ModalTitle = styled.h2`
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: 600;
 `;
 
@@ -55,34 +87,62 @@ const CloseButton = styled.button`
   font-size: 1.5rem;
   color: ${props => props.theme.text};
   opacity: 0.7;
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
   
   &:hover {
     opacity: 1;
+    background: rgba(0,0,0,0.05);
   }
 `;
 
 const ModalBody = styled.div`
-  padding: 20px;
+  padding: 24px;
 `;
 
 const SettingsSection = styled.div`
-  margin-bottom: 30px;
+  margin-bottom: 36px;
+  position: relative;
   
   &:last-child {
     margin-bottom: 0;
   }
+  
+  &:after {
+    content: '';
+    display: block;
+    height: 1px;
+    background: ${props => props.theme.border}80;
+    margin-top: 36px;
+    opacity: ${props => props.isLast ? '0' : '1'};
+  }
 `;
 
 const SectionTitle = styled.h3`
-  margin: 0 0 15px 0;
-  font-size: 1.1rem;
+  margin: 0 0 20px 0;
+  font-size: 1.15rem;
   font-weight: 600;
-  padding-bottom: 8px;
-  border-bottom: 1px solid ${props => props.theme.border}80;
+  display: flex;
+  align-items: center;
+  
+  &:before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    background: ${props => props.theme.primary};
+    margin-right: 10px;
+    border-radius: 4px;
+  }
 `;
 
 const SettingGroup = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   
   &:last-child {
     margin-bottom: 0;
@@ -90,7 +150,7 @@ const SettingGroup = styled.div`
 `;
 
 const ApiTokenInput = styled.div`
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   
   &:last-child {
     margin-bottom: 0;
@@ -99,37 +159,40 @@ const ApiTokenInput = styled.div`
 
 const TokenLabel = styled.label`
   display: block;
-  margin-bottom: 6px;
-  font-size: 0.9rem;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
   font-weight: 500;
 `;
 
 const TokenInput = styled.input`
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 4px;
+  padding: 12px 14px;
+  border-radius: 10px;
   border: 1px solid ${props => props.theme.border};
-  background-color: ${props => props.theme.background};
+  background-color: ${props => props.theme.background}80;
   color: ${props => props.theme.text};
   font-family: inherit;
+  transition: all 0.2s ease;
   
   &:focus {
     outline: none;
     border-color: ${props => props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.primary}30;
   }
 `;
 
 const TokenNote = styled.p`
   font-size: 0.8rem;
   color: ${props => props.theme.text}80;
-  margin-top: 4px;
+  margin-top: 6px;
   margin-bottom: 0;
 `;
 
 const SettingLabel = styled.h4`
-  margin: 0 0 10px 0;
-  font-size: 1rem;
+  margin: 0 0 14px 0;
+  font-size: 1.05rem;
   font-weight: 500;
+  color: ${props => props.theme.text}dd;
 `;
 
 const RadioGroup = styled.div`
@@ -138,7 +201,7 @@ const RadioGroup = styled.div`
   flex-wrap: wrap;
   
   @media (max-width: 768px) {
-    gap: 8px;
+    gap: 10px;
   }
 `;
 
@@ -146,13 +209,20 @@ const RadioOption = styled.label`
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  background-color: ${props => props.isSelected ? props.theme.primary + '20' : 'transparent'};
-  border: 1px solid ${props => props.isSelected ? props.theme.primary : props.theme.border};
+  padding: 10px 14px;
+  border-radius: 8px;
+  background-color: ${props => props.isSelected ? 
+    `${props.theme.primary}15` : 
+    'rgba(0, 0, 0, 0.03)'};
+  border: 1px solid ${props => props.isSelected ? 
+    props.theme.primary : 
+    'transparent'};
+  transition: all 0.2s ease;
   
   &:hover {
-    background-color: ${props => props.theme.hover};
+    background-color: ${props => props.isSelected ? 
+      `${props.theme.primary}20` : 
+      'rgba(0, 0, 0, 0.05)'};
   }
   
   input {
@@ -163,15 +233,16 @@ const RadioOption = styled.label`
 const ToggleWrapper = styled.div`
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
+  padding: 8px 0;
 `;
 
 const Toggle = styled.label`
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
-  margin-right: 10px;
+  width: 48px;
+  height: 26px;
+  margin-right: 12px;
   
   input {
     opacity: 0;
@@ -180,6 +251,7 @@ const Toggle = styled.label`
   }
 `;
 
+// More animated slider
 const Slider = styled.span`
   position: absolute;
   cursor: pointer;
@@ -187,36 +259,39 @@ const Slider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: ${props => props.checked ? props.theme.primary : props.theme.border};
-  transition: 0.4s;
-  border-radius: 24px;
+  background-color: ${props => props.checked ? props.theme.primary : 'rgba(0,0,0,0.15)'};
+  transition: 0.3s;
+  border-radius: 26px;
   
   &:before {
     position: absolute;
     content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
     background-color: white;
-    transition: 0.4s;
+    transition: 0.3s;
     border-radius: 50%;
-    transform: ${props => props.checked ? 'translateX(20px)' : 'translateX(0)'};
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    transform: ${props => props.checked ? 'translateX(22px)' : 'translateX(0)'};
   }
 `;
 
 const ThemeOption = styled.label`
   display: flex;
   align-items: center;
-  padding: 10px;
-  border-radius: 8px;
-  border: 2px solid ${props => props.isSelected ? props.theme.primary : props.theme.border};
-  background: ${props => props.isSelected ? props.theme.cardBackground : 'transparent'};
+  padding: 14px 10px;
+  border-radius: 10px;
+  border: 2px solid ${props => props.isSelected ? props.theme.primary : 'transparent'};
+  background: ${props => props.isSelected ? props.theme.cardBackground : 'rgba(0,0,0,0.03)'};
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   width: 90px;
   justify-content: center;
   position: relative;
+  box-shadow: ${props => props.isSelected ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'};
+  transform: ${props => props.isSelected ? 'translateY(-2px)' : 'none'};
   
   /* Make bisexual theme option wider */
   &.bisexual-theme {
@@ -232,102 +307,94 @@ const ThemeOption = styled.label`
   }
   
   &:hover {
-    background: ${props => props.theme.cardBackground};
-    border-color: ${props => props.theme.primary};
+    background: ${props => props.isSelected ? props.theme.cardBackground : 'rgba(0,0,0,0.05)'};
+    transform: ${props => props.isSelected ? 'translateY(-3px)' : 'translateY(-1px)'};
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
   }
   
-  /* Light theme option - always light */
+  /* Keep existing theme-specific styles but enhance them */
   &.light-theme {
-    background: ${props => props.isSelected ? '#ffffff' : '#f0f0f0'};
+    background: ${props => props.isSelected ? '#ffffff' : '#f5f5f7'};
     color: #222222;
-    border-color: ${props => props.isSelected ? '#0078d7' : '#cccccc'};
+    border-color: ${props => props.isSelected ? '#0078d7' : 'transparent'};
   }
   
-  /* Dark theme option - always dark */
   &.dark-theme {
     background: ${props => props.isSelected ? '#222222' : '#333333'};
     color: #ffffff;
-    border-color: ${props => props.isSelected ? '#0078d7' : '#555555'};
+    border-color: ${props => props.isSelected ? '#0078d7' : 'transparent'};
   }
   
-  /* OLED theme option - true black */
   &.oled-theme {
     background: ${props => props.isSelected ? '#000000' : '#0a0a0a'};
     color: #ffffff;
-    border-color: ${props => props.isSelected ? '#0078d7' : '#333333'};
+    border-color: ${props => props.isSelected ? '#0078d7' : 'transparent'};
   }
   
-  /* Ocean theme option */
   &.ocean-theme {
     background: ${props => props.isSelected ? 
       'linear-gradient(135deg, #0277bd, #039be5, #4fc3f7)' : 
       'linear-gradient(135deg, #0277bd80, #039be580, #4fc3f780)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#0277bd' : '#039be5'};
+    border-color: ${props => props.isSelected ? '#0277bd' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
-  /* Forest theme option */
   &.forest-theme {
     background: ${props => props.isSelected ? 
       'linear-gradient(135deg, #2e7d32, #388e3c, #4caf50)' : 
       'linear-gradient(135deg, #2e7d3280, #388e3c80, #4caf5080)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#2e7d32' : '#388e3c'};
+    border-color: ${props => props.isSelected ? '#2e7d32' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
-  /* Keep existing theme-specific styles */
   &.bisexual-theme {
     background: ${props => props.isSelected ? 
       'linear-gradient(135deg, #D60270, #9B4F96, #0038A8)' : 
       'linear-gradient(135deg, #D6027080, #9B4F9680, #0038A880)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#D60270' : '#9B4F96'};
+    border-color: ${props => props.isSelected ? '#D60270' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
-  /* Pride theme option */
   &.pride-theme {
     background: ${props => props.isSelected ? 
       'linear-gradient(135deg, #ff0000, #ff9900, #ffff00, #33cc33, #3399ff, #9933ff)' : 
       'linear-gradient(135deg, #ff000080, #ff990080, #ffff0080, #33cc3380, #3399ff80, #9933ff80)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#ff0000' : '#9933ff'};
+    border-color: ${props => props.isSelected ? '#ff0000' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
-  /* Trans theme option */
   &.trans-theme {
     background: ${props => props.isSelected ? 
       'linear-gradient(135deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)' : 
       'linear-gradient(135deg, #5BCEFA80, #F5A9B880, #FFFFFF80, #F5A9B880, #5BCEFA80)'};
     color: #333;
-    border-color: ${props => props.isSelected ? '#5BCEFA' : '#F5A9B8'};
+    border-color: ${props => props.isSelected ? '#5BCEFA' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-  }
-  
-  @media (max-width: 768px) {
-    width: 80px;
-    
-    /* Keep bisexual theme wider on mobile too */
-    &.bisexual-theme {
-      width: 100px;
-    }
   }
 `;
 
 const AboutSection = styled.div`
   margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid ${props => props.theme.border}80;
   text-align: center;
   font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 `;
 
 const VersionText = styled.div`
-  margin-bottom: 8px;
-  opacity: 0.8;
+  opacity: 0.6;
+  font-size: 0.85rem;
+`;
+
+const pulseAnimation = keyframes`
+  0% { background-position: 0% center; }
+  100% { background-position: 400% center; }
 `;
 
 const RainbowText = styled.span`
@@ -344,39 +411,8 @@ const RainbowText = styled.span`
   color: transparent;
   -webkit-background-clip: text;
   background-clip: text;
-  animation: ${props => {
-    if (props.theme.name === 'bisexual') return 'bisexualPride';
-    else if (props.theme.name === 'trans') return 'transPride';
-    else return 'rainbow';
-  }} 8s linear infinite;
+  animation: ${pulseAnimation} 8s linear infinite;
   font-weight: 600;
-  
-  @keyframes rainbow { 
-    0% {
-      background-position: 0% center;
-    }
-    100% {
-      background-position: 400% center;
-    }
-  }
-  
-  @keyframes bisexualPride { 
-    0% {
-      background-position: 0% center;
-    }
-    100% {
-      background-position: 400% center;
-    }
-  }
-  
-  @keyframes transPride { 
-    0% {
-      background-position: 0% center;
-    }
-    100% {
-      background-position: 400% center;
-    }
-  }
 `;
 
 const SettingsModal = ({ settings, updateSettings, closeModal }) => {
@@ -393,7 +429,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
       closeModal();
     }
   };
-  
+
   return (
     <ModalOverlay onClick={handleOutsideClick}>
       <ModalContent>
@@ -637,9 +673,9 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
             </SettingGroup>
           </SettingsSection>
           
-          <SettingsSection>
+          <SettingsSection isLast={true}>
             <SectionTitle>API Tokens</SectionTitle>
-            <p style={{ fontSize: '0.9rem', marginBottom: '15px' }}>
+            <p style={{ fontSize: '0.95rem', marginBottom: '18px', opacity: 0.8 }}>
               Add your own API tokens to use with the different AI models.
               These will be securely stored in your account.
             </p>
@@ -680,8 +716,9 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               <TokenNote>Used for Gemini models</TokenNote>
             </ApiTokenInput>
           </SettingsSection>
+          
           <AboutSection>
-            <VersionText>Version : 0.1.0</VersionText>
+            <VersionText>Version: 0.1.0</VersionText>
             <div>Made with <RainbowText>Pride</RainbowText></div>
           </AboutSection>
         </ModalBody>
