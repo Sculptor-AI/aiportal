@@ -415,6 +415,77 @@ const RainbowText = styled.span`
   font-weight: 600;
 `;
 
+// Enhance existing SettingsModal component
+
+// First, let's add some visual representation to font size options
+const FontSizeOption = styled(RadioOption)`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 20px;
+  width: auto;
+  min-width: 100px;
+  
+  .size-label {
+    margin-top: 8px;
+  }
+  
+  .sample-text {
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+  
+  .small {
+    font-size: 0.9rem;
+  }
+  
+  .medium {
+    font-size: 1rem;
+  }
+  
+  .large {
+    font-size: 1.1rem;
+  }
+`;
+
+// Add new components for additional settings
+const ColorPickerOption = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  
+  label {
+    flex: 1;
+  }
+  
+  input[type="color"] {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    overflow: hidden;
+  }
+`;
+
+const SelectBox = styled.select`
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.border};
+  background-color: ${props => props.theme.background}80;
+  color: ${props => props.theme.text};
+  font-family: inherit;
+  width: 100%;
+  margin-bottom: 15px;
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.primary};
+  }
+`;
+
 const SettingsModal = ({ settings, updateSettings, closeModal }) => {
   const [localSettings, setLocalSettings] = useState(settings);
   
@@ -554,7 +625,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
             <SettingGroup>
               <SettingLabel>Font Size</SettingLabel>
               <RadioGroup>
-                <RadioOption isSelected={localSettings.fontSize === 'small'}>
+                <FontSizeOption isSelected={localSettings.fontSize === 'small'}>
                   <input
                     type="radio"
                     name="fontSize"
@@ -562,9 +633,10 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     checked={localSettings.fontSize === 'small'}
                     onChange={() => handleChange('fontSize', 'small')}
                   />
-                  Small
-                </RadioOption>
-                <RadioOption isSelected={localSettings.fontSize === 'medium'}>
+                  <div className="sample-text small">Aa</div>
+                  <div className="size-label">Small</div>
+                </FontSizeOption>
+                <FontSizeOption isSelected={localSettings.fontSize === 'medium'}>
                   <input
                     type="radio"
                     name="fontSize"
@@ -572,9 +644,10 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     checked={localSettings.fontSize === 'medium'}
                     onChange={() => handleChange('fontSize', 'medium')}
                   />
-                  Medium
-                </RadioOption>
-                <RadioOption isSelected={localSettings.fontSize === 'large'}>
+                  <div className="sample-text medium">Aa</div>
+                  <div className="size-label">Medium</div>
+                </FontSizeOption>
+                <FontSizeOption isSelected={localSettings.fontSize === 'large'}>
                   <input
                     type="radio"
                     name="fontSize"
@@ -582,9 +655,26 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     checked={localSettings.fontSize === 'large'}
                     onChange={() => handleChange('fontSize', 'large')}
                   />
-                  Large
-                </RadioOption>
+                  <div className="sample-text large">Aa</div>
+                  <div className="size-label">Large</div>
+                </FontSizeOption>
               </RadioGroup>
+            </SettingGroup>
+
+            {/* Add new Font Family setting */}
+            <SettingGroup>
+              <SettingLabel>Font Family</SettingLabel>
+              <SelectBox
+                value={localSettings.fontFamily || 'system'}
+                onChange={(e) => handleChange('fontFamily', e.target.value)}
+              >
+                <option value="system">System Default</option>
+                <option value="inter">Inter</option>
+                <option value="roboto">Roboto</option>
+                <option value="opensans">Open Sans</option>
+                <option value="georgia">Georgia</option>
+                <option value="merriweather">Merriweather</option>
+              </SelectBox>
             </SettingGroup>
           </SettingsSection>
           
@@ -668,6 +758,178 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     onChange={() => handleChange('messageAlignment', 'right')}
                   />
                   Right
+                </RadioOption>
+              </RadioGroup>
+            </SettingGroup>
+          </SettingsSection>
+
+          {/* Add a new Interface section */}
+          <SettingsSection>
+            <SectionTitle>Interface</SectionTitle>
+            
+            <SettingGroup>
+              <SettingLabel>Layout</SettingLabel>
+              <ToggleWrapper>
+                <Toggle>
+                  <input
+                    type="checkbox"
+                    checked={localSettings.sidebarAutoCollapse || false}
+                    onChange={() => handleChange('sidebarAutoCollapse', !localSettings.sidebarAutoCollapse)}
+                  />
+                  <Slider checked={localSettings.sidebarAutoCollapse || false} />
+                </Toggle>
+                Auto-collapse sidebar when chatting
+              </ToggleWrapper>
+              
+              <ToggleWrapper>
+                <Toggle>
+                  <input
+                    type="checkbox"
+                    checked={localSettings.focusMode || false}
+                    onChange={() => handleChange('focusMode', !localSettings.focusMode)}
+                  />
+                  <Slider checked={localSettings.focusMode || false} />
+                </Toggle>
+                Focus mode (hide UI elements while typing)
+              </ToggleWrapper>
+            </SettingGroup>
+            
+            <SettingGroup>
+              <SettingLabel>Message Bubbles</SettingLabel>
+              <RadioGroup>
+                <RadioOption isSelected={localSettings.bubbleStyle === 'modern' || !localSettings.bubbleStyle}>
+                  <input
+                    type="radio"
+                    name="bubbleStyle"
+                    value="modern"
+                    checked={localSettings.bubbleStyle === 'modern' || !localSettings.bubbleStyle}
+                    onChange={() => handleChange('bubbleStyle', 'modern')}
+                  />
+                  Modern (rounded)
+                </RadioOption>
+                <RadioOption isSelected={localSettings.bubbleStyle === 'classic'}>
+                  <input
+                    type="radio"
+                    name="bubbleStyle"
+                    value="classic"
+                    checked={localSettings.bubbleStyle === 'classic'}
+                    onChange={() => handleChange('bubbleStyle', 'classic')}
+                  />
+                  Classic (rectangle)
+                </RadioOption>
+                <RadioOption isSelected={localSettings.bubbleStyle === 'minimal'}>
+                  <input
+                    type="radio"
+                    name="bubbleStyle"
+                    value="minimal"
+                    checked={localSettings.bubbleStyle === 'minimal'}
+                    onChange={() => handleChange('bubbleStyle', 'minimal')}
+                  />
+                  Minimal (no bubbles)
+                </RadioOption>
+              </RadioGroup>
+            </SettingGroup>
+            
+            <SettingGroup>
+              <SettingLabel>Message Spacing</SettingLabel>
+              <RadioGroup>
+                <RadioOption isSelected={localSettings.messageSpacing === 'compact'}>
+                  <input
+                    type="radio"
+                    name="messageSpacing"
+                    value="compact"
+                    checked={localSettings.messageSpacing === 'compact'}
+                    onChange={() => handleChange('messageSpacing', 'compact')}
+                  />
+                  Compact
+                </RadioOption>
+                <RadioOption isSelected={localSettings.messageSpacing === 'comfortable' || !localSettings.messageSpacing}>
+                  <input
+                    type="radio"
+                    name="messageSpacing"
+                    value="comfortable"
+                    checked={localSettings.messageSpacing === 'comfortable' || !localSettings.messageSpacing}
+                    onChange={() => handleChange('messageSpacing', 'comfortable')}
+                  />
+                  Comfortable
+                </RadioOption>
+                <RadioOption isSelected={localSettings.messageSpacing === 'spacious'}>
+                  <input
+                    type="radio"
+                    name="messageSpacing"
+                    value="spacious"
+                    checked={localSettings.messageSpacing === 'spacious'}
+                    onChange={() => handleChange('messageSpacing', 'spacious')}
+                  />
+                  Spacious
+                </RadioOption>
+              </RadioGroup>
+            </SettingGroup>
+          </SettingsSection>
+
+          {/* Add an Accessibility section */}
+          <SettingsSection>
+            <SectionTitle>Accessibility</SectionTitle>
+            
+            <SettingGroup>
+              <SettingLabel>Visual Comfort</SettingLabel>
+              <ToggleWrapper>
+                <Toggle>
+                  <input
+                    type="checkbox"
+                    checked={localSettings.highContrast || false}
+                    onChange={() => handleChange('highContrast', !localSettings.highContrast)}
+                  />
+                  <Slider checked={localSettings.highContrast || false} />
+                </Toggle>
+                High Contrast Mode
+              </ToggleWrapper>
+              
+              <ToggleWrapper>
+                <Toggle>
+                  <input
+                    type="checkbox"
+                    checked={localSettings.reducedMotion || false}
+                    onChange={() => handleChange('reducedMotion', !localSettings.reducedMotion)}
+                  />
+                  <Slider checked={localSettings.reducedMotion || false} />
+                </Toggle>
+                Reduce animations and motion
+              </ToggleWrapper>
+            </SettingGroup>
+            
+            <SettingGroup>
+              <SettingLabel>Text Spacing</SettingLabel>
+              <RadioGroup>
+                <RadioOption isSelected={localSettings.lineSpacing === 'normal' || !localSettings.lineSpacing}>
+                  <input
+                    type="radio"
+                    name="lineSpacing"
+                    value="normal"
+                    checked={localSettings.lineSpacing === 'normal' || !localSettings.lineSpacing}
+                    onChange={() => handleChange('lineSpacing', 'normal')}
+                  />
+                  Normal
+                </RadioOption>
+                <RadioOption isSelected={localSettings.lineSpacing === 'relaxed'}>
+                  <input
+                    type="radio"
+                    name="lineSpacing"
+                    value="relaxed"
+                    checked={localSettings.lineSpacing === 'relaxed'}
+                    onChange={() => handleChange('lineSpacing', 'relaxed')}
+                  />
+                  Relaxed
+                </RadioOption>
+                <RadioOption isSelected={localSettings.lineSpacing === 'loose'}>
+                  <input
+                    type="radio"
+                    name="lineSpacing"
+                    value="loose"
+                    checked={localSettings.lineSpacing === 'loose'}
+                    onChange={() => handleChange('lineSpacing', 'loose')}
+                  />
+                  Loose
                 </RadioOption>
               </RadioGroup>
             </SettingGroup>

@@ -427,7 +427,7 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
             <ChatMessage 
               key={message.id} 
               message={message} 
-              showModelIcons={settings?.showModelIcons}
+              settings={settings}
             />
           ))}
           {isLoading && (
@@ -437,6 +437,7 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
                 content: 'Thinking...', 
                 isLoading: true 
               }} 
+              settings={settings}
             />
           )}
           <div ref={messagesEndRef} />
