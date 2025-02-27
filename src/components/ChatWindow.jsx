@@ -211,7 +211,7 @@ const EmptyState = styled.div`
   }
 `;
 
-const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, updateChatTitle, settings }) => {
+const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, updateChatTitle, settings, focusMode = false }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
@@ -372,9 +372,23 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
     // E.g.: onModelChange(modelId);
   };
 
+  const [isFocused, setIsFocused] = useState(false);
+  
+  // Handle focus mode
+  const inputFocusChange = (isFocusedState) => {
+    if (focusMode) {
+      setIsFocused(isFocusedState);
+    }
+  };
+
   return (
     <ChatWindowContainer fontSize={settings?.fontSize}>
-      <ChatHeader>
+      <ChatHeader 
+        style={{ 
+          opacity: (focusMode && isFocused) ? '0' : '1',
+          transition: 'opacity 0.3s ease'
+        }}
+      >
         <ChatTitleSection>
           <ChatTitle>
             {isEditingTitle ? (
@@ -427,6 +441,7 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
             <ChatMessage 
               key={message.id} 
               message={message} 
+              showModelIcons={settings.showModelIcons}
               settings={settings}
             />
           ))}
@@ -437,6 +452,7 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
                 content: 'Thinking...', 
                 isLoading: true 
               }} 
+              showModelIcons={settings.showModelIcons}
               settings={settings}
             />
           )}
@@ -450,6 +466,8 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => inputFocusChange(true)}
+            onBlur={() => inputFocusChange(false)}
             placeholder="Type your message here..."
             disabled={isLoading}
           />

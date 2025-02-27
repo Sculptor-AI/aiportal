@@ -275,10 +275,19 @@ const Pre = styled.pre`
 
 const Message = styled.div`
   display: flex;
-  margin-bottom: 24px;
+  margin-bottom: ${props => {
+    // Apply message spacing settings
+    const spacing = props.theme.messageSpacing || 'comfortable';
+    switch (spacing) {
+      case 'compact': return '16px';
+      case 'spacious': return '32px';
+      default: return '24px'; // comfortable
+    }
+  }};
   align-items: flex-start;
   max-width: 100%;
   width: 100%;
+  justify-content: ${props => props.alignment === 'right' ? 'flex-end' : 'flex-start'};
 `;
 
 const Avatar = styled.div`
@@ -308,19 +317,41 @@ const Avatar = styled.div`
 
 const Content = styled.div`
   padding: 15px 18px;
-  border-radius: 18px;
+  border-radius: ${props => {
+    // Apply bubble style
+    const bubbleStyle = props.bubbleStyle || 'modern';
+    switch (bubbleStyle) {
+      case 'classic': return '8px';
+      case 'minimal': return '0';
+      default: return '18px'; // modern
+    }
+  }};
   max-width: 90%;
   width: fit-content;
   white-space: pre-wrap;
-  background: ${props => props.role === 'user' ? props.theme.messageUser : props.theme.messageAi};
+  background: ${props => {
+    // Apply bubble style
+    const bubbleStyle = props.bubbleStyle || 'modern';
+    if (bubbleStyle === 'minimal') {
+      return 'transparent';
+    }
+    return props.role === 'user' ? props.theme.messageUser : props.theme.messageAi;
+  }};
   color: ${props => props.theme.text};
-  box-shadow: 0 2px 10px ${props => props.theme.shadow};
-  line-height: 1.6;
+  box-shadow: ${props => {
+    // Apply bubble style
+    const bubbleStyle = props.bubbleStyle || 'modern';
+    if (bubbleStyle === 'minimal') {
+      return 'none';
+    }
+    return `0 2px 10px ${props.theme.shadow}`;
+  }};
+  line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  border: 1px solid ${props => props.theme.border};
+  backdrop-filter: ${props => props.bubbleStyle === 'minimal' ? 'none' : 'blur(5px)'};
+  -webkit-backdrop-filter: ${props => props.bubbleStyle === 'minimal' ? 'none' : 'blur(5px)'};
+  border: ${props => props.bubbleStyle === 'minimal' ? 'none' : `1px solid ${props.theme.border}`};
   
   /* Special border for bisexual theme */
   ${props => props.theme.name === 'bisexual' && `
@@ -429,7 +460,7 @@ const formatTimestamp = (timestamp) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const ChatMessage = ({ message, showModelIcons = true }) => {
+const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
   const { role, content, timestamp, isError, isLoading, modelId } = message;
   
   const getAvatar = () => {
@@ -445,16 +476,25 @@ const ChatMessage = ({ message, showModelIcons = true }) => {
   // Determine if we should use a model icon (for AI messages with a modelId)
   const useModelIcon = role === 'assistant' && showModelIcons && modelId;
 
+  // Get message alignment from settings
+  const messageAlignment = settings.messageAlignment || 'left';
+
+  // Get bubble style from settings
+  const bubbleStyle = settings.bubbleStyle || 'modern';
+
+  // Apply high contrast mode if set
+  const highContrast = settings.highContrast || false;
+
   return (
-    <Message>
-      <Avatar role={role} useModelIcon={useModelIcon}>{getAvatar()}</Avatar>
+    <Message alignment={messageAlignment}>
+      {messageAlignment !== 'right' && <Avatar role={role} useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
       {isError ? (
-        <ErrorMessage role={role}>
+        <ErrorMessage role={role} bubbleStyle={bubbleStyle}>
           {content}
-          {timestamp && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
+          {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
         </ErrorMessage>
       ) : (
-        <Content role={role}>
+        <Content role={role} bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
           {isLoading ? (
             <LoadingDots>{content}</LoadingDots>
           ) : (
@@ -468,9 +508,10 @@ const ChatMessage = ({ message, showModelIcons = true }) => {
               return <em key={index}>- {part}</em>;
             })
           )}
-          {timestamp && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
+          {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
         </Content>
       )}
+      {messageAlignment === 'right' && <Avatar role={role} useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
     </Message>
   );
 };

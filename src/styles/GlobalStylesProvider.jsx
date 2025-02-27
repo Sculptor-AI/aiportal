@@ -31,6 +31,22 @@ const GlobalStyle = createGlobalStyle`
     }};
     
     --transition-speed: ${props => props.reducedMotion ? '0s' : '0.3s'};
+    
+    --message-spacing: ${props => {
+      switch(props.messageSpacing) {
+        case 'compact': return '16px';
+        case 'spacious': return '32px';
+        default: return '24px'; // comfortable
+      }
+    }};
+    
+    --bubble-radius: ${props => {
+      switch(props.bubbleStyle) {
+        case 'classic': return '8px';
+        case 'minimal': return '0';
+        default: return '18px'; // modern
+      }
+    }};
   }
 
   body {
@@ -50,12 +66,26 @@ const GlobalStyle = createGlobalStyle`
       --high-contrast-border: #ffffff;
     }
     
-    body {
+    body, .message-content, .chat-window {
       color: var(--high-contrast-text) !important;
     }
     
     button, input, textarea, select {
       border: 2px solid var(--high-contrast-border) !important;
+      color: var(--high-contrast-text) !important;
+    }
+    
+    .message-bubble {
+      background: var(--high-contrast-bg) !important;
+      border: 2px solid var(--high-contrast-border) !important;
+    }
+  `}
+  
+  /* Override animation effects for reduced motion */
+  ${props => props.reducedMotion && `
+    * {
+      animation: none !important;
+      transition: none !important;
     }
   `}
 `;
@@ -69,6 +99,8 @@ const GlobalStylesProvider = ({ settings, children }) => {
         lineSpacing={settings?.lineSpacing || 'normal'}
         reducedMotion={settings?.reducedMotion || false}
         highContrast={settings?.highContrast || false}
+        bubbleStyle={settings?.bubbleStyle || 'modern'}
+        messageSpacing={settings?.messageSpacing || 'comfortable'}
       />
       {children}
     </>

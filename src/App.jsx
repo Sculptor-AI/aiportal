@@ -8,6 +8,7 @@ import ProfileModal from './components/ProfileModal';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import GlobalStylesProvider from './styles/GlobalStylesProvider';
 
 const AppContainer = styled.div`
   display: flex;
@@ -125,11 +126,19 @@ const AppContent = () => {
     return savedSettings ? JSON.parse(savedSettings) : {
       theme: 'light',
       fontSize: 'medium',
+      fontFamily: 'system',
       sendWithEnter: true,
       showTimestamps: true,
       showModelIcons: true,
       messageAlignment: 'left',
       codeHighlighting: true,
+      bubbleStyle: 'modern',
+      messageSpacing: 'comfortable',
+      sidebarAutoCollapse: false,
+      focusMode: false,
+      highContrast: false,
+      reducedMotion: false,
+      lineSpacing: 'normal',
       openaiApiKey: '',
       anthropicApiKey: '',
       googleApiKey: ''
@@ -264,42 +273,44 @@ const AppContent = () => {
   
   return (
     <ThemeProvider theme={getTheme(settings.theme)}>
-      <GlobalStyles />
-      <AppContainer>
-        {collapsed && (
-          <FloatingMenuButton onClick={() => setCollapsed(false)}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </FloatingMenuButton>
-        )}
-        <Sidebar 
-          chats={chats}
-          activeChat={activeChat}
-          setActiveChat={setActiveChat}
-          createNewChat={createNewChat}
-          deleteChat={deleteChat}
-          availableModels={availableModels}
-          selectedModel={selectedModel}
-          setSelectedModel={setSelectedModel}
-          toggleSettings={toggleSettings}
-          toggleProfile={toggleProfile}
-          isLoggedIn={!!user}
-          username={user?.username}
-          onModelChange={handleModelChange}
-          collapsed={collapsed}
-          setCollapsed={setCollapsed}
-        />
-        <ChatWindow 
-          chat={getCurrentChat()}
-          addMessage={addMessage}
-          selectedModel={selectedModel}
-          updateChatTitle={updateChatTitle}
-          settings={settings}
-          onModelChange={handleModelChange}
-        />
+      <GlobalStylesProvider settings={settings}>
+        <GlobalStyles />
+        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
+          {collapsed && (
+            <FloatingMenuButton onClick={() => setCollapsed(false)}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </FloatingMenuButton>
+          )}
+          <Sidebar 
+            chats={chats}
+            activeChat={activeChat}
+            setActiveChat={setActiveChat}
+            createNewChat={createNewChat}
+            deleteChat={deleteChat}
+            availableModels={availableModels}
+            selectedModel={selectedModel}
+            setSelectedModel={setSelectedModel}
+            toggleSettings={toggleSettings}
+            toggleProfile={toggleProfile}
+            isLoggedIn={!!user}
+            username={user?.username}
+            onModelChange={handleModelChange}
+            collapsed={collapsed || (settings.sidebarAutoCollapse && getCurrentChat()?.messages?.length > 0)}
+            setCollapsed={setCollapsed}
+          />
+          <ChatWindow 
+            chat={getCurrentChat()}
+            addMessage={addMessage}
+            selectedModel={selectedModel}
+            updateChatTitle={updateChatTitle}
+            settings={settings}
+            onModelChange={handleModelChange}
+            focusMode={settings.focusMode}
+          />
         
         {/* Modals */}
         {isSettingsOpen && (
