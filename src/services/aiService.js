@@ -161,7 +161,7 @@ const getApiKeys = () => {
   };
 };
 
-// Add this function to format requests for the Ursa Minor API:
+// Updated createUrsaMinorRequest to include max_tokens similar to the CURL example.
 const createUrsaMinorRequest = async (message, history, apiUrl) => {
   const formattedMessages = [
     ...history.map(msg => ({ role: msg.role, content: msg.content })),
@@ -170,7 +170,7 @@ const createUrsaMinorRequest = async (message, history, apiUrl) => {
 
   try {
     console.log(`Sending request to Ursa Minor API: ${apiUrl}/chat`);
-    console.log('Request body:', JSON.stringify({ messages: formattedMessages }));
+    console.log('Request body:', JSON.stringify({ messages: formattedMessages, max_tokens: 100 }));
     
     const response = await fetch(`${apiUrl}/chat`, {
       method: 'POST',
@@ -178,8 +178,8 @@ const createUrsaMinorRequest = async (message, history, apiUrl) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        messages: formattedMessages
-        // Remove max_tokens and temperature to match the curl example
+        messages: formattedMessages,
+        max_tokens: 100
       }),
     });
 
