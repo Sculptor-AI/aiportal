@@ -1,106 +1,168 @@
-# AI Portal
+# <img src="/images/sculptor.svg" width="32" height="32" alt="Sculptor Logo" style="vertical-align: middle; margin-right: 10px;"> Sculptor AI
 
-A multi-model AI chat interface that connects to multiple LLM APIs including OpenAI, Anthropic, and Google's Gemini.
+<div align="center">
+  <img src="/images/sculptor.svg" width="120" height="120" alt="Sculptor Logo">
+  <h3>Your AI Conversation Portal</h3>
+  <p>A sleek, modern interface for interacting with multiple AI models</p>
 
-## Features
+  <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 20px 0;">
+    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#ReactJS</span>
+    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#AI</span>
+    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#StyledComponents</span>
+    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#ViteJS</span>
+  </div>
+</div>
 
-- Connect to ChatGPT, Claude, and Gemini APIs
-- User account system with secure authentication
-- Persistent chat history
-- Multiple theme options including light, dark, and bisexual themes
-- Code syntax highlighting
-- Personal API key management
-- Responsive design
+## ✨ Features
 
-## Setup
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin: 20px 0;">
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <h3>🌈 Multiple Themes</h3>
+    <p>Choose from 8 beautiful themes including Light, Dark, OLED, Ocean, Forest, Pride, Bisexual, and Trans themes</p>
+  </div>
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <h3>🤖 Multiple AI Models</h3>
+    <p>Seamlessly switch between Gemini, Claude, ChatGPT, and locally hosted models</p>
+  </div>
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <h3>🔒 Local First</h3>
+    <p>All data stored locally in your browser with optional login for syncing settings</p>
+  </div>
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+    <h3>📱 Responsive Design</h3>
+    <p>Works beautifully on desktop, tablet, and mobile devices</p>
+  </div>
+</div>
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js (v16+)
+- npm or yarn
 
 ### Installation
 
+1. Clone the repository
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/aiportal.git
-cd aiportal
-
-# Install dependencies
-npm install
+git clone https://github.com/yourusername/sculptor-ai.git
+cd sculptor-ai
 ```
 
-### Configuration
+2. Install dependencies
+```bash
+npm install
+# or
+yarn install
+```
 
-Create a `.env` file with your API keys (optional, as users can add their own in settings):
-
+3. Create a `.env` file with your API keys (optional)
 ```bash
 cp .env.example .env
 ```
 
-Edit the `.env` file to add your API keys:
-
-```
-VITE_OPENAI_API_KEY=your_openai_key_here
-VITE_CLAUDE_API_KEY=your_anthropic_key_here
-VITE_GEMINI_API_KEY=your_google_key_here
-```
-
-## Development
-
-Start the development server:
-
+4. Start the development server
 ```bash
 npm run dev
+# or
+yarn dev
 ```
 
-This will start the app on [http://localhost:3009](http://localhost:3009).
+5. Open your browser and navigate to `http://localhost:3009`
 
-## Building for Production
+## 🔧 Configuration
 
-Build a production version:
+### API Keys
 
-```bash
-npm run build
+Sculptor supports the following AI providers:
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0;">
+  <span style="background: linear-gradient(135deg, #1B72E8, #EA4335); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">Gemini AI</span>
+  <span style="background: linear-gradient(135deg, #732BEB, #A480EB); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">Claude</span>
+  <span style="background: linear-gradient(135deg, #10A37F, #1A7F64); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">ChatGPT</span>
+  <span style="background: linear-gradient(135deg, #FF5722, #FF9800); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">Ursa Minor (Local)</span>
+</div>
+
+Add your API keys to the `.env` file or enter them in the settings panel within the app:
+
+```
+VITE_OPENAI_API_KEY=sk-...
+VITE_ANTHROPIC_API_KEY=sk-ant-...
+VITE_GOOGLE_API_KEY=AIzaSy...
+VITE_CUSTOM_GGUF_API_URL=http://localhost:8000
 ```
 
-This creates a `dist` directory with the production build.
+## 🎨 Customization
 
-Preview the production build locally:
+Sculptor offers extensive customization options:
 
-```bash
-npm run preview
-```
+### Themes
+- 🌞 Light
+- 🌙 Dark
+- ⚫ OLED
+- 🌊 Ocean
+- 🌲 Forest
+- 🌈 Pride
+- 💖 Bisexual
+- 💙 Trans
 
-## Deployment to Cloudflare
+### Accessibility Features
+- High contrast mode
+- Reduced motion
+- Adjustable font sizes
+- Customizable line spacing
+- Multiple font families
 
-This project is configured for deployment to Cloudflare Pages and Workers.
+### Chat Experience
+- Adjustable message bubbles
+- Custom message spacing
+- Message alignment options
+- Timestamp toggle
+- Code syntax highlighting
 
-### Deploy to Cloudflare
+## 🖥️ Using with Local Models
 
-Make sure you have authenticated with Cloudflare first:
+Sculptor supports connecting to locally hosted models through the Ursa Minor API:
 
-```bash
-npx wrangler login
-```
+1. Set up your local model server
+2. Configure the API URL in settings
+3. Select "Ursa Minor" as your model
 
-Then deploy:
+## 🧩 Architecture
 
-```bash
-npm run deploy
-```
+Sculptor is built with modern React best practices:
 
-Or run:
+- **React 18** with functional components and hooks
+- **Styled Components** for theme-aware styling
+- **Context API** for state management
+- **Vite** for lightning-fast builds
+- **LocalStorage/SessionStorage** for persistence
 
-```bash
-npx wrangler deploy
-```
+## 📱 Screenshots
 
-### Testing Cloudflare Workers locally
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
+  <!-- Add screenshots of your application here -->
+  <img src="https://placeholder.pics/svg/300x200/DEDEDE/555555/Light%20Theme" alt="Light Theme">
+  <img src="https://placeholder.pics/svg/300x200/222222/FFFFFF/Dark%20Theme" alt="Dark Theme">
+  <img src="https://placeholder.pics/svg/300x200/000000/FFFFFF/OLED%20Theme" alt="OLED Theme">
+  <img src="https://placeholder.pics/svg/300x200/0277BD/FFFFFF/Ocean%20Theme" alt="Ocean Theme">
+</div>
 
-```bash
-npm run wrangler:dev
-```
+## 🌟 Acknowledgments
 
-## API Keys
+- UI design inspired by modern messaging applications
+- SVG icons from [Lucide React](https://lucide.dev/)
+- Background images from [Unsplash](https://unsplash.com/)
 
-Users can provide their own API keys in the application's Settings → API Tokens section. These keys will be stored in their account and will be used instead of any environment variables.
+## 📄 License
 
-## License
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-ISC License
+---
+
+<div align="center">
+  <p>Made with ❤️ by <a href="https://github.com/yourusername">Your Name</a></p>
+  <p>
+    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">v0.1.0</span>
+  </p>
+</div>
