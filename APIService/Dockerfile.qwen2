@@ -1,0 +1,40 @@
+
+FROM python:3.10-slim
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    pkg-config \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Install latest llama-cpp-python with Qwen2 support
+RUN pip install --no-cache-dir fastapi uvicorn pydantic
+
+# Clone the latest llama-cpp-python to ensure we have Qwen2 support
+RUN git clone --recursive https://github.com/abetlen/llama-cpp-python.git && \
+    cd llama-cpp-python && \
+    CMAKE_ARGS="-DLLAMA_BLAS=ON -DLLAMA_BLAS_VENDOR=OpenBLAS" pip install -e .
+
+# Copy application code
+COPY app.py .
+
+# Create models directory
+RUN mkdir -p /app/models
+
+# Set environment variables with defaults
+ENV MODEL_PATH=/app/models/Ursa_Minor.Q2_K.gguf
+ENV N_CTX=4096
+ENV N_THREADS=4
+ENV N_BATCH=512
+ENV PORT=8000
+
+# Expose the port for the API
+EXPOSE 8000
+
+# Start the FastAPI application
+CMD ["python", "app.py"]

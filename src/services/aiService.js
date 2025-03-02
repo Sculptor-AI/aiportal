@@ -84,7 +84,7 @@ const MODEL_CONFIGS = {
   
   // Add custom GGUF model
   'custom-gguf': {
-    baseUrl: 'http://your-api-server:8000/chat',  // Replace with your API server URL
+    baseUrl: 'https://api.explodingcb.com/chat',  // Your Cloudflare tunnel URL
     prepareRequest: (message, history) => {
       // Format properly for your GGUF API
       return {

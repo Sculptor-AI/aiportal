@@ -989,6 +989,19 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               />
               <TokenNote>URL for your locally hosted Ursa Minor API (default: http://localhost:8000)</TokenNote>
             </ApiTokenInput>
+            
+            {/* NEW: Custom GGUF API Token */}
+            <ApiTokenInput>
+              <TokenLabel htmlFor="custom-gguf-api-url">Custom GGUF API URL</TokenLabel>
+              <TokenInput
+                id="custom-gguf-api-url"
+                type="text"
+                placeholder="https://api.explodingcb.com"
+                value={localSettings.customGgufApiUrl || 'https://api.explodingcb.com'}
+                onChange={(e) => handleChange('customGgufApiUrl', e.target.value)}
+              />
+              <TokenNote>URL for your GGUF model API (already configured)</TokenNote>
+            </ApiTokenInput>
           </SettingsSection>
           
           <AboutSection>
