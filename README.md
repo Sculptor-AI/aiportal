@@ -151,7 +151,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ---
 
 <div align="center">
-  <p>Made with ❤️ by <a href="https://github.com/yourusername">Your Name</a></p>
+  <p>Made with ❤️ by Chase & Kellen</p>
   <p>
     <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">v0.1.0</span>
   </p>
