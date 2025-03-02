@@ -39,6 +39,14 @@ const ChatGPTIcon = () => (
   </svg>
 );
 
+// Custom model icon
+const CustomModelIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+    <path d="M8 12l2.38 3.17L13 11l5 7H6z"/>
+  </svg>
+);
+
 const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
   let iconComponent;
   let iconBackground;
@@ -67,6 +75,12 @@ const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
     } catch (e) {
       // Image not found, will use SVG
     }
+  } else if (modelId === 'ursa-minor') {
+    try {
+      imageUrl = '/images/sculptor.svg';
+    } catch (e) {
+      // Image not found, will use SVG
+    }
   }
   
   // If no image available, set icon based on model
@@ -82,6 +96,10 @@ const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
         break;
       case 'chatgpt-4o':
         iconComponent = <ChatGPTIcon />;
+        iconBackground = model.gradient;
+        break;
+      case 'custom-gguf':
+        iconComponent = <CustomModelIcon />;
         iconBackground = model.gradient;
         break;
       default:

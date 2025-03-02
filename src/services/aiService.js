@@ -80,6 +80,54 @@ const MODEL_CONFIGS = {
       }
       return response.data.choices[0].message.content;
     }
+  },
+  
+  // Add custom GGUF model
+  'custom-gguf': {
+    baseUrl: 'http://your-api-server:8000/chat',  // Replace with your API server URL
+    prepareRequest: (message, history) => {
+      // Format properly for your GGUF API
+      return {
+        messages: [
+          ...history.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          { role: 'user', content: message }
+        ],
+        max_tokens: 1024,
+        temperature: 0.7,
+        top_p: 0.95
+      };
+    },
+    extractResponse: (response) => {
+      if (!response.data || !response.data.content) {
+        throw new Error("Unexpected response format from custom GGUF API");
+      }
+      return response.data.content;
+    }
+  },
+
+  'ursa-minor': {
+    name: 'Ursa Minor',
+    baseUrl: '', // Will be set dynamically from user settings
+    prepareRequest: (message, history) => {
+      // Format messages for the Ursa Minor API
+      const messages = [
+        ...history.map(msg => ({ role: msg.role, content: msg.content })),
+        { role: 'user', content: message }
+      ];
+      
+      return {
+        messages,
+        max_tokens: 512,
+        temperature: 0.7
+      };
+    },
+    extractResponse: (data) => {
+      // Extract response text from API result
+      return data.content;
+    }
   }
 };
 
@@ -107,8 +155,45 @@ const getApiKeys = () => {
   return {
     openai: userSettings.openaiApiKey || OPENAI_API_KEY,
     anthropic: userSettings.anthropicApiKey || CLAUDE_API_KEY,
-    google: userSettings.googleApiKey || GEMINI_API_KEY
+    google: userSettings.googleApiKey || GEMINI_API_KEY,
+    customGguf: userSettings.customGgufApiKey || '', // Add custom GGUF API key
+    customGgufUrl: userSettings?.customGgufApiUrl || 'http://localhost:8000'
   };
+};
+
+// Add this function to format requests for the Ursa Minor API:
+const createUrsaMinorRequest = async (message, history, apiUrl) => {
+  const formattedMessages = [
+    ...history.map(msg => ({ role: msg.role, content: msg.content })),
+    { role: 'user', content: message }
+  ];
+
+  try {
+    console.log(`Sending request to Ursa Minor API: ${apiUrl}/chat`);
+    console.log('Request body:', JSON.stringify({ messages: formattedMessages }));
+    
+    const response = await fetch(`${apiUrl}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: formattedMessages
+        // Remove max_tokens and temperature to match the curl example
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Received response from Ursa Minor API:', data);
+    return data.content;
+  } catch (error) {
+    console.error("Error with Ursa Minor API:", error);
+    throw error;
+  }
 };
 
 export const sendMessage = async (message, modelId, history) => {
@@ -144,32 +229,37 @@ export const sendMessage = async (message, modelId, history) => {
   } else if (modelId === 'chatgpt-4o' && apiKeys.openai) {
     hasApiKey = true;
     apiKeySource = apiKeys.openai === OPENAI_API_KEY ? '.env file' : 'user settings';
+  } else if (modelId === 'custom-gguf') {
+    // Always allow access to custom model
+    hasApiKey = true;
+    apiKeySource = 'local API';
+  } else if (modelId === 'ursa-minor') {
+    hasApiKey = true;
+    apiKeySource = 'local API';
   }
   
   // Only use simulation if no API key is available
   if (!hasApiKey) {
-    console.log(`No API key available for ${modelId}, using simulation`);
-    return new Promise(resolve => {
-      setTimeout(() => {
-        const response = `I need a valid API key to connect to the ${modelId} service. You can add your API key in Settings -> API Tokens.
-        
-For ${modelId === 'gemini-2-flash' ? 'Gemini' : modelId === 'claude-3.7-sonnet' ? 'Claude' : 'ChatGPT'}, you'll need to provide ${
-          modelId === 'gemini-2-flash' ? 'a Google AI API key' : 
-          modelId === 'claude-3.7-sonnet' ? 'an Anthropic API key' : 
-          'an OpenAI API key'
-        }.
-
-Without a valid API key, I cannot connect to the actual AI service.
-
-\n\n- ${modelId}`;
-        resolve(response);
-      }, 500);
-    });
+    // ...existing simulation code...
   }
   
   // Use real API when we have keys
   try {
     console.log(`Using real API for ${modelId} (source: ${apiKeySource})`);
+    
+    // Special case for Ursa Minor API
+    if (modelId === 'ursa-minor') {
+      const apiUrl = apiKeys.customGgufUrl;
+      console.log(`Using Ursa Minor API at ${apiUrl}`);
+      
+      try {
+        return await createUrsaMinorRequest(message, history, apiUrl);
+      } catch (error) {
+        console.error("Error calling Ursa Minor API:", error);
+        throw new Error(`Error setting up request to ursa-minor API: ${error.message}\n\nPlease check your API configuration and try again.`);
+      }
+    }
+    
     // Prepare the request based on the selected model
     const requestData = modelConfig.prepareRequest(message, history);
   
@@ -187,44 +277,20 @@ Without a valid API key, I cannot connect to the actual AI service.
       headers['Content-Type'] = 'application/json';
     } else if (modelId === 'chatgpt-4o') {
       headers['Authorization'] = `Bearer ${apiKeys.openai}`;
+    } else if (modelId === 'custom-gguf') {
+      // No special headers needed for custom API, use default headers
+      url = modelConfig.baseUrl;
+      
+      // Optionally add API key if your custom implementation requires it
+      if (apiKeys.customGguf) {
+        headers['Authorization'] = `Bearer ${apiKeys.customGguf}`;
+      }
     }
 
     const response = await axios.post(url, requestData, { headers });
     return modelConfig.extractResponse(response);
   } catch (error) {
     console.error('Error calling AI API:', error);
-    
-    // Provide a helpful error message
-    if (error.response) {
-      let errorMsg = `Error from the ${modelId} API: ${error.response.status} ${error.response.statusText}
-      
-Details: ${JSON.stringify(error.response.data)}
-
-Please check your API key and ensure it has the correct permissions.`;
-
-      // Add specific information for Gemini model errors
-      if (modelId === 'gemini-2-flash' && error.response.data?.error?.message?.includes('gemini-pro')) {
-        errorMsg += `\n\nImportant: The error mentions 'gemini-pro' but you're using the 'gemini-2-flash' model. Make sure your Google AI API key has access to the latest Gemini models.`;
-      }
-      
-      return errorMsg + `\n\n- Error from ${modelId}`;
-    } else if (error.request) {
-      return `Network error connecting to the ${modelId} API. No response was received.
-      
-This may be due to:
-- Network connectivity issues
-- API service being temporarily unavailable
-- CORS restrictions in your browser
-
-Please try again later or check your network connection.
-      
-\n\n- Error from ${modelId}`;
-    } else {
-      return `Error setting up request to ${modelId} API: ${error.message}
-      
-Please check your API configuration and try again.
-      
-\n\n- Error from ${modelId}`;
-    }
+    throw error;
   }
 };

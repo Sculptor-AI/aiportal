@@ -360,7 +360,8 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
   const availableModels = [
     { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
-    { id: 'chatgpt-4o', name: 'ChatGPT 4o' }
+    { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
+    { id: 'ursa-minor', name: 'Ursa Minor' }  // Changed from "SculptorAI" to "Ursa Minor"
   ];
   
   // Handle model change

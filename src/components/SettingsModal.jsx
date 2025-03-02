@@ -977,6 +977,18 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               />
               <TokenNote>Used for Gemini models</TokenNote>
             </ApiTokenInput>
+            
+            <ApiTokenInput>
+              <TokenLabel htmlFor="custom-gguf-api-url">Ursa Minor API URL</TokenLabel>
+              <TokenInput
+                id="custom-gguf-api-url"
+                type="text"
+                placeholder="http://localhost:8000"
+                value={localSettings.customGgufApiUrl || ''}
+                onChange={(e) => handleChange('customGgufApiUrl', e.target.value)}
+              />
+              <TokenNote>URL for your locally hosted Ursa Minor API (default: http://localhost:8000)</TokenNote>
+            </ApiTokenInput>
           </SettingsSection>
           
           <AboutSection>

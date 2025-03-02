@@ -440,7 +440,6 @@ const Sidebar = ({
   username
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   
   const toggleExpanded = () => {
@@ -450,18 +449,6 @@ const Sidebar = ({
   const toggleCollapsed = () => {
     setCollapsed(!collapsed);
   };
-  
-  const toggleModelDropdown = () => {
-    setModelDropdownOpen(!modelDropdownOpen);
-  };
-  
-  const selectModel = (modelId) => {
-    setSelectedModel(modelId);
-    setModelDropdownOpen(false);
-  };
-  
-  // Get current model display name
-  const currentModel = availableModels.find(model => model.id === selectedModel);
   
   return (
     <SidebarContainer isExpanded={isExpanded} collapsed={collapsed}>
@@ -528,46 +515,6 @@ const Sidebar = ({
         </ChatList>
         
         <BottomSection collapsed={collapsed}>
-          {/* Remove the model dropdown selection section - start */}
-          {/* 
-          <ModelDropdownContainer>
-            <ModelDropdownButton onClick={toggleModelDropdown} collapsed={collapsed}>
-              <ModelIcon modelId={selectedModel} size="small" />
-              <ModelDropdownText collapsed={collapsed}>
-                {currentModel?.name || "Select Model"}
-              </ModelDropdownText>
-              {!collapsed && (
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              )}
-            </ModelDropdownButton>
-            
-            <ModelDropdownContent isOpen={modelDropdownOpen}>
-              {availableModels.map(model => (
-                <ModelOption 
-                  key={model.id} 
-                  isSelected={selectedModel === model.id}
-                  onClick={() => selectModel(model.id)}
-                >
-                  <ModelIcon modelId={model.id} size="small" />
-                  <ModelInfo collapsed={collapsed}>
-                    <ModelName isSelected={selectedModel === model.id}>
-                      {model.name}
-                    </ModelName>
-                    <ModelDescription>
-                      {model.id === 'gemini-2-flash' ? 'Google AI' : 
-                       model.id === 'claude-3.7-sonnet' ? 'Anthropic' : 
-                       'OpenAI'}
-                    </ModelDescription>
-                  </ModelInfo>
-                </ModelOption>
-              ))}
-            </ModelDropdownContent>
-          </ModelDropdownContainer>
-          */}
-          {/* Remove the model dropdown selection section - end */}
-          
           {/* Profile and settings buttons */}
           <ProfileButton 
             onClick={toggleProfile} 

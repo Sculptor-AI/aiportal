@@ -106,7 +106,8 @@ const AppContent = () => {
   const [availableModels, setAvailableModels] = useState([
     { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
-    { id: 'chatgpt-4o', name: 'ChatGPT 4o' }
+    { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
+    { id: 'ursa-minor', name: 'Ursa Minor' }  // Changed from "SculptorAI" to "Ursa Minor"
   ]);
   
   const [selectedModel, setSelectedModel] = useState(() => {
@@ -191,11 +192,23 @@ const AppContent = () => {
 
   const deleteChat = (chatId) => {
     const updatedChats = chats.filter(chat => chat.id !== chatId);
-    setChats(updatedChats);
     
-    // If the deleted chat was the active one, set a new active chat
-    if (chatId === activeChat) {
-      setActiveChat(updatedChats.length > 0 ? updatedChats[0].id : null);
+    // If this would delete the last chat, create a new one first
+    if (updatedChats.length === 0) {
+      const newChat = {
+        id: uuidv4(),
+        title: 'New Chat',
+        messages: []
+      };
+      setChats([newChat]);
+      setActiveChat(newChat.id);
+    } else {
+      setChats(updatedChats);
+      
+      // If the deleted chat was the active one, set a new active chat
+      if (chatId === activeChat) {
+        setActiveChat(updatedChats.length > 0 ? updatedChats[0].id : null);
+      }
     }
   };
   
@@ -312,27 +325,28 @@ const AppContent = () => {
             focusMode={settings.focusMode}
           />
         
-        {/* Modals */}
-        {isSettingsOpen && (
-          <SettingsModal 
-            settings={settings}
-            updateSettings={updateSettings}
-            closeModal={() => setIsSettingsOpen(false)}
-          />
-        )}
-        
-        {isLoginOpen && (
-          <LoginModal 
-            closeModal={() => setIsLoginOpen(false)}
-          />
-        )}
-        
-        {isProfileOpen && (
-          <ProfileModal 
-            closeModal={() => setIsProfileOpen(false)}
-          />
-        )}
-      </AppContainer>
+          {/* Modals */}
+          {isSettingsOpen && (
+            <SettingsModal 
+              settings={settings}
+              updateSettings={updateSettings}
+              closeModal={() => setIsSettingsOpen(false)}
+            />
+          )}
+          
+          {isLoginOpen && (
+            <LoginModal 
+              closeModal={() => setIsLoginOpen(false)}
+            />
+          )}
+          
+          {isProfileOpen && (
+            <ProfileModal 
+              closeModal={() => setIsProfileOpen(false)}
+            />
+          )}
+        </AppContainer>
+      </GlobalStylesProvider>
     </ThemeProvider>
   );
 };

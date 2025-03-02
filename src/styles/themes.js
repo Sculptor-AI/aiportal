@@ -206,6 +206,12 @@ export const modelThemes = {
     primary: '#10A37F',     // OpenAI green
     secondary: '#1A7F64',   // Darker green
     gradient: 'linear-gradient(135deg, #10A37F, #1A7F64)'
+  },
+  // Add your custom model
+  'custom-gguf': {
+    primary: '#FF5722',     // Orange
+    secondary: '#FF9800',   // Light orange
+    gradient: 'linear-gradient(135deg, #FF5722, #FF9800)'
   }
 };
 

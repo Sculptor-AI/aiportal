@@ -134,7 +134,7 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
     if (modelId.includes('gemini')) return 'Google AI';
     if (modelId.includes('claude')) return 'Anthropic';
     if (modelId.includes('gpt') || modelId.includes('chatgpt')) return 'OpenAI';
-    return 'AI Provider';
+    if (modelId.includes('ursa')) return 'SculptorAI';
   };
   
   // Close dropdown when clicking outside
