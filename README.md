@@ -1,7 +1,7 @@
-# <img src="/images/sculptor.svg" width="32" height="32" alt="Sculptor Logo" style="vertical-align: middle; margin-right: 10px;"> Sculptor AI
+# <img src="https://ai.explodingcb.com/images/sculptor.svg" width="32" height="32" alt="Sculptor Logo" style="vertical-align: middle; margin-right: 10px;"> Sculptor AI
 
 <div align="center">
-  <img src="/images/sculptor.svg" width="120" height="120" alt="Sculptor Logo">
+  <img src="https://ai.explodingcb.com/images/sculptor.svg" width="120" height="120" alt="Sculptor Logo">
   <h3>Your AI Conversation Portal</h3>
   <p>A sleek, modern interface for interacting with multiple AI models</p>
 
@@ -137,16 +137,6 @@ Sculptor is built with modern React best practices:
 - **Context API** for state management
 - **Vite** for lightning-fast builds
 - **LocalStorage/SessionStorage** for persistence
-
-## 📱 Screenshots
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin: 20px 0;">
-  <!-- Add screenshots of your application here -->
-  <img src="https://placeholder.pics/svg/300x200/DEDEDE/555555/Light%20Theme" alt="Light Theme">
-  <img src="https://placeholder.pics/svg/300x200/222222/FFFFFF/Dark%20Theme" alt="Dark Theme">
-  <img src="https://placeholder.pics/svg/300x200/000000/FFFFFF/OLED%20Theme" alt="OLED Theme">
-  <img src="https://placeholder.pics/svg/300x200/0277BD/FFFFFF/Ocean%20Theme" alt="Ocean Theme">
-</div>
 
 ## 🌟 Acknowledgments
 
