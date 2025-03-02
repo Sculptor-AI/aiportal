@@ -31,3 +31,5 @@ dist-ssr
 .env.local
 .env.development
 .env.production
+APIService/models/ursa_minor-q8_0.gguf
+APIService/models/Ursa_Minor.Q2_K.gguf
