@@ -979,6 +979,18 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
             </ApiTokenInput>
             
             <ApiTokenInput>
+              <TokenLabel htmlFor="nvidia-api-token">NVIDIA API Key</TokenLabel>
+              <TokenInput
+                id="nvidia-api-token"
+                type="password"
+                placeholder="Enter your NVIDIA API key"
+                value={localSettings.nvidiaApiKey || ''}
+                onChange={(e) => handleChange('nvidiaApiKey', e.target.value)}
+              />
+              <TokenNote>Used for Nemotron models</TokenNote>
+            </ApiTokenInput>
+            
+            <ApiTokenInput>
               <TokenLabel htmlFor="custom-gguf-api-url">Ursa Minor API URL</TokenLabel>
               <TokenInput
                 id="custom-gguf-api-url"

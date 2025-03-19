@@ -4,6 +4,7 @@ import axios from 'axios';
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const CLAUDE_API_KEY = import.meta.env.VITE_CLAUDE_API_KEY;
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+const NVIDIA_API_KEY = import.meta.env.VITE_NVIDIA_API_KEY;
 
 // Map updated model IDs to their respective API endpoints and formats
 const MODEL_CONFIGS = {
@@ -128,6 +129,36 @@ const MODEL_CONFIGS = {
       // Extract response text from API result
       return data.content;
     }
+  },
+  
+  // New NVIDIA Nemotron model
+  'nemotron-super-49b': {
+    baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    prepareRequest: (message, history) => {
+      // Format properly for NVIDIA's Nemotron API - using OpenAI-compatible interface
+      return {
+        model: "nvidia/llama-3.3-nemotron-super-49b-v1",
+        messages: [
+          { role: "system", content: "detailed thinking off" },
+          ...history.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          { role: 'user', content: message }
+        ],
+        temperature: 0.6,
+        top_p: 0.95,
+        max_tokens: 4096,
+        frequency_penalty: 0,
+        presence_penalty: 0
+      };
+    },
+    extractResponse: (response) => {
+      if (!response.data || !response.data.choices || !response.data.choices[0] || !response.data.choices[0].message) {
+        throw new Error("Unexpected response format from Nemotron API");
+      }
+      return response.data.choices[0].message.content;
+    }
   }
 };
 
@@ -156,6 +187,7 @@ const getApiKeys = () => {
     openai: userSettings.openaiApiKey || OPENAI_API_KEY,
     anthropic: userSettings.anthropicApiKey || CLAUDE_API_KEY,
     google: userSettings.googleApiKey || GEMINI_API_KEY,
+    nvidia: userSettings.nvidiaApiKey || NVIDIA_API_KEY,
     customGguf: userSettings.customGgufApiKey || '', // Add custom GGUF API key
     customGgufUrl: userSettings?.customGgufApiUrl || 'http://localhost:8000'
   };
@@ -236,6 +268,9 @@ export const sendMessage = async (message, modelId, history) => {
   } else if (modelId === 'ursa-minor') {
     hasApiKey = true;
     apiKeySource = 'local API';
+  } else if (modelId === 'nemotron-super-49b' && apiKeys.nvidia) {
+    hasApiKey = true;
+    apiKeySource = apiKeys.nvidia === NVIDIA_API_KEY ? '.env file' : 'user settings';
   }
   
   // Only use simulation if no API key is available
@@ -285,6 +320,8 @@ export const sendMessage = async (message, modelId, history) => {
       if (apiKeys.customGguf) {
         headers['Authorization'] = `Bearer ${apiKeys.customGguf}`;
       }
+    } else if (modelId === 'nemotron-super-49b') {
+      headers['Authorization'] = `Bearer ${apiKeys.nvidia}`;
     }
 
     const response = await axios.post(url, requestData, { headers });

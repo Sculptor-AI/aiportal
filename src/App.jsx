@@ -107,7 +107,8 @@ const AppContent = () => {
     { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
     { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
-    { id: 'ursa-minor', name: 'Ursa Minor' }  // Changed from "SculptorAI" to "Ursa Minor"
+    { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
+    { id: 'ursa-minor', name: 'Ursa Minor' }
   ]);
   
   const [selectedModel, setSelectedModel] = useState(() => {
