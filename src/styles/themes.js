@@ -212,6 +212,12 @@ export const modelThemes = {
     primary: '#FF5722',     // Orange
     secondary: '#FF9800',   // Light orange
     gradient: 'linear-gradient(135deg, #FF5722, #FF9800)'
+  },
+  // Add NVIDIA Nemotron theme
+  'nemotron-super-49b': {
+    primary: '#76B900',     // NVIDIA green
+    secondary: '#1A1A1A',   // Dark gray/black
+    gradient: 'linear-gradient(135deg, #76B900, #1A1A1A)'
   }
 };
 
