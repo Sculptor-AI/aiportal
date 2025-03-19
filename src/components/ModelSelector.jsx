@@ -126,8 +126,17 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
   
+  // Define all available models if none provided
+  const allModels = models || [
+    { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
+    { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
+    { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
+    { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
+    { id: 'ursa-minor', name: 'Ursa Minor' }
+  ];
+  
   // Find current model data
-  const currentModel = models.find(model => model.id === selectedModel) || models[0];
+  const currentModel = allModels.find(model => model.id === selectedModel) || allModels[0];
   
   // Get provider name for model
   const getProviderName = (modelId) => {
@@ -135,6 +144,8 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
     if (modelId.includes('claude')) return 'Anthropic';
     if (modelId.includes('gpt') || modelId.includes('chatgpt')) return 'OpenAI';
     if (modelId.includes('ursa')) return 'SculptorAI';
+    if (modelId.includes('nemotron')) return 'NVIDIA';
+    return 'AI Provider';
   };
   
   // Close dropdown when clicking outside
@@ -172,7 +183,7 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
       
       {isOpen && (
         <DropdownMenu>
-          {models.map(model => (
+          {allModels.map(model => (
             <ModelOption 
               key={model.id}
               isSelected={model.id === selectedModel}
