@@ -453,6 +453,15 @@ const BulletList = styled.ul`
   }
 `;
 
+const MessageImage = styled.img`
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  object-fit: contain;
+  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+`;
+
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return '';
   
@@ -461,7 +470,7 @@ const formatTimestamp = (timestamp) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image } = message;
   
   const getAvatar = () => {
     if (role === 'user') {
@@ -495,6 +504,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
         </ErrorMessage>
       ) : (
         <Content role={role} bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+          {image && (
+            <MessageImage src={image} alt="Uploaded image" />
+          )}
           {isLoading ? (
             <LoadingDots>{content}</LoadingDots>
           ) : (

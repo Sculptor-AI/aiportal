@@ -10,20 +10,58 @@ const NVIDIA_API_KEY = import.meta.env.VITE_NVIDIA_API_KEY;
 const MODEL_CONFIGS = {
   'gemini-2-flash': {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    prepareRequest: (message, history) => {
-      // Format request for Gemini API - ensure we're using gemini-2-flash model
-      const formattedMessages = history.map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }));
+    prepareRequest: (message, history, imageData) => {
+      // Format request for Gemini API with image support
+      const formattedMessages = history.map(msg => {
+        if (msg.image) {
+          return {
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [
+              { 
+                text: msg.content 
+              },
+              {
+                inline_data: {
+                  mime_type: 'image/jpeg',
+                  data: msg.image.split(',')[1] // Remove the data:image/jpeg;base64, prefix
+                }
+              }
+            ]
+          };
+        } else {
+          return {
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }]
+          };
+        }
+      });
+      
+      // Add current message with image if provided
+      let currentMessage;
+      if (imageData) {
+        currentMessage = {
+          role: 'user',
+          parts: [
+            { text: message },
+            {
+              inline_data: {
+                mime_type: 'image/jpeg',
+                data: imageData.split(',')[1] // Remove the data:image/jpeg;base64, prefix
+              }
+            }
+          ]
+        };
+      } else {
+        currentMessage = {
+          role: 'user',
+          parts: [{ text: message }]
+        };
+      }
       
       return {
         contents: [
           ...formattedMessages,
-          {
-            role: 'user',
-            parts: [{ text: message }]
-          }
+          currentMessage
         ]
       };
     },
@@ -38,18 +76,56 @@ const MODEL_CONFIGS = {
 
   'claude-3.7-sonnet': {
     baseUrl: 'https://api.anthropic.com/v1/messages',
-    prepareRequest: (message, history) => {
-      // Format properly for Claude API
+    prepareRequest: (message, history, imageData) => {
+      // Format properly for Claude API with image support
+      const messages = history.map(msg => {
+        if (msg.image) {
+          return {
+            role: msg.role,
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: 'image/jpeg',
+                  data: msg.image.split(',')[1] // Remove the data:image/jpeg;base64, prefix
+                }
+              },
+              { type: 'text', text: msg.content }
+            ]
+          };
+        } else {
+          return {
+            role: msg.role,
+            content: msg.content
+          };
+        }
+      });
+
+      // Add the current message
+      if (imageData) {
+        messages.push({
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/jpeg',
+                data: imageData.split(',')[1] // Remove the data:image/jpeg;base64, prefix
+              }
+            },
+            { type: 'text', text: message }
+          ]
+        });
+      } else {
+        messages.push({ role: 'user', content: message });
+      }
+
       return {
         model: 'claude-3-sonnet-20240229',
         max_tokens: 4000,
-        messages: [
-          ...history.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })),
-          { role: 'user', content: message }
-        ]
+        messages: messages
       };
     },
     extractResponse: (response) => {
@@ -62,16 +138,65 @@ const MODEL_CONFIGS = {
 
   'chatgpt-4o': {
     baseUrl: 'https://api.openai.com/v1/chat/completions',
-    prepareRequest: (message, history) => {
-      // Format properly for OpenAI API
+    prepareRequest: (message, history, imageData) => {
+      // Format properly for OpenAI API with image support
+      const formattedMessages = history.map(msg => {
+        if (msg.image) {
+          return {
+            role: msg.role,
+            content: [
+              {
+                type: 'text',
+                text: msg.content
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: msg.image,
+                  detail: 'auto'
+                }
+              }
+            ]
+          };
+        } else {
+          return {
+            role: msg.role,
+            content: msg.content
+          };
+        }
+      });
+      
+      // Add current message with image if provided
+      let currentMessage;
+      if (imageData) {
+        currentMessage = {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: message
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageData,
+                detail: 'auto'
+              }
+            }
+          ]
+        };
+      } else {
+        currentMessage = {
+          role: 'user',
+          content: message
+        };
+      }
+      
       return {
         model: 'gpt-4o',
         messages: [
-          ...history.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })),
-          { role: 'user', content: message }
+          ...formattedMessages,
+          currentMessage
         ]
       };
     },
@@ -86,15 +211,28 @@ const MODEL_CONFIGS = {
   // Add custom GGUF model
   'custom-gguf': {
     baseUrl: 'https://api.explodingcb.com/chat',  // Your Cloudflare tunnel URL
-    prepareRequest: (message, history) => {
+    prepareRequest: (message, history, imageData) => {
       // Format properly for your GGUF API
+      // Note: Basic GGUF models might not support image input
+      // We'll include a note about the image in the message text
+      let messageText = message;
+      if (imageData) {
+        messageText = `[Note: Image was uploaded with this message] ${message}`;
+      }
+      
       return {
         messages: [
-          ...history.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })),
-          { role: 'user', content: message }
+          ...history.map(msg => {
+            let content = msg.content;
+            if (msg.image) {
+              content = `[Note: Message included an image] ${content}`;
+            }
+            return {
+              role: msg.role,
+              content: content
+            };
+          }),
+          { role: 'user', content: messageText }
         ],
         max_tokens: 1024,
         temperature: 0.7,
@@ -112,11 +250,24 @@ const MODEL_CONFIGS = {
   'ursa-minor': {
     name: 'Ursa Minor',
     baseUrl: '', // Will be set dynamically from user settings
-    prepareRequest: (message, history) => {
+    prepareRequest: (message, history, imageData) => {
       // Format messages for the Ursa Minor API
+      // Note: Basic local models might not support image input
+      // We'll include a note about the image in the message text
+      let messageText = message;
+      if (imageData) {
+        messageText = `[Note: Image was uploaded with this message] ${message}`;
+      }
+      
       const messages = [
-        ...history.map(msg => ({ role: msg.role, content: msg.content })),
-        { role: 'user', content: message }
+        ...history.map(msg => {
+          let content = msg.content;
+          if (msg.image) {
+            content = `[Note: Message included an image] ${content}`;
+          }
+          return { role: msg.role, content: content };
+        }),
+        { role: 'user', content: messageText }
       ];
       
       return {
@@ -134,17 +285,67 @@ const MODEL_CONFIGS = {
   // New NVIDIA Nemotron model
   'nemotron-super-49b': {
     baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    prepareRequest: (message, history) => {
+    prepareRequest: (message, history, imageData) => {
       // Format properly for NVIDIA's Nemotron API - using OpenAI-compatible interface
+      // Note: Check if NVIDIA API supports images - this implementation assumes similar to OpenAI
+      const formattedMessages = history.map(msg => {
+        if (msg.image) {
+          return {
+            role: msg.role,
+            content: [
+              {
+                type: 'text',
+                text: msg.content
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: msg.image,
+                  detail: 'auto'
+                }
+              }
+            ]
+          };
+        } else {
+          return {
+            role: msg.role,
+            content: msg.content
+          };
+        }
+      });
+      
+      // Add current message with image if provided
+      let currentMessage;
+      if (imageData) {
+        currentMessage = {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: message
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageData,
+                detail: 'auto'
+              }
+            }
+          ]
+        };
+      } else {
+        currentMessage = {
+          role: 'user',
+          content: message
+        };
+      }
+      
       return {
         model: "nvidia/llama-3.3-nemotron-super-49b-v1",
         messages: [
           { role: "system", content: "detailed thinking off" },
-          ...history.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })),
-          { role: 'user', content: message }
+          ...formattedMessages,
+          currentMessage
         ],
         temperature: 0.6,
         top_p: 0.95,
@@ -193,11 +394,23 @@ const getApiKeys = () => {
   };
 };
 
-// Updated createUrsaMinorRequest to include max_tokens similar to the CURL example.
-const createUrsaMinorRequest = async (message, history, apiUrl) => {
+// Updated createUrsaMinorRequest to include max_tokens and image support
+const createUrsaMinorRequest = async (message, history, apiUrl, imageData = null) => {
+  // Add image data note for models that don't natively support images
+  let messageText = message;
+  if (imageData) {
+    messageText = `[Note: Image was uploaded with this message] ${message}`;
+  }
+  
   const formattedMessages = [
-    ...history.map(msg => ({ role: msg.role, content: msg.content })),
-    { role: 'user', content: message }
+    ...history.map(msg => {
+      let content = msg.content;
+      if (msg.image) {
+        content = `[Note: Message included an image] ${content}`;
+      }
+      return { role: msg.role, content: content };
+    }),
+    { role: 'user', content: messageText }
   ];
 
   try {
@@ -228,7 +441,7 @@ const createUrsaMinorRequest = async (message, history, apiUrl) => {
   }
 };
 
-export const sendMessage = async (message, modelId, history) => {
+export const sendMessage = async (message, modelId, history, imageData = null) => {
   console.log(`sendMessage called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`);
   
@@ -288,7 +501,7 @@ export const sendMessage = async (message, modelId, history) => {
       console.log(`Using Ursa Minor API at ${apiUrl}`);
       
       try {
-        return await createUrsaMinorRequest(message, history, apiUrl);
+        return await createUrsaMinorRequest(message, history, apiUrl, imageData);
       } catch (error) {
         console.error("Error calling Ursa Minor API:", error);
         throw new Error(`Error setting up request to ursa-minor API: ${error.message}\n\nPlease check your API configuration and try again.`);
@@ -296,7 +509,7 @@ export const sendMessage = async (message, modelId, history) => {
     }
     
     // Prepare the request based on the selected model
-    const requestData = modelConfig.prepareRequest(message, history);
+    const requestData = modelConfig.prepareRequest(message, history, imageData);
   
     // Set up headers and URL based on model type
     let headers = { 'Content-Type': 'application/json' };

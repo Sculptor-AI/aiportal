@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import { sendMessage } from '../services/aiService';
 import ModelSelector from './ModelSelector';
+import ImageUploadButton from './ImageUploadButton';
 
 const ChatWindowContainer = styled.div`
   flex: 1;
@@ -30,7 +31,7 @@ const ChatHeader = styled.div`
   justify-content: space-between;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  z-index: 5;
+  z-index: 10;
   position: relative;
 `;
 
@@ -68,6 +69,7 @@ const MessageList = styled.div`
   display: flex;
   flex-direction: column;
   width: 100%;
+  position: relative;
   
   /* Stylish scrollbar */
   &::-webkit-scrollbar {
@@ -119,11 +121,13 @@ const MessageInputWrapper = styled.div`
   flex: 1;
   max-width: ${props => props.isEmpty ? '700px' : '100%'};
   transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  align-items: center;
 `;
 
 const MessageInput = styled.textarea`
   width: 100%;
-  padding: 14px 50px 14px 18px;
+  padding: 15px 50px 15px 60px;
   border-radius: 24px;
   border: 1px solid ${props => props.theme.border};
   background: ${props => props.theme.inputBackground};
@@ -138,6 +142,12 @@ const MessageInput = styled.textarea`
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   transition: all 0.2s ease;
+  vertical-align: middle;
+  
+  &::placeholder {
+    position: relative;
+    top: 0;
+  }
   
   &:focus {
     outline: none;
@@ -146,7 +156,7 @@ const MessageInput = styled.textarea`
   }
   
   @media (max-width: 768px) {
-    padding: 12px 45px 12px 15px;
+    padding: 13px 45px 13px 55px;
     min-height: 45px;
   }
 `;
@@ -187,16 +197,23 @@ const SendButton = styled.button`
 `;
 
 const EmptyState = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
   color: ${props => props.theme.text}aa;
   text-align: center;
   padding: 20px;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
+  width: 100%;
+  max-width: 600px;
+  z-index: 5;
+  pointer-events: none; /* Allow clicks to pass through */
   
   h3 {
     margin-bottom: 15px;
@@ -218,6 +235,8 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
   const messagesEndRef = useRef(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chat?.title || 'New Conversation');
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [resetImagePreview, setResetImagePreview] = useState(false);
 
   // Find the current model data for display
   const modelDisplay = {
@@ -241,7 +260,7 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
   };
   
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !chat) return;
+    if ((!inputMessage.trim() && !uploadedImage) || !chat) return;
     
     // Store the message to send before clearing the input
     const messageToSend = inputMessage.trim();
@@ -254,14 +273,20 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
       id: userMessageId,
       role: 'user',
       content: messageToSend,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      image: uploadedImage ? uploadedImage.src : null
     };
     
     // Add user message to the chat
     addMessage(chat.id, userMessage);
     
-    // Clear input and show loading state
+    // Clear input, image and show loading state
     setInputMessage('');
+    setUploadedImage(null);
+    // Trigger image preview reset
+    setResetImagePreview(true);
+    // Reset the flag after a short delay
+    setTimeout(() => setResetImagePreview(false), 100);
     setIsLoading(true);
     
     console.log("Sending message to", selectedModel + ":", messageToSend);
@@ -270,11 +295,17 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
       // Filter history to include only user/assistant messages without UI-specific properties
       const processedHistory = chat.messages.map(msg => ({
         role: msg.role,
-        content: msg.content
+        content: msg.content,
+        image: msg.image // Include image if present
       }));
       
       // Send the message to the AI service
-      const aiResponse = await sendMessage(messageToSend, selectedModel, processedHistory);
+      const aiResponse = await sendMessage(
+        messageToSend, 
+        selectedModel, 
+        processedHistory, 
+        uploadedImage ? uploadedImage.src : null
+      );
       
       console.log("Received AI response from", selectedModel + ":", aiResponse);
       
@@ -314,6 +345,22 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
     if (e.key === 'Enter' && !e.shiftKey && settings?.sendWithEnter) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  // Handle image upload
+  const handleImageSelected = (file) => {
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadedImage({
+          src: reader.result,
+          name: file.name
+        });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setUploadedImage(null);
     }
   };
 
@@ -464,6 +511,11 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
       
       <InputContainer isEmpty={chatIsEmpty}>
         <MessageInputWrapper isEmpty={chatIsEmpty}>
+          <ImageUploadButton 
+            onImageSelected={handleImageSelected} 
+            disabled={isLoading}
+            resetPreview={resetImagePreview}
+          />
           <MessageInput 
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
@@ -475,7 +527,7 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
           />
           <SendButton 
             onClick={handleSendMessage}
-            disabled={isLoading || !inputMessage.trim()}
+            disabled={isLoading || (!inputMessage.trim() && !uploadedImage)}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 2L11 13"></path>
