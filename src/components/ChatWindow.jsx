@@ -40,7 +40,7 @@ const ChatTitleSection = styled.div`
   flex-direction: column;
   flex: 1;
   gap: 4px; // Use gap instead of margin for more consistent spacing
-  padding-left: 5px; // Add padding to shift title right to align with the logo
+  padding-left: 45px; // Add padding to shift title right to align with the logo
 `;
 
 const ChatTitle = styled.h2`
