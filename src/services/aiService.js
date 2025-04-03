@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { fetchEventSource } from '@microsoft/fetch-event-source'; // Use a robust SSE client library
 
 // Get API keys from environment variables (fallback)
 const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -66,13 +66,6 @@ const MODEL_CONFIGS = {
           currentMessage
         ]
       };
-    },
-    extractResponse: (response) => {
-      if (!response.data.candidates || !response.data.candidates[0] || 
-          !response.data.candidates[0].content || !response.data.candidates[0].content.parts) {
-        throw new Error("Unexpected response format from Gemini API");
-      }
-      return response.data.candidates[0].content.parts[0].text;
     }
   },
 
@@ -134,12 +127,6 @@ const MODEL_CONFIGS = {
         max_tokens: 4000,
         messages: messages
       };
-    },
-    extractResponse: (response) => {
-      if (!response.data || !response.data.content || !response.data.content[0] || !response.data.content[0].text) {
-        throw new Error("Unexpected response format from Claude API");
-      }
-      return response.data.content[0].text;
     }
   },
 
@@ -201,12 +188,6 @@ const MODEL_CONFIGS = {
           currentMessage
         ]
       };
-    },
-    extractResponse: (response) => {
-      if (!response.data || !response.data.choices || !response.data.choices[0] || !response.data.choices[0].message) {
-        throw new Error("Unexpected response format from OpenAI API");
-      }
-      return response.data.choices[0].message.content;
     }
   },
   
@@ -245,12 +226,6 @@ const MODEL_CONFIGS = {
         temperature: 0.7,
         top_p: 0.95
       };
-    },
-    extractResponse: (response) => {
-      if (!response.data || !response.data.content) {
-        throw new Error("Unexpected response format from custom GGUF API");
-      }
-      return response.data.content;
     }
   },
 
@@ -318,111 +293,68 @@ const MODEL_CONFIGS = {
         frequency_penalty: 0,
         presence_penalty: 0
       };
-    },
-    extractResponse: (response) => {
-      if (!response.data || !response.data.choices || !response.data.choices[0] || !response.data.choices[0].message) {
-        throw new Error("Unexpected response format from Nemotron API");
-      }
-      return response.data.choices[0].message.content;
     }
-  }
-};
-
-// Helper to get API keys, prioritizing user-provided keys
-const getApiKeys = () => {
-  // Try to get user's API keys from settings in localStorage
-  let userSettings = {};
-  try {
-    // Check if user is logged in
-    const userJSON = sessionStorage.getItem('ai_portal_current_user');
-    if (userJSON) {
-      const user = JSON.parse(userJSON);
-      userSettings = user.settings || {};
-    } else {
-      // If not logged in, try to get settings from localStorage
-      const settingsJSON = localStorage.getItem('settings');
-      if (settingsJSON) {
-        userSettings = JSON.parse(settingsJSON);
-      }
-    }
-  } catch (e) {
-    console.error('Error getting user settings:', e);
-  }
-
-  return {
-    openai: userSettings.openaiApiKey || OPENAI_API_KEY,
-    anthropic: userSettings.anthropicApiKey || CLAUDE_API_KEY,
-    // Use user setting only if it's a non-empty string, otherwise fallback to env variable
-    google: (userSettings.googleApiKey && userSettings.googleApiKey.trim() !== '') 
-            ? userSettings.googleApiKey 
-            : GEMINI_API_KEY,
-    nvidia: userSettings.nvidiaApiKey || NVIDIA_API_KEY,
-    customGguf: userSettings.customGgufApiKey || '', // Add custom GGUF API key
-    customGgufUrl: userSettings?.customGgufApiUrl || 'http://localhost:8000'
-  };
-};
-
-// Reverted: Removed textContent and fileName parameters
-const createUrsaMinorRequest = async (message, history, apiUrl, imageData = null) => {
-  let messageText = message;
-  if (imageData) {
-    // Reverted: Simplified image note
-    messageText = `[Note: Image was uploaded with this message]\n\n${message}`; 
-  }
-  // Reverted: Removed textContent handling logic
-  
-  const formattedMessages = [
-    ...history.map(msg => {
-       let content = msg.content;
-       if (msg.image) { 
-         content = `[Note: Previous message included an image]\n\n${content}`;
-       } 
-       // Reverted: Removed file handling in history
-       return { role: msg.role, content: content };
-    }),
-    { role: 'user', content: messageText }
-  ];
-
-  try {
-    console.log(`Sending request to Ursa Minor API: ${apiUrl}/chat`);
-    console.log('Request body:', JSON.stringify({ messages: formattedMessages, max_tokens: 100 }));
-    
-    const response = await fetch(`${apiUrl}/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  },
+  // Add Ursa Minor config if it differs from custom-gguf, otherwise it uses custom-gguf logic
+  'ursa-minor': {
+      baseUrl: '', // Base URL handled dynamically like custom-gguf
+      prepareRequest: (message, history, imageData, fileTextContent = null) => { 
+          // Share the same preparation logic as custom-gguf or define specific logic
+          let messageText = message;
+          if (fileTextContent) {
+              messageText = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
+          }
+          if (imageData) {
+              messageText = `[Note: Image was uploaded with this message]\n\n${messageText}`;
+          }
+          const processedHistory = history.map(msg => ({
+              role: msg.role,
+              content: msg.image ? `[Note: Previous message included an image]\n\n${msg.content}` : msg.content
+          }));
+          return {
+              messages: [...processedHistory, { role: 'user', content: messageText }],
+              // Example parameters, adjust if needed for Ursa Minor
+              max_tokens: 1024, 
+              temperature: 0.7,
+          };
       },
-      body: JSON.stringify({
-        messages: formattedMessages,
-        max_tokens: 100
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('Received response from Ursa Minor API:', data);
-    return data.content;
-  } catch (error) {
-    console.error("Error with Ursa Minor API:", error);
-    throw error;
   }
 };
 
-// Updated sendMessage signature to accept fileTextContent
-export const sendMessage = async (message, modelId, history, imageData = null, fileTextContent = null) => { 
-  console.log(`sendMessage called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
+// Helper function to parse SSE data chunks
+// This needs to handle different formats potentially sent by APIs
+const parseSSEChunk = (chunk) => {
+  if (chunk.startsWith('data:')) {
+    const jsonString = chunk.substring(5).trim();
+    if (jsonString === '[DONE]') {
+      return { done: true };
+    }
+    try {
+      return { data: JSON.parse(jsonString) };
+    } catch (e) {
+      console.error("Failed to parse SSE JSON:", jsonString, e);
+      return { error: "Failed to parse stream data" };
+    }
+  }
+  return {}; // Ignore non-data lines like comments or empty lines
+};
+
+// Refactored sendMessage as an async generator
+export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null) { 
+  console.log(`sendMessage (streaming) called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`, 
-    imageData ? `imageData: [${imageData.substring(0,30)}...]` : '',
-    fileTextContent ? `fileTextContent: [${fileTextContent.substring(0,30)}...]` : '' // Log file text
+    imageData ? `imageData: Present` : '',
+    fileTextContent ? `fileTextContent: Present` : ''
   );
-  
+
   // Validate inputs
-  if (!message || !modelId) {
-    console.error("Missing required parameters:", { message, modelId });
-    throw new Error("Missing required parameters for sendMessage");
+  if (!message && !imageData && !fileTextContent) { // Allow empty text message if file/image provided
+      console.error("Missing message, image, or file content.");
+      throw new Error("No content provided to send.");
+  }
+  if (!modelId) {
+    console.error("Missing required parameter: modelId");
+    throw new Error("Missing required parameter: modelId");
   }
   
   // Get model config
@@ -432,101 +364,285 @@ export const sendMessage = async (message, modelId, history, imageData = null, f
     throw new Error(`Unsupported model: ${modelId}`);
   }
 
-  // Get API keys, prioritizing user-provided keys
-  const apiKeys = getApiKeys();
-  
-  // Check if we have the required API key for the selected model
-  let hasApiKey = false;
-  let apiKeySource = '';
-  
-  if (modelId === 'gemini-2-flash' && apiKeys.google) {
-    hasApiKey = true;
-    apiKeySource = apiKeys.google === GEMINI_API_KEY ? '.env file' : 'user settings';
-  } else if (modelId === 'claude-3.7-sonnet' && apiKeys.anthropic) {
-    hasApiKey = true;
-    apiKeySource = apiKeys.anthropic === CLAUDE_API_KEY ? '.env file' : 'user settings';
-  } else if (modelId === 'chatgpt-4o' && apiKeys.openai) {
-    hasApiKey = true;
-    apiKeySource = apiKeys.openai === OPENAI_API_KEY ? '.env file' : 'user settings';
-  } else if (modelId === 'custom-gguf') {
-    // Always allow access to custom model
-    hasApiKey = true;
-    apiKeySource = 'local API';
-  } else if (modelId === 'ursa-minor') {
-    hasApiKey = true;
-    apiKeySource = 'local API';
-  } else if (modelId === 'nemotron-super-49b' && apiKeys.nvidia) {
-    hasApiKey = true;
-    apiKeySource = apiKeys.nvidia === NVIDIA_API_KEY ? '.env file' : 'user settings';
-  }
-  
-  // Only use simulation if no API key is available
-  if (!hasApiKey) {
-    // TODO: Add simulation logic if needed
-  }
-  
-  // Use real API when we have keys
+  // --- Start API Key Retrieval --- 
+  let userSettings = {};
+  let settingsSource = 'none'; 
   try {
-    console.log(`Using real API for ${modelId} (source: ${apiKeySource})`);
-    
-    // Special case for Ursa Minor API (local GGUF)
-    if (modelId === 'ursa-minor') {
-      const apiUrl = apiKeys.customGgufUrl || 'http://localhost:8000'; // Default if not set
-      console.log(`Using Ursa Minor API at ${apiUrl}`);
-      try {
-        // TODO: Update createUrsaMinorRequest if it needs to handle fileTextContent
-        // For now, it will ignore fileTextContent
-        return await createUrsaMinorRequest(message, history, apiUrl, imageData); 
-      } catch (error) {
-        console.error("Error calling Ursa Minor API:", error);
-        throw new Error(`Error setting up request to Ursa Minor API: ${error.message}\n\nPlease check your API configuration and try again.`);
+    const userJSON = sessionStorage.getItem('ai_portal_current_user');
+    if (userJSON) {
+      const user = JSON.parse(userJSON);
+      userSettings = user.settings || {};
+      settingsSource = 'sessionStorage';
+    } else {
+      const settingsJSON = localStorage.getItem('settings');
+      if (settingsJSON) {
+        userSettings = JSON.parse(settingsJSON);
+        settingsSource = 'localStorage';
       }
     }
-    
-    // Prepare the request based on the selected model, passing all relevant data
-    const requestData = modelConfig.prepareRequest(message, history, imageData, fileTextContent);
-  
-    // Set up headers and URL based on model type
-    let headers = { 'Content-Type': 'application/json' };
-    let url = modelConfig.baseUrl;
-
-    // Set model-specific headers (Claude, OpenAI, NVIDIA)
-    if (modelId.startsWith('claude')) { // Use startsWith for flexibility
-      headers['x-api-key'] = apiKeys.anthropic;
-      headers['anthropic-version'] = '2023-06-01';
-      // The Content-Type header is already set initially
-    } else if (modelId.startsWith('chatgpt') || modelId === 'dall-e-3') { // Use startsWith for flexibility
-      headers['Authorization'] = `Bearer ${apiKeys.openai}`;
-    } else if (modelId === 'custom-gguf') { 
-      // Use the URL from settings for the generic custom GGUF model
-      url = apiKeys.customGgufUrl || modelConfig.baseUrl; // Fallback if needed
-      if (!url) {
-         throw new Error("Custom GGUF API URL is not configured in settings.");
-      }
-      console.log(`Using Custom GGUF API at ${url}`);
-      // Optionally add API key if your custom implementation requires it
-      if (apiKeys.customGguf) {
-        headers['Authorization'] = `Bearer ${apiKeys.customGguf}`;
-      }
-    } else if (modelId.startsWith('nemotron')) { // Use startsWith for flexibility
-      headers['Authorization'] = `Bearer ${apiKeys.nvidia}`;
-    }
-
-    // Append Google API key as query param if it's a Gemini model
-    if (modelId.startsWith('gemini')) {
-        if (!apiKeys.google) throw new Error('Google API Key is missing.');
-        url += `?key=${apiKeys.google}`; // Append key correctly
-    }
-
-    console.log("Final Request URL:", url);
-    console.log("Final Request Headers:", headers);
-    console.log("Final Request Data:", JSON.stringify(requestData, null, 2));
-
-    const response = await axios.post(url, requestData, { headers });
-    console.log("API Response:", response);
-    return modelConfig.extractResponse(response);
-  } catch (error) {
-    console.error('Error calling AI API:', error);
-    throw error;
+  } catch (e) {
+    console.error('Error getting user settings:', e);
+    settingsSource = 'error';
   }
-};
+  
+  console.log(`[sendMessage] Retrieved user settings from ${settingsSource}:`, userSettings);
+
+  const apiKeys = {
+    openai: userSettings.openaiApiKey || OPENAI_API_KEY,
+    anthropic: userSettings.anthropicApiKey || CLAUDE_API_KEY,
+    google: (userSettings.googleApiKey && userSettings.googleApiKey.trim() !== '') ? userSettings.googleApiKey : GEMINI_API_KEY,
+    nvidia: userSettings.nvidiaApiKey || NVIDIA_API_KEY,
+    customGguf: userSettings.customGgufApiKey || '',
+    customGgufUrl: userSettings?.customGgufApiUrl || 'http://localhost:8000' 
+  };
+  
+  console.log("[sendMessage] API keys being used:", {
+      openai: apiKeys.openai ? 'Present' : 'Missing',
+      anthropic: apiKeys.anthropic ? 'Present' : 'Missing',
+      google: apiKeys.google ? 'Present' : 'Missing',
+      nvidia: apiKeys.nvidia ? 'Present' : 'Missing',
+  });
+  // --- End API Key Retrieval ---
+
+  let apiKey;
+  let url = modelConfig.baseUrl;
+  let headers = { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' }; 
+  
+  // Prepare model-specific details
+  if (modelId.startsWith('gemini')) {
+    apiKey = apiKeys.google;
+    if (!apiKey) throw new Error('Google API Key is missing.');
+    url = url.replace(':generateContent', ':streamGenerateContent') + `?key=${apiKey}&alt=sse`; 
+    headers = { 'Content-Type': 'application/json' }; // Reset headers for Gemini SSE
+  } else if (modelId.startsWith('claude')) {
+    apiKey = apiKeys.anthropic;
+    if (!apiKey) throw new Error('Anthropic API Key is missing.');
+    headers['x-api-key'] = apiKey;
+    headers['anthropic-version'] = '2023-06-01';
+    // headers['anthropic-beta'] = 'messages-streaming-2024-07-15'; // Usually not needed now
+  } else if (modelId.startsWith('chatgpt')) {
+    apiKey = apiKeys.openai;
+    if (!apiKey) throw new Error('OpenAI API Key is missing.');
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  } else if (modelId.startsWith('nemotron')) {
+     apiKey = apiKeys.nvidia;
+     if (!apiKey) throw new Error('NVIDIA API Key is missing.');
+     headers['Authorization'] = `Bearer ${apiKey}`;
+  } else if (modelId === 'ursa-minor' || modelId === 'custom-gguf') {
+     url = apiKeys.customGgufUrl;
+     if (!url) throw new Error("Custom GGUF/Ursa Minor API URL is not configured.");
+     // Ensure the URL points to the correct streaming endpoint if different from non-streaming
+     // Assuming OpenAI compatible /v1/chat/completions endpoint supports streaming
+     url = url.endsWith('/') ? `${url}v1/chat/completions` : `${url}/v1/chat/completions`; 
+     if (apiKeys.customGguf) {
+       headers['Authorization'] = `Bearer ${apiKeys.customGguf}`;
+     }
+     console.log(`Using Custom/Local API at ${url}`);
+  } else {
+     throw new Error(`API Key or configuration missing for model: ${modelId}`);
+  }
+
+  // Prepare payload - ensure stream: true is set for models that need it
+  const basePayload = modelConfig.prepareRequest(message || "", history, imageData, fileTextContent);
+  const requestPayload = {
+     ...basePayload,
+     // Only add stream: true for non-Gemini models
+     ...(modelId.startsWith('gemini') ? {} : { stream: true })
+  };
+  
+  console.log("Final Streaming Request URL:", url);
+  console.log("Final Streaming Request Headers:", headers);
+  console.log("Final Streaming Request Payload:", JSON.stringify(requestPayload, null, 2));
+
+  // We need a way to communicate between the fetch callbacks and our generator
+  // Create a simple message queue system
+  const messageQueue = [];
+  let resolveNextMessage = null;
+  let streamError = null;
+  let streamDone = false;
+
+  // Function to add a message to the queue
+  function enqueueMessage(message) {
+    if (resolveNextMessage) {
+      // If someone is waiting for a message, resolve their promise
+      const resolve = resolveNextMessage;
+      resolveNextMessage = null;
+      resolve(message);
+    } else {
+      // Otherwise add to the queue
+      messageQueue.push(message);
+    }
+  }
+
+  // Function to get the next message from the queue
+  function getNextMessage() {
+    return new Promise((resolve, reject) => {
+      if (streamError) {
+        reject(streamError);
+        return;
+      }
+      
+      if (messageQueue.length > 0) {
+        // If there's a message in the queue, return it
+        resolve(messageQueue.shift());
+      } else if (streamDone) {
+        // If the stream is done and no messages left, signal completion
+        resolve(null);
+      } else {
+        // Otherwise, wait for the next message
+        resolveNextMessage = resolve;
+      }
+    });
+  }
+
+  try {
+    const ctrl = new AbortController();
+
+    // Start the fetch in the background
+    const fetchPromise = fetchEventSource(url, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(requestPayload),
+      signal: ctrl.signal,
+      openWhenHidden: true,
+
+      async onopen(response) {
+        console.log("SSE Connection opened with status:", response.status);
+        if (!response.ok) {
+          // Try reading the error body for more details
+          let errorBody = 'Unknown error';
+          try {
+            errorBody = await response.text();
+          } catch (e) { /* Ignore reading error */ }
+          
+          const error = new Error(`Failed to connect: ${response.status} ${response.statusText}. Body: ${errorBody}`);
+          streamError = error;
+          ctrl.abort();
+        }
+      },
+
+      onmessage(event) {
+        if (event.event === 'ping' || !event.data) {
+          return;
+        }
+        
+        if (event.data === '[DONE]') {
+          console.log("SSE stream finished [DONE]");
+          streamDone = true;
+          enqueueMessage(null); // Signal end of stream
+          ctrl.abort();
+          return;
+        }
+        
+        try {
+          const parsedData = JSON.parse(event.data);
+          let textChunk = '';
+
+          // Extract text chunk based on model type
+          if (modelId.startsWith('gemini')) {
+            textChunk = parsedData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          } else if (modelId.startsWith('claude')) {
+            if (parsedData.type === 'content_block_delta' && parsedData.delta?.type === 'text_delta') {
+              textChunk = parsedData.delta.text || '';
+            }
+            if (parsedData.type === 'message_stop') {
+              console.log("Claude streaming complete");
+              streamDone = true;
+              enqueueMessage(null); // Signal end of stream
+              ctrl.abort();
+              return;
+            }
+          } else if (modelId.startsWith('chatgpt') || modelId === 'custom-gguf' || modelId === 'ursa-minor') {
+            textChunk = parsedData?.choices?.[0]?.delta?.content || '';
+            if (parsedData?.choices?.[0]?.finish_reason) {
+              console.log("OpenAI/NVIDIA/Local finish reason:", parsedData.choices[0].finish_reason);
+              streamDone = true;
+              enqueueMessage(null); // Signal end of stream
+              ctrl.abort();
+              return;
+            }
+          }
+          
+          if (textChunk) {
+            enqueueMessage(textChunk);
+          }
+        } catch (e) {
+          console.error("Error parsing SSE data chunk:", event.data, e);
+          // Don't abort immediately, maybe the next chunk is fine
+        }
+      },
+
+      onclose() {
+        console.log("SSE Connection closed.");
+        // If we haven't already signaled completion
+        if (!streamDone && !streamError) {
+          streamDone = true;
+          enqueueMessage(null); // Signal end of stream
+        }
+      },
+
+      onerror(err) {
+        console.error("SSE Error:", err);
+        streamError = err;
+        ctrl.abort();
+      }
+    });
+
+    // Now use a loop to yield chunks as they come in
+    while (true) {
+      try {
+        const chunk = await getNextMessage();
+        
+        if (chunk === null) {
+          // End of stream
+          break;
+        }
+        
+        // We can safely yield here because we're in the generator function
+        yield chunk;
+      } catch (error) {
+        console.error("Error in stream processing:", error);
+        yield `\n[Error during streaming: ${error.message}]\n`;
+        break;
+      }
+    }
+
+  } catch (error) {
+    console.error(`Error during streaming fetch for ${modelId}:`, error);
+    yield `\n[Error communicating with ${modelId}: ${error.message}]\n`;
+  }
+}
+
+// --- Keep or update MODEL_CONFIGS prepareRequest functions ---
+// Ensure they DO NOT include stream: true, as it's added in sendMessage
+// Remove extractResponse functions as they are not used for streaming
+
+// Example modification for MODEL_CONFIGS['chatgpt-4o'].prepareRequest
+/*
+'chatgpt-4o': {
+  baseUrl: 'https://api.openai.com/v1/chat/completions',
+  prepareRequest: (message, history, imageData, fileTextContent = null) => {
+    // ... (existing logic to format messages) ...
+    
+    const currentMessage = {
+      role: 'user',
+      content: currentMessageContent
+    };
+    
+    return { // DO NOT add stream: true here
+      model: 'gpt-4o',
+      messages: [
+        ...formattedMessages,
+        currentMessage
+      ]
+    };
+  },
+  // extractResponse: REMOVED
+},
+*/
+
+// TODO: 
+// 1. Change `export const sendMessage = ...` to `export async function* sendMessage(...)`
+// 2. Replace the temporary simulation block with `yield textChunk;` inside the `onmessage` handler where commented.
+// 3. Remove `extractResponse` from all MODEL_CONFIGS.
+// 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.

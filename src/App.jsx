@@ -232,7 +232,6 @@ const AppContent = () => {
           const updatedChat = {
             ...chat,
             messages: [...chat.messages, message],
-            // If this is the first user message, set the chat title to the first few words
             title: chat.title === 'New Chat' && message.role === 'user' 
               ? message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
               : chat.title
@@ -242,11 +241,26 @@ const AppContent = () => {
         }
         return chat;
       });
-      
-      // Save to localStorage for persistence
       localStorage.setItem('chats', JSON.stringify(updatedChats));
-      
       return updatedChats;
+    });
+  };
+
+  // New function to update a specific message within a chat
+  const updateMessage = (chatId, messageId, updates) => {
+    setChats(prevChats => {
+      return prevChats.map(chat => {
+        if (chat.id === chatId) {
+          return {
+            ...chat,
+            messages: chat.messages.map(msg => 
+              msg.id === messageId ? { ...msg, ...updates } : msg
+            )
+          };
+        }
+        return chat;
+      });
+      // Note: No need to save to localStorage here, as `chats` useEffect will handle it
     });
   };
 
@@ -333,12 +347,12 @@ const AppContent = () => {
             setCollapsed={setCollapsed}
           />
           <ChatWindow 
-            chat={getCurrentChat()}
+            chat={currentChat}
             addMessage={addMessage}
-            selectedModel={selectedModel}
+            updateMessage={updateMessage}
             updateChatTitle={updateChatTitle}
+            selectedModel={selectedModel}
             settings={settings}
-            onModelChange={handleModelChange}
             focusMode={settings.focusMode}
           />
         

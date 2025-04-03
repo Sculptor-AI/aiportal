@@ -262,7 +262,7 @@ const EmptyState = styled.div`
   }
 `;
 
-const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, updateChatTitle, settings, focusMode = false }) => {
+const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSelectedModel, updateChatTitle, settings, focusMode = false }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
@@ -326,21 +326,21 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
     const messageToSend = inputMessage.trim();
     const userMessageId = Date.now();
     const fileDataToSend = uploadedFileData; // Store before clearing state
+    const currentModel = selectedModel; // Capture current model for the response
     
-    // Clear input, file and show loading state
+    // Clear input, file and set processing state
     setInputMessage('');
     setUploadedFileData(null);
     setResetFileUpload(true);
     setTimeout(() => setResetFileUpload(false), 100);
-    setIsLoading(true);
+    setIsLoading(true); // Keep isLoading for overall process
 
-    // Determine if there's text content from a file (PDF/TXT)
     let fileTextContent = null;
     if (fileDataToSend && (fileDataToSend.type === 'pdf' || fileDataToSend.type === 'text')) {
       fileTextContent = fileDataToSend.content;
     }
 
-    // Create user message object - include file metadata for display
+    // Add user message immediately
     const userMessage = {
       id: userMessageId,
       role: 'user',
@@ -349,15 +349,26 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
       ...(fileDataToSend && {
         file: {
           name: fileDataToSend.name,
-          type: fileDataToSend.type,
+          type: fileDataToSend.type, // Store 'pdf' or 'text' or 'image'
         },
         image: (fileDataToSend.type === 'image') ? fileDataToSend.content : null
       })
     };
-
     addMessage(chat.id, userMessage);
     
-    console.log("Sending message to", selectedModel + ":", messageToSend, "with file:", fileDataToSend?.file?.name);
+    // Add placeholder AI message
+    const aiMessageId = userMessageId + 1;
+    const placeholderAiMessage = {
+      id: aiMessageId,
+      role: 'assistant',
+      content: '', // Start with empty content
+      isLoading: true, // Indicate loading/streaming
+      timestamp: new Date().toISOString(),
+      modelId: currentModel
+    };
+    addMessage(chat.id, placeholderAiMessage);
+    
+    console.log("Sending message to", currentModel + ":", messageToSend, "with file:", fileDataToSend?.name);
     
     try {
       const processedHistory = chat.messages.map(msg => ({
@@ -368,38 +379,38 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
       
       const imageDataToSend = (fileDataToSend?.type === 'image') ? fileDataToSend.content : null;
       
-      // Pass fileTextContent to sendMessage
-      const aiResponse = await sendMessage(
+      // Get the async generator from the new sendMessage
+      const streamGenerator = sendMessage(
         messageToSend,
-        selectedModel,
+        currentModel,
         processedHistory,
-        imageDataToSend, // Pass image data (or null)
-        fileTextContent // Pass extracted text content (or null)
+        imageDataToSend,
+        fileTextContent
       );
       
-      console.log("Received AI response from", selectedModel + ":", aiResponse);
+      // Process the stream
+      let streamedContent = '';
+      for await (const chunk of streamGenerator) {
+        streamedContent += chunk;
+        // Update the placeholder message content chunk by chunk
+        updateMessage(chat.id, aiMessageId, { content: streamedContent, isLoading: true }); 
+      }
       
-      const aiMessage = {
-        id: userMessageId + 1, 
-        role: 'assistant',
-        content: aiResponse,
-        timestamp: new Date().toISOString(),
-        modelId: selectedModel 
-      };
-      
-      addMessage(chat.id, aiMessage);
+      // Final update to the AI message when streaming is complete
+      updateMessage(chat.id, aiMessageId, { content: streamedContent, isLoading: false, timestamp: new Date().toISOString() });
+      console.log("Streaming finished for", currentModel);
+
     } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage = {
-        id: userMessageId + 1,
-        role: 'assistant',
-        content: `I encountered an error with the ${selectedModel} API. Error details: ${error.message}`,
-        timestamp: new Date().toISOString(),
-        isError: true
-      };
-      addMessage(chat.id, errorMessage);
+      console.error('Error during message streaming:', error);
+      // Update the placeholder message to show the error
+      updateMessage(chat.id, aiMessageId, {
+          content: `Error receiving response from ${currentModel}: ${error.message}`,
+          isError: true,
+          isLoading: false,
+          timestamp: new Date().toISOString()
+      });
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Indicate overall process finished
     }
   };
   
@@ -641,17 +652,6 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
               settings={settings}
             />
           ))}
-          {isLoading && (
-            <ChatMessage 
-              message={{ 
-                role: 'assistant', 
-                content: 'Thinking...', 
-                isLoading: true 
-              }} 
-              showModelIcons={settings.showModelIcons}
-              settings={settings}
-            />
-          )}
           <div ref={messagesEndRef} />
         </MessageList>
       )}
