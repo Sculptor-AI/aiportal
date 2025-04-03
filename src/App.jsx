@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import GlobalStylesProvider from './styles/GlobalStylesProvider';
+import SharedChatView from './components/SharedChatView';
 
 const AppContainer = styled.div`
   display: flex;
@@ -285,8 +286,23 @@ const AppContent = () => {
     // Any other actions needed when model changes, like saving to storage
   };
   
+  // Render logic
+  const currentChat = getCurrentChat();
+  const currentTheme = getTheme(settings.theme);
+
+  // Check if we should render the shared view
+  if (window.location.pathname === '/share-view') {
+    return (
+      <ThemeProvider theme={currentTheme}>
+        <GlobalStylesProvider />
+        <SharedChatView />
+      </ThemeProvider>
+    );
+  }
+
+  // Otherwise, render the main app layout
   return (
-    <ThemeProvider theme={getTheme(settings.theme)}>
+    <ThemeProvider theme={currentTheme}>
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
         <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>

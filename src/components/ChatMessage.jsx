@@ -462,6 +462,33 @@ const MessageImage = styled.img`
   background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
 `;
 
+// New component for PDF file attachment indicator
+const FileAttachmentContainer = styled.div`
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  border: 1px solid ${props => props.theme.border};
+  max-width: fit-content;
+`;
+
+const FileIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  color: #e64a3b; /* PDF red color */
+`;
+
+const FileName = styled.span`
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: ${props => props.theme.text};
+  word-break: break-word;
+`;
+
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return '';
   
@@ -470,7 +497,7 @@ const formatTimestamp = (timestamp) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId, image } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file } = message;
   
   const getAvatar = () => {
     if (role === 'user') {
@@ -494,6 +521,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
   // Apply high contrast mode if set
   const highContrast = settings.highContrast || false;
 
+  // Check if there's a PDF file attached to the message
+  const hasPdfAttachment = file && file.type === 'pdf';
+  
+  // Check if there's a text file attached to the message
+  const hasTextAttachment = file && file.type === 'text';
+
   return (
     <Message alignment={messageAlignment}>
       {messageAlignment !== 'right' && <Avatar role={role} useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
@@ -506,6 +539,33 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
         <Content role={role} bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
           {image && (
             <MessageImage src={image} alt="Uploaded image" />
+          )}
+          {hasPdfAttachment && (
+            <FileAttachmentContainer>
+              <FileIcon style={{ color: '#e64a3b' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <path d="M9 15h6"></path>
+                  <path d="M9 11h6"></path>
+                </svg>
+              </FileIcon>
+              <FileName>{file.name || 'document.pdf'}</FileName>
+            </FileAttachmentContainer>
+          )}
+          {hasTextAttachment && (
+            <FileAttachmentContainer>
+              <FileIcon style={{ color: '#4285F4' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              </FileIcon>
+              <FileName>{file.name || 'document.txt'}</FileName>
+            </FileAttachmentContainer>
           )}
           {isLoading ? (
             <LoadingDots>{content}</LoadingDots>

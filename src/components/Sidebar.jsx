@@ -287,6 +287,44 @@ const ChatTitle = styled.div`
   }
 `;
 
+// New Share Button styled component
+const ShareButton = styled.button`
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 5px;
+  display: flex; /* Align icon nicely */
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px; /* Add slight rounding */
+  opacity: 0; /* Hidden by default */
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease, background-color 0.2s ease;
+  flex-shrink: 0; /* Prevent shrinking */
+
+  /* Show on ChatItem hover only when not collapsed */
+  ${ChatItem}:hover & {
+      opacity: ${props => props.collapsed ? '0' : '1'};
+      visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+  }
+
+  &:hover {
+    color: #1e88e5; // Different hover color (e.g., blue)
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  /* Ensure it's always visible & hoverable on mobile */
+  @media (max-width: 768px) {
+      opacity: 1;
+      visibility: visible;
+      ${ChatItem}:hover & { /* Keep styles consistent */
+          opacity: 1;
+          visibility: visible;
+      }
+  }
+`;
+
 const DeleteButton = styled.button`
   background: none;
   border: none;
@@ -324,6 +362,32 @@ const DeleteButton = styled.button`
   }
 `;
 
+const ButtonContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px; /* Space between buttons */
+  flex-shrink: 0;
+
+  /* Control visibility based on parent hover */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+
+  ${ChatItem}:hover & {
+      opacity: ${props => props.collapsed ? '0' : '1'};
+      visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+  }
+
+  /* Ensure buttons are always visible on mobile */
+  @media (max-width: 768px) {
+      opacity: 1;
+      visibility: visible;
+      ${ChatItem}:hover & {
+          opacity: 1;
+          visibility: visible;
+      }
+  }
+`;
 
 const BottomSection = styled.div`
   padding: ${props => props.collapsed ? '10px 5px' : '15px'};
@@ -609,6 +673,7 @@ const Sidebar = ({
   const [collapsed, setCollapsed] = useState(false); // For desktop sidebar collapse state
   const [showHamburger, setShowHamburger] = useState(true); // Control hamburger visibility during transition
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false); // Model dropdown state
+  const [copyStatus, setCopyStatus] = useState(''); // To show copy confirmation briefly
 
   // Toggle mobile content visibility
   const toggleMobileExpanded = () => {
@@ -638,6 +703,19 @@ const Sidebar = ({
 
   // Find the currently selected model object for display
   const currentModel = availableModels.find(m => m.id === selectedModel);
+
+  // Handle sharing a chat
+  const handleShareChat = async (chatId) => {
+    // Updated share functionality: copy a static link to the clipboard
+    const shareUrl = `${window.location.origin}/share-view?id=${chatId}`; // Use query param for ID
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Static share link copied to clipboard! You need to implement the /share-view route.');
+    } catch (err) {
+      console.error('Failed to copy share link: ', err);
+      alert('Could not copy share link.');
+    }
+  };
 
   return (
     <>
@@ -747,22 +825,43 @@ const Sidebar = ({
                   >
                     {/* TODO: Add chat icon if desired */}
                     <ChatTitle collapsed={collapsed}>{chat.title || `Chat ${chat.id.substring(0, 4)}`}</ChatTitle>
-                    <DeleteButton
-                       collapsed={collapsed}
-                       onClick={(e) => {
-                         e.stopPropagation(); // Prevent ChatItem click
-                         deleteChat(chat.id);
-                       }}
-                       title={`Delete chat: ${chat.title || 'Untitled'}`}
-                     >
-                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2v2"></path>
-                       </svg>
-                     </DeleteButton>
+                    {/* Container for action buttons */}
+                    <ButtonContainer collapsed={collapsed}>
+                      <ShareButton
+                        title="Share Chat"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent chat selection
+                          handleShareChat(chat.id);
+                        }}
+                      >
+                        {/* Share Icon (Feather Icons) */}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                          <polyline points="16 6 12 2 8 6"></polyline>
+                          <line x1="12" y1="2" x2="12" y2="15"></line>
+                        </svg>
+                      </ShareButton>
+                      <DeleteButton
+                        title="Delete Chat"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent chat selection
+                          deleteChat(chat.id);
+                        }}
+                      >
+                        {/* Trash Icon (Feather Icons) */}
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2v2"></path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                      </DeleteButton>
+                    </ButtonContainer>
                   </ChatItem>
                 ))}
               </ChatList>
-
+              {/* Display copy status message */}
+              {copyStatus && <div style={{ padding: '5px 10px', fontSize: '11px', color: '#aaa', textAlign: 'center' }}>{copyStatus}</div>}
             </ScrollableContent>
 
             {/* --- Bottom Buttons Section (Profile, Settings) --- */}

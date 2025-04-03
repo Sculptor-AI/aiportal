@@ -3,7 +3,12 @@ import styled, { keyframes } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import { sendMessage } from '../services/aiService';
 import ModelSelector from './ModelSelector';
-import ImageUploadButton from './ImageUploadButton';
+import FileUploadButton from './FileUploadButton'; // Renamed import
+import * as pdfjsLib from 'pdfjs-dist'; // Import pdfjs
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker'; // Import worker using Vite's worker syntax
+
+// Use Vite's worker import approach instead of CDN
+pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
 
 const ChatWindowContainer = styled.div`
   flex: 1;
@@ -137,12 +142,41 @@ const MessageInput = styled.textarea`
   resize: none;
   min-height: 50px;
   max-height: 150px;
-  overflow-y: auto;
+  /* Change from auto to hidden until height threshold is reached */
+  overflow-y: hidden;
+  /* Hide scrollbar using browser-specific selectors */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Show scrollbar only when content exceeds ~4 lines */
+  &.show-scrollbar {
+    overflow-y: auto;
+    scrollbar-width: thin; /* Firefox */
+    -ms-overflow-style: auto; /* IE and Edge */
+    
+    /* Show scrollbar for Chrome, Safari and Opera */
+    &::-webkit-scrollbar {
+      display: block;
+      width: 6px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
+    }
+  }
+  
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   transition: all 0.2s ease;
   vertical-align: middle;
+  padding-left: 60px; /* Ensure consistent padding */
   
   &::placeholder {
     position: relative;
@@ -235,8 +269,10 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
   const messagesEndRef = useRef(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chat?.title || 'New Conversation');
-  const [uploadedImage, setUploadedImage] = useState(null);
-  const [resetImagePreview, setResetImagePreview] = useState(false);
+  const [uploadedFileData, setUploadedFileData] = useState(null); // { file: File, type: 'image' | 'text', content: string | null }
+  const [resetFileUpload, setResetFileUpload] = useState(false); // Renamed state
+  const inputRef = useRef(null); // Add ref for the textarea
+  const [isProcessingFile, setIsProcessingFile] = useState(false); // State for file processing
 
   // Find the current model data for display
   const modelDisplay = {
@@ -255,75 +291,105 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
     }
   }, [initialSelectedModel]);
   
+  useEffect(() => {
+    if (chat?.id && initialSelectedModel && focusMode) {
+      setSelectedModel(initialSelectedModel);
+      setResetFileUpload(false);
+    }
+  }, [chat?.id, initialSelectedModel, focusMode]);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'; // Reset height
+      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`; // Set to scroll height
+      
+      // Add or remove scrollbar based on content height
+      // Assuming ~20px per line of text, show scrollbar after ~4 lines (80px)
+      const lineHeight = parseInt(getComputedStyle(inputRef.current).lineHeight) || 20;
+      const fourLinesHeight = lineHeight * 4;
+      
+      if (inputRef.current.scrollHeight > fourLinesHeight) {
+        inputRef.current.classList.add('show-scrollbar');
+      } else {
+        inputRef.current.classList.remove('show-scrollbar');
+      }
+    }
+  }, [inputMessage]); // Adjust height and scrollbar visibility based on inputMessage
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
   const handleSendMessage = async () => {
-    if ((!inputMessage.trim() && !uploadedImage) || !chat) return;
+    if ((!inputMessage.trim() && !uploadedFileData) || !chat) return;
     
-    // Store the message to send before clearing the input
     const messageToSend = inputMessage.trim();
-    
-    // Create a unique ID for this message
     const userMessageId = Date.now();
+    const fileDataToSend = uploadedFileData; // Store before clearing state
     
-    // Create user message object
+    // Clear input, file and show loading state
+    setInputMessage('');
+    setUploadedFileData(null);
+    setResetFileUpload(true);
+    setTimeout(() => setResetFileUpload(false), 100);
+    setIsLoading(true);
+
+    // Determine if there's text content from a file (PDF/TXT)
+    let fileTextContent = null;
+    if (fileDataToSend && (fileDataToSend.type === 'pdf' || fileDataToSend.type === 'text')) {
+      fileTextContent = fileDataToSend.content;
+    }
+
+    // Create user message object - include file metadata for display
     const userMessage = {
       id: userMessageId,
       role: 'user',
       content: messageToSend,
       timestamp: new Date().toISOString(),
-      image: uploadedImage ? uploadedImage.src : null
+      ...(fileDataToSend && {
+        file: {
+          name: fileDataToSend.name,
+          type: fileDataToSend.type,
+        },
+        image: (fileDataToSend.type === 'image') ? fileDataToSend.content : null
+      })
     };
-    
-    // Add user message to the chat
+
     addMessage(chat.id, userMessage);
     
-    // Clear input, image and show loading state
-    setInputMessage('');
-    setUploadedImage(null);
-    // Trigger image preview reset
-    setResetImagePreview(true);
-    // Reset the flag after a short delay
-    setTimeout(() => setResetImagePreview(false), 100);
-    setIsLoading(true);
-    
-    console.log("Sending message to", selectedModel + ":", messageToSend);
+    console.log("Sending message to", selectedModel + ":", messageToSend, "with file:", fileDataToSend?.file?.name);
     
     try {
-      // Filter history to include only user/assistant messages without UI-specific properties
       const processedHistory = chat.messages.map(msg => ({
         role: msg.role,
         content: msg.content,
-        image: msg.image // Include image if present
+        image: msg.image
       }));
       
-      // Send the message to the AI service
+      const imageDataToSend = (fileDataToSend?.type === 'image') ? fileDataToSend.content : null;
+      
+      // Pass fileTextContent to sendMessage
       const aiResponse = await sendMessage(
-        messageToSend, 
-        selectedModel, 
-        processedHistory, 
-        uploadedImage ? uploadedImage.src : null
+        messageToSend,
+        selectedModel,
+        processedHistory,
+        imageDataToSend, // Pass image data (or null)
+        fileTextContent // Pass extracted text content (or null)
       );
       
       console.log("Received AI response from", selectedModel + ":", aiResponse);
       
-      // Create AI message object with a different ID
       const aiMessage = {
-        id: userMessageId + 1, // Ensure different ID from user message
+        id: userMessageId + 1, 
         role: 'assistant',
         content: aiResponse,
         timestamp: new Date().toISOString(),
-        modelId: selectedModel // Add the model ID for the icon
+        modelId: selectedModel 
       };
       
-      // Add AI response to the chat
       addMessage(chat.id, aiMessage);
     } catch (error) {
       console.error('Error sending message:', error);
-      
-      // Create error message
       const errorMessage = {
         id: userMessageId + 1,
         role: 'assistant',
@@ -331,11 +397,8 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
         timestamp: new Date().toISOString(),
         isError: true
       };
-      
-      // Add error message to the chat
       addMessage(chat.id, errorMessage);
     } finally {
-      // Hide loading state
       setIsLoading(false);
     }
   };
@@ -348,20 +411,89 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
     }
   };
 
-  // Handle image upload
-  const handleImageSelected = (file) => {
+  // Handle file selection (from button or paste)
+  const handleFileSelected = async (file) => { // Make async
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUploadedImage({
-          src: reader.result,
-          name: file.name
-        });
-      };
-      reader.readAsDataURL(file);
+      const isImage = file.type.startsWith('image/');
+      const isText = file.type === 'text/plain';
+      const isPdf = file.type === 'application/pdf';
+
+      if (isImage || isText || isPdf) {
+        if (file.size > 10 * 1024 * 1024) { /* ... size check ... */ return; }
+
+        setIsProcessingFile(true); // Start processing indicator
+        setUploadedFileData({ file: file, type: file.type.split('/')[0], content: 'Processing...', name: file.name }); // Show processing state
+
+        try {
+          if (isImage) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setUploadedFileData({ file: file, type: 'image', content: reader.result, name: file.name });
+              setIsProcessingFile(false);
+            };
+            reader.onerror = () => { setIsProcessingFile(false); alert('Error reading image file.'); };
+            reader.readAsDataURL(file);
+          } else if (isText) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setUploadedFileData({ file: file, type: 'text', content: reader.result, name: file.name });
+              setIsProcessingFile(false);
+            };
+             reader.onerror = () => { setIsProcessingFile(false); alert('Error reading text file.'); };
+            reader.readAsText(file);
+          } else if (isPdf) {
+             // Extract text from PDF
+             const arrayBuffer = await file.arrayBuffer();
+             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+             let fullText = '';
+             for (let i = 1; i <= pdf.numPages; i++) {
+               const page = await pdf.getPage(i);
+               const textContent = await page.getTextContent();
+               fullText += textContent.items.map(item => item.str).join(' ') + '\n'; // Add newline between pages
+             }
+             setUploadedFileData({ file: file, type: 'pdf', content: fullText.trim(), name: file.name });
+             setIsProcessingFile(false);
+          }
+          setResetFileUpload(false); // Ensure reset is false if a valid file is selected
+        } catch (error) {
+           console.error('Error processing file:', error);
+           alert(`Error processing ${file.type} file: ${error.message}`);
+           setUploadedFileData(null);
+           setIsProcessingFile(false);
+           setResetFileUpload(true); // Trigger reset
+           setTimeout(() => setResetFileUpload(false), 0); // Reset trigger
+        }
+      } else {
+         alert('Unsupported file type selected.');
+         setUploadedFileData(null);
+         // No need to set setIsProcessingFile(false) here as it wasn't set true
+      }
     } else {
-      setUploadedImage(null);
+      setUploadedFileData(null);
     }
+  };
+
+  // Handle paste event for images (keep this for image pasting)
+  const handlePaste = (event) => {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        event.preventDefault(); // Prevent pasting file path as text
+        const file = item.getAsFile();
+        if (file) {
+          // Reuse the existing file selection logic
+          handleFileSelected(file);
+          // DO NOT trigger resetFileUpload here; FileUploadButton should show its preview
+          // setResetFileUpload(true);
+          // setTimeout(() => setResetFileUpload(false), 0);
+        }
+        break; // Handle only the first image found
+      }
+    }
+    // Allow default paste behavior for text etc. if no image was found
   };
 
   const handleStartEditing = () => {
@@ -428,6 +560,21 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
     if (focusMode) {
       setIsFocused(isFocusedState);
     }
+  };
+
+  // Clear attached file data
+  const clearUploadedFile = () => {
+    setUploadedFileData(null);
+    setResetFileUpload(true); // Trigger reset in FileUploadButton as well
+    setTimeout(() => setResetFileUpload(false), 0);
+  };
+
+  // Update placeholder and disabled state based on processing
+  const getPlaceholderText = () => {
+    if (isLoading) return "Waiting for response...";
+    if (isProcessingFile) return "Processing file...";
+    if (uploadedFileData) return `Attached: ${uploadedFileData.name}. Add text or send.`;
+    return "Type message, paste image, or attach file...";
   };
 
   return (
@@ -511,23 +658,26 @@ const ChatWindow = ({ chat, addMessage, selectedModel: initialSelectedModel, upd
       
       <InputContainer isEmpty={chatIsEmpty}>
         <MessageInputWrapper isEmpty={chatIsEmpty}>
-          <ImageUploadButton 
-            onImageSelected={handleImageSelected} 
-            disabled={isLoading}
-            resetPreview={resetImagePreview}
+          <FileUploadButton 
+            onFileSelected={handleFileSelected} 
+            disabled={isLoading || isProcessingFile} // Disable while processing
+            resetFile={resetFileUpload} 
+            externalFile={uploadedFileData?.file} 
           />
-          <MessageInput 
+          <MessageInput
+            ref={inputRef} 
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => inputFocusChange(true)}
-            onBlur={() => inputFocusChange(false)}
-            placeholder="Type your message here..."
-            disabled={isLoading}
+            onPaste={handlePaste} 
+            placeholder={getPlaceholderText()} // Use dynamic placeholder
+            disabled={isLoading || isProcessingFile} // Disable while processing
+            rows={1}
+            style={{ maxHeight: '150px', overflowY: 'auto' }} 
           />
-          <SendButton 
+          <SendButton
             onClick={handleSendMessage}
-            disabled={isLoading || (!inputMessage.trim() && !uploadedImage)}
+            disabled={isLoading || isProcessingFile || (!inputMessage.trim() && !uploadedFileData)} // Also disable while processing
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 2L11 13"></path>

@@ -1,31 +1,33 @@
 import axios from 'axios';
 
 // Get API keys from environment variables (fallback)
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const CLAUDE_API_KEY = import.meta.env.VITE_CLAUDE_API_KEY;
+const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+const CLAUDE_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const NVIDIA_API_KEY = import.meta.env.VITE_NVIDIA_API_KEY;
+
+// Add debug logging to check what we're receiving from environment
+console.log("Loaded API keys from environment:", {
+  gemini: GEMINI_API_KEY ? "Present (value hidden)" : "Missing",
+  claude: CLAUDE_API_KEY ? "Present (value hidden)" : "Missing",
+  openai: OPENAI_API_KEY ? "Present (value hidden)" : "Missing",
+  nvidia: NVIDIA_API_KEY ? "Present (value hidden)" : "Missing"
+});
 
 // Map updated model IDs to their respective API endpoints and formats
 const MODEL_CONFIGS = {
   'gemini-2-flash': {
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    prepareRequest: (message, history, imageData) => {
-      // Format request for Gemini API with image support
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
+    prepareRequest: (message, history, imageData, fileTextContent = null) => { 
       const formattedMessages = history.map(msg => {
         if (msg.image) {
+          const base64Data = msg.image.split(',')[1];
+          const mimeType = 'image/jpeg';
           return {
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [
-              { 
-                text: msg.content 
-              },
-              {
-                inline_data: {
-                  mime_type: 'image/jpeg',
-                  data: msg.image.split(',')[1] // Remove the data:image/jpeg;base64, prefix
-                }
-              }
+              { text: msg.content },
+              { inline_data: { mime_type: mimeType, data: base64Data } }
             ]
           };
         } else {
@@ -36,27 +38,27 @@ const MODEL_CONFIGS = {
         }
       });
       
-      // Add current message with image if provided
-      let currentMessage;
-      if (imageData) {
-        currentMessage = {
-          role: 'user',
-          parts: [
-            { text: message },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: imageData.split(',')[1] // Remove the data:image/jpeg;base64, prefix
-              }
-            }
-          ]
-        };
-      } else {
-        currentMessage = {
-          role: 'user',
-          parts: [{ text: message }]
-        };
+      // Prepend file text content if available
+      let currentMessageText = message;
+      if (fileTextContent) {
+        currentMessageText = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
       }
+      
+      // Construct parts using potentially modified text
+      let currentMessageParts = [{ text: currentMessageText }]; 
+      if (imageData) {
+        currentMessageParts.push({
+          inline_data: {
+            mime_type: imageData.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg', 
+            data: imageData.split(',')[1] 
+          }
+        });
+      }
+      
+      const currentMessage = {
+        role: 'user',
+        parts: currentMessageParts
+      };
       
       return {
         contents: [
@@ -76,10 +78,9 @@ const MODEL_CONFIGS = {
 
   'claude-3.7-sonnet': {
     baseUrl: 'https://api.anthropic.com/v1/messages',
-    prepareRequest: (message, history, imageData) => {
-      // Format properly for Claude API with image support
+    prepareRequest: (message, history, imageData, fileTextContent = null) => { 
       const messages = history.map(msg => {
-        if (msg.image) {
+        if (msg.image) { 
           return {
             role: msg.role,
             content: [
@@ -88,7 +89,7 @@ const MODEL_CONFIGS = {
                 source: {
                   type: 'base64',
                   media_type: 'image/jpeg',
-                  data: msg.image.split(',')[1] // Remove the data:image/jpeg;base64, prefix
+                  data: msg.image.split(',')[1]
                 }
               },
               { type: 'text', text: msg.content }
@@ -102,25 +103,31 @@ const MODEL_CONFIGS = {
         }
       });
 
-      // Add the current message
-      if (imageData) {
-        messages.push({
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: imageData.split(',')[1] // Remove the data:image/jpeg;base64, prefix
-              }
-            },
-            { type: 'text', text: message }
-          ]
-        });
-      } else {
-        messages.push({ role: 'user', content: message });
+      // Prepend file text content if available
+      let currentMessageText = message;
+      if (fileTextContent) {
+        currentMessageText = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
       }
+
+      // Construct content using potentially modified text
+      let currentMessageContent = [];
+      if (imageData) {
+        currentMessageContent = [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: imageData.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg', 
+              data: imageData.split(',')[1]
+            }
+          },
+          { type: 'text', text: currentMessageText } // Use potentially modified text
+        ];
+      } else {
+        currentMessageContent = [{ type: 'text', text: currentMessageText }]; // Use potentially modified text
+      }
+      
+      messages.push({ role: 'user', content: currentMessageContent });
 
       return {
         model: 'claude-3-sonnet-20240229',
@@ -138,8 +145,7 @@ const MODEL_CONFIGS = {
 
   'chatgpt-4o': {
     baseUrl: 'https://api.openai.com/v1/chat/completions',
-    prepareRequest: (message, history, imageData) => {
-      // Format properly for OpenAI API with image support
+    prepareRequest: (message, history, imageData, fileTextContent = null) => {
       const formattedMessages = history.map(msg => {
         if (msg.image) {
           return {
@@ -166,31 +172,27 @@ const MODEL_CONFIGS = {
         }
       });
       
-      // Add current message with image if provided
-      let currentMessage;
-      if (imageData) {
-        currentMessage = {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: message
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageData,
-                detail: 'auto'
-              }
-            }
-          ]
-        };
-      } else {
-        currentMessage = {
-          role: 'user',
-          content: message
-        };
+      // Prepend file text content if available
+      let currentMessageText = message;
+      if (fileTextContent) {
+        currentMessageText = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
       }
+
+      // Construct content using potentially modified text
+      let currentMessageContent = [];
+      if (imageData) {
+         currentMessageContent = [
+           { type: 'text', text: currentMessageText }, // Use potentially modified text
+           { type: 'image_url', image_url: { url: imageData, detail: 'auto' } }
+         ];
+      } else {
+         currentMessageContent = currentMessageText; // Use potentially modified text (OpenAI accepts string directly)
+      }
+      
+      const currentMessage = {
+        role: 'user',
+        content: currentMessageContent
+      };
       
       return {
         model: 'gpt-4o',
@@ -208,31 +210,36 @@ const MODEL_CONFIGS = {
     }
   },
   
-  // Add custom GGUF model
   'custom-gguf': {
-    baseUrl: 'https://api.explodingcb.com/chat',  // Your Cloudflare tunnel URL
-    prepareRequest: (message, history, imageData) => {
-      // Format properly for your GGUF API
-      // Note: Basic GGUF models might not support image input
-      // We'll include a note about the image in the message text
+    baseUrl: '',
+    prepareRequest: (message, history, imageData, fileTextContent = null) => { 
       let messageText = message;
+      // Prepend file text content if available
+      if (fileTextContent) {
+        messageText = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
+      }
+      // Note about image is separate
       if (imageData) {
-        messageText = `[Note: Image was uploaded with this message] ${message}`;
+        // Prepend image note AFTER potential file content
+        messageText = `[Note: Image was uploaded with this message]\n\n${messageText}`;
       }
       
+      const processedHistory = history.map(msg => {
+        let originalContent = msg.content; 
+        let processedContent = originalContent; 
+        if (msg.image) { 
+          processedContent = `[Note: Previous message included an image]\n\n${originalContent}`;
+        } 
+        return {
+          role: msg.role,
+          content: processedContent 
+        };
+      });
+
       return {
         messages: [
-          ...history.map(msg => {
-            let content = msg.content;
-            if (msg.image) {
-              content = `[Note: Message included an image] ${content}`;
-            }
-            return {
-              role: msg.role,
-              content: content
-            };
-          }),
-          { role: 'user', content: messageText }
+          ...processedHistory, 
+          { role: 'user', content: messageText } // Use potentially modified message text
         ],
         max_tokens: 1024,
         temperature: 0.7,
@@ -247,49 +254,11 @@ const MODEL_CONFIGS = {
     }
   },
 
-  'ursa-minor': {
-    name: 'Ursa Minor',
-    baseUrl: '', // Will be set dynamically from user settings
-    prepareRequest: (message, history, imageData) => {
-      // Format messages for the Ursa Minor API
-      // Note: Basic local models might not support image input
-      // We'll include a note about the image in the message text
-      let messageText = message;
-      if (imageData) {
-        messageText = `[Note: Image was uploaded with this message] ${message}`;
-      }
-      
-      const messages = [
-        ...history.map(msg => {
-          let content = msg.content;
-          if (msg.image) {
-            content = `[Note: Message included an image] ${content}`;
-          }
-          return { role: msg.role, content: content };
-        }),
-        { role: 'user', content: messageText }
-      ];
-      
-      return {
-        messages,
-        max_tokens: 512,
-        temperature: 0.7
-      };
-    },
-    extractResponse: (data) => {
-      // Extract response text from API result
-      return data.content;
-    }
-  },
-  
-  // New NVIDIA Nemotron model
   'nemotron-super-49b': {
     baseUrl: 'https://integrate.api.nvidia.com/v1/chat/completions',
-    prepareRequest: (message, history, imageData) => {
-      // Format properly for NVIDIA's Nemotron API - using OpenAI-compatible interface
-      // Note: Check if NVIDIA API supports images - this implementation assumes similar to OpenAI
+    prepareRequest: (message, history, imageData, fileTextContent = null) => { 
       const formattedMessages = history.map(msg => {
-        if (msg.image) {
+        if (msg.image) { 
           return {
             role: msg.role,
             content: [
@@ -314,31 +283,27 @@ const MODEL_CONFIGS = {
         }
       });
       
-      // Add current message with image if provided
-      let currentMessage;
-      if (imageData) {
-        currentMessage = {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: message
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageData,
-                detail: 'auto'
-              }
-            }
-          ]
-        };
-      } else {
-        currentMessage = {
-          role: 'user',
-          content: message
-        };
+      // Prepend file text content if available
+      let currentMessageText = message;
+      if (fileTextContent) {
+        currentMessageText = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
       }
+
+      // Construct content using potentially modified text
+      let currentMessageContent = [];
+      if (imageData) {
+         currentMessageContent = [
+           { type: 'text', text: currentMessageText }, // Use potentially modified text
+           { type: 'image_url', image_url: { url: imageData, detail: 'auto' } } // Nvidia uses image_url like OpenAI
+         ];
+      } else {
+         currentMessageContent = currentMessageText; // Use potentially modified text (Nvidia likely accepts string directly)
+      }
+
+      const currentMessage = {
+        role: 'user',
+        content: currentMessageContent
+      };
       
       return {
         model: "nvidia/llama-3.3-nemotron-super-49b-v1",
@@ -387,28 +352,33 @@ const getApiKeys = () => {
   return {
     openai: userSettings.openaiApiKey || OPENAI_API_KEY,
     anthropic: userSettings.anthropicApiKey || CLAUDE_API_KEY,
-    google: userSettings.googleApiKey || GEMINI_API_KEY,
+    // Use user setting only if it's a non-empty string, otherwise fallback to env variable
+    google: (userSettings.googleApiKey && userSettings.googleApiKey.trim() !== '') 
+            ? userSettings.googleApiKey 
+            : GEMINI_API_KEY,
     nvidia: userSettings.nvidiaApiKey || NVIDIA_API_KEY,
     customGguf: userSettings.customGgufApiKey || '', // Add custom GGUF API key
     customGgufUrl: userSettings?.customGgufApiUrl || 'http://localhost:8000'
   };
 };
 
-// Updated createUrsaMinorRequest to include max_tokens and image support
+// Reverted: Removed textContent and fileName parameters
 const createUrsaMinorRequest = async (message, history, apiUrl, imageData = null) => {
-  // Add image data note for models that don't natively support images
   let messageText = message;
   if (imageData) {
-    messageText = `[Note: Image was uploaded with this message] ${message}`;
+    // Reverted: Simplified image note
+    messageText = `[Note: Image was uploaded with this message]\n\n${message}`; 
   }
+  // Reverted: Removed textContent handling logic
   
   const formattedMessages = [
     ...history.map(msg => {
-      let content = msg.content;
-      if (msg.image) {
-        content = `[Note: Message included an image] ${content}`;
-      }
-      return { role: msg.role, content: content };
+       let content = msg.content;
+       if (msg.image) { 
+         content = `[Note: Previous message included an image]\n\n${content}`;
+       } 
+       // Reverted: Removed file handling in history
+       return { role: msg.role, content: content };
     }),
     { role: 'user', content: messageText }
   ];
@@ -441,9 +411,13 @@ const createUrsaMinorRequest = async (message, history, apiUrl, imageData = null
   }
 };
 
-export const sendMessage = async (message, modelId, history, imageData = null) => {
+// Updated sendMessage signature to accept fileTextContent
+export const sendMessage = async (message, modelId, history, imageData = null, fileTextContent = null) => { 
   console.log(`sendMessage called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
-    `history length: ${history?.length || 0}`);
+    `history length: ${history?.length || 0}`, 
+    imageData ? `imageData: [${imageData.substring(0,30)}...]` : '',
+    fileTextContent ? `fileTextContent: [${fileTextContent.substring(0,30)}...]` : '' // Log file text
+  );
   
   // Validate inputs
   if (!message || !modelId) {
@@ -488,56 +462,68 @@ export const sendMessage = async (message, modelId, history, imageData = null) =
   
   // Only use simulation if no API key is available
   if (!hasApiKey) {
-    // ...existing simulation code...
+    // TODO: Add simulation logic if needed
   }
   
   // Use real API when we have keys
   try {
     console.log(`Using real API for ${modelId} (source: ${apiKeySource})`);
     
-    // Special case for Ursa Minor API
+    // Special case for Ursa Minor API (local GGUF)
     if (modelId === 'ursa-minor') {
-      const apiUrl = apiKeys.customGgufUrl;
+      const apiUrl = apiKeys.customGgufUrl || 'http://localhost:8000'; // Default if not set
       console.log(`Using Ursa Minor API at ${apiUrl}`);
-      
       try {
-        return await createUrsaMinorRequest(message, history, apiUrl, imageData);
+        // TODO: Update createUrsaMinorRequest if it needs to handle fileTextContent
+        // For now, it will ignore fileTextContent
+        return await createUrsaMinorRequest(message, history, apiUrl, imageData); 
       } catch (error) {
         console.error("Error calling Ursa Minor API:", error);
-        throw new Error(`Error setting up request to ursa-minor API: ${error.message}\n\nPlease check your API configuration and try again.`);
+        throw new Error(`Error setting up request to Ursa Minor API: ${error.message}\n\nPlease check your API configuration and try again.`);
       }
     }
     
-    // Prepare the request based on the selected model
-    const requestData = modelConfig.prepareRequest(message, history, imageData);
+    // Prepare the request based on the selected model, passing all relevant data
+    const requestData = modelConfig.prepareRequest(message, history, imageData, fileTextContent);
   
     // Set up headers and URL based on model type
     let headers = { 'Content-Type': 'application/json' };
     let url = modelConfig.baseUrl;
 
-    if (modelId === 'gemini-2-flash') {
-      // Ensure we're explicitly using the correct model
-      url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent' + `?key=${apiKeys.google}`;
-    } else if (modelId === 'claude-3.7-sonnet') {
+    // Set model-specific headers (Claude, OpenAI, NVIDIA)
+    if (modelId.startsWith('claude')) { // Use startsWith for flexibility
       headers['x-api-key'] = apiKeys.anthropic;
       headers['anthropic-version'] = '2023-06-01';
-      // Required for CORS in browser environment
-      headers['Content-Type'] = 'application/json';
-    } else if (modelId === 'chatgpt-4o') {
+      // The Content-Type header is already set initially
+    } else if (modelId.startsWith('chatgpt') || modelId === 'dall-e-3') { // Use startsWith for flexibility
       headers['Authorization'] = `Bearer ${apiKeys.openai}`;
-    } else if (modelId === 'custom-gguf') {
-      // No special headers needed for custom API, use default headers
-      url = modelConfig.baseUrl;
-      
+    } else if (modelId === 'custom-gguf') { 
+      // Use the URL from settings for the generic custom GGUF model
+      url = apiKeys.customGgufUrl || modelConfig.baseUrl; // Fallback if needed
+      if (!url) {
+         throw new Error("Custom GGUF API URL is not configured in settings.");
+      }
+      console.log(`Using Custom GGUF API at ${url}`);
       // Optionally add API key if your custom implementation requires it
       if (apiKeys.customGguf) {
         headers['Authorization'] = `Bearer ${apiKeys.customGguf}`;
       }
-    } else if (modelId === 'nemotron-super-49b') {
+    } else if (modelId.startsWith('nemotron')) { // Use startsWith for flexibility
       headers['Authorization'] = `Bearer ${apiKeys.nvidia}`;
     }
 
+    // Append Google API key as query param if it's a Gemini model
+    if (modelId.startsWith('gemini')) {
+        if (!apiKeys.google) throw new Error('Google API Key is missing.');
+        url += `?key=${apiKeys.google}`; // Append key correctly
+    }
+
+    console.log("Final Request URL:", url);
+    console.log("Final Request Headers:", headers);
+    console.log("Final Request Data:", JSON.stringify(requestData, null, 2));
+
     const response = await axios.post(url, requestData, { headers });
+    console.log("API Response:", response);
     return modelConfig.extractResponse(response);
   } catch (error) {
     console.error('Error calling AI API:', error);
