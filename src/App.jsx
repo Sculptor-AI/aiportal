@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import GlobalStylesProvider from './styles/GlobalStylesProvider';
 import SharedChatView from './components/SharedChatView';
 import { keyframes } from 'styled-components';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 
 const AppContainer = styled.div`
   display: flex;
@@ -83,7 +84,9 @@ const MainGreeting = styled.div`
 const AppWithAuth = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   );
 };
@@ -91,18 +94,17 @@ const AppWithAuth = () => {
 // Main app component
 const AppContent = () => {
   const { user, updateSettings: updateUserSettings } = useAuth();
+  const toast = useToast();
   
   // Greeting messages
   const greetingMessages = [
-    "How's it going",
-    "Good to see you",
-    "Hello there",
-    "Welcome back",
-    "Hey there",
-    "Greetings",
-    "Nice to see you",
-    "Howdy",
-    "Hi there"
+    "Look who decided to show up",
+    "Back for more AI wisdom?",
+    "Oh great, it's you again",
+    "Lemme guess, essay due in an hour",
+    "You again? Don't you sleep?",
+    "You treat me like Google with trauma.",
+    "I was just about to take a nap, but okay"
   ];
   
   // Get random greeting message
@@ -334,6 +336,54 @@ const AppContent = () => {
     // Any other actions needed when model changes, like saving to storage
   };
   
+  // Firefox Demo Toast
+  const showFirefoxToast = () => {
+    // Detect if the user is using Firefox
+    const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+    
+    if (isFirefox) {
+      // User is already using Firefox - show the success toast
+      toast.showCustomToast(
+        "Nice!", 
+        "", 
+        { 
+          customImage: '/images/firefox-logo.png',
+          duration: 5000,
+          bottom: '20px',
+          left: '20px',
+          type: 'success',
+          successOverride: true
+        }
+      );
+    } else {
+      // User is not using Firefox - show the prompt toast with redirection
+      toast.showCustomToast(
+        "Firefox preferred", 
+        "This website works best with Firefox", 
+        { 
+          customImage: '/images/firefox-logo.png',
+          duration: 10000, // Longer duration to give user time to click
+          bottom: '20px',
+          left: '20px',
+          useTheme: true,
+          onClick: () => {
+            window.open('https://www.mozilla.org/en-US/firefox/new/?xv=refresh-new&v=a', '_blank');
+          }
+        }
+      );
+    }
+  };
+
+  // Show Firefox toast on component mount or page refresh
+  useEffect(() => {
+    // Show Firefox toast after a short delay
+    const timer = setTimeout(() => {
+      showFirefoxToast();
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   // Render logic
   const currentChat = getCurrentChat();
   const currentTheme = getTheme(settings.theme);
@@ -365,10 +415,11 @@ const AppContent = () => {
           )}
           
           {/* Main greeting that appears at the top of the page */}
-          {currentChat && currentChat.messages.length === 0 && (
+          {getCurrentChat()?.messages?.length === 0 && (
             <MainGreeting sidebarCollapsed={collapsed}>
               <h1>
-                {greeting}, {user?.username || "friend"}!
+                {greeting}{user ? `, ${user.username}` : ''} 
+                {user && <span role="img" aria-label="wave">👋</span>}
               </h1>
             </MainGreeting>
           )}

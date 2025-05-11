@@ -4,6 +4,7 @@ import ChatMessage from './ChatMessage';
 import { sendMessage } from '../services/aiService';
 import ModelSelector from './ModelSelector';
 import FileUploadButton from './FileUploadButton';
+import { useToast } from '../contexts/ToastContext';
 import * as pdfjsLib from 'pdfjs-dist'; // Import pdfjs
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker'; // Import worker using Vite's worker syntax
 
@@ -380,7 +381,15 @@ const ActionChip = styled.button`
   }
 `;
 
-const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSelectedModel, updateChatTitle, settings, focusMode = false }) => {
+const ChatWindow = ({ 
+  chat, 
+  onAddMessage, 
+  onUpdateMessage, 
+  selectedModel: initialSelectedModel, 
+  settings, 
+  sidebarCollapsed = false, 
+  availableModels 
+}) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
@@ -391,6 +400,7 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
   const [resetFileUpload, setResetFileUpload] = useState(false); // Renamed state
   const inputRef = useRef(null); // Add ref for the textarea
   const [isProcessingFile, setIsProcessingFile] = useState(false); // State for file processing
+  const toast = useToast();
 
   const chatIsEmpty = !chat || chat.messages.length === 0;
 
@@ -445,11 +455,11 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
   }, [initialSelectedModel]);
   
   useEffect(() => {
-    if (chat?.id && initialSelectedModel && focusMode) {
+    if (chat?.id && initialSelectedModel && sidebarCollapsed) {
       setSelectedModel(initialSelectedModel);
       setResetFileUpload(false);
     }
-  }, [chat?.id, initialSelectedModel, focusMode]);
+  }, [chat?.id, initialSelectedModel, sidebarCollapsed]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -495,7 +505,7 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
       fileInfo: uploadedFileData ? { name: uploadedFileData.name, type: uploadedFileData.type } : undefined,
       model: currentModel // Associate message with model used
     };
-    addMessage(currentChatId, userMessage); // Use the updated addMessage from context
+    onAddMessage(currentChatId, userMessage); // Use the updated addMessage from context
     
     // Add placeholder AI message
     const aiMessageId = userMessage.id + 1; // Temporary ID for the streaming message
@@ -506,7 +516,7 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
         isLoading: true,
         modelId: currentModel // Store which model is responding
     };
-    addMessage(currentChatId, placeholderAiMessage);
+    onAddMessage(currentChatId, placeholderAiMessage);
     // --- End Optimistic UI Update ---
 
     // Clear input and reset file upload state *after* capturing needed data
@@ -526,11 +536,11 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
         (chunk) => {       // Callback for receiving chunks
           streamedContent += chunk;
           // Update the placeholder message content chunk by chunk
-          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
+          onUpdateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
         },
         (error) => {       // Callback for errors during streaming
           console.error(`Error streaming response from ${currentModel}:`, error);
-          updateMessage(currentChatId, aiMessageId, {
+          onUpdateMessage(currentChatId, aiMessageId, {
             content: `Error: ${error.message || 'Failed to get response'}`,
             isError: true,
             isLoading: false
@@ -541,12 +551,12 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
         settings           // Pass settings object
       );
       // If sendMessage completes without calling the error callback, finalize the message
-       updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
+       onUpdateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
        console.log(`[ChatWindow] Streaming finished successfully for ${currentModel}.`);
 
     } catch (error) { // Catch errors thrown directly by sendMessage setup (e.g., network issues)
        console.error(`Error setting up sendMessage for ${currentModel}:`, error);
-        updateMessage(currentChatId, aiMessageId, {
+        onUpdateMessage(currentChatId, aiMessageId, {
             content: `Setup Error: ${error.message || 'Failed to initiate connection'}`,
             isError: true,
             isLoading: false
@@ -662,7 +672,7 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
 
   const handleTitleSave = () => {
     if (editedTitle.trim()) {
-      updateChatTitle(chat.id, editedTitle.trim());
+      onUpdateMessage(chat.id, null, { title: editedTitle.trim() });
     }
     setIsEditingTitle(false);
   };
@@ -722,16 +732,6 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
     );
   }
   
-  // Models array to pass to the ModelSelector component
-  const availableModels = [
-    { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-    { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
-    { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
-    { id: 'nemotron-super-49b', name: 'Nemotron 49B' },  
-    { id: 'ursa-minor', name: 'Ursa Minor' }
-  ];
-  
   // Handle model change
   const handleModelChange = (modelId) => {
     setSelectedModel(modelId); // Ensure the selected model is updated in state
@@ -747,7 +747,7 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
   
   // Handle focus mode
   const inputFocusChange = (isFocusedState) => {
-    if (focusMode) {
+    if (sidebarCollapsed) {
       setIsFocused(isFocusedState);
     }
   };
@@ -771,7 +771,7 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
     <ChatWindowContainer fontSize={settings?.fontSize}>
       <ChatHeader 
         style={{ 
-          opacity: (focusMode && isFocused) ? '0' : '1',
+          opacity: (sidebarCollapsed && isFocused) ? '0' : '1',
           transition: 'opacity 0.3s ease'
         }}
       >
