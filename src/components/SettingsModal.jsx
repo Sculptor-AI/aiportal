@@ -33,8 +33,8 @@ const ModalContent = styled.div`
   background-color: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
   border-radius: 16px;
-  width: 520px;
-  max-width: 90%;
+  width: 90vw;
+  max-width: 1600px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
@@ -63,7 +63,7 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
+  padding: 20px 30px;
   border-bottom: 1px solid ${props => props.theme.border};
   position: sticky;
   top: 0;
@@ -102,29 +102,31 @@ const CloseButton = styled.button`
 `;
 
 const ModalBody = styled.div`
-  padding: 24px;
+  padding: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 40px;
 `;
 
 const SettingsSection = styled.div`
-  margin-bottom: 36px;
+  margin-bottom: 40px;
   position: relative;
+  padding: 20px;
+  background-color: ${props => props.theme.cardBackground || 'rgba(0,0,0,0.02)'};
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
   
   &:last-child {
     margin-bottom: 0;
   }
   
-  &:after {
-    content: '';
-    display: block;
-    height: 1px;
-    background: ${props => props.theme.border}80;
-    margin-top: 36px;
-    opacity: ${props => props.isLast ? '0' : '1'};
+  @media (max-width: 768px) {
+    padding: 15px;
   }
 `;
 
 const SectionTitle = styled.h3`
-  margin: 0 0 20px 0;
+  margin: 0 0 25px 0;
   font-size: 1.15rem;
   font-weight: 600;
   display: flex;
@@ -142,54 +144,15 @@ const SectionTitle = styled.h3`
 `;
 
 const SettingGroup = styled.div`
-  margin-bottom: 24px;
+  margin-bottom: 30px;
   
   &:last-child {
     margin-bottom: 0;
   }
-`;
-
-const ApiTokenInput = styled.div`
-  margin-bottom: 20px;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const TokenLabel = styled.label`
-  display: block;
-  margin-bottom: 8px;
-  font-size: 0.95rem;
-  font-weight: 500;
-`;
-
-const TokenInput = styled.input`
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid ${props => props.theme.border};
-  background-color: ${props => props.theme.background}80;
-  color: ${props => props.theme.text};
-  font-family: inherit;
-  transition: all 0.2s ease;
-  
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.primary}30;
-  }
-`;
-
-const TokenNote = styled.p`
-  font-size: 0.8rem;
-  color: ${props => props.theme.text}80;
-  margin-top: 6px;
-  margin-bottom: 0;
 `;
 
 const SettingLabel = styled.h4`
-  margin: 0 0 14px 0;
+  margin: 0 0 16px 0;
   font-size: 1.05rem;
   font-weight: 500;
   color: ${props => props.theme.text}dd;
@@ -197,7 +160,7 @@ const SettingLabel = styled.h4`
 
 const RadioGroup = styled.div`
   display: flex;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
   
   @media (max-width: 768px) {
@@ -209,8 +172,8 @@ const RadioOption = styled.label`
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 10px 14px;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border-radius: 10px;
   background-color: ${props => props.isSelected ? 
     `${props.theme.primary}15` : 
     'rgba(0, 0, 0, 0.03)'};
@@ -218,6 +181,7 @@ const RadioOption = styled.label`
     props.theme.primary : 
     'transparent'};
   transition: all 0.2s ease;
+  font-size: 0.95rem;
   
   &:hover {
     background-color: ${props => props.isSelected ? 
@@ -226,15 +190,19 @@ const RadioOption = styled.label`
   }
   
   input {
-    margin-right: 8px;
+    margin-right: 10px;
   }
 `;
 
 const ToggleWrapper = styled.div`
   display: flex;
   align-items: center;
-  margin-bottom: 14px;
-  padding: 8px 0;
+  margin-bottom: 18px;
+  padding: 10px 0;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
 `;
 
 const Toggle = styled.label`
@@ -260,38 +228,59 @@ const Slider = styled.span`
   right: 0;
   bottom: 0;
   background-color: ${props => props.checked ? props.theme.primary : 'rgba(0,0,0,0.15)'};
+  background-image: ${props => props.checked ? 
+    `linear-gradient(to right, ${props.theme.primary}90, ${props.theme.primary})` : 
+    'none'};
   transition: 0.3s;
   border-radius: 26px;
+  overflow: visible;
   
   &:before {
     position: absolute;
     content: "";
-    height: 20px;
-    width: 20px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
+    height: ${props => props.checked ? '22px' : '20px'};
+    width: ${props => props.checked ? '22px' : '20px'};
+    left: ${props => props.checked ? '2px' : '3px'};
+    bottom: ${props => props.checked ? '2px' : '3px'};
+    background-color: ${props => props.checked ? '#4caf50' : 'white'};
     transition: 0.3s;
     border-radius: 50%;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    box-shadow: ${props => props.checked ? 
+      `0 2px 5px rgba(0,0,0,0.2)` : 
+      '0 2px 5px rgba(0,0,0,0.2)'};
     transform: ${props => props.checked ? 'translateX(22px)' : 'translateX(0)'};
+  }
+  
+  /* Visual indicator on track */
+  &:after {
+    content: "";
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: ${props => props.checked ? 'white' : 'transparent'};
+    top: 10px;
+    left: 9px;
+    opacity: ${props => props.checked ? '0.7' : '0'};
+    transition: 0.3s;
   }
 `;
 
 const ThemeOption = styled.label`
   display: flex;
   align-items: center;
-  padding: 14px 10px;
+  padding: 16px 12px;
   border-radius: 10px;
   border: 2px solid ${props => props.isSelected ? props.theme.primary : 'transparent'};
   background: ${props => props.isSelected ? props.theme.cardBackground : 'rgba(0,0,0,0.03)'};
   cursor: pointer;
   transition: all 0.25s ease;
-  width: 90px;
+  width: 100px;
   justify-content: center;
   position: relative;
   box-shadow: ${props => props.isSelected ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'};
   transform: ${props => props.isSelected ? 'translateY(-2px)' : 'none'};
+  margin-bottom: 8px;
   
   /* Make bisexual theme option wider */
   &.bisexual-theme {
@@ -378,13 +367,18 @@ const ThemeOption = styled.label`
 `;
 
 const AboutSection = styled.div`
-  margin-top: 20px;
+  margin-top: 30px;
+  padding: 20px;
   text-align: center;
   font-size: 0.9rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
+  grid-column: 1 / -1;
+  background-color: ${props => props.theme.cardBackground || 'rgba(0,0,0,0.02)'};
+  border-radius: 12px;
 `;
 
 const VersionText = styled.div`
@@ -422,17 +416,19 @@ const FontSizeOption = styled(RadioOption)`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px 20px;
+  padding: 18px 20px;
   width: auto;
-  min-width: 100px;
+  min-width: 110px;
   
   .size-label {
-    margin-top: 8px;
+    margin-top: 10px;
+    font-weight: 500;
   }
   
   .sample-text {
-    margin-top: 4px;
+    margin-top: 6px;
     white-space: nowrap;
+    font-weight: 600;
   }
   
   .small {
@@ -471,18 +467,20 @@ const ColorPickerOption = styled.div`
 `;
 
 const SelectBox = styled.select`
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
   border: 1px solid ${props => props.theme.border};
   background-color: ${props => props.theme.background}80;
   color: ${props => props.theme.text};
   font-family: inherit;
   width: 100%;
   margin-bottom: 15px;
+  font-size: 0.95rem;
   
   &:focus {
     outline: none;
     border-color: ${props => props.theme.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.primary}30;
   }
 `;
 
@@ -685,7 +683,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               <SettingLabel>Message Features</SettingLabel>
               
               <ToggleWrapper>
-                <Toggle>
+                <Toggle checked={localSettings.showTimestamps}>
                   <input
                     type="checkbox"
                     checked={localSettings.showTimestamps}
@@ -697,7 +695,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               </ToggleWrapper>
               
               <ToggleWrapper>
-                <Toggle>
+                <Toggle checked={localSettings.showModelIcons}>
                   <input
                     type="checkbox"
                     checked={localSettings.showModelIcons}
@@ -709,7 +707,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               </ToggleWrapper>
               
               <ToggleWrapper>
-                <Toggle>
+                <Toggle checked={localSettings.codeHighlighting}>
                   <input
                     type="checkbox"
                     checked={localSettings.codeHighlighting}
@@ -724,7 +722,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
             <SettingGroup>
               <SettingLabel>Message Sending</SettingLabel>
               <ToggleWrapper>
-                <Toggle>
+                <Toggle checked={localSettings.sendWithEnter}>
                   <input
                     type="checkbox"
                     checked={localSettings.sendWithEnter}
@@ -770,7 +768,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
             <SettingGroup>
               <SettingLabel>Layout</SettingLabel>
               <ToggleWrapper>
-                <Toggle>
+                <Toggle checked={localSettings.sidebarAutoCollapse || false}>
                   <input
                     type="checkbox"
                     checked={localSettings.sidebarAutoCollapse || false}
@@ -782,7 +780,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               </ToggleWrapper>
               
               <ToggleWrapper>
-                <Toggle>
+                <Toggle checked={localSettings.focusMode || false}>
                   <input
                     type="checkbox"
                     checked={localSettings.focusMode || false}
@@ -868,13 +866,13 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
           </SettingsSection>
 
           {/* Add an Accessibility section */}
-          <SettingsSection>
+          <SettingsSection isLast={true}>
             <SectionTitle>Accessibility</SectionTitle>
             
             <SettingGroup>
               <SettingLabel>Visual Comfort</SettingLabel>
               <ToggleWrapper>
-                <Toggle>
+                <Toggle checked={localSettings.highContrast || false}>
                   <input
                     type="checkbox"
                     checked={localSettings.highContrast || false}
@@ -886,7 +884,7 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
               </ToggleWrapper>
               
               <ToggleWrapper>
-                <Toggle>
+                <Toggle checked={localSettings.reducedMotion || false}>
                   <input
                     type="checkbox"
                     checked={localSettings.reducedMotion || false}
@@ -933,87 +931,6 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                 </RadioOption>
               </RadioGroup>
             </SettingGroup>
-          </SettingsSection>
-          
-          <SettingsSection isLast={true}>
-            <SectionTitle>API Tokens</SectionTitle>
-            <p style={{ fontSize: '0.95rem', marginBottom: '18px', opacity: 0.8 }}>
-              Add your own API tokens to use with the different AI models.
-              These will be securely stored in your account.
-            </p>
-            
-            <ApiTokenInput>
-              <TokenLabel htmlFor="openai-api-token">OpenAI API Key</TokenLabel>
-              <TokenInput
-                id="openai-api-token"
-                type="password"
-                placeholder="sk-..."
-                value={localSettings.openaiApiKey || ''}
-                onChange={(e) => handleChange('openaiApiKey', e.target.value)}
-              />
-              <TokenNote>Used for ChatGPT models</TokenNote>
-            </ApiTokenInput>
-            
-            <ApiTokenInput>
-              <TokenLabel htmlFor="anthropic-api-token">Anthropic API Key</TokenLabel>
-              <TokenInput
-                id="anthropic-api-token"
-                type="password"
-                placeholder="sk-ant-..."
-                value={localSettings.anthropicApiKey || ''}
-                onChange={(e) => handleChange('anthropicApiKey', e.target.value)}
-              />
-              <TokenNote>Used for Claude models</TokenNote>
-            </ApiTokenInput>
-            
-            <ApiTokenInput>
-              <TokenLabel htmlFor="google-api-token">Google AI API Key</TokenLabel>
-              <TokenInput
-                id="google-api-token"
-                type="password"
-                placeholder="AIzaSy..."
-                value={localSettings.googleApiKey || ''}
-                onChange={(e) => handleChange('googleApiKey', e.target.value)}
-              />
-              <TokenNote>Used for Gemini models</TokenNote>
-            </ApiTokenInput>
-            
-            <ApiTokenInput>
-              <TokenLabel htmlFor="nvidia-api-token">NVIDIA API Key</TokenLabel>
-              <TokenInput
-                id="nvidia-api-token"
-                type="password"
-                placeholder="Enter your NVIDIA API key"
-                value={localSettings.nvidiaApiKey || ''}
-                onChange={(e) => handleChange('nvidiaApiKey', e.target.value)}
-              />
-              <TokenNote>Used for Nemotron models</TokenNote>
-            </ApiTokenInput>
-            
-            <ApiTokenInput>
-              <TokenLabel htmlFor="custom-gguf-api-url">Ursa Minor API URL</TokenLabel>
-              <TokenInput
-                id="custom-gguf-api-url"
-                type="text"
-                placeholder="http://localhost:8000"
-                value={localSettings.customGgufApiUrl || ''}
-                onChange={(e) => handleChange('customGgufApiUrl', e.target.value)}
-              />
-              <TokenNote>URL for your locally hosted Ursa Minor API (default: http://localhost:8000)</TokenNote>
-            </ApiTokenInput>
-            
-            {/* NEW: Custom GGUF API Token */}
-            <ApiTokenInput>
-              <TokenLabel htmlFor="custom-gguf-api-url">Custom GGUF API URL</TokenLabel>
-              <TokenInput
-                id="custom-gguf-api-url"
-                type="text"
-                placeholder="https://api.explodingcb.com"
-                value={localSettings.customGgufApiUrl || 'https://api.explodingcb.com'}
-                onChange={(e) => handleChange('customGgufApiUrl', e.target.value)}
-              />
-              <TokenNote>URL for your GGUF model API (already configured)</TokenNote>
-            </ApiTokenInput>
           </SettingsSection>
           
           <AboutSection>

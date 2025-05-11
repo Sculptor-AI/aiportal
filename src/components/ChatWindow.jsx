@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import { sendMessage } from '../services/aiService';
 import ModelSelector from './ModelSelector';
-import FileUploadButton from './FileUploadButton'; // Renamed import
+import FileUploadButton from './FileUploadButton';
 import * as pdfjsLib from 'pdfjs-dist'; // Import pdfjs
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker'; // Import worker using Vite's worker syntax
 
@@ -15,6 +15,7 @@ const ChatWindowContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%; /* Ensure it takes full width when sidebar is hidden */
   background: ${props => props.theme.chat};
   backdrop-filter: ${props => props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.glassEffect};
@@ -102,31 +103,115 @@ const fadeIn = keyframes`
   }
 `;
 
-const InputContainer = styled.div`
-  padding: ${props => props.isEmpty ? '15px 10% 40px' : '15px'};
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  position: ${props => props.isEmpty ? 'absolute' : 'relative'};
-  bottom: ${props => props.isEmpty ? '5%' : '0'};
-  width: 100%;
-  z-index: 10;
-  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  animation: ${props => props.isEmpty ? fadeIn : 'none'} 0.5s ease;
-  backdrop-filter: ${props => !props.isEmpty && 'blur(5px)'};
-  -webkit-backdrop-filter: ${props => !props.isEmpty && 'blur(5px)'};
-  
-  @media (max-width: 768px) {
-    padding: ${props => props.isEmpty ? '10px 5% 40px' : '10px'};
+// New keyframes for moving input to bottom
+const moveInputToBottom = keyframes`
+  from {
+    top: 50%;
+    transform: translate(-50%, -50%);
+    bottom: auto;
   }
+  to {
+    top: auto;
+    bottom: 30px;
+    transform: translateX(-50%);
+  }
+`;
+
+const moveInputToBottomMobile = keyframes`
+  from {
+    top: 50%;
+    transform: translate(-50%, -50%);
+    bottom: auto;
+  }
+  to {
+    top: auto;
+    bottom: 20px;
+    transform: translateX(-50%);
+  }
+`;
+
+// Keyframes for EmptyState exit animation
+const emptyStateExitAnimation = keyframes`
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -55%); /* Fade and move slightly up */
+  }
+`;
+
+const InputContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+  z-index: 100 !important;
+  pointer-events: none;
+  left: 50% !important; // Common style, applied to both states
+  flex-direction: column;
+
+  ${({ isEmpty, animateDown }) => {
+    if (animateDown) {
+      // When animateDown is true, isEmpty is false.
+      // The element starts at the centered position and animates to the bottom.
+      return css`
+        top: 50%; /* Start position for the animation - NO !important */
+        transform: translate(-50%, -50%); /* Start position - NO !important */
+        bottom: auto; /* Ensure bottom is not conflicting - NO !important */
+        
+        animation-name: ${moveInputToBottom};
+        animation-duration: 0.5s;
+        animation-timing-function: ease-out;
+        animation-fill-mode: forwards;
+
+        @media (max-width: 768px) {
+          animation-name: ${moveInputToBottomMobile};
+        }
+      `;
+    } else if (isEmpty) { // Centered, no animation
+      return css`
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        bottom: auto !important; 
+      `;
+    } else { // At bottom, no animation (isEmpty is false, animateDown is false)
+      return css`
+        top: auto !important;
+        bottom: 30px !important;
+        transform: translateX(-50%) !important;
+        @media (max-width: 768px) {
+          bottom: 20px !important;
+        }
+      `;
+    }
+  }}
 `;
 
 const MessageInputWrapper = styled.div`
   position: relative;
-  flex: 1;
-  max-width: ${props => props.isEmpty ? '700px' : '100%'};
-  transition: max-width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 100%;
+  max-width: 700px !important; /* Match the width from the image */
+  margin: 0 20px !important; /* Add horizontal margins */
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important; /* Add subtle shadow for depth */
+  border-radius: 24px !important; /* Match the input's border radius */
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  padding-bottom: 8px;
+`;
+
+const InputRow = styled.div`
+  display: flex;
+  width: 100%;
+  position: relative;
   align-items: center;
 `;
 
@@ -134,8 +219,8 @@ const MessageInput = styled.textarea`
   width: 100%;
   padding: 15px 50px 15px 60px;
   border-radius: 24px;
-  border: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.inputBackground};
+  border: none;
+  background: transparent;
   color: ${props => props.theme.text};
   font-family: inherit;
   font-size: inherit;
@@ -171,22 +256,14 @@ const MessageInput = styled.textarea`
     }
   }
   
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   transition: all 0.2s ease;
-  vertical-align: middle;
-  padding-left: 60px; /* Ensure consistent padding */
   
   &::placeholder {
-    position: relative;
-    top: 0;
+    color: #888;
   }
   
   &:focus {
     outline: none;
-    border-color: rgba(0, 122, 255, 0.5);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
   }
   
   @media (max-width: 768px) {
@@ -232,7 +309,7 @@ const SendButton = styled.button`
 
 const EmptyState = styled.div`
   position: fixed;
-  top: 50%;
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
@@ -248,9 +325,14 @@ const EmptyState = styled.div`
   max-width: 600px;
   z-index: 5;
   pointer-events: none; /* Allow clicks to pass through */
+  opacity: 1; /* Default opacity */
+
+  ${({ isExiting }) => isExiting && css`
+    animation: ${emptyStateExitAnimation} 0.5s ease-out forwards;
+  `}
   
   h3 {
-    margin-bottom: 15px;
+    margin-bottom: 0;
     font-weight: 500;
     font-size: 1.5rem;
   }
@@ -259,6 +341,42 @@ const EmptyState = styled.div`
     max-width: 500px;
     line-height: 1.6;
     font-size: 1rem;
+  }
+`;
+
+// Add ActionChipsContainer styled component
+const ActionChipsContainer = styled.div`
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 2px;
+  margin-bottom: 4px;
+  gap: 8px;
+  pointer-events: auto;
+  width: 95%;
+`;
+
+const ActionChip = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background-color: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  color: ${props => props.theme.text}99;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+    color: ${props => props.theme.text};
+  }
+
+  svg {
+    width: 15px;
+    height: 15px;
+    opacity: 0.7;
   }
 `;
 
@@ -273,6 +391,41 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
   const [resetFileUpload, setResetFileUpload] = useState(false); // Renamed state
   const inputRef = useRef(null); // Add ref for the textarea
   const [isProcessingFile, setIsProcessingFile] = useState(false); // State for file processing
+
+  const chatIsEmpty = !chat || chat.messages.length === 0;
+
+  const prevIsEmptyRef = useRef(chatIsEmpty);
+  const [animateDown, setAnimateDown] = useState(false);
+
+  // Determine if the animation should START in this specific render cycle
+  const shouldStartAnimationThisRender = prevIsEmptyRef.current && !chatIsEmpty;
+
+  useEffect(() => {
+    // This effect manages the animateDown state for the duration of the animation
+    if (shouldStartAnimationThisRender) {
+      setAnimateDown(true); // Keep animation styles active
+      const timer = setTimeout(() => {
+        setAnimateDown(false); // Turn off animation styles after duration
+      }, 500); // Corresponds to animation-duration
+      return () => clearTimeout(timer);
+    }
+  }, [shouldStartAnimationThisRender]); // Re-run if the trigger condition changes
+
+  // Update prevIsEmptyRef *after* all render logic, for the next render cycle
+  useEffect(() => {
+    prevIsEmptyRef.current = chatIsEmpty;
+  }); // No dependency array, runs after every render
+
+  // If chat becomes empty again (e.g. messages deleted), ensure animateDown is reset
+  useEffect(() => {
+    if (chatIsEmpty) {
+      setAnimateDown(false);
+    }
+  }, [chatIsEmpty]);
+
+  // Calculate the effective signal to pass to InputContainer
+  // This ensures animation starts immediately on the correct render
+  const effectiveAnimateDownSignal = animateDown || shouldStartAnimationThisRender;
 
   // Find the current model data for display
   const modelDisplay = {
@@ -320,105 +473,96 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  const handleSendMessage = async () => {
-    if ((!inputMessage.trim() && !uploadedFileData) || !chat) return;
-    
+  // Renamed from handleSendMessage
+  const submitMessage = async () => {
     const messageToSend = inputMessage.trim();
-    const userMessageId = Date.now();
-    const fileDataToSend = uploadedFileData; // Store before clearing state
-    const currentModel = selectedModel; // Capture current model for the response
-    
-    // Clear input, file and set processing state
-    setInputMessage('');
-    setUploadedFileData(null);
-    setResetFileUpload(true);
-    setTimeout(() => setResetFileUpload(false), 100);
-    setIsLoading(true); // Keep isLoading for overall process
+    const currentImageData = uploadedFileData?.dataUrl;
+    const currentFileText = uploadedFileData?.text;
 
-    let fileTextContent = null;
-    if (fileDataToSend && (fileDataToSend.type === 'pdf' || fileDataToSend.type === 'text')) {
-      fileTextContent = fileDataToSend.content;
-    }
+    if (!messageToSend && !currentImageData && !currentFileText) return;
+    if (isLoading || isProcessingFile || !chat?.id) return; // Prevent sending if already busy or no chat selected
 
-    // Add user message immediately
+    const currentChatId = chat.id; // Capture chat ID before clearing state
+    const currentModel = selectedModel; // Capture selected model
+    const currentHistory = chat.messages; // Capture current history
+
+    // --- Optimistic UI Update --- 
     const userMessage = {
-      id: userMessageId,
+      id: Date.now(), // Use timestamp as temp ID
       role: 'user',
       content: messageToSend,
-      timestamp: new Date().toISOString(),
-      ...(fileDataToSend && {
-        file: {
-          name: fileDataToSend.name,
-          type: fileDataToSend.type, // Store 'pdf' or 'text' or 'image'
-        },
-        image: (fileDataToSend.type === 'image') ? fileDataToSend.content : null
-      })
+      image: currentImageData,
+      fileInfo: uploadedFileData ? { name: uploadedFileData.name, type: uploadedFileData.type } : undefined,
+      model: currentModel // Associate message with model used
     };
-    addMessage(chat.id, userMessage);
+    addMessage(currentChatId, userMessage); // Use the updated addMessage from context
     
     // Add placeholder AI message
-    const aiMessageId = userMessageId + 1;
+    const aiMessageId = userMessage.id + 1; // Temporary ID for the streaming message
     const placeholderAiMessage = {
-      id: aiMessageId,
-      role: 'assistant',
-      content: '', // Start with empty content
-      isLoading: true, // Indicate loading/streaming
-      timestamp: new Date().toISOString(),
-      modelId: currentModel
+        id: aiMessageId,
+        role: 'assistant',
+        content: '', // Start empty
+        isLoading: true,
+        modelId: currentModel // Store which model is responding
     };
-    addMessage(chat.id, placeholderAiMessage);
-    
-    console.log("Sending message to", currentModel + ":", messageToSend, "with file:", fileDataToSend?.name);
-    
-    try {
-      const processedHistory = chat.messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        image: msg.image
-      }));
-      
-      const imageDataToSend = (fileDataToSend?.type === 'image') ? fileDataToSend.content : null;
-      
-      // Get the async generator from the new sendMessage
-      const streamGenerator = sendMessage(
-        messageToSend,
-        currentModel,
-        processedHistory,
-        imageDataToSend,
-        fileTextContent
-      );
-      
-      // Process the stream
-      let streamedContent = '';
-      for await (const chunk of streamGenerator) {
-        streamedContent += chunk;
-        // Update the placeholder message content chunk by chunk
-        updateMessage(chat.id, aiMessageId, { content: streamedContent, isLoading: true }); 
-      }
-      
-      // Final update to the AI message when streaming is complete
-      updateMessage(chat.id, aiMessageId, { content: streamedContent, isLoading: false, timestamp: new Date().toISOString() });
-      console.log("Streaming finished for", currentModel);
+    addMessage(currentChatId, placeholderAiMessage);
+    // --- End Optimistic UI Update ---
 
-    } catch (error) {
-      console.error('Error during message streaming:', error);
-      // Update the placeholder message to show the error
-      updateMessage(chat.id, aiMessageId, {
-          content: `Error receiving response from ${currentModel}: ${error.message}`,
-          isError: true,
-          isLoading: false,
-          timestamp: new Date().toISOString()
-      });
+    // Clear input and reset file upload state *after* capturing needed data
+    setInputMessage('');
+    clearUploadedFile(); // Assumes this handles resetting related state
+    inputRef.current?.style.setProperty('height', 'auto'); // Reset input height
+    setIsLoading(true); // Set loading state for the whole operation
+
+    console.log(`[ChatWindow] Attempting to send message to ${currentModel}`); // Log model being used
+    let streamedContent = '';
+
+    try {
+      await sendMessage(
+        currentModel,      // Pass captured model
+        messageToSend,     // Pass user input text
+        currentHistory,    // Pass captured history
+        (chunk) => {       // Callback for receiving chunks
+          streamedContent += chunk;
+          // Update the placeholder message content chunk by chunk
+          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
+        },
+        (error) => {       // Callback for errors during streaming
+          console.error(`Error streaming response from ${currentModel}:`, error);
+          updateMessage(currentChatId, aiMessageId, {
+            content: `Error: ${error.message || 'Failed to get response'}`,
+            isError: true,
+            isLoading: false
+          });
+        },
+        currentImageData,  // Pass image data
+        currentFileText,   // Pass file text content
+        settings           // Pass settings object
+      );
+      // If sendMessage completes without calling the error callback, finalize the message
+       updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
+       console.log(`[ChatWindow] Streaming finished successfully for ${currentModel}.`);
+
+    } catch (error) { // Catch errors thrown directly by sendMessage setup (e.g., network issues)
+       console.error(`Error setting up sendMessage for ${currentModel}:`, error);
+        updateMessage(currentChatId, aiMessageId, {
+            content: `Setup Error: ${error.message || 'Failed to initiate connection'}`,
+            isError: true,
+            isLoading: false
+        });
     } finally {
-      setIsLoading(false); // Indicate overall process finished
+      setIsLoading(false); // Turn off loading indicator regardless of outcome
+      // Note: The final updateMessage call inside the try block handles success
+      // The error callback inside sendMessage or the catch block handles errors
     }
   };
-  
-  const handleKeyDown = (e) => {
-    // Only send on Enter if the setting is enabled
-    if (e.key === 'Enter' && !e.shiftKey && settings?.sendWithEnter) {
-      e.preventDefault();
-      handleSendMessage();
+
+  // Handle sending message on Enter key press
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault(); // Prevent default Enter behavior (new line)
+      submitMessage();
     }
   };
 
@@ -533,22 +677,55 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
     }
   };
 
+  // Conditions for EmptyState visibility and animation
+  const showEmptyStateStatic = chatIsEmpty && !effectiveAnimateDownSignal;
+  // Animate out if it *was* empty (implied by shouldStartAnimationThisRender or animateDown) 
+  // and input is moving (effectiveAnimateDownSignal is true)
+  const animateEmptyStateOut = (!chatIsEmpty || shouldStartAnimationThisRender) && effectiveAnimateDownSignal;
+
   if (!chat) {
     return (
       <ChatWindowContainer fontSize={settings?.fontSize}>
-        <EmptyState>
-          <h3>No chat selected</h3>
-          <p>Create a new chat or select an existing one to start the conversation.</p>
+        <EmptyState isExiting={animateEmptyStateOut}>
         </EmptyState>
+        <InputContainer isEmpty={true} animateDown={false}>
+          <MessageInputWrapper isEmpty={true}>
+            <FileUploadButton 
+              onFileSelected={handleFileSelected} 
+              disabled={true}
+              resetFile={resetFileUpload} 
+              externalFile={uploadedFileData?.file} 
+            />
+            <MessageInput
+              ref={inputRef} 
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste} 
+              placeholder={getPlaceholderText()}
+              disabled={true}
+              rows={1}
+              style={{ maxHeight: '150px', overflowY: 'auto' }} 
+            />
+            <SendButton
+              onClick={submitMessage}
+              disabled={true}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 2L11 13"></path>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </SendButton>
+          </MessageInputWrapper>
+        </InputContainer>
       </ChatWindowContainer>
     );
   }
   
-  const chatIsEmpty = chat.messages.length === 0;
-  
   // Models array to pass to the ModelSelector component
   const availableModels = [
     { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
     { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
     { id: 'nemotron-super-49b', name: 'Nemotron 49B' },  
@@ -557,6 +734,8 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
   
   // Handle model change
   const handleModelChange = (modelId) => {
+    setSelectedModel(modelId); // Ensure the selected model is updated in state
+    
     // This would need to be lifted up to the parent component
     // For now, we'll just log it
     console.log(`Model changed to: ${modelId}`);
@@ -626,64 +805,89 @@ const ChatWindow = ({ chat, addMessage, updateMessage, selectedModel: initialSel
         
         {/* Move ModelSelector back to the top right */}
         <ModelSelectorWrapper>
-          <ModelSelector 
-            selectedModel={selectedModel} 
+          <ModelSelector
+            selectedModel={selectedModel}
             models={availableModels}
-            onChange={(modelId) => {
-              setSelectedModel(modelId);
-              handleModelChange(modelId);
-            }}
+            onChange={handleModelChange}
+            key="model-selector"
           />
         </ModelSelectorWrapper>
       </ChatHeader>
       
-      {chatIsEmpty ? (
-        <EmptyState>
-          <h3>Start a conversation</h3>
-          <p>Send a message to start chatting with the AI assistant. You can ask questions, get information, or just have a casual conversation.</p>
+      {(showEmptyStateStatic || animateEmptyStateOut) && (
+        <EmptyState isExiting={animateEmptyStateOut}>
         </EmptyState>
-      ) : (
-        <MessageList>
-          {Array.isArray(chat.messages) && chat.messages.map(message => (
-            <ChatMessage 
-              key={message.id} 
-              message={message} 
-              showModelIcons={settings.showModelIcons}
-              settings={settings}
-            />
-          ))}
-          <div ref={messagesEndRef} />
-        </MessageList>
       )}
       
-      <InputContainer isEmpty={chatIsEmpty}>
+      {!chatIsEmpty && (
+          <MessageList>
+            {Array.isArray(chat.messages) && chat.messages.map(message => (
+              <ChatMessage 
+                key={message.id} 
+                message={message} 
+                showModelIcons={settings.showModelIcons}
+                settings={settings}
+              />
+            ))}
+            <div ref={messagesEndRef} />
+          </MessageList>
+      )}
+      
+      <InputContainer isEmpty={chatIsEmpty} animateDown={effectiveAnimateDownSignal}>
         <MessageInputWrapper isEmpty={chatIsEmpty}>
-          <FileUploadButton 
-            onFileSelected={handleFileSelected} 
-            disabled={isLoading || isProcessingFile} // Disable while processing
-            resetFile={resetFileUpload} 
-            externalFile={uploadedFileData?.file} 
-          />
-          <MessageInput
-            ref={inputRef} 
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste} 
-            placeholder={getPlaceholderText()} // Use dynamic placeholder
-            disabled={isLoading || isProcessingFile} // Disable while processing
-            rows={1}
-            style={{ maxHeight: '150px', overflowY: 'auto' }} 
-          />
-          <SendButton
-            onClick={handleSendMessage}
-            disabled={isLoading || isProcessingFile || (!inputMessage.trim() && !uploadedFileData)} // Also disable while processing
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 2L11 13"></path>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </SendButton>
+          <InputRow>
+            <FileUploadButton 
+              onFileSelected={handleFileSelected} 
+              disabled={isLoading || isProcessingFile} // Disable while processing
+              resetFile={resetFileUpload} 
+              externalFile={uploadedFileData?.file} 
+            />
+            <MessageInput
+              ref={inputRef} 
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={handleKeyDown} // Changed from handleSendMessage
+              onPaste={handlePaste} 
+              placeholder={getPlaceholderText()} // Use dynamic placeholder
+              disabled={isLoading || isProcessingFile} // Disable while processing
+              rows={1}
+              style={{ maxHeight: '150px', overflowY: 'auto' }} 
+            />
+            <SendButton
+              onClick={submitMessage} // Changed from handleSendMessage
+              disabled={isLoading || isProcessingFile || (!inputMessage.trim() && !uploadedFileData)} // Also disable while processing
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 2L11 13"></path>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </SendButton>
+          </InputRow>
+          
+          {/* Action Chips */}
+          <ActionChipsContainer>
+            <ActionChip>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              Search
+            </ActionChip>
+            <ActionChip>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
+              </svg>
+              Deep research
+            </ActionChip>
+            <ActionChip>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+              Create image
+            </ActionChip>
+          </ActionChipsContainer>
         </MessageInputWrapper>
       </InputContainer>
     </ChatWindowContainer>

@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import ModelIcon from './ModelIcon';
 
+// Remove environment variable imports for UI filtering
+// const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+// const CLAUDE_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+// const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+// const NVIDIA_API_KEY = import.meta.env.VITE_NVIDIA_API_KEY;
+
 const ModelSelectorContainer = styled.div`
   position: relative;
 `;
@@ -125,29 +131,119 @@ const ModelProvider = styled.div`
 const ModelSelector = ({ selectedModel, models, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
-  
-  // Define all available models if none provided
-  const allModels = models || [
+  // Initialize keys as empty, rely solely on settings storage
+  const [apiKeys, setApiKeys] = useState({
+    google: '',
+    claude: '',
+    openai: '',
+    nvidia: '',
+    ursa: '' // Assuming custom gguf might have a key too
+  });
+
+  // Load API keys from user settings on component mount
+  useEffect(() => {
+    let userSettings = {};
+    try {
+      // Check sessionStorage first
+      const userJSON = sessionStorage.getItem('ai_portal_current_user');
+      if (userJSON) {
+        const user = JSON.parse(userJSON);
+        userSettings = user?.settings || {};
+        console.log("Loaded settings from sessionStorage:", userSettings);
+      } else {
+        // Fall back to localStorage
+        const settingsJSON = localStorage.getItem('settings');
+        if (settingsJSON) {
+          userSettings = JSON.parse(settingsJSON);
+           console.log("Loaded settings from localStorage:", userSettings);
+        } else {
+           console.log("No settings found in storage.");
+        }
+      }
+
+      // Update API keys state ONLY with values found in settings
+      setApiKeys({
+        google: userSettings.googleApiKey || '',
+        claude: userSettings.anthropicApiKey || '',
+        openai: userSettings.openaiApiKey || '',
+        nvidia: userSettings.nvidiaApiKey || '',
+        // Assuming 'customGgufApiKey' corresponds to Ursa/Custom GGUF models
+        ursa: userSettings.customGgufApiKey || ''
+      });
+    } catch (e) {
+      console.error('Error reading user settings for API keys:', e);
+      // Ensure keys are reset if parsing fails
+       setApiKeys({ google: '', claude: '', openai: '', nvidia: '', ursa: '' });
+    }
+  }, []); // Dependency array is empty, so this runs once on mount
+
+  // Define all available models
+  const baseModels = models || [
     { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
     { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
     { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
-    { id: 'ursa-minor', name: 'Ursa Minor' }
+    { id: 'ursa-minor', name: 'Ursa Minor' } // Represents custom GGUF
   ];
-  
-  // Find current model data
-  const currentModel = allModels.find(model => model.id === selectedModel) || allModels[0];
-  
-  // Get provider name for model
+
+   // Debug log for current API keys state
+   useEffect(() => {
+     console.log("Current apiKeys state:", apiKeys);
+   }, [apiKeys]);
+
+  // Filter models based on available API keys (stricter check)
+  const availableModels = baseModels.filter(model => {
+    const checkKey = (key) => key && key.trim() !== '';
+
+    if (model.id.includes('gemini')) return checkKey(apiKeys.google);
+    if (model.id.includes('claude')) return checkKey(apiKeys.claude);
+    if (model.id.includes('chatgpt') || model.id.includes('gpt')) return checkKey(apiKeys.openai);
+    if (model.id.includes('nemotron')) return checkKey(apiKeys.nvidia);
+    // Check 'ursa' key for 'ursa-minor' (custom gguf)
+    if (model.id.includes('ursa')) return checkKey(apiKeys.ursa);
+    return false; // Hide if no key found or doesn't match category
+  });
+
+   // Debug log for filtered models
+   useEffect(() => {
+     console.log("Available models after filtering:", availableModels);
+   }, [availableModels]);
+
+
+  // Find current model data from the *available* models
+  // If the selected model is no longer available, default to the first available, or the very first base model if none are available
+  const currentModel =
+    availableModels.find(model => model.id === selectedModel) ||
+    availableModels[0] ||
+    baseModels.find(model => model.id === 'gemini-2-flash'); // Fallback to a default like flash
+
+  // If the initially selected model is not available, call onChange with the new default
+  useEffect(() => {
+    if (selectedModel !== currentModel?.id && availableModels.length > 0) {
+      onChange(currentModel.id);
+    } else if (availableModels.length === 0 && selectedModel) {
+       // Handle case where no models are available anymore
+       // Perhaps clear selection or select a placeholder?
+       // For now, let's stick with the hardcoded fallback in currentModel definition
+       if(selectedModel !== currentModel?.id) {
+           onChange(currentModel.id) // Force selection of the fallback like flash
+       }
+    }
+  }, [selectedModel, currentModel, availableModels, onChange]);
+
+
+  // Get provider name for model (ensure it handles the new gemini model)
   const getProviderName = (modelId) => {
+    if (modelId.includes('gemini-2.5-pro')) return 'Google AI (2.5 Pro)'; // Specific name
     if (modelId.includes('gemini')) return 'Google AI';
     if (modelId.includes('claude')) return 'Anthropic';
     if (modelId.includes('gpt') || modelId.includes('chatgpt')) return 'OpenAI';
-    if (modelId.includes('ursa')) return 'SculptorAI';
     if (modelId.includes('nemotron')) return 'NVIDIA';
+    if (modelId.includes('ursa')) return 'Custom GGUF'; // Updated provider name
     return 'AI Provider';
   };
-  
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -155,36 +251,47 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
         setIsOpen(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-  
+
   const toggleDropdown = () => {
-    setIsOpen(!isOpen);
+    // Only open if there are models to show
+    if (availableModels.length > 0) {
+       setIsOpen(!isOpen);
+    }
   };
-  
+
   const handleSelectModel = (modelId) => {
     onChange(modelId);
     setIsOpen(false);
   };
-  
+
   return (
     <ModelSelectorContainer ref={containerRef}>
-      <ModelButton onClick={toggleDropdown} isOpen={isOpen}>
-        <ModelIcon modelId={currentModel.id} size="small" />
-        <span>{currentModel.name}</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </ModelButton>
-      
-      {isOpen && (
+       {/* Only render button if a currentModel could be determined */}
+       {currentModel ? (
+         <ModelButton onClick={toggleDropdown} isOpen={isOpen} disabled={availableModels.length === 0}>
+           <ModelIcon modelId={currentModel.id} size="small" />
+           <span>{currentModel.name}</span>
+           {availableModels.length > 0 && ( // Only show arrow if dropdown is possible
+             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+               <polyline points="6 9 12 15 18 9"></polyline>
+             </svg>
+           )}
+         </ModelButton>
+       ) : (
+           // Optional: Render a placeholder or message if no models are available/selected
+            <ModelButton disabled>No Models Available</ModelButton>
+       )}
+
+      {isOpen && availableModels.length > 0 && (
         <DropdownMenu>
-          {allModels.map(model => (
-            <ModelOption 
+          {availableModels.map(model => (
+            <ModelOption
               key={model.id}
               isSelected={model.id === selectedModel}
               onClick={() => handleSelectModel(model.id)}

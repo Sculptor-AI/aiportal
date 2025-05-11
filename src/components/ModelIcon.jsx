@@ -75,6 +75,12 @@ const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
     } catch (e) {
       // Image not found, will use SVG
     }
+  } else if (modelId === 'gemini-2.5-pro') {
+    try {
+      imageUrl = '/images/gemini-2.5-pro-logo.png';
+    } catch (e) {
+      // Specific logo not found, will fall back below
+    }
   } else if (modelId === 'claude-3.7-sonnet') {
     try {
       imageUrl = '/images/claude-logo.png';
@@ -99,8 +105,9 @@ const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
   if (!imageUrl) {
     switch (modelId) {
       case 'gemini-2-flash':
+      case 'gemini-2.5-pro':
         iconComponent = <GeminiIcon />;
-        iconBackground = model.gradient;
+        iconBackground = model.gradient || modelThemes['gemini-2-flash']?.gradient;
         break;
       case 'claude-3.7-sonnet':
         iconComponent = <ClaudeIcon />;

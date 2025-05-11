@@ -4,31 +4,26 @@ import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 
 // Styled Components (Keep all your existing styled components definitions)
 const SidebarContainer = styled.div`
-  width: ${props => props.collapsed ? '0' : '260px'};
-  background: ${props => props.theme.sidebar};
-  backdrop-filter: ${props => props.theme.glassEffect};
-  -webkit-backdrop-filter: ${props => props.theme.glassEffect};
-  border-right: 1px solid ${props => props.theme.border};
-  display: flex;
+  display: ${props => props.collapsed ? 'none !important' : 'flex'};
   flex-direction: column;
+  width: ${props => props.collapsed ? '0 !important' : '280px'};
   height: 100%;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
-  position: relative;
-  z-index: 10;
+  background: ${props => props.theme.sidebar};
+  color: ${props => props.theme.text};
+  border-right: 1px solid ${props => props.theme.border};
   overflow: hidden;
-
+  transition: width 0.3s ease;
+  position: relative;
+  z-index: 20;
+  
   @media (max-width: 768px) {
-    width: ${props => props.collapsed ? '0' : '100%'};
-    height: auto;
-    min-height: ${props => props.collapsed ? '0' : '60px'};
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: ${props => props.collapsed ? '0 !important' : '100%'};
+    z-index: 100;
     border-right: none;
-    border-bottom: ${props => props.collapsed ? 'none' : `1px solid ${props.theme.border}`};
-    max-height: ${props => props.isExpanded ? '40vh' : '60px'};
-    overflow: hidden;
-    transition: all 0.3s ease-in-out;
-    display: flex;
-    flex-direction: column;
+    display: ${props => props.collapsed ? 'none !important' : 'flex'};
   }
 `;
 
@@ -667,13 +662,14 @@ const Sidebar = ({
   toggleSettings,
   toggleProfile,
   isLoggedIn,
-  username
+  username,
+  collapsed,
+  setCollapsed
 }) => {
-  const [isMobileExpanded, setIsMobileExpanded] = useState(false); // For mobile dropdown content visibility
-  const [collapsed, setCollapsed] = useState(false); // For desktop sidebar collapse state
-  const [showHamburger, setShowHamburger] = useState(true); // Control hamburger visibility during transition
-  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false); // Model dropdown state
-  const [copyStatus, setCopyStatus] = useState(''); // To show copy confirmation briefly
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+  const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
 
   // Toggle mobile content visibility
   const toggleMobileExpanded = () => {
@@ -719,18 +715,8 @@ const Sidebar = ({
 
   return (
     <>
-      {/* Hamburger button shown only when collapsed and animation finished */}
-      {collapsed && showHamburger && (
-        <CollapseButton onClick={toggleCollapsed} collapsed={collapsed} title="Expand Sidebar">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </CollapseButton>
-      )}
-
       {/* Main Sidebar container */}
       <SidebarContainer isExpanded={isMobileExpanded} collapsed={collapsed}>
-
         {/* Top Bar for Desktop */}
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
            <LogoContainer>

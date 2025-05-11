@@ -10,38 +10,29 @@ import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import GlobalStylesProvider from './styles/GlobalStylesProvider';
 import SharedChatView from './components/SharedChatView';
+import { keyframes } from 'styled-components';
 
 const AppContainer = styled.div`
   display: flex;
   height: 100vh;
   overflow: hidden;
+  position: relative;
   background: ${props => props.theme.background};
   color: ${props => props.theme.text};
-  position: relative;
+  transition: background 0.3s ease;
   
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.08) 0%, transparent 70%),
-                radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.06) 0%, transparent 60%);
-    z-index: 0;
-    pointer-events: none;
-  }
-  
-  @media (max-width: 768px) {
-    flex-direction: column;
-  }
+  ${props => props.sidebarCollapsed && `
+    @media (min-width: 769px) {
+      padding-left: 0;
+    }
+  `}
 `;
 
-// Add this styled component for the floating hamburger button
+// Add back the floating hamburger button
 const FloatingMenuButton = styled.button`
   position: absolute;
   left: 20px;
-  top: 20px; // Aligned with chat title height
+  top: 9px; // Adjusted to vertically align with chat title
   z-index: 100;
   background: transparent;
   border: none;
@@ -64,6 +55,30 @@ const FloatingMenuButton = styled.button`
   }
 `;
 
+// Main Greeting Component
+const MainGreeting = styled.div`
+  position: fixed;
+  top: 36%;
+  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 130px)'};
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 4;
+  pointer-events: none;
+  transition: left 0.3s ease;
+  
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 500;
+    color: ${props => props.theme.text};
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+`;
+
 // App wrapper with authentication context
 const AppWithAuth = () => {
   return (
@@ -76,6 +91,28 @@ const AppWithAuth = () => {
 // Main app component
 const AppContent = () => {
   const { user, updateSettings: updateUserSettings } = useAuth();
+  
+  // Greeting messages
+  const greetingMessages = [
+    "How's it going",
+    "Good to see you",
+    "Hello there",
+    "Welcome back",
+    "Hey there",
+    "Greetings",
+    "Nice to see you",
+    "Howdy",
+    "Hi there"
+  ];
+  
+  // Get random greeting message
+  const getRandomGreeting = () => {
+    const randomIndex = Math.floor(Math.random() * greetingMessages.length);
+    return greetingMessages[randomIndex];
+  };
+  
+  // State for greeting message
+  const [greeting, setGreeting] = useState(getRandomGreeting());
   
   // Chat state
   const [chats, setChats] = useState(() => {
@@ -141,10 +178,7 @@ const AppContent = () => {
       focusMode: false,
       highContrast: false,
       reducedMotion: false,
-      lineSpacing: 'normal',
-      openaiApiKey: '',
-      anthropicApiKey: '',
-      googleApiKey: ''
+      lineSpacing: 'normal'
     };
   });
   
@@ -152,7 +186,7 @@ const AppContent = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   // Update settings when user changes
   useEffect(() => {
@@ -319,7 +353,7 @@ const AppContent = () => {
     <ThemeProvider theme={currentTheme}>
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
-        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
+        <AppContainer sidebarCollapsed={collapsed} className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
           {collapsed && (
             <FloatingMenuButton onClick={() => setCollapsed(false)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -329,6 +363,16 @@ const AppContent = () => {
               </svg>
             </FloatingMenuButton>
           )}
+          
+          {/* Main greeting that appears at the top of the page */}
+          {currentChat && currentChat.messages.length === 0 && (
+            <MainGreeting sidebarCollapsed={collapsed}>
+              <h1>
+                {greeting}, {user?.username || "friend"}!
+              </h1>
+            </MainGreeting>
+          )}
+          
           <Sidebar 
             chats={chats}
             activeChat={activeChat}
@@ -343,8 +387,8 @@ const AppContent = () => {
             isLoggedIn={!!user}
             username={user?.username}
             onModelChange={handleModelChange}
-            collapsed={collapsed || (settings.sidebarAutoCollapse && getCurrentChat()?.messages?.length > 0)}
-            setCollapsed={setCollapsed}
+            collapsed={collapsed} // Use the state value
+            setCollapsed={setCollapsed} // Allow toggling
           />
           <ChatWindow 
             chat={currentChat}

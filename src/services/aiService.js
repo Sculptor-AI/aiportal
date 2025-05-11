@@ -69,6 +69,59 @@ const MODEL_CONFIGS = {
     }
   },
 
+  'gemini-2.5-pro': {
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-latest:generateContent',
+    prepareRequest: (message, history, imageData, fileTextContent = null) => { 
+      const formattedMessages = history.map(msg => {
+        if (msg.image) {
+          const base64Data = msg.image.split(',')[1];
+          const mimeType = 'image/jpeg';
+          return {
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [
+              { text: msg.content },
+              { inline_data: { mime_type: mimeType, data: base64Data } }
+            ]
+          };
+        } else {
+          return {
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.content }]
+          };
+        }
+      });
+      
+      // Prepend file text content if available
+      let currentMessageText = message;
+      if (fileTextContent) {
+        currentMessageText = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
+      }
+      
+      // Construct parts using potentially modified text
+      let currentMessageParts = [{ text: currentMessageText }]; 
+      if (imageData) {
+        currentMessageParts.push({
+          inline_data: {
+            mime_type: imageData.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg', 
+            data: imageData.split(',')[1] 
+          }
+        });
+      }
+      
+      const currentMessage = {
+        role: 'user',
+        parts: currentMessageParts
+      };
+      
+      return {
+        contents: [
+          ...formattedMessages,
+          currentMessage
+        ]
+      };
+    }
+  },
+
   'claude-3.7-sonnet': {
     baseUrl: 'https://api.anthropic.com/v1/messages',
     prepareRequest: (message, history, imageData, fileTextContent = null) => { 

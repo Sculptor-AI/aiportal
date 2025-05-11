@@ -5,6 +5,31 @@
     <link rel="icon" type="image/svg+xml" href="/images/sculptor.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sculptor AI</title>
+    <style>
+      /* Global styles to center the chat input */
+      
+      /* Don't hide sidebar completely, allow toggling */
+      #root > div > div:first-child {
+        transition: width 0.3s ease;
+      }
+      
+      /* Center the chat input */
+      /*
+      [class*="InputContainer"] {
+        position: fixed !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 100% !important;
+        z-index: 10000 !important;
+      }
+      */
+      
+      [class*="MessageInputWrapper"] {
+        max-width: 700px !important;
+        margin: 0 20px !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
