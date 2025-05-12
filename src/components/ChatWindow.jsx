@@ -388,7 +388,8 @@ const ChatWindow = ({
   selectedModel: initialSelectedModel, 
   settings, 
   sidebarCollapsed = false, 
-  availableModels 
+  availableModels,
+  onAttachmentChange
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -578,63 +579,63 @@ const ChatWindow = ({
 
   // Handle file selection (from button or paste)
   const handleFileSelected = async (file) => { // Make async
-    if (file) {
-      const isImage = file.type.startsWith('image/');
-      const isText = file.type === 'text/plain';
-      const isPdf = file.type === 'application/pdf';
+    if (!file) {
+      setUploadedFileData(null);
+      return;
+    }
+    const isImage = file.type.startsWith('image/');
+    const isText = file.type === 'text/plain';
+    const isPdf = file.type === 'application/pdf';
 
-      if (isImage || isText || isPdf) {
-        if (file.size > 10 * 1024 * 1024) { /* ... size check ... */ return; }
+    if (isImage || isText || isPdf) {
+      if (file.size > 10 * 1024 * 1024) { /* ... size check ... */ return; }
 
-        setIsProcessingFile(true); // Start processing indicator
-        setUploadedFileData({ file: file, type: file.type.split('/')[0], content: 'Processing...', name: file.name }); // Show processing state
+      setIsProcessingFile(true); // Start processing indicator
+      setUploadedFileData({ file: file, type: file.type.split('/')[0], content: 'Processing...', name: file.name }); // Show processing state
 
-        try {
-          if (isImage) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              setUploadedFileData({ file: file, type: 'image', content: reader.result, name: file.name });
-              setIsProcessingFile(false);
-            };
-            reader.onerror = () => { setIsProcessingFile(false); alert('Error reading image file.'); };
-            reader.readAsDataURL(file);
-          } else if (isText) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              setUploadedFileData({ file: file, type: 'text', content: reader.result, name: file.name });
-              setIsProcessingFile(false);
-            };
-             reader.onerror = () => { setIsProcessingFile(false); alert('Error reading text file.'); };
-            reader.readAsText(file);
-          } else if (isPdf) {
-             // Extract text from PDF
-             const arrayBuffer = await file.arrayBuffer();
-             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-             let fullText = '';
-             for (let i = 1; i <= pdf.numPages; i++) {
-               const page = await pdf.getPage(i);
-               const textContent = await page.getTextContent();
-               fullText += textContent.items.map(item => item.str).join(' ') + '\n'; // Add newline between pages
-             }
-             setUploadedFileData({ file: file, type: 'pdf', content: fullText.trim(), name: file.name });
-             setIsProcessingFile(false);
-          }
-          setResetFileUpload(false); // Ensure reset is false if a valid file is selected
-        } catch (error) {
-           console.error('Error processing file:', error);
-           alert(`Error processing ${file.type} file: ${error.message}`);
-           setUploadedFileData(null);
+      try {
+        if (isImage) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setUploadedFileData({ file: file, type: 'image', content: reader.result, name: file.name });
+            setIsProcessingFile(false);
+          };
+          reader.onerror = () => { setIsProcessingFile(false); alert('Error reading image file.'); };
+          reader.readAsDataURL(file);
+        } else if (isText) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setUploadedFileData({ file: file, type: 'text', content: reader.result, name: file.name });
+            setIsProcessingFile(false);
+          };
+           reader.onerror = () => { setIsProcessingFile(false); alert('Error reading text file.'); };
+          reader.readAsText(file);
+        } else if (isPdf) {
+           // Extract text from PDF
+           const arrayBuffer = await file.arrayBuffer();
+           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+           let fullText = '';
+           for (let i = 1; i <= pdf.numPages; i++) {
+             const page = await pdf.getPage(i);
+             const textContent = await page.getTextContent();
+             fullText += textContent.items.map(item => item.str).join(' ') + '\n'; // Add newline between pages
+           }
+           setUploadedFileData({ file: file, type: 'pdf', content: fullText.trim(), name: file.name });
            setIsProcessingFile(false);
-           setResetFileUpload(true); // Trigger reset
-           setTimeout(() => setResetFileUpload(false), 0); // Reset trigger
         }
-      } else {
-         alert('Unsupported file type selected.');
+        setResetFileUpload(false); // Ensure reset is false if a valid file is selected
+      } catch (error) {
+         console.error('Error processing file:', error);
+         alert(`Error processing ${file.type} file: ${error.message}`);
          setUploadedFileData(null);
-         // No need to set setIsProcessingFile(false) here as it wasn't set true
+         setIsProcessingFile(false);
+         setResetFileUpload(true); // Trigger reset
+         setTimeout(() => setResetFileUpload(false), 0); // Reset trigger
       }
     } else {
-      setUploadedFileData(null);
+       alert('Unsupported file type selected.');
+       setUploadedFileData(null);
+       // No need to set setIsProcessingFile(false) here as it wasn't set true
     }
   };
 
@@ -692,6 +693,13 @@ const ChatWindow = ({
   // Animate out if it *was* empty (implied by shouldStartAnimationThisRender or animateDown) 
   // and input is moving (effectiveAnimateDownSignal is true)
   const animateEmptyStateOut = (!chatIsEmpty || shouldStartAnimationThisRender) && effectiveAnimateDownSignal;
+
+  // Effect to notify parent about attachment changes
+  useEffect(() => {
+    if (onAttachmentChange) {
+      onAttachmentChange(!!uploadedFileData);
+    }
+  }, [uploadedFileData, onAttachmentChange]);
 
   if (!chat) {
     return (
@@ -755,8 +763,7 @@ const ChatWindow = ({
   // Clear attached file data
   const clearUploadedFile = () => {
     setUploadedFileData(null);
-    setResetFileUpload(true); // Trigger reset in FileUploadButton as well
-    setTimeout(() => setResetFileUpload(false), 0);
+    setResetFileUpload(prev => !prev); // Toggle to trigger reset in FileUploadButton
   };
 
   // Update placeholder and disabled state based on processing

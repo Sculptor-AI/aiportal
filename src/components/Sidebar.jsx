@@ -18,12 +18,13 @@ const SidebarContainer = styled.div`
   
   @media (max-width: 768px) {
     position: fixed;
-    left: 0;
+    left: ${props => (props.collapsed ? '-100%' : '0')};
     top: 0;
-    width: ${props => props.collapsed ? '0 !important' : '100%'};
+    width: 100%; /* Ensure full width when shown */
     z-index: 100;
     border-right: none;
-    display: ${props => props.collapsed ? 'none !important' : 'flex'};
+    display: flex; /* Keep display flex for layout when visible */
+    transition: left 0.3s ease-in-out, width 0.3s ease; /* Animate left and width */
   }
 `;
 

@@ -59,24 +59,49 @@ const FloatingMenuButton = styled.button`
 // Main Greeting Component
 const MainGreeting = styled.div`
   position: fixed;
-  top: 36%;
-  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 130px)'};
+  top: 35%; /* Adjusted lower: Default for larger screens */
+  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 140px)'}; /* 140px is half of sidebar width 280px */
   transform: translateX(-50%);
+  max-width: 800px; 
   text-align: center;
   z-index: 4;
   pointer-events: none;
-  transition: left 0.3s ease;
+  padding: 0 20px; /* Horizontal padding */
+  transition: left 0.3s ease-out, top 0.3s ease-out; /* Added top to transition */
   
   h1 {
-    font-size: 2.4rem;
+    font-size: min(2.4rem, 7vw); /* Responsive font size */
     font-weight: 500;
     color: ${props => props.theme.text};
     margin: 0;
     padding: 0;
     display: flex;
+    flex-direction: column; /* Allow text to wrap */
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 0px; 
+    line-height: 1.2; 
+  }
+
+  /* Adjustments for medium to small screens */
+  @media (max-width: 768px) {
+    left: 50%; /* Override: Always viewport center on smaller screens */
+    top: 30%; /* Adjusted lower: For tablets and smaller */
+    padding: 0 15px; 
+    h1 {
+      font-size: min(2rem, 6.5vw); 
+      gap: 4px; 
+    }
+  }
+
+  /* Adjustments for very small screens */
+  @media (max-width: 480px) {
+    left: 50%; /* Override: Always viewport center on very small screens */
+    top: 28%; /* Adjusted lower: For very small screens */
+    padding: 0 10px; 
+    h1 {
+      font-size: min(1.8rem, 6vw); 
+    }
   }
 `;
 
@@ -115,6 +140,7 @@ const AppContent = () => {
   
   // State for greeting message
   const [greeting, setGreeting] = useState(getRandomGreeting());
+  const [hasAttachment, setHasAttachment] = useState(false);
   
   // Chat state
   const [chats, setChats] = useState(() => {
@@ -415,7 +441,7 @@ const AppContent = () => {
           )}
           
           {/* Main greeting that appears at the top of the page */}
-          {getCurrentChat()?.messages?.length === 0 && (
+          {getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
             <MainGreeting sidebarCollapsed={collapsed}>
               <h1>
                 {greeting}{user ? `, ${user.username}` : ''} 
@@ -438,8 +464,8 @@ const AppContent = () => {
             isLoggedIn={!!user}
             username={user?.username}
             onModelChange={handleModelChange}
-            collapsed={collapsed} // Use the state value
-            setCollapsed={setCollapsed} // Allow toggling
+            collapsed={collapsed} 
+            setCollapsed={setCollapsed} 
           />
           <ChatWindow 
             chat={currentChat}
@@ -449,9 +475,9 @@ const AppContent = () => {
             selectedModel={selectedModel}
             settings={settings}
             focusMode={settings.focusMode}
+            onAttachmentChange={setHasAttachment}
           />
         
-          {/* Modals */}
           {isSettingsOpen && (
             <SettingsModal 
               settings={settings}
@@ -461,15 +487,11 @@ const AppContent = () => {
           )}
           
           {isLoginOpen && (
-            <LoginModal 
-              closeModal={() => setIsLoginOpen(false)}
-            />
+            <LoginModal closeModal={() => setIsLoginOpen(false)} />
           )}
           
           {isProfileOpen && (
-            <ProfileModal 
-              closeModal={() => setIsProfileOpen(false)}
-            />
+            <ProfileModal closeModal={() => setIsProfileOpen(false)} />
           )}
         </AppContainer>
       </GlobalStylesProvider>
