@@ -23,6 +23,55 @@ const saveUserDatabase = (users) => {
   localStorage.setItem('ai_portal_users', JSON.stringify(users));
 };
 
+// Google login simulation
+export const loginWithGoogle = () => {
+  return new Promise((resolve, reject) => {
+    // Simulate server processing time
+    setTimeout(() => {
+      // Generate a random Google ID
+      const googleId = 'google_' + Math.random().toString(36).substring(2, 15);
+      const username = 'user_' + Math.random().toString(36).substring(2, 10);
+      
+      const users = getUserDatabase();
+      
+      // Check if this Google user already exists
+      let user = Object.values(users).find(u => u.googleId === googleId);
+      
+      if (!user) {
+        // Create new user with Google credentials
+        user = {
+          username,
+          googleId,
+          createdAt: new Date().toISOString(),
+          settings: {
+            theme: 'light',
+            fontSize: 'medium',
+            sendWithEnter: true,
+            showTimestamps: true,
+            showModelIcons: true,
+            messageAlignment: 'left',
+            codeHighlighting: true,
+            openaiApiKey: '',
+            anthropicApiKey: '',
+            googleApiKey: ''
+          }
+        };
+        
+        users[username] = user;
+        saveUserDatabase(users);
+      }
+      
+      // Create a clean user object without sensitive data
+      const cleanUser = { ...user };
+      
+      // Store in session storage
+      sessionStorage.setItem('ai_portal_current_user', JSON.stringify(cleanUser));
+      
+      resolve(cleanUser);
+    }, 800); // Simulate network delay
+  });
+};
+
 // Register a new user
 export const registerUser = (username, password) => {
   return new Promise((resolve, reject) => {

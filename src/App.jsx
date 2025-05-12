@@ -124,11 +124,11 @@ const AppContent = () => {
   // Greeting messages
   const greetingMessages = [
     "Look who decided to show up",
-    "Back for more AI wisdom?",
+    "Back for more AI wisdom",
     "Oh great, it's you again",
     "Lemme guess, essay due in an hour",
-    "You again? Don't you sleep?",
-    "You treat me like Google with trauma.",
+    "You again? Don't you sleep",
+    "You treat me like Google with trauma",
     "I was just about to take a nap, but okay"
   ];
   
@@ -445,7 +445,6 @@ const AppContent = () => {
             <MainGreeting sidebarCollapsed={collapsed}>
               <h1>
                 {greeting}{user ? `, ${user.username}` : ''} 
-                {user && <span role="img" aria-label="wave">👋</span>}
               </h1>
             </MainGreeting>
           )}

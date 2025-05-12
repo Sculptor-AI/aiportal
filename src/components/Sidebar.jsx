@@ -12,30 +12,33 @@ const SidebarContainer = styled.div`
   color: ${props => props.theme.text};
   border-right: 1px solid ${props => props.theme.border};
   overflow: hidden;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, background 0.3s ease;
   position: relative;
   z-index: 20;
+  box-shadow: ${props => props.theme.name === 'dark' ? '0 0 20px rgba(0,0,0,0.2)' : 'none'};
   
   @media (max-width: 768px) {
     position: fixed;
     left: ${props => (props.collapsed ? '-100%' : '0')};
     top: 0;
-    width: 100%; /* Ensure full width when shown */
+    width: 100%;
     z-index: 100;
     border-right: none;
-    display: flex; /* Keep display flex for layout when visible */
-    transition: left 0.3s ease-in-out, width 0.3s ease; /* Animate left and width */
+    display: flex;
+    transition: left 0.3s ease-in-out, width 0.3s ease;
+    box-shadow: ${props => props.theme.name === 'dark' ? '0 0 25px rgba(0,0,0,0.3)' : '0 0 20px rgba(0,0,0,0.1)'};
   }
 `;
 
 const LogoContainer = styled.div`
   display: flex;
   align-items: center;
+  padding-left: 6px;
 
   img {
     height: 26px;
     width: auto;
-    margin-right: 8px;
+    margin-right: 10px;
   }
 
   @media (max-width: 768px) {
@@ -49,6 +52,7 @@ const LogoText = styled.span`
   font-size: 20px;
   letter-spacing: 0.5px;
   color: ${props => props.theme.text};
+  padding-left: 2px;
 `;
 
 const CollapseButton = styled.button`
@@ -63,9 +67,10 @@ const CollapseButton = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   position: ${props => props.collapsed ? 'fixed' : 'relative'};
-  top: ${props => props.collapsed ? '14px' : '0'}; /* Changed from 15px to 40px */
+  top: ${props => props.collapsed ? '14px' : '0'};
   left: ${props => props.collapsed ? '18px' : '0'};
   z-index: 30;
+  opacity: 0.7;
 
   svg {
     width: 18px;
@@ -74,8 +79,9 @@ const CollapseButton = styled.button`
   }
 
   &:hover {
-    background: ${props => props.collapsed ? 'transparent' : 'rgba(255,255,255,0.05)'};
-    border-radius: ${props => props.collapsed ? '0' : '4px'};
+    background: ${props => props.collapsed ? 'transparent' : 'rgba(255,255,255,0.08)'};
+    border-radius: ${props => props.collapsed ? '0' : '6px'};
+    opacity: 1;
   }
 
   @media (max-width: 768px) {
@@ -86,26 +92,23 @@ const CollapseButton = styled.button`
 const TopBarContainer = styled.div`
   display: flex;
   align-items: center;
-  padding: 10px 10px 10px 15px;
+  padding: 14px 12px 14px 16px;
   width: 100%;
   justify-content: space-between;
-  flex-shrink: 0; /* Prevent shrinking */
+  flex-shrink: 0;
 
-  /* Apply specific styles for mobile view */
   @media (max-width: 768px) {
     &.mobile-top-bar {
-        display: flex !important; /* Override inline style */
-        padding: 10px;
+        display: flex !important;
+        padding: 14px 12px;
         width: 100%;
         justify-content: space-between;
     }
-    /* Hide desktop version on mobile */
     &.desktop-top-bar {
         display: none;
     }
   }
 `;
-
 
 const MobileLogoContainer = styled.div`
   display: none; // Hidden by default
@@ -131,25 +134,26 @@ const MobileLogoText = styled.span`
 `;
 
 const NewChatButton = styled.button`
-  background: transparent;
+  background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)'};
   color: ${props => props.theme.text};
   border: 1px solid ${props => props.theme.border};
   padding: 12px 15px;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  justify-content: center; /* Center content */
+  justify-content: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: none;
-  margin: 10px 15px;
-  width: calc(100% - 30px); /* Adjust width based on margin */
-  flex-shrink: 0; /* Prevent shrinking */
+  box-shadow: ${props => props.theme.name === 'dark' ? 'none' : '0 1px 2px rgba(0,0,0,0.05)'};
+  margin: 8px 16px 16px;
+  width: calc(100% - 32px);
+  flex-shrink: 0;
 
   &:hover {
-    background: rgba(255,255,255,0.05);
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)'};
     transform: translateY(-1px);
+    box-shadow: ${props => props.theme.name === 'dark' ? '0 2px 5px rgba(0,0,0,0.2)' : '0 2px 5px rgba(0,0,0,0.08)'};
   }
 
   svg {
@@ -161,60 +165,60 @@ const NewChatButton = styled.button`
     opacity: ${props => props.collapsed ? '0' : '1'};
     transform: translateX(${props => props.collapsed ? '-10px' : '0'});
     visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
-    white-space: nowrap; /* Prevent text wrapping */
+    white-space: nowrap;
     transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s;
     transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
   }
 
   @media (max-width: 768px) {
-    width: auto; /* Let button size naturally */
-    margin: 0 10px 10px auto; /* Align right, add bottom margin */
-    padding: 8px 12px; /* Slightly smaller padding */
-    span { // Ensure text is visible on mobile even if screen width collapses it
+    width: auto;
+    margin: 0 10px 10px auto;
+    padding: 10px 14px;
+    border-radius: 10px;
+    
+    span {
         opacity: 1;
         transform: translateX(0);
         visibility: visible;
         display: inline-block;
     }
     svg {
-        margin-right: 8px; /* Keep space on mobile */
+        margin-right: 8px;
     }
   }
 `;
 
 const ScrollableContent = styled.div`
-  flex: 1; /* Take remaining space */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Hide overflow initially */
+  overflow: hidden;
   margin-top: 5px;
 
-  /* Only apply mobile specific overflow/display when expanded */
   @media (max-width: 768px) {
     display: ${props => props.isExpanded ? 'flex' : 'none'};
-    overflow-y: auto; /* Allow scrolling only when expanded */
-    max-height: calc(40vh - 60px); /* Adjust based on top bar height */
+    overflow-y: auto;
+    max-height: calc(40vh - 60px);
   }
 `;
 
 const ChatList = styled.div`
-  flex-grow: 1; /* Allow chat list to grow */
+  flex-grow: 1;
   overflow-y: auto;
-  padding: 0 ${props => props.collapsed ? '8px' : '10px'};
-  /* Center chat items in collapsed state */
+  padding: 0 ${props => props.collapsed ? '8px' : '12px'};
   display: flex;
   flex-direction: column;
   align-items: ${props => props.collapsed ? 'center' : 'stretch'};
-  margin-bottom: 10px; /* Add space before bottom section */
+  margin-bottom: 10px;
+  gap: 4px;
 
   @media (max-width: 768px) {
-     max-height: none; /* Remove max-height on mobile as ScrollableContent handles it */
-     padding: 0 10px; /* Consistent padding */
-     align-items: stretch; /* Don't center items on mobile */
-     flex-grow: 0; /* Don't let it grow excessively on mobile */
+     max-height: none;
+     padding: 0 12px;
+     align-items: stretch;
+     flex-grow: 0;
   }
 
-  /* Stylish scrollbar */
   &::-webkit-scrollbar {
     width: 5px;
   }
@@ -228,18 +232,26 @@ const ChatList = styled.div`
 `;
 
 const ChatItem = styled.div`
-  padding: 8px 10px;
+  padding: 10px 12px;
   margin: 2px 0;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: ${props => props.collapsed ? 'center' : 'space-between'}; /* Center icon when collapsed */
-  background: ${props => props.active ? `rgba(255,255,255,0.1)` : 'transparent'};
-  transition: all 0.1s ease;
+  justify-content: ${props => props.collapsed ? 'center' : 'space-between'};
+  background: ${props => props.active ? 
+    props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)' 
+    : 'transparent'};
+  transition: all 0.15s ease;
   width: 100%;
   height: auto;
-  position: relative; /* Needed for absolute positioning of delete button */
+  position: relative;
+  
+  &:hover {
+    background: ${props => props.active ? 
+      props.theme.name === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' 
+      : props.theme.name === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.03)'};
+  }
 
   /* Special styling for specific theme active items */
   ${props => props.theme.name === 'bisexual' && props.active && `
@@ -248,17 +260,27 @@ const ChatItem = styled.div`
       position: absolute;
       left: 0;
       top: 0;
-      bottom: 0;
-      width: 3px;
-      background: ${props.theme.accentGradient};
-      border-top-left-radius: 12px;
-      border-bottom-left-radius: 12px;
+      height: 100%;
+      width: 4px;
+      background: linear-gradient(to bottom, #D70071 0%, #D70071 50%, #0035AA 50%, #0035AA 100%);
+      border-radius: 4px 0 0 4px;
     }
   `}
 
-  &:hover {
-    background: ${props => !props.active && `rgba(255,255,255,0.05)`};
-  }
+  /* Special styling for dark theme active items */
+  ${props => props.theme.name === 'dark' && props.active && `
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  `}
+  
+  /* Special styling for light theme active items */
+  ${props => props.theme.name === 'light' && props.active && `
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  `}
+  
+  /* Common active item styling */
+  ${props => props.active && `
+    font-weight: 500;
+  `}
 
   @media (max-width: 768px) {
       justify-content: space-between; /* Always space-between on mobile */
@@ -399,26 +421,26 @@ const BottomSection = styled.div`
 `;
 
 const SectionHeader = styled.div`
-  padding: 0 15px;
-  margin-top: 15px;
-  margin-bottom: 5px;
-  font-size: 11px;
+  padding: 0 16px;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-size: 12px;
   text-transform: uppercase;
-  color: #888;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  opacity: ${props => props.collapsed ? '0' : '1'};
+  color: ${props => props.theme.text};
+  opacity: 0.7;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  opacity: ${props => props.collapsed ? '0' : '0.7'};
   visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
   transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
 
   @media (max-width: 768px) {
-      opacity: 1; /* Always visible on mobile */
+      opacity: 1;
       visibility: visible;
-      margin-top: 10px; /* Adjust spacing */
+      margin-top: 12px;
   }
 `;
-
 
 const ModelDropdownContainer = styled.div`
   position: relative;
@@ -573,43 +595,29 @@ const ModelDescription = styled.span`
 `;
 
 const SidebarButton = styled.button`
-  width: 100%;
-  padding: 10px;
-  background: transparent;
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 8px;
-  color: ${props => props.theme.text};
   display: flex;
   align-items: center;
-  justify-content: ${props => props.collapsed ? 'center' : 'flex-start'}; /* Center icon when collapsed */
-  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: ${props => props.theme.text};
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-bottom: ${props => props.marginBottom ? '8px' : '0'};
-  min-height: 40px; /* Ensure consistent height */
-
-  span {
-    opacity: ${props => props.collapsed ? '0' : '1'};
-    visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
-    white-space: nowrap;
-    transition: opacity 0.2s ease, visibility 0.2s;
-    transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
-  }
-
-  svg {
-    flex-shrink: 0; /* Prevent icon shrinking */
-  }
-
+  justify-content: flex-start;
+  
   &:hover {
-    background: rgba(255,255,255,0.05);
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.03)'};
   }
-
-  @media (max-width: 768px) {
-      justify-content: flex-start; /* Always left-align on mobile */
-      span { /* Always visible */
-          opacity: 1;
-          visibility: visible;
-      }
+  
+  svg {
+    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
   }
 `;
 
@@ -648,6 +656,13 @@ const MobileToggleButton = styled.button`
   }
 `;
 
+const SidebarSection = styled.div`
+  border-top: 1px solid ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
 
 // --- React Component ---
 
@@ -743,14 +758,7 @@ const Sidebar = ({
         {!collapsed && (
           <NewChatButton 
             onClick={createNewChat} 
-            collapsed={collapsed} 
-            style={{ 
-              background: 'transparent', 
-              margin: '5px 15px 15px 15px',
-              width: 'calc(100% - 30px)',
-              justifyContent: 'center',
-              padding: '10px 12px'
-            }}
+            collapsed={collapsed}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
@@ -853,29 +861,26 @@ const Sidebar = ({
 
             {/* --- Bottom Buttons Section (Profile, Settings) --- */}
             {/* Rendered outside ScrollableContent to stick to bottom */}
-            <BottomSection collapsed={collapsed}>
+            <SidebarSection>
                 {/* Profile / Sign In Button */}
-                <ProfileButton
+                <SidebarButton
                   onClick={toggleProfile}
-                  isLoggedIn={isLoggedIn}
-                  marginBottom
-                  collapsed={collapsed}
                   title={isLoggedIn ? `View profile: ${username}` : "Sign In"}
                 >
                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
                    </svg>
-                   <span collapsed={collapsed}>{isLoggedIn ? username : 'Sign In'}</span>
-                </ProfileButton>
+                   <span>{isLoggedIn ? username : 'Sign In'}</span>
+                </SidebarButton>
 
                 {/* Settings Button */}
-                <SidebarButton onClick={toggleSettings} collapsed={collapsed} title="Open Settings">
+                <SidebarButton onClick={toggleSettings} title="Open Settings">
                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                      <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                    </svg>
-                   <span collapsed={collapsed}>Settings</span>
+                   <span>Settings</span>
                 </SidebarButton>
-              </BottomSection>
+              </SidebarSection>
           </>
         )}
         {/* --- END: Main content area --- */}

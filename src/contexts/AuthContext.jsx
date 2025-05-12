@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getCurrentUser, loginUser, logoutUser, registerUser, updateUserSettings } from '../services/authService';
+import { getCurrentUser, loginUser, logoutUser, registerUser, updateUserSettings, loginWithGoogle } from '../services/authService';
 
 // Create the Auth Context
 const AuthContext = createContext();
@@ -38,6 +38,22 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const loggedInUser = await loginUser(username, password);
+      setUser(loggedInUser);
+      return loggedInUser;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Google login function
+  const loginWithGoogleAuth = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const loggedInUser = await loginWithGoogle();
       setUser(loggedInUser);
       return loggedInUser;
     } catch (err) {
@@ -106,7 +122,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    updateSettings
+    updateSettings,
+    loginWithGoogle: loginWithGoogleAuth
   };
 
   return (
