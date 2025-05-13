@@ -1,7 +1,0 @@
-tunnel: 46f0de52-1a88-4cae-b9e4-1f0a00ad0b96
-credentials-file: /home/chase/.cloudflared/46f0de52-1a88-4cae-b9e4-1f0a00ad0b96.json
-
-ingress:
-  - hostname: api.explodingcb.com
-    service: http://localhost:8000
-  - service: http_status:404

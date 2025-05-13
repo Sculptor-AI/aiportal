@@ -362,15 +362,15 @@ const ActionChip = styled.button`
   gap: 6px;
   padding: 6px 12px;
   border-radius: 20px;
-  background-color: rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  color: ${props => props.theme.text}99;
+  background-color: ${props => props.selected ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.03)'};
+  border: 1px solid ${props => props.selected ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)'};
+  color: ${props => props.selected ? props.theme.text : props.theme.text + '99'};
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   
   &:hover {
-    background-color: rgba(0, 0, 0, 0.06);
+    background-color: ${props => props.selected ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.06)'};
     color: ${props => props.theme.text};
   }
 
@@ -396,6 +396,7 @@ const ChatWindow = ({
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
+  const [selectedActionChip, setSelectedActionChip] = useState(null); // Added state for selected chip
   const messagesEndRef = useRef(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chat?.title || 'New Conversation');
@@ -1012,20 +1013,20 @@ const ChatWindow = ({
           
           {/* Action Chips */}
           <ActionChipsContainer>
-            <ActionChip>
+            <ActionChip selected={selectedActionChip === 'search'} onClick={() => setSelectedActionChip('search')}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
               Search
             </ActionChip>
-            <ActionChip>
+            <ActionChip selected={selectedActionChip === 'deep-research'} onClick={() => setSelectedActionChip('deep-research')}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
               </svg>
               Deep research
             </ActionChip>
-            <ActionChip>
+            <ActionChip selected={selectedActionChip === 'create-image'} onClick={() => setSelectedActionChip('create-image')}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>
