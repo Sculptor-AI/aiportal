@@ -62,35 +62,35 @@ const MainGreeting = styled.div`
   top: 35%; /* Adjusted lower: Default for larger screens */
   left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 140px)'}; /* 140px is half of sidebar width 280px */
   transform: translateX(-50%);
-  max-width: 800px; 
+  max-width: 800px; /* Keep a max width */
+  width: 90%; /* Use percentage width for better flexibility */
   text-align: center;
   z-index: 4;
   pointer-events: none;
   padding: 0 20px; /* Horizontal padding */
+  box-sizing: border-box; /* Include padding in width calculation */
   transition: left 0.3s ease-out, top 0.3s ease-out; /* Added top to transition */
   
   h1 {
-    font-size: min(2.4rem, 7vw); /* Responsive font size */
+    font-size: min(2.2rem, 6vw); /* Adjusted responsive font size */
     font-weight: 500;
     color: ${props => props.theme.text};
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column; /* Allow text to wrap */
-    align-items: center;
-    justify-content: center;
-    gap: 0px; 
+    /* Removed flex properties, let natural wrapping occur */
     line-height: 1.2; 
+    word-wrap: break-word; /* Ensure long words break if needed */
+    overflow-wrap: break-word; /* More modern property for word breaking */
   }
 
   /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
     left: 50%; /* Override: Always viewport center on smaller screens */
     top: 30%; /* Adjusted lower: For tablets and smaller */
+    max-width: 90%; /* Reduce max-width on smaller screens */
     padding: 0 15px; 
     h1 {
-      font-size: min(2rem, 6.5vw); 
-      gap: 4px; 
+      font-size: min(2rem, 5.5vw); /* Slightly smaller font */
     }
   }
 
@@ -98,9 +98,10 @@ const MainGreeting = styled.div`
   @media (max-width: 480px) {
     left: 50%; /* Override: Always viewport center on very small screens */
     top: 28%; /* Adjusted lower: For very small screens */
+    max-width: 95%; /* Allow slightly more width on very small screens */
     padding: 0 10px; 
     h1 {
-      font-size: min(1.8rem, 6vw); 
+      font-size: min(1.7rem, 5vw); /* Slightly smaller font */
     }
   }
 `;
@@ -405,7 +406,7 @@ const AppContent = () => {
   useEffect(() => {
     // Show Chrome toast after a short delay
     const timer = setTimeout(() => {
-      showChromeToast();
+      // showChromeToast(); // Commented out to remove the toast
     }, 1000);
 
     return () => clearTimeout(timer);
