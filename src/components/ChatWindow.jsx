@@ -499,6 +499,73 @@ const ChatWindow = ({
     const currentModel = selectedModel; // Capture selected model
     const currentHistory = chat.messages; // Capture current history
 
+    // Check for API key based on selected model
+    let apiKeyMissing = false;
+    let apiKeyMessage = "";
+    
+    // Get the user settings that might contain API keys
+    const userSettingsStr = sessionStorage.getItem('ai_portal_current_user');
+    const localSettingsStr = localStorage.getItem('settings');
+    const userSettings = userSettingsStr ? JSON.parse(userSettingsStr)?.settings || {} : {};
+    const localSettings = localSettingsStr ? JSON.parse(localSettingsStr) || {} : {};
+    const settings = userSettings || localSettings;
+    
+    // Check API keys based on selected model
+    if (currentModel.startsWith('gemini') && 
+        !settings.googleApiKey && 
+        !import.meta.env.VITE_GOOGLE_API_KEY) {
+      apiKeyMissing = true;
+      apiKeyMessage = "Google API key is missing. Please add it in Settings.";
+    } else if (currentModel.startsWith('claude') && 
+              !settings.anthropicApiKey && 
+              !import.meta.env.VITE_ANTHROPIC_API_KEY) {
+      apiKeyMissing = true;
+      apiKeyMessage = "Anthropic API key is missing. Please add it in Settings.";
+    } else if (currentModel.startsWith('chatgpt') && 
+              !settings.openaiApiKey && 
+              !import.meta.env.VITE_OPENAI_API_KEY) {
+      apiKeyMissing = true;
+      apiKeyMessage = "OpenAI API key is missing. Please add it in Settings.";
+    }
+    
+    if (apiKeyMissing) {
+      // Add user message
+      const userMessage = {
+        id: Date.now(),
+        role: 'user',
+        content: messageToSend,
+        image: currentImageData,
+        fileInfo: uploadedFileData ? { name: uploadedFileData.name, type: uploadedFileData.type } : undefined,
+        model: currentModel
+      };
+      addMessage(currentChatId, userMessage);
+      
+      // Add error message as assistant response
+      const aiMessageId = userMessage.id + 1;
+      const errorMessage = {
+        id: aiMessageId,
+        role: 'assistant',
+        content: apiKeyMessage,
+        isError: true,
+        modelId: currentModel
+      };
+      addMessage(currentChatId, errorMessage);
+      
+      // Clear input and reset file upload state
+      setInputMessage('');
+      clearUploadedFile();
+      inputRef.current?.style.setProperty('height', 'auto');
+      
+      // Show a toast notification if possible
+      if (toast) {
+        toast.showErrorToast("API Key Required", apiKeyMessage, {
+          duration: 5000
+        });
+      }
+      
+      return;
+    }
+
     // --- Optimistic UI Update --- 
     const userMessage = {
       id: Date.now(), // Use timestamp as temp ID
