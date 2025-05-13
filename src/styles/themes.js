@@ -149,45 +149,57 @@ export const bisexualTheme = {
 
 export const prideTheme = {
   name: 'pride',
-  background: 'radial-gradient(circle, #111111, #000000)',
-  sidebar: 'rgba(20, 20, 30, 0.8)',
-  chat: 'rgba(10, 10, 15, 0.7)',
-  text: '#ffffff',
-  border: 'rgba(255, 255, 255, 0.1)',
-  borderGlow: '0 0 5px rgba(255, 0, 0, 0.6), 0 0 10px rgba(255, 165, 0, 0.3), 0 0 15px rgba(255, 255, 0, 0.2), 0 0 20px rgba(0, 128, 0, 0.2), 0 0 25px rgba(0, 0, 255, 0.2), 0 0 30px rgba(75, 0, 130, 0.3)',
-  messageUser: 'linear-gradient(145deg, rgba(80, 80, 120, 0.7), rgba(60, 60, 100, 0.7))',
-  messageAi: 'linear-gradient(145deg, rgba(40, 40, 60, 0.7), rgba(30, 30, 50, 0.7))',
-  hover: 'rgba(80, 80, 120, 0.4)',
-  primary: 'linear-gradient(145deg, rgba(255, 0, 0, 0.7), rgba(255, 165, 0, 0.7), rgba(255, 255, 0, 0.7), rgba(0, 128, 0, 0.7), rgba(0, 0, 255, 0.7), rgba(75, 0, 130, 0.7))',
-  secondary: 'rgba(255, 165, 0, 0.7)',
-  shadow: 'rgba(0, 0, 0, 0.4)',
-  glassBlur: '10px',
-  glassEffect: 'blur(10px) saturate(120%)',
-  inputBackground: 'rgba(30, 30, 40, 0.7)',
-  buttonGradient: 'linear-gradient(145deg, rgba(255, 0, 0, 0.6), rgba(255, 165, 0, 0.6), rgba(255, 255, 0, 0.6), rgba(0, 128, 0, 0.6), rgba(0, 0, 255, 0.6), rgba(75, 0, 130, 0.6))',
-  buttonHoverGradient: 'linear-gradient(145deg, rgba(75, 0, 130, 0.6), rgba(0, 0, 255, 0.6), rgba(0, 128, 0, 0.6), rgba(255, 255, 0, 0.6), rgba(255, 165, 0, 0.6), rgba(255, 0, 0, 0.6))',
-  cardBackground: 'rgba(25, 25, 35, 0.7)'
+  // Vibrant rainbow background with a dark overlay for readability - making overlay even less opaque
+  background: 'linear-gradient(rgba(10, 10, 10, 0.7), rgba(0, 0, 0, 0.75)), linear-gradient(135deg, #E40303 0%, #FF8C00 16.67%, #FFED00 33.33%, #008026 50%, #004DFF 66.67%, #750787 83.33%, #E40303 100%)',
+  backgroundAttachment: 'fixed', // Make background fixed for a cooler effect with scrolling
+  sidebar: 'rgba(30, 30, 40, 0.85)', // Slightly lighter, more modern dark
+  chat: 'rgba(20, 20, 25, 0.8)', // Consistent dark base for chat area
+  text: '#f0f2f5', // Softer white for better readability
+  border: 'rgba(220, 220, 255, 0.15)', // Slightly brighter border
+  // Enhanced rainbow glow using specific pride colors - removed
+  borderGlow: 'none',
+  // Dark, neutral message bubbles to make content pop
+  messageUser: 'rgba(45, 45, 55, 0.8)',
+  messageAi: 'rgba(40, 40, 50, 0.8)',
+  hover: 'rgba(65, 65, 80, 0.6)', // A more responsive neutral hover
+  primary: '#E40303', // Pride Red
+  secondary: '#004DFF', // Pride Blue
+  shadow: 'rgba(0, 0, 0, 0.5)', // Slightly stronger shadow for depth
+  glassBlur: '12px', // Slightly more blur
+  glassEffect: 'blur(12px) saturate(180%)', // More saturation for glass
+  inputBackground: 'rgba(40, 40, 55, 0.75)',
+  // Full, vibrant rainbow gradients for buttons
+  buttonGradient: 'linear-gradient(145deg, #E40303, #FF8C00, #FFED00, #008026, #004DFF, #750787)',
+  buttonHoverGradient: 'linear-gradient(145deg, #750787, #004DFF, #008026, #FFED00, #FF8C00, #E40303)', // Reversed
+  cardBackground: 'rgba(35, 35, 50, 0.85)', // Consistent dark card background
+  // Accent gradient for special highlights
+  accentGradient: 'linear-gradient(to right, #E40303, #FF8C00, #FFED00, #008026, #004DFF, #750787)',
 };
 
 export const transTheme = {
   name: 'trans',
-  background: 'radial-gradient(circle, #111111, #000000)',
-  sidebar: 'rgba(91, 206, 250, 0.15)',
-  chat: 'rgba(10, 10, 15, 0.7)',
-  text: '#ffffff',
-  border: 'rgba(255, 255, 255, 0.1)',
-  messageUser: 'linear-gradient(145deg, rgba(91, 206, 250, 0.3), rgba(70, 160, 200, 0.3))',
-  messageAi: 'linear-gradient(145deg, rgba(245, 169, 184, 0.3), rgba(200, 140, 150, 0.3))',
-  hover: 'rgba(91, 206, 250, 0.2)',
+  // Dynamic background using trans flag colors - significantly reduced dark overlay for intensity
+  background: 'linear-gradient(rgba(10, 5, 10, 0.5), rgba(0, 0, 0, 0.6)), linear-gradient(135deg, #5BCEFA 0%, #F5A9B8 50%, #FFFFFF 100%)',
+  backgroundAttachment: 'fixed',
+  // Slightly adjusted UI element backgrounds to let background color influence them more
+  sidebar: 'rgba(30, 25, 35, 0.8)',
+  chat: 'rgba(20, 15, 25, 0.75)',
+  text: '#f0f2f5',
+  border: 'rgba(245, 169, 184, 0.3)', // Slightly more visible pink border
+  borderGlow: 'none',
+  messageUser: 'rgba(55, 50, 60, 0.8)',
+  messageAi: 'rgba(50, 45, 55, 0.8)',
+  hover: 'rgba(80, 75, 90, 0.6)',
   primary: '#5BCEFA',
   secondary: '#F5A9B8',
-  shadow: 'rgba(0, 0, 0, 0.4)',
-  glassBlur: '10px',
-  glassEffect: 'blur(10px) saturate(120%)',
-  inputBackground: 'rgba(30, 30, 40, 0.7)',
-  buttonGradient: 'linear-gradient(145deg, #5BCEFA, #F5A9B8)',
-  buttonHoverGradient: 'linear-gradient(145deg, #F5A9B8, #5BCEFA)',
-  cardBackground: 'rgba(25, 25, 35, 0.7)'
+  shadow: 'rgba(0, 0, 0, 0.55)', // Slightly darker shadow for contrast
+  glassBlur: '12px',
+  glassEffect: 'blur(12px) saturate(190%)', // Increased saturation
+  inputBackground: 'rgba(50, 45, 60, 0.7)',
+  buttonGradient: 'linear-gradient(145deg, #5BCEFA, #F5A9B8, #FFFFFF)',
+  buttonHoverGradient: 'linear-gradient(145deg, #FFFFFF, #F5A9B8, #5BCEFA)',
+  cardBackground: 'rgba(45, 40, 55, 0.8)',
+  accentGradient: 'linear-gradient(to right, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
 };
 
 // Custom theme for the model icons with enhanced gradients
