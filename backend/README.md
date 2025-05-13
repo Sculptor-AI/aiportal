@@ -6,7 +6,7 @@ This is the backend server for the AI Portal application. It provides an API tha
 
 - Unified API for accessing multiple LLMs (GPT-4o, Claude, Llama, etc.)
 - Request validation and sanitization
-- AES-128 encryption for secure communication
+- Public/private key (asymmetric) encryption for secure communication
 - Model allowlisting to prevent abuse
 - Clean error handling
 
@@ -21,7 +21,8 @@ This is the backend server for the AI Portal application. It provides an API tha
    ```
    PORT=3000
    OPENROUTER_API_KEY=your_openrouter_api_key
-   AES_ENCRYPTION_KEY=your_16char_key
+   PUBLIC_KEY=your_public_key
+   PRIVATE_KEY=your_private_key
    ALLOWED_MODELS=openai/gpt-4o,anthropic/claude-3-haiku,anthropic/claude-3-opus,anthropic/claude-3-sonnet,meta-llama/llama-2-70b-chat,google/gemini-pro
    ```
 
@@ -61,7 +62,7 @@ Processes a chat completion request.
 }
 ```
 
-The response is encrypted with AES-128 using the key specified in the environment variable. When decrypted, it has the following format:
+The response is encrypted with the public key and must be decrypted with the private key. When decrypted, it has the following format:
 
 ```json
 {
@@ -76,7 +77,7 @@ The response is encrypted with AES-128 using the key specified in the environmen
 
 ## Security
 
-- All API responses are encrypted with AES-128
+- All API responses are encrypted with public key cryptography (RSA)
 - Environment variables are used to store sensitive information
 - Requests are validated before processing
 - Only allowed models can be used

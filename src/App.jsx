@@ -12,6 +12,7 @@ import GlobalStylesProvider from './styles/GlobalStylesProvider';
 import SharedChatView from './components/SharedChatView';
 import { keyframes } from 'styled-components';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { fetchModelsFromBackend } from './services/aiService';
 
 const AppContainer = styled.div`
   display: flex;
@@ -199,6 +200,47 @@ const AppContent = () => {
     const savedModel = localStorage.getItem('selectedModel');
     return savedModel || 'gemini-2-flash';
   });
+
+  // Fetch models from backend
+  useEffect(() => {
+    const getBackendModels = async () => {
+      try {
+        const backendModels = await fetchModelsFromBackend();
+        if (backendModels && backendModels.length > 0) {
+          // Merge backend models with local models to ensure backwards compatibility
+          // This approach allows both direct API models and backend-proxied models
+          const mergedModels = [...availableModels];
+          
+          backendModels.forEach(backendModel => {
+            // Check if the model already exists in the list
+            const existingIndex = mergedModels.findIndex(m => m.id === backendModel.id);
+            
+            if (existingIndex >= 0) {
+              // Update existing model with backend info
+              mergedModels[existingIndex] = {
+                ...mergedModels[existingIndex],
+                ...backendModel,
+                isBackendModel: true
+              };
+            } else {
+              // Add new backend model
+              mergedModels.push({
+                ...backendModel,
+                isBackendModel: true
+              });
+            }
+          });
+          
+          setAvailableModels(mergedModels);
+          console.log('Models updated with backend models:', mergedModels);
+        }
+      } catch (error) {
+        console.error('Failed to fetch models from backend:', error);
+      }
+    };
+    
+    getBackendModels();
+  }, []);
   
   // Settings - from user account or localStorage
   const [settings, setSettings] = useState(() => {

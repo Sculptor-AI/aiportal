@@ -699,3 +699,114 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // 2. Replace the temporary simulation block with `yield textChunk;` inside the `onmessage` handler where commented.
 // 3. Remove `extractResponse` from all MODEL_CONFIGS.
 // 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.
+
+// Add backend API base URL - ensure this matches your backend server address
+const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3000/api';
+
+/**
+ * Fetch available models from the backend
+ * @returns {Promise<Array>} Array of model objects
+ */
+export const fetchModelsFromBackend = async () => {
+  try {
+    const response = await fetch(`${BACKEND_API_BASE}/models`);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch models from backend');
+    }
+    
+    const data = await response.json();
+    return data.models.map(model => ({
+      id: model.id,
+      name: model.name,
+      provider: model.provider,
+      capabilities: model.capabilities || []
+    }));
+  } catch (error) {
+    console.error('Error fetching models from backend:', error);
+    return []; // Return empty array on error
+  }
+};
+
+/**
+ * Send a message to the backend for processing
+ * @param {string} modelType - The model ID to use
+ * @param {string} prompt - The message content
+ * @param {boolean} search - Whether to use search feature
+ * @param {boolean} deepResearch - Whether to use deep research
+ * @param {boolean} imageGen - Whether to generate images
+ * @returns {Promise<Object>} The processed response
+ */
+export const sendMessageToBackend = async (modelType, prompt, search = false, deepResearch = false, imageGen = false) => {
+  try {
+    // Create the request packet based on the diagram specification
+    const requestPacket = {
+      modelType,
+      prompt,
+      search,
+      deepResearch,
+      imageGen
+    };
+    
+    console.log('Sending request to backend:', requestPacket);
+    
+    const response = await fetch(`${BACKEND_API_BASE}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestPacket)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to process message');
+    }
+    
+    const data = await response.json();
+    console.log('Received encrypted response from backend');
+    
+    // The response data.data is encrypted
+    // In a production app, we'd decrypt it on the client side
+    // For simplicity, we're assuming the backend returns the decrypted response in this example
+    
+    // Mock decryption for demo purposes
+    // In a real app, this would use a proper decryption function with the client's private key
+    const decryptedResponse = mockDecryptResponse(data.data);
+    
+    return decryptedResponse;
+  } catch (error) {
+    console.error('Error sending message to backend:', error);
+    throw error;
+  }
+};
+
+/**
+ * Mock function to simulate decryption of backend response
+ * In a real app, this would use actual decryption with the client's private key
+ * @param {string} encryptedData - The encrypted data from the backend
+ * @returns {Object} The decrypted response object
+ */
+const mockDecryptResponse = (encryptedData) => {
+  // This is just a placeholder for demonstration
+  // In a real app, this would use proper cryptographic decryption
+  
+  // For demo purposes, if the data is already a JSON object, return it as is
+  if (typeof encryptedData === 'object') {
+    return encryptedData;
+  }
+  
+  // Otherwise, try to parse it as JSON (assuming the backend returned unencrypted data for demo)
+  try {
+    return JSON.parse(encryptedData);
+  } catch (e) {
+    // If it's not JSON, just create a response object with the data as the message
+    return {
+      response: encryptedData,
+      metadata: {
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+};

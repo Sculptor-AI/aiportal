@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import ChatMessage from './ChatMessage';
-import { sendMessage } from '../services/aiService';
+import { sendMessage, sendMessageToBackend } from '../services/aiService';
 import ModelSelector from './ModelSelector';
 import FileUploadButton from './FileUploadButton';
 import { useToast } from '../contexts/ToastContext';
@@ -500,6 +500,10 @@ const ChatWindow = ({
     const currentModel = selectedModel; // Capture selected model
     const currentHistory = chat.messages; // Capture current history
 
+    // Find the full model object for the current model
+    const currentModelObj = availableModels.find(model => model.id === currentModel);
+    const isBackendModel = currentModelObj?.isBackendModel === true;
+
     // Check for API key based on selected model
     let apiKeyMissing = false;
     let apiKeyMessage = "";
@@ -600,33 +604,53 @@ const ChatWindow = ({
     let streamedContent = '';
 
     try {
-      await sendMessage(
-        currentModel,      // Pass captured model
-        messageToSend,     // Pass user input text
-        currentHistory,    // Pass captured history
-        (chunk) => {       // Callback for receiving chunks
-          streamedContent += chunk;
-          // Update the placeholder message content chunk by chunk
-          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
-        },
-        (error) => {       // Callback for errors during streaming
-          console.error(`Error streaming response from ${currentModel}:`, error);
-          updateMessage(currentChatId, aiMessageId, {
-            content: `Error: ${error.message || 'Failed to get response'}`,
-            isError: true,
-            isLoading: false
-          });
-        },
-        currentImageData,  // Pass image data
-        currentFileText,   // Pass file text content
-        settings           // Pass settings object
-      );
-      // If sendMessage completes without calling the error callback, finalize the message
-       updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
-       console.log(`[ChatWindow] Streaming finished successfully for ${currentModel}.`);
-
+      // Use backend API if it's a backend model
+      if (isBackendModel) {
+        console.log(`[ChatWindow] Using backend API for model: ${currentModel}`);
+        
+        const backendResponse = await sendMessageToBackend(
+          currentModel,
+          messageToSend,
+          userMessage.search || false,
+          userMessage.deepResearch || false,
+          userMessage.imageGen || false
+        );
+        
+        // Update the placeholder message with the backend response
+        updateMessage(currentChatId, aiMessageId, { 
+          content: backendResponse.response || 'No response from backend', 
+          isLoading: false
+        });
+        console.log(`[ChatWindow] Backend response received for ${currentModel}.`);
+      } else {
+        // Use direct API for regular models
+        await sendMessage(
+          currentModel,      // Pass captured model
+          messageToSend,     // Pass user input text
+          currentHistory,    // Pass captured history
+          (chunk) => {       // Callback for receiving chunks
+            streamedContent += chunk;
+            // Update the placeholder message content chunk by chunk
+            updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
+          },
+          (error) => {       // Callback for errors during streaming
+            console.error(`Error streaming response from ${currentModel}:`, error);
+            updateMessage(currentChatId, aiMessageId, {
+              content: `Error: ${error.message || 'Failed to get response'}`,
+              isError: true,
+              isLoading: false
+            });
+          },
+          currentImageData,  // Pass image data
+          currentFileText,   // Pass file text content
+          settings           // Pass settings object
+        );
+        // If sendMessage completes without calling the error callback, finalize the message
+        updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
+        console.log(`[ChatWindow] Streaming finished successfully for ${currentModel}.`);
+      }
     } catch (error) { // Catch errors thrown directly by sendMessage setup (e.g., network issues)
-       console.error(`Error setting up sendMessage for ${currentModel}:`, error);
+       console.error(`Error setting up message for ${currentModel}:`, error);
         updateMessage(currentChatId, aiMessageId, {
             content: `Setup Error: ${error.message || 'Failed to initiate connection'}`,
             isError: true,
@@ -634,8 +658,6 @@ const ChatWindow = ({
         });
     } finally {
       setIsLoading(false); // Turn off loading indicator regardless of outcome
-      // Note: The final updateMessage call inside the try block handles success
-      // The error callback inside sendMessage or the catch block handles errors
     }
   };
 

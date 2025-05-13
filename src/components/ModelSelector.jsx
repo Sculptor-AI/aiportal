@@ -128,6 +128,18 @@ const ModelProvider = styled.div`
   margin-top: 2px;
 `;
 
+// Add a new styled component for the backend model indicator
+const BackendModelBadge = styled.span`
+  background: ${props => props.theme.primary};
+  color: white;
+  font-size: 0.6rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  margin-left: 5px;
+  font-weight: bold;
+  opacity: 0.8;
+`;
+
 const ModelSelector = ({ selectedModel, models, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -233,14 +245,22 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
   }, [selectedModel, currentModel, availableModels, onChange]);
 
 
-  // Get provider name for model (ensure it handles the new gemini model)
-  const getProviderName = (modelId) => {
-    if (modelId.includes('gemini-2.5-pro')) return 'Google AI (2.5 Pro)'; // Specific name
+  // Get provider name for model
+  const getProviderName = (model) => {
+    const modelId = model.id;
+    
+    // If it's a backend model and has provider info, use it
+    if (model.isBackendModel && model.provider) {
+      return `${model.provider} (via Backend)`;
+    }
+    
+    // Otherwise fall back to the standard provider logic
+    if (modelId.includes('gemini-2.5-pro')) return 'Google AI (2.5 Pro)';
     if (modelId.includes('gemini')) return 'Google AI';
     if (modelId.includes('claude')) return 'Anthropic';
     if (modelId.includes('gpt') || modelId.includes('chatgpt')) return 'OpenAI';
     if (modelId.includes('nemotron')) return 'NVIDIA';
-    if (modelId.includes('ursa')) return 'Custom GGUF'; // Updated provider name
+    if (modelId.includes('ursa')) return 'Custom GGUF';
     return 'AI Provider';
   };
 
@@ -277,6 +297,9 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
          <ModelButton onClick={toggleDropdown} isOpen={isOpen} disabled={availableModels.length === 0}>
            <ModelIcon modelId={currentModel.id} size="small" />
            <span>{currentModel.name}</span>
+           {currentModel.isBackendModel && (
+             <BackendModelBadge>B</BackendModelBadge>
+           )}
            {availableModels.length > 0 && ( // Only show arrow if dropdown is possible
              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                <polyline points="6 9 12 15 18 9"></polyline>
@@ -299,7 +322,10 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
               <ModelIcon modelId={model.id} size="small" />
               <ModelDetails>
                 <ModelName>{model.name}</ModelName>
-                <ModelProvider>{getProviderName(model.id)}</ModelProvider>
+                <ModelProvider>{getProviderName(model)}</ModelProvider>
+                {model.isBackendModel && (
+                  <BackendModelBadge>Backend</BackendModelBadge>
+                )}
               </ModelDetails>
             </ModelOption>
           ))}
