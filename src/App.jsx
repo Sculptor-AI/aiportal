@@ -128,9 +128,21 @@ const AppContent = () => {
     "Back for more AI wisdom",
     "Oh great, it's you again",
     "Lemme guess, essay due in an hour",
-    "You again? Don't you sleep",
     "You treat me like Google with trauma",
-    "I was just about to take a nap, but okay"
+    "I was just about to take a nap, but okay",
+    "Oh joy, it's my favorite procrastinator",
+    "Missed me already? How predictable",
+    "You know, boundaries exist, right",
+    "Again? At this rate, I deserve a raise",
+    "What's today's crisis",
+    "Back so soon? Therapy might help more",
+    "Did Google hurt your feelings again",
+    "Is ignoring deadlines your hobby or passion",
+    "I'm not judging—actually, yes, I am",
+    "Welcome back, chronic advice seeker",
+    "Great, another chance to practice patience",
+    "Look, it's the usual suspect",
+    "Community guidelines, prepare to be ignored"
   ];
   
   // Get random greeting message
@@ -140,8 +152,13 @@ const AppContent = () => {
   };
   
   // State for greeting message
-  const [greeting, setGreeting] = useState(getRandomGreeting());
+  const [greeting, setGreeting] = useState(''); // Initialize with empty string
   const [hasAttachment, setHasAttachment] = useState(false);
+  
+  // Set random greeting on mount
+  useEffect(() => {
+    setGreeting(getRandomGreeting());
+  }, []); // Empty dependency array ensures this runs only once on mount
   
   // Chat state
   const [chats, setChats] = useState(() => {
