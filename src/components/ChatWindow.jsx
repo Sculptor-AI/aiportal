@@ -320,11 +320,11 @@ const EmptyState = styled.div`
   color: ${props => props.theme.text}aa;
   text-align: center;
   padding: 20px;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  /* backdrop-filter: blur(5px); */ // Apply blur effect to elements behind
+  /* -webkit-backdrop-filter: blur(5px); */ // Vendor prefix for backdrop-filter
   width: 100%;
   max-width: 600px;
-  z-index: 5;
+  z-index: 5; // Higher than MainGreeting (4) but lower than InputContainer (100)
   pointer-events: none; /* Allow clicks to pass through */
   opacity: 1; /* Default opacity */
 

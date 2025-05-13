@@ -362,18 +362,19 @@ const AppContent = () => {
     // Any other actions needed when model changes, like saving to storage
   };
   
-  // Firefox Demo Toast
-  const showFirefoxToast = () => {
-    // Detect if the user is using Firefox
-    const isFirefox = navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
-    
-    if (isFirefox) {
-      // User is already using Firefox - show the success toast
+  // Chrome Demo Toast
+  const showChromeToast = () => {
+    // Detect if the user is using Chrome (and not Edge)
+    const ua = navigator.userAgent.toLowerCase();
+    const isChrome = ua.indexOf('chrome') > -1 && ua.indexOf('edg/') === -1 && ua.indexOf('opr/') === -1;
+
+    if (isChrome) {
+      // User is already using Chrome - show the success toast
       toast.showCustomToast(
-        "Nice!", 
-        "", 
-        { 
-          customImage: '/images/firefox-logo.png',
+        "Nice!",
+        "",
+        {
+          customImage: '/images/firefox-logo.png', // Reverted to firefox logo path
           duration: 5000,
           bottom: '20px',
           left: '20px',
@@ -382,31 +383,31 @@ const AppContent = () => {
         }
       );
     } else {
-      // User is not using Firefox - show the prompt toast with redirection
+      // User is not using Chrome - show the prompt toast with redirection
       toast.showCustomToast(
-        "Firefox preferred", 
-        "This website works best with Firefox", 
-        { 
-          customImage: '/images/firefox-logo.png',
+        "Chrome preferred",
+        "This website works best with Chrome",
+        {
+          customImage: '/images/firefox-logo.png', // Reverted to firefox logo path
           duration: 10000, // Longer duration to give user time to click
           bottom: '20px',
           left: '20px',
           useTheme: true,
           onClick: () => {
-            window.open('https://www.mozilla.org/en-US/firefox/new/?xv=refresh-new&v=a', '_blank');
+            window.open('https://www.google.com/chrome/', '_blank');
           }
         }
       );
     }
   };
 
-  // Show Firefox toast on component mount or page refresh
+  // Show Chrome toast on component mount or page refresh
   useEffect(() => {
-    // Show Firefox toast after a short delay
+    // Show Chrome toast after a short delay
     const timer = setTimeout(() => {
-      showFirefoxToast();
+      showChromeToast();
     }, 1000);
-    
+
     return () => clearTimeout(timer);
   }, []);
 
