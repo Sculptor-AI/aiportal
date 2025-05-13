@@ -492,8 +492,10 @@ const AppContent = () => {
             updateChatTitle={updateChatTitle}
             selectedModel={selectedModel}
             settings={settings}
-            focusMode={settings.focusMode}
+            sidebarCollapsed={collapsed}
+            availableModels={availableModels}
             onAttachmentChange={setHasAttachment}
+            onModelChange={handleModelChange}
           />
         
           {isSettingsOpen && (

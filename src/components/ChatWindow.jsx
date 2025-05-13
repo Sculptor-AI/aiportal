@@ -383,13 +383,15 @@ const ActionChip = styled.button`
 
 const ChatWindow = ({ 
   chat, 
-  onAddMessage, 
-  onUpdateMessage, 
+  addMessage,
+  updateMessage,
+  updateChatTitle,
   selectedModel: initialSelectedModel, 
   settings, 
   sidebarCollapsed = false, 
   availableModels,
-  onAttachmentChange
+  onAttachmentChange,
+  onModelChange
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -506,7 +508,7 @@ const ChatWindow = ({
       fileInfo: uploadedFileData ? { name: uploadedFileData.name, type: uploadedFileData.type } : undefined,
       model: currentModel // Associate message with model used
     };
-    onAddMessage(currentChatId, userMessage); // Use the updated addMessage from context
+    addMessage(currentChatId, userMessage); // Use the updated addMessage from context
     
     // Add placeholder AI message
     const aiMessageId = userMessage.id + 1; // Temporary ID for the streaming message
@@ -517,7 +519,7 @@ const ChatWindow = ({
         isLoading: true,
         modelId: currentModel // Store which model is responding
     };
-    onAddMessage(currentChatId, placeholderAiMessage);
+    addMessage(currentChatId, placeholderAiMessage);
     // --- End Optimistic UI Update ---
 
     // Clear input and reset file upload state *after* capturing needed data
@@ -537,11 +539,11 @@ const ChatWindow = ({
         (chunk) => {       // Callback for receiving chunks
           streamedContent += chunk;
           // Update the placeholder message content chunk by chunk
-          onUpdateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
+          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
         },
         (error) => {       // Callback for errors during streaming
           console.error(`Error streaming response from ${currentModel}:`, error);
-          onUpdateMessage(currentChatId, aiMessageId, {
+          updateMessage(currentChatId, aiMessageId, {
             content: `Error: ${error.message || 'Failed to get response'}`,
             isError: true,
             isLoading: false
@@ -552,12 +554,12 @@ const ChatWindow = ({
         settings           // Pass settings object
       );
       // If sendMessage completes without calling the error callback, finalize the message
-       onUpdateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
+       updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
        console.log(`[ChatWindow] Streaming finished successfully for ${currentModel}.`);
 
     } catch (error) { // Catch errors thrown directly by sendMessage setup (e.g., network issues)
        console.error(`Error setting up sendMessage for ${currentModel}:`, error);
-        onUpdateMessage(currentChatId, aiMessageId, {
+        updateMessage(currentChatId, aiMessageId, {
             content: `Setup Error: ${error.message || 'Failed to initiate connection'}`,
             isError: true,
             isLoading: false
@@ -571,9 +573,25 @@ const ChatWindow = ({
 
   // Handle sending message on Enter key press
   const handleKeyDown = (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (settings.sendWithEnter && event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault(); // Prevent default Enter behavior (new line)
       submitMessage();
+    } else if (!settings.sendWithEnter && event.key === 'Enter' && event.shiftKey) {
+      // If sendWithEnter is false, allow Shift+Enter to send if desired (optional, but common UX)
+      // Or, if Shift+Enter is purely for newlines when sendWithEnter is false, this block can be removed.
+      // For now, let's assume Shift+Enter should also send if sendWithEnter is false and Enter alone makes a newline.
+      // This specific behavior might need clarification based on desired UX.
+      // If the intention is that Enter *only* creates a newline when sendWithEnter is false,
+      // and *only* send button works, then this 'else if' is not needed.
+      // However, current setup has Enter creating newlines by default if not prevented.
+      // Let's assume for now: if sendWithEnter is true, Enter sends. If false, Shift+Enter sends.
+      // If sendWithEnter is false and user hits just Enter, it makes a new line (default textarea behavior).
+      event.preventDefault(); 
+      submitMessage();
+    } else if (event.key === 'Enter' && !event.shiftKey && !settings.sendWithEnter) {
+      // This case is when sendWithEnter is false, and the user presses Enter without Shift.
+      // We do *not* preventDefault here, allowing Enter to create a new line.
+      // No call to submitMessage().
     }
   };
 
@@ -581,6 +599,9 @@ const ChatWindow = ({
   const handleFileSelected = async (file) => { // Make async
     if (!file) {
       setUploadedFileData(null);
+      if (onAttachmentChange) {
+        onAttachmentChange(false);
+      }
       return;
     }
     const isImage = file.type.startsWith('image/');
@@ -588,27 +609,58 @@ const ChatWindow = ({
     const isPdf = file.type === 'application/pdf';
 
     if (isImage || isText || isPdf) {
-      if (file.size > 10 * 1024 * 1024) { /* ... size check ... */ return; }
+      if (file.size > 10 * 1024 * 1024) { 
+        alert('File too large. Max size is 10MB.');
+        return; 
+      }
 
       setIsProcessingFile(true); // Start processing indicator
       setUploadedFileData({ file: file, type: file.type.split('/')[0], content: 'Processing...', name: file.name }); // Show processing state
+      
+      if (onAttachmentChange) {
+        onAttachmentChange(true);
+      }
 
       try {
         if (isImage) {
           const reader = new FileReader();
           reader.onloadend = () => {
-            setUploadedFileData({ file: file, type: 'image', content: reader.result, name: file.name });
+            setUploadedFileData({ 
+              file: file, 
+              type: 'image', 
+              content: reader.result, 
+              dataUrl: reader.result, // Add dataUrl for image data
+              name: file.name 
+            });
             setIsProcessingFile(false);
           };
-          reader.onerror = () => { setIsProcessingFile(false); alert('Error reading image file.'); };
+          reader.onerror = () => { 
+            setIsProcessingFile(false); 
+            alert('Error reading image file.'); 
+            if (onAttachmentChange) {
+              onAttachmentChange(false);
+            }
+          };
           reader.readAsDataURL(file);
         } else if (isText) {
           const reader = new FileReader();
           reader.onloadend = () => {
-            setUploadedFileData({ file: file, type: 'text', content: reader.result, name: file.name });
+            setUploadedFileData({ 
+              file: file, 
+              type: 'text', 
+              content: reader.result, 
+              text: reader.result, // Add text field for text content
+              name: file.name 
+            });
             setIsProcessingFile(false);
           };
-           reader.onerror = () => { setIsProcessingFile(false); alert('Error reading text file.'); };
+          reader.onerror = () => { 
+            setIsProcessingFile(false); 
+            alert('Error reading text file.'); 
+            if (onAttachmentChange) {
+              onAttachmentChange(false);
+            }
+          };
           reader.readAsText(file);
         } else if (isPdf) {
            // Extract text from PDF
@@ -620,7 +672,13 @@ const ChatWindow = ({
              const textContent = await page.getTextContent();
              fullText += textContent.items.map(item => item.str).join(' ') + '\n'; // Add newline between pages
            }
-           setUploadedFileData({ file: file, type: 'pdf', content: fullText.trim(), name: file.name });
+           setUploadedFileData({ 
+             file: file, 
+             type: 'pdf', 
+             content: fullText.trim(), 
+             text: fullText.trim(), // Add text field for PDF content
+             name: file.name 
+           });
            setIsProcessingFile(false);
         }
         setResetFileUpload(false); // Ensure reset is false if a valid file is selected
@@ -631,11 +689,17 @@ const ChatWindow = ({
          setIsProcessingFile(false);
          setResetFileUpload(true); // Trigger reset
          setTimeout(() => setResetFileUpload(false), 0); // Reset trigger
+         if (onAttachmentChange) {
+           onAttachmentChange(false);
+         }
       }
     } else {
        alert('Unsupported file type selected.');
        setUploadedFileData(null);
        // No need to set setIsProcessingFile(false) here as it wasn't set true
+       if (onAttachmentChange) {
+         onAttachmentChange(false);
+       }
     }
   };
 
@@ -673,7 +737,7 @@ const ChatWindow = ({
 
   const handleTitleSave = () => {
     if (editedTitle.trim()) {
-      onUpdateMessage(chat.id, null, { title: editedTitle.trim() });
+      updateChatTitle(chat.id, editedTitle.trim());
     }
     setIsEditingTitle(false);
   };
@@ -742,13 +806,18 @@ const ChatWindow = ({
   
   // Handle model change
   const handleModelChange = (modelId) => {
-    setSelectedModel(modelId); // Ensure the selected model is updated in state
+    setSelectedModel(modelId); // Update local state
     
-    // This would need to be lifted up to the parent component
-    // For now, we'll just log it
-    console.log(`Model changed to: ${modelId}`);
-    // In a real implementation, you would call a function passed as props
-    // E.g.: onModelChange(modelId);
+    // Pass the model change up to the parent component
+    if (availableModels) {
+      // Store in localStorage for persistence across refreshes
+      localStorage.setItem('selectedModel', modelId);
+      
+      // If the parent passed an onModelChange handler, call it
+      if (onModelChange && typeof onModelChange === 'function') {
+        onModelChange(modelId);
+      }
+    }
   };
 
   const [isFocused, setIsFocused] = useState(false);
@@ -764,6 +833,9 @@ const ChatWindow = ({
   const clearUploadedFile = () => {
     setUploadedFileData(null);
     setResetFileUpload(prev => !prev); // Toggle to trigger reset in FileUploadButton
+    if (onAttachmentChange) {
+      onAttachmentChange(false);
+    }
   };
 
   // Update placeholder and disabled state based on processing
@@ -902,3 +974,5 @@ const ChatWindow = ({
 };
 
 export default ChatWindow;
+
+
