@@ -239,22 +239,33 @@ const ChatItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: ${props => props.collapsed ? 'center' : 'space-between'};
-  background: ${props => props.active ? 
-    props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)' 
-    : 'transparent'};
+  background: ${props => {
+    if (!props.active) return 'transparent';
+    if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.15)';
+    if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.12)';
+    return 'rgba(0, 0, 0, 0.06)'; // For light and other themes
+  }};
   transition: all 0.15s ease;
   width: 100%;
   height: auto;
   position: relative;
   
   &:hover {
-    background: ${props => props.active ? 
-      props.theme.name === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' 
-      : props.theme.name === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.03)'};
+    background: ${props => {
+      if (props.active) {
+        if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.20)';
+        if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.15)';
+        return 'rgba(0, 0, 0, 0.08)'; // For light and other themes active hover
+      } else { // Not active, but hovered
+        if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.07)';
+        if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.07)';
+        return 'rgba(0, 0, 0, 0.03)'; // For light and other themes non-active hover
+      }
+    }};
   }
 
   /* Special styling for specific theme active items */
-  ${props => props.theme.name === 'bisexual' && props.active && `
+  /* ${props => props.theme.name === 'bisexual' && props.active && `
     &::before {
       content: '';
       position: absolute;
@@ -265,7 +276,7 @@ const ChatItem = styled.div`
       background: linear-gradient(to bottom, #D70071 0%, #D70071 50%, #0035AA 50%, #0035AA 100%);
       border-radius: 4px 0 0 4px;
     }
-  `}
+  `} */
 
   /* Special styling for dark theme active items */
   ${props => props.theme.name === 'dark' && props.active && `
