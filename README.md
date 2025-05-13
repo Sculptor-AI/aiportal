@@ -148,6 +148,38 @@ Sculptor is built with modern React best practices:
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Backend Integration
+
+This application now includes a backend server that integrates with the frontend to provide:
+
+1. Secure API access to multiple AI models
+2. Unified model selection in the frontend
+3. Secure communication with encryption
+4. Model allowlisting to prevent abuse
+
+For detailed setup and usage instructions, see [BACKEND_INTEGRATION.md](BACKEND_INTEGRATION.md).
+
+### Quick Setup for Backend
+
+1. Navigate to the backend directory:
+   ```
+   cd backend
+   ```
+
+2. Install dependencies:
+   ```
+   npm install
+   ```
+
+3. Create a `.env` file based on the example in the backend documentation
+   
+4. Start the backend server:
+   ```
+   npm start
+   ```
+
+The frontend will automatically connect to the backend if the proper environment variable (`VITE_BACKEND_API_URL`) is set.
+
 ---
 
 <div align="center">
