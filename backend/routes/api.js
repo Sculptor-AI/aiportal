@@ -1,5 +1,5 @@
 import express from 'express';
-import { completeChat } from '../controllers/chatController.js';
+import { completeChat, streamChat } from '../controllers/chatController.js';
 import { getModels } from '../controllers/modelController.js';
 import { validateChatRequest } from '../middleware/validation.js';
 
@@ -10,5 +10,8 @@ router.get('/models', getModels);
 
 // Chat completion endpoint
 router.post('/chat', validateChatRequest, completeChat);
+
+// Streaming chat completion endpoint
+router.post('/chat/stream', validateChatRequest, streamChat);
 
 export { router }; 

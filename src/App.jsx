@@ -207,6 +207,8 @@ const AppContent = () => {
       try {
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
+          console.log('Fetched backend models:', backendModels); // Add debug log
+          
           // Merge backend models with local models to ensure backwards compatibility
           // This approach allows both direct API models and backend-proxied models
           const mergedModels = [...availableModels];
@@ -527,6 +529,7 @@ const AppContent = () => {
             collapsed={collapsed} 
             setCollapsed={setCollapsed} 
           />
+          {console.log('Available models for ChatWindow:', availableModels)}
           <ChatWindow 
             chat={currentChat}
             addMessage={addMessage}

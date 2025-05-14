@@ -25,7 +25,7 @@ const ModelImage = styled.img`
   object-fit: cover;
 `;
 
-// SVG icons for each model
+// SVG icons as fallbacks for models without images
 const GeminiIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white">
     <path d="M12 1.5c-1.72 0-3.43.5-4.9 1.5L4.2 4.8C3.1 5.6 2.1 6.3 1.4 7.6c-.4.7-.7 1.4-.9 2.1C.1 11.3 0 12.6 0 13.9c0 1.2.3 2.4.6 3.3.3.9.9 1.8 1.6 2.5.7.7 1.6 1.2 2.5 1.6.9.4 1.9.7 2.9.7h8.7c1 0 2-.3 2.9-.7.9-.4 1.8-.9 2.5-1.6.7-.7 1.3-1.6 1.6-2.5.4-.9.6-2.1.6-3.3 0-1.3-.1-2.6-.5-3.8-.2-.7-.5-1.4-.9-2.1-.7-1.3-1.7-2-2.8-2.8-1.3-.7-2.7-1.5-4.2-2.3-1.5-1-3.2-1.5-4.9-1.5zm0 2c1.4 0 2.8.4 4 1.1l2.8 1.4c1.3.6 1.8 1.1 2.3 1.7.5.6.8 1 1 1.5.3.5.4 1.1.6 2 .2.8.3 1.8.3 2.8 0 .9-.1 1.8-.4 2.4-.2.6-.5 1.2-1 1.7-.5.5-1.1.9-1.7 1.1-.6.3-1.3.4-2.4.4h-8.7c-.9 0-1.6-.1-2.2-.3-.6-.2-1.2-.6-1.7-1-.5-.4-.9-1-1.1-1.8-.2-.8-.3-1.6-.3-2.5 0-1.1.1-2 .3-2.8.1-.9.4-1.5.6-2 .2-.5.5-.9 1-1.5.5-.6 1-1.1 2.3-1.7l3.2-1.8c1.2-.7 2.6-1.1 4-1.1z"/>
@@ -52,12 +52,34 @@ const CustomModelIcon = () => (
   </svg>
 );
 
-// Add a new NVIDIA icon component
-const NvidiaNemotronIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-3-9h2v6h2v-6h2v-2H9v2z"/>
-  </svg>
-);
+// Map model IDs to their respective logo files
+const MODEL_LOGOS = {
+  // OpenAI models
+  'openai/gpt-4o': '/images/openai-logo.png',
+  'chatgpt-4o': '/images/openai-logo.png',
+  
+  // Google models
+  'google/gemini-2.5-pro-exp-03-25': '/images/gemini-logo.png',
+  'gemini-2.5-pro': '/images/gemini-logo.png',
+  'gemini-2-flash': '/images/gemini-logo.png',
+  
+  // DeepSeek models
+  'deepseek/deepseek-v3-base:free': '/images/deepseek-logo.png',
+  'deepseek/deepseek-r1:free': '/images/deepseek-logo.png',
+  
+  // Meta models
+  'meta-llama/llama-4-maverick:free': '/images/meta-logo.png',
+  'llama-3-70b-instruct': '/images/meta-logo.png',
+  
+  // Claude models
+  'claude-3.7-sonnet': '/images/claude-logo.png',
+  'anthropic/claude-3-haiku': '/images/claude-logo.png',
+  'anthropic/claude-3-opus': '/images/claude-logo.png',
+  'anthropic/claude-3-sonnet': '/images/claude-logo.png',
+  
+  // Sculptor model
+  'ursa-minor': '/images/sculptor.svg'
+};
 
 const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
   let iconComponent;
@@ -65,64 +87,42 @@ const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
   
   const model = modelThemes[modelId] || {};
   
-  // Try to get image from public folder
-  let imageUrl = null;
+  // Try to get image from the MODEL_LOGOS mapping
+  let imageUrl = MODEL_LOGOS[modelId];
   
-  // First check if we can use an image
-  if (modelId === 'gemini-2-flash') {
-    try {
-      imageUrl = '/images/gemini-logo.png';
-    } catch (e) {
-      // Image not found, will use SVG
-    }
-  } else if (modelId === 'gemini-2.5-pro') {
-    try {
-      imageUrl = '/images/gemini-2.5-pro-logo.png';
-    } catch (e) {
-      // Specific logo not found, will fall back below
-    }
-  } else if (modelId === 'claude-3.7-sonnet') {
-    try {
-      imageUrl = '/images/claude-logo.png';
-    } catch (e) {
-      // Image not found, will use SVG
-    }
-  } else if (modelId === 'chatgpt-4o') {
-    try {
+  // If we don't have an exact match, try to find a partial match
+  if (!imageUrl) {
+    // Check if the modelId contains any of our known provider names
+    if (modelId?.includes('openai') || modelId?.includes('gpt')) {
       imageUrl = '/images/openai-logo.png';
-    } catch (e) {
-      // Image not found, will use SVG
-    }
-  } else if (modelId === 'ursa-minor') {
-    try {
-      imageUrl = '/images/sculptor.svg';
-    } catch (e) {
-      // Image not found, will use SVG
+    } else if (modelId?.includes('gemini')) {
+      imageUrl = '/images/gemini-logo.png';
+    } else if (modelId?.includes('claude') || modelId?.includes('anthropic')) {
+      imageUrl = '/images/claude-logo.png';
+    } else if (modelId?.includes('llama') || modelId?.includes('meta')) {
+      imageUrl = '/images/meta-logo.png';
+    } else if (modelId?.includes('deepseek')) {
+      imageUrl = '/images/deepseek-logo.png';
     }
   }
   
   // If no image available, set icon based on model
   if (!imageUrl) {
-    switch (modelId) {
-      case 'gemini-2-flash':
-      case 'gemini-2.5-pro':
+    switch (true) {
+      case modelId?.includes('gemini'):
         iconComponent = <GeminiIcon />;
         iconBackground = model.gradient || modelThemes['gemini-2-flash']?.gradient;
         break;
-      case 'claude-3.7-sonnet':
+      case modelId?.includes('claude') || modelId?.includes('anthropic'):
         iconComponent = <ClaudeIcon />;
         iconBackground = model.gradient;
         break;
-      case 'chatgpt-4o':
+      case modelId?.includes('gpt') || modelId?.includes('openai'):
         iconComponent = <ChatGPTIcon />;
         iconBackground = model.gradient;
         break;
-      case 'custom-gguf':
+      case modelId?.includes('custom-gguf'):
         iconComponent = <CustomModelIcon />;
-        iconBackground = model.gradient;
-        break;
-      case 'nemotron-super-49b':
-        iconComponent = <NvidiaNemotronIcon />;
         iconBackground = model.gradient;
         break;
       default:

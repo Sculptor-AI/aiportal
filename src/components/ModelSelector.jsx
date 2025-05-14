@@ -10,6 +10,7 @@ import ModelIcon from './ModelIcon';
 
 const ModelSelectorContainer = styled.div`
   position: relative;
+  z-index: 10;
 `;
 
 const ModelButton = styled.button`
@@ -47,6 +48,10 @@ const ModelButton = styled.button`
     transition: transform 0.2s ease;
     transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0)'};
   }
+  
+  /* Ensure the button doesn't look disabled even if it has backend models only */
+  opacity: 1;
+  pointer-events: auto;
 `;
 
 const DropdownMenu = styled.div`
@@ -58,7 +63,7 @@ const DropdownMenu = styled.div`
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-  z-index: 100;
+  z-index: 1000;
   backdrop-filter: ${props => props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.glassEffect};
   
@@ -199,13 +204,20 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
     { id: 'ursa-minor', name: 'Ursa Minor' } // Represents custom GGUF
   ];
 
-   // Debug log for current API keys state
-   useEffect(() => {
-     console.log("Current apiKeys state:", apiKeys);
-   }, [apiKeys]);
+  // Debug log to see what models are passed into the component
+  useEffect(() => {
+    console.log("Base models before filtering:", models);
+    console.log("Backend models:", models?.filter(m => m.isBackendModel === true));
+  }, [models]);
 
   // Filter models based on available API keys (stricter check)
   const availableModels = baseModels.filter(model => {
+    // If it's a backend model, always include it
+    if (model.isBackendModel === true) {
+      console.log('Including backend model:', model);
+      return true;
+    }
+    
     const checkKey = (key) => key && key.trim() !== '';
 
     if (model.id.includes('gemini')) return checkKey(apiKeys.google);
@@ -281,7 +293,10 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
   const toggleDropdown = () => {
     // Only open if there are models to show
     if (availableModels.length > 0) {
-       setIsOpen(!isOpen);
+      console.log('Toggling dropdown with available models:', availableModels);
+      setIsOpen(!isOpen);
+    } else {
+      console.log('Not toggling dropdown - no available models found');
     }
   };
 
@@ -294,24 +309,24 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
     <ModelSelectorContainer ref={containerRef}>
        {/* Only render button if a currentModel could be determined */}
        {currentModel ? (
-         <ModelButton onClick={toggleDropdown} isOpen={isOpen} disabled={availableModels.length === 0}>
+         <ModelButton 
+           onClick={toggleDropdown} 
+           isOpen={isOpen}
+         >
            <ModelIcon modelId={currentModel.id} size="small" />
-           <span>{currentModel.name}</span>
+           <span>{currentModel.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</span>
            {currentModel.isBackendModel && (
-             <BackendModelBadge>B</BackendModelBadge>
+             <BackendModelBadge>E</BackendModelBadge>
            )}
-           {availableModels.length > 0 && ( // Only show arrow if dropdown is possible
-             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-               <polyline points="6 9 12 15 18 9"></polyline>
-             </svg>
-           )}
+           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+             <polyline points="6 9 12 15 18 9"></polyline>
+           </svg>
          </ModelButton>
        ) : (
-           // Optional: Render a placeholder or message if no models are available/selected
-            <ModelButton disabled>No Models Available</ModelButton>
+         <ModelButton disabled>No Models Available</ModelButton>
        )}
 
-      {isOpen && availableModels.length > 0 && (
+      {isOpen && (
         <DropdownMenu>
           {availableModels.map(model => (
             <ModelOption
@@ -321,10 +336,9 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
             >
               <ModelIcon modelId={model.id} size="small" />
               <ModelDetails>
-                <ModelName>{model.name}</ModelName>
-                <ModelProvider>{getProviderName(model)}</ModelProvider>
+                <ModelName>{model.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</ModelName>
                 {model.isBackendModel && (
-                  <BackendModelBadge>Backend</BackendModelBadge>
+                  <BackendModelBadge>External</BackendModelBadge>
                 )}
               </ModelDetails>
             </ModelOption>

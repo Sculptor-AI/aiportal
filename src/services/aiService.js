@@ -719,9 +719,10 @@ export const fetchModelsFromBackend = async () => {
     const data = await response.json();
     return data.models.map(model => ({
       id: model.id,
-      name: model.name,
+      name: model.name || `${model.provider}: ${model.id.split('/').pop()}`,
       provider: model.provider,
-      capabilities: model.capabilities || []
+      capabilities: model.capabilities || [],
+      isBackendModel: true  // Explicitly mark as backend model
     }));
   } catch (error) {
     console.error('Error fetching models from backend:', error);
@@ -740,7 +741,7 @@ export const fetchModelsFromBackend = async () => {
  */
 export const sendMessageToBackend = async (modelType, prompt, search = false, deepResearch = false, imageGen = false) => {
   try {
-    // Create the request packet based on the diagram specification
+    // Create the request packet
     const requestPacket = {
       modelType,
       prompt,
@@ -764,18 +765,22 @@ export const sendMessageToBackend = async (modelType, prompt, search = false, de
       throw new Error(errorData.error || 'Failed to process message');
     }
     
+    // Get the complete OpenRouter response
     const data = await response.json();
-    console.log('Received encrypted response from backend');
+    console.log('Received response from OpenRouter via backend');
     
-    // The response data.data is encrypted
-    // In a production app, we'd decrypt it on the client side
-    // For simplicity, we're assuming the backend returns the decrypted response in this example
-    
-    // Mock decryption for demo purposes
-    // In a real app, this would use a proper decryption function with the client's private key
-    const decryptedResponse = mockDecryptResponse(data.data);
-    
-    return decryptedResponse;
+    // Format the response for the UI
+    return {
+      response: data.choices[0].message.content,
+      metadata: {
+        modelType: modelType,
+        prompt: prompt,
+        timestamp: new Date().toISOString(),
+        usage: data.usage,
+        model: data.model,
+        id: data.id
+      }
+    };
   } catch (error) {
     console.error('Error sending message to backend:', error);
     throw error;
@@ -783,30 +788,120 @@ export const sendMessageToBackend = async (modelType, prompt, search = false, de
 };
 
 /**
- * Mock function to simulate decryption of backend response
- * In a real app, this would use actual decryption with the client's private key
- * @param {string} encryptedData - The encrypted data from the backend
- * @returns {Object} The decrypted response object
+ * Stream a message from the backend
+ * @param {string} modelType - The model ID to use
+ * @param {string} prompt - The message content
+ * @param {function} onChunk - Callback for each text chunk received
+ * @param {boolean} search - Whether to use search feature
+ * @param {boolean} deepResearch - Whether to use deep research
+ * @param {boolean} imageGen - Whether to generate images
+ * @returns {Promise<Object>} Final metadata when streaming completes
  */
-const mockDecryptResponse = (encryptedData) => {
-  // This is just a placeholder for demonstration
-  // In a real app, this would use proper cryptographic decryption
-  
-  // For demo purposes, if the data is already a JSON object, return it as is
-  if (typeof encryptedData === 'object') {
-    return encryptedData;
+export const streamMessageFromBackend = async (modelType, prompt, onChunk, search = false, deepResearch = false, imageGen = false) => {
+  // Validate parameters
+  if (!modelType || !prompt || typeof onChunk !== 'function') {
+    throw new Error('Missing required parameters for streaming');
   }
-  
-  // Otherwise, try to parse it as JSON (assuming the backend returned unencrypted data for demo)
+
+  let fullContent = '';
+  let metadata = {
+    modelType,
+    prompt,
+    timestamp: new Date().toISOString()
+  };
+
   try {
-    return JSON.parse(encryptedData);
-  } catch (e) {
-    // If it's not JSON, just create a response object with the data as the message
-    return {
-      response: encryptedData,
-      metadata: {
-        timestamp: new Date().toISOString()
-      }
+    // Create the request packet
+    const requestPacket = {
+      modelType,
+      prompt,
+      search,
+      deepResearch,
+      imageGen
     };
+    
+    console.log('Sending streaming request to backend:', requestPacket);
+    
+    // Use fetch with streaming enabled
+    const response = await fetch(`${BACKEND_API_BASE}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestPacket)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to process streaming message');
+    }
+    
+    // Get the reader from the response body stream
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) {
+        break;
+      }
+      
+      // Decode the chunk and process each SSE event
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n\n');
+      
+      for (const line of lines) {
+        if (!line.trim() || !line.startsWith('data:')) continue;
+        
+        try {
+          const eventData = line.replace('data: ', '').trim();
+          
+          // Handle the special "[DONE]" message
+          if (eventData === '[DONE]') {
+            continue;
+          }
+          
+          const parsedData = JSON.parse(eventData);
+          
+          // Extract the text chunk based on OpenRouter's streaming format
+          const textChunk = parsedData.choices?.[0]?.delta?.content || '';
+          
+          // Collect usage info if present
+          if (parsedData.usage) {
+            metadata.usage = parsedData.usage;
+          }
+          
+          // Save model info if present
+          if (parsedData.model && !metadata.model) {
+            metadata.model = parsedData.model;
+          }
+          
+          // Save ID if present
+          if (parsedData.id && !metadata.id) {
+            metadata.id = parsedData.id;
+          }
+          
+          // Accumulate the full content
+          fullContent += textChunk;
+          
+          // Call the callback with the new chunk
+          onChunk(textChunk);
+        } catch (e) {
+          console.error('Error parsing stream chunk:', e, line);
+        }
+      }
+    }
+    
+    // Return the metadata with the complete response
+    return {
+      ...metadata,
+      fullContent
+    };
+  } catch (error) {
+    console.error('Error in streaming from backend:', error);
+    // Call onChunk with error message so the user sees it
+    onChunk(`\n[Error: ${error.message}]`);
+    throw error;
   }
 };
