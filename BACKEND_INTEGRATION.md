@@ -46,69 +46,8 @@ The AI Portal application now includes a backend server that provides:
    VITE_ANTHROPIC_API_KEY=your_anthropic_api_key_here
    VITE_OPENAI_API_KEY=your_openai_api_key_here
    VITE_NVIDIA_API_KEY=your_nvidia_api_key_here
-   VITE_BACKEND_API_URL=http://localhost:3000/api
+   VITE_BACKEND_API_URL=https://aiportal-backend.vercel.app/api
    ```
 
 2. Install dependencies:
    ```
-   npm install
-   ```
-
-3. Start the frontend development server:
-   ```
-   npm run dev
-   ```
-
-## How It Works
-
-### Model Selection
-
-1. When the frontend loads, it fetches available models from both direct API sources and the backend server
-2. Models from the backend are marked with `isBackendModel: true`
-3. All models appear in the dropdown selector in the UI
-
-### Message Flow
-
-When a user sends a message:
-
-1. The frontend checks if the selected model is a backend model (`isBackendModel: true`)
-2. For backend models:
-   - The message is sent to the backend API with model type, prompt, and feature flags
-   - The backend validates the request and model availability
-   - The backend encrypts the response before sending it back
-   - The frontend displays the response
-
-3. For direct API models:
-   - The existing direct API communication is used
-
-## API Endpoints
-
-### GET /api/models
-Returns a list of available AI models from the backend.
-
-### POST /api/chat
-Processes a chat completion request.
-
-Request Body:
-```json
-{
-  "modelType": "openai/gpt-4o",
-  "prompt": "What color is the sky?",
-  "search": false,
-  "deepResearch": false,
-  "imageGen": false
-}
-```
-
-Response:
-```json
-{
-  "data": "encrypted_response_string"
-}
-```
-
-## Security Notes
-
-- All API responses from the backend are encrypted
-- The backend validates models against an allowlist
-- Error handling provides appropriate feedback without exposing sensitive information 
