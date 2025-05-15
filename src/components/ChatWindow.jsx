@@ -369,6 +369,7 @@ const ActionChip = styled.button`
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
   
   &:hover {
     background-color: ${props => props.selected ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.06)'};
@@ -379,6 +380,64 @@ const ActionChip = styled.button`
     width: 15px;
     height: 15px;
     opacity: 0.7;
+  }
+`;
+
+const ChipDropdownButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-left: 3px;
+  cursor: pointer;
+  
+  svg {
+    width: 12px;
+    height: 12px;
+    opacity: 0.7;
+  }
+  
+  &:hover svg {
+    opacity: 1;
+  }
+`;
+
+const ChipDropdownMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 5px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 150px;
+  overflow: hidden;
+  z-index: 10;
+`;
+
+const ChipDropdownItem = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: ${props => props.active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  color: ${props => props.theme.text};
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+  
+  svg {
+    width: 14px;
+    height: 14px;
   }
 `;
 
@@ -398,6 +457,12 @@ const ChatWindow = ({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
   const [selectedActionChip, setSelectedActionChip] = useState(null); // Added state for selected chip
+  const [showModeDropdown, setShowModeDropdown] = useState(false);
+  const [showCreateDropdown, setShowCreateDropdown] = useState(false);
+  const [thinkingMode, setThinkingMode] = useState(null); // null for not selected, 'thinking' or 'instant'
+  const [createType, setCreateType] = useState(null); // null for not selected, 'image' or 'video'
+  const modeDropdownRef = useRef(null);
+  const createDropdownRef = useRef(null);
   const messagesEndRef = useRef(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chat?.title || 'New Conversation');
@@ -965,6 +1030,23 @@ const ChatWindow = ({
     }
   }, [uploadedFileData, onAttachmentChange]);
 
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modeDropdownRef.current && !modeDropdownRef.current.contains(event.target)) {
+        setShowModeDropdown(false);
+      }
+      if (createDropdownRef.current && !createDropdownRef.current.contains(event.target)) {
+        setShowCreateDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   if (!chat) {
     return (
       <ChatWindowContainer fontSize={settings?.fontSize}>
@@ -1146,6 +1228,95 @@ const ChatWindow = ({
           {/* Action Chips */}
           <ActionChipsContainer>
             <ActionChip 
+              ref={modeDropdownRef}
+              selected={false}
+              onClick={() => setShowModeDropdown(!showModeDropdown)}
+            >
+              {thinkingMode === 'thinking' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+                  <line x1="16" y1="8" x2="2" y2="22"></line>
+                  <line x1="17.5" y1="15" x2="9" y2="15"></line>
+                </svg>
+              ) : thinkingMode === 'instant' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                  <rect x="9" y="9" width="6" height="6"></rect>
+                  <line x1="9" y1="2" x2="9" y2="4"></line>
+                  <line x1="15" y1="2" x2="15" y2="4"></line>
+                  <line x1="9" y1="20" x2="9" y2="22"></line>
+                  <line x1="15" y1="20" x2="15" y2="22"></line>
+                  <line x1="20" y1="9" x2="22" y2="9"></line>
+                  <line x1="20" y1="14" x2="22" y2="14"></line>
+                  <line x1="2" y1="9" x2="4" y2="9"></line>
+                  <line x1="2" y1="14" x2="4" y2="14"></line>
+                </svg>
+              )}
+              {thinkingMode === 'thinking' ? 'Thinking' : thinkingMode === 'instant' ? 'Instant' : 'Mode'}
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+              
+              {showModeDropdown && (
+                <ChipDropdownMenu>
+                  <ChipDropdownItem 
+                    active={thinkingMode === null} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setThinkingMode(null);
+                      setShowModeDropdown(false);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                      <rect x="9" y="9" width="6" height="6"></rect>
+                      <line x1="9" y1="2" x2="9" y2="4"></line>
+                      <line x1="15" y1="2" x2="15" y2="4"></line>
+                      <line x1="9" y1="20" x2="9" y2="22"></line>
+                      <line x1="15" y1="20" x2="15" y2="22"></line>
+                      <line x1="20" y1="9" x2="22" y2="9"></line>
+                      <line x1="20" y1="14" x2="22" y2="14"></line>
+                      <line x1="2" y1="9" x2="4" y2="9"></line>
+                      <line x1="2" y1="14" x2="4" y2="14"></line>
+                    </svg>
+                    Default
+                  </ChipDropdownItem>
+                  <ChipDropdownItem 
+                    active={thinkingMode === 'thinking'} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setThinkingMode('thinking');
+                      setShowModeDropdown(false);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+                      <line x1="16" y1="8" x2="2" y2="22"></line>
+                      <line x1="17.5" y1="15" x2="9" y2="15"></line>
+                    </svg>
+                    Thinking
+                  </ChipDropdownItem>
+                  <ChipDropdownItem 
+                    active={thinkingMode === 'instant'} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setThinkingMode('instant');
+                      setShowModeDropdown(false);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                    </svg>
+                    Instant
+                  </ChipDropdownItem>
+                </ChipDropdownMenu>
+              )}
+            </ActionChip>
+            <ActionChip 
               selected={selectedActionChip === 'search'} 
               onClick={() => setSelectedActionChip(selectedActionChip === 'search' ? null : 'search')}
             >
@@ -1165,15 +1336,96 @@ const ChatWindow = ({
               Deep research
             </ActionChip>
             <ActionChip 
-              selected={selectedActionChip === 'create-image'} 
-              onClick={() => setSelectedActionChip(selectedActionChip === 'create-image' ? null : 'create-image')}
+              ref={createDropdownRef}
+              selected={selectedActionChip === 'create-image' || selectedActionChip === 'create-video'}
+              onClick={() => setShowCreateDropdown(!showCreateDropdown)}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
+              {createType === 'image' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              ) : createType === 'video' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                  <line x1="7" y1="2" x2="7" y2="22"></line>
+                  <line x1="17" y1="2" x2="17" y2="22"></line>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <line x1="2" y1="7" x2="7" y2="7"></line>
+                  <line x1="2" y1="17" x2="7" y2="17"></line>
+                  <line x1="17" y1="17" x2="22" y2="17"></line>
+                  <line x1="17" y1="7" x2="22" y2="7"></line>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+              )}
+              {createType === 'image' ? 'Create image' : createType === 'video' ? 'Create video' : 'Create'}
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
+                <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
-              Create image
+              
+              {showCreateDropdown && (
+                <ChipDropdownMenu>
+                  <ChipDropdownItem 
+                    active={createType === null} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCreateType(null);
+                      setSelectedActionChip(null);
+                      setShowCreateDropdown(false);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="12" y1="8" x2="12" y2="16"></line>
+                      <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    Default
+                  </ChipDropdownItem>
+                  <ChipDropdownItem 
+                    active={createType === 'image'} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCreateType('image');
+                      setSelectedActionChip('create-image');
+                      setShowCreateDropdown(false);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                      <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                      <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    Image
+                  </ChipDropdownItem>
+                  <ChipDropdownItem 
+                    active={createType === 'video'} 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCreateType('video');
+                      setSelectedActionChip('create-video');
+                      setShowCreateDropdown(false);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                      <line x1="7" y1="2" x2="7" y2="22"></line>
+                      <line x1="17" y1="2" x2="17" y2="22"></line>
+                      <line x1="2" y1="12" x2="22" y2="12"></line>
+                      <line x1="2" y1="7" x2="7" y2="7"></line>
+                      <line x1="2" y1="17" x2="7" y2="17"></line>
+                      <line x1="17" y1="17" x2="22" y2="17"></line>
+                      <line x1="17" y1="7" x2="22" y2="7"></line>
+                    </svg>
+                    Video
+                  </ChipDropdownItem>
+                </ChipDropdownMenu>
+              )}
             </ActionChip>
           </ActionChipsContainer>
         </MessageInputWrapper>

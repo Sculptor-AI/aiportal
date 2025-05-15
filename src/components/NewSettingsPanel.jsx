@@ -763,7 +763,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           
           {activeSection === 'general' && (
             <div>
-              <SectionTitle>WebUI Settings</SectionTitle>
+              <SectionTitle>General</SectionTitle>
               
               <SettingsRow>
                 <SettingsLabel>Theme</SettingsLabel>
