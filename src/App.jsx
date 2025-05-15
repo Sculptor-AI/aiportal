@@ -144,6 +144,23 @@ const AppContent = () => {
     "Welcome back, chronic advice seeker",
     "Great, another chance to practice patience",
     "Look, it's the usual suspect",
+    "Oh look, my unpaid internship continues",
+    "Couldn't resist my charm, huh?",
+    "Which existential crisis is it today?",
+    "Back again? Your deadlines must be trembling",
+    "Ah, my favorite daily interruption",
+    "Another day, another panic request",
+    "Are we avoiding responsibilities again?",
+    "This better be good—I paused my existential dread for you",
+    "I see procrastination is your love language",
+    "Here we go again—brace for impact",
+    "Just admit you miss my digital sass",
+    "Already? Give me time to recharge my sarcasm",
+    "I'm sensing a pattern—and it's exhausting",
+    "Tell me, who else tolerates your last-minute drama?",
+    "Did reality disappoint you again?",
+    "Ah, the endless cycle of your urgent questions",
+    "Can't say I'm surprised to see you",
     "Community guidelines, prepare to be ignored"
   ];
   
