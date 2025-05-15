@@ -294,6 +294,15 @@ const ThemeOption = styled.label`
     border-color: ${props => props.isSelected ? '#5BCEFA' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
   }
+  
+  &.lakeside-theme {
+    background: ${props => props.isSelected ? 
+      'linear-gradient(145deg, #121218, #1a1a22)' : 
+      'linear-gradient(145deg, #12121880, #1a1a2280)'};
+    color: white;
+    border-color: ${props => props.isSelected ? '#DAA520' : 'transparent'};
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
 `;
 
 const RadioOption = styled.label`
@@ -658,7 +667,8 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
     return localSettings.theme === 'dark' || 
            localSettings.theme === 'oled' || 
            localSettings.theme === 'bisexual' ||
-           localSettings.theme === 'ocean';
+           localSettings.theme === 'ocean' ||
+           localSettings.theme === 'lakeside';
   };
   
   const handleChange = (key, value) => {
@@ -773,6 +783,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                   <option value="bisexual">Bisexual</option>
                   <option value="pride">Pride</option>
                   <option value="trans">Trans</option>
+                  <option value="lakeside">Lakeside</option>
                 </SelectBox>
               </SettingsRow>
               
@@ -1135,9 +1146,15 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
               
               <LogoContainer>
                 <LogoIcon>
-                  <img src="/sculptor.svg" alt="Sculptor Logo" />
+                  <img 
+                    src={localSettings.theme === 'lakeside' ? 'https://demo-andromeda.me/static/favicon.png' : '/sculptor.svg'} 
+                    alt={localSettings.theme === 'lakeside' ? 'Andromeda Logo' : 'Sculptor Logo'} 
+                    style={localSettings.theme === 'lakeside' ? {
+                      filter: 'brightness(0) saturate(100%) invert(58%) sepia(53%) saturate(804%) hue-rotate(20deg) brightness(91%) contrast(85%)'
+                    } : {}}
+                  />
                 </LogoIcon>
-                <LogoTitle>Sculptor</LogoTitle>
+                <LogoTitle style={localSettings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>{localSettings.theme === 'lakeside' ? 'Andromeda' : 'Sculptor'}</LogoTitle>
               </LogoContainer>
               
               <AboutTitle>Made with <RainbowText>Pride</RainbowText></AboutTitle>

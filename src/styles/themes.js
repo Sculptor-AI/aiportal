@@ -147,6 +147,29 @@ export const bisexualTheme = {
   highlightBorder: 'linear-gradient(to right, #D60270, #9B4F96, #0038A8)',
 };
 
+// Lakeside theme - dark theme with maroon sidebar and gold accents
+export const lakesideTheme = {
+  name: 'lakeside',
+  background: 'rgba(23, 23, 23)',
+  sidebar: 'rgb(120, 47, 64)', // Maroon sidebar as specified
+  chat: 'rgba(25, 25, 30, 0.7)',
+  text: '#f0f2f5',
+  border: 'rgba(198, 146, 20, 0.15)', // Gold-tinted borders
+  messageUser: 'rgba(40, 40, 45, 0.8)',
+  messageAi: 'rgba(30, 30, 35, 0.8)',
+  hover: 'rgba(91, 10, 35, 0.6)', // Lighter maroon for hover
+  primary: 'rgb(198, 146, 20)', // Gold
+  secondary: '#8B0000', // Dark red
+  shadow: 'rgba(0, 0, 0, 0.3)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(160%)',
+  inputBackground: 'rgba(30, 30, 35, 1.0)',
+  buttonGradient: 'linear-gradient(145deg, rgb(198, 146, 20), rgb(178, 126, 0))', // Gold gradient
+  buttonHoverGradient: 'linear-gradient(145deg, rgb(178, 126, 0), rgb(198, 146, 20))', // Reversed gradient
+  cardBackground: 'rgba(30, 30, 35, 0.8)',
+  accentGradient: 'linear-gradient(to right, #5B0019, #8B0000, rgb(198, 146, 20))', // Maroon to gold gradient
+};
+
 export const prideTheme = {
   name: 'pride',
   // Vibrant rainbow background with a dark overlay for readability - making overlay even less opaque
@@ -242,6 +265,7 @@ export const getTheme = (themeName) => {
     case 'pride': return prideTheme;
     case 'trans': return transTheme;
     case 'bisexual': return bisexualTheme;
+    case 'lakeside': return lakesideTheme;
     default: return lightTheme;
   }
 };

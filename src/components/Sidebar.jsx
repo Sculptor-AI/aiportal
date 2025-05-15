@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 
 // Styled Components (Keep all your existing styled components definitions)
@@ -39,6 +39,9 @@ const LogoContainer = styled.div`
     height: 26px;
     width: auto;
     margin-right: 10px;
+    ${props => props.theme.name === 'lakeside' && `
+      filter: brightness(0) saturate(100%) invert(58%) sepia(53%) saturate(804%) hue-rotate(20deg) brightness(91%) contrast(85%);
+    `}
   }
 
   @media (max-width: 768px) {
@@ -51,7 +54,7 @@ const LogoText = styled.span`
   font-weight: 600;
   font-size: 20px;
   letter-spacing: 0.5px;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   padding-left: 2px;
 `;
 
@@ -60,7 +63,7 @@ const CollapseButton = styled.button`
   height: 32px;
   background: transparent;
   border: none;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -118,6 +121,9 @@ const MobileLogoContainer = styled.div`
   img {
     height: 30px;
     margin-right: 5px;
+    ${props => props.theme.name === 'lakeside' && `
+      filter: brightness(0) saturate(100%) invert(58%) sepia(53%) saturate(804%) hue-rotate(20deg) brightness(91%) contrast(85%);
+    `}
   }
 
   @media (max-width: 768px) {
@@ -130,13 +136,13 @@ const MobileLogoText = styled.span`
   font-weight: 600;
   font-size: 16px;
   letter-spacing: 0.5px;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 `;
 
 const NewChatButton = styled.button`
   background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)'};
-  color: ${props => props.theme.text};
-  border: 1px solid ${props => props.theme.border};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border};
   padding: 12px 15px;
   border-radius: 12px;
   font-weight: 500;
@@ -151,7 +157,8 @@ const NewChatButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)'};
+    background: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 
+      (props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)')};
     transform: translateY(-1px);
     box-shadow: ${props => props.theme.name === 'dark' ? '0 2px 5px rgba(0,0,0,0.2)' : '0 2px 5px rgba(0,0,0,0.08)'};
   }
@@ -159,6 +166,7 @@ const NewChatButton = styled.button`
   svg {
     transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     margin-right: ${props => props.collapsed ? '0' : '8px'};
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
   }
 
   span {
@@ -241,6 +249,7 @@ const ChatItem = styled.div`
   justify-content: ${props => props.collapsed ? 'center' : 'space-between'};
   background: ${props => {
     if (!props.active) return 'transparent';
+    if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.1)';
     if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.15)';
     if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.12)';
     return 'rgba(0, 0, 0, 0.06)'; // For light and other themes
@@ -253,10 +262,12 @@ const ChatItem = styled.div`
   &:hover {
     background: ${props => {
       if (props.active) {
+        if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
         if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.20)';
         if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.15)';
         return 'rgba(0, 0, 0, 0.08)'; // For light and other themes active hover
       } else { // Not active, but hovered
+        if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.07)';
         if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.07)';
         if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.07)';
         return 'rgba(0, 0, 0, 0.03)'; // For light and other themes non-active hover
@@ -264,8 +275,8 @@ const ChatItem = styled.div`
     }};
   }
 
-  /* Special styling for specific theme active items */
-  /* ${props => props.theme.name === 'bisexual' && props.active && `
+  /* Special styling for lakeside theme active items */
+  ${props => props.theme.name === 'lakeside' && props.active && `
     &::before {
       content: '';
       position: absolute;
@@ -273,10 +284,10 @@ const ChatItem = styled.div`
       top: 0;
       height: 100%;
       width: 4px;
-      background: linear-gradient(to bottom, #D70071 0%, #D70071 50%, #0035AA 50%, #0035AA 100%);
+      background: rgb(198, 146, 20);
       border-radius: 4px 0 0 4px;
     }
-  `} */
+  `}
 
   /* Special styling for dark theme active items */
   ${props => props.theme.name === 'dark' && props.active && `
@@ -309,6 +320,7 @@ const ChatTitle = styled.div`
   visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
   transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
 
   @media (max-width: 768px) {
       opacity: 1; /* Always visible on mobile */
@@ -320,7 +332,7 @@ const ChatTitle = styled.div`
 const ShareButton = styled.button`
   background: none;
   border: none;
-  color: #888;
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : '#888'};
   cursor: pointer;
   padding: 5px;
   display: flex; /* Align icon nicely */
@@ -339,7 +351,7 @@ const ShareButton = styled.button`
   }
 
   &:hover {
-    color: #1e88e5; // Different hover color (e.g., blue)
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(238, 186, 60)' : '#1e88e5'}; // Different hover color
     background-color: rgba(255, 255, 255, 0.08);
   }
 
@@ -357,7 +369,7 @@ const ShareButton = styled.button`
 const DeleteButton = styled.button`
   background: none;
   border: none;
-  color: #888;
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : '#888'};
   cursor: pointer;
   padding: 5px;
   display: flex; /* Align icon nicely */
@@ -376,7 +388,7 @@ const DeleteButton = styled.button`
   }
 
   &:hover {
-    color: #d32f2f;
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(238, 186, 60)' : '#d32f2f'};
     background-color: rgba(255, 255, 255, 0.08); /* Slight background on hover */
   }
 
@@ -437,17 +449,14 @@ const SectionHeader = styled.div`
   margin-bottom: 8px;
   font-size: 12px;
   text-transform: uppercase;
-  color: ${props => props.theme.text};
-  opacity: 0.7;
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  opacity: ${props => props.collapsed ? '0' : '0.7'};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  opacity: ${props => props.collapsed ? '0' : (props.theme.name === 'lakeside' ? '1' : '0.7')};
   visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
   transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
 
   @media (max-width: 768px) {
-      opacity: 1;
+      opacity: ${props => props.theme.name === 'lakeside' ? '1' : '0.7'};
       visibility: visible;
       margin-top: 12px;
   }
@@ -465,8 +474,8 @@ const ModelDropdownContainer = styled.div`
 
 const ModelDropdownButton = styled.button`
   width: 100%;
-  background: ${props => props.theme.inputBackground};
-  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 0.5)' : props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border};
   border-radius: 12px;
   padding: ${props => props.collapsed ? '8px' : '10px 12px'}; /* Adjust padding */
   display: flex;
@@ -477,9 +486,11 @@ const ModelDropdownButton = styled.button`
   backdrop-filter: blur(5px);
   /* margin-bottom: 10px; Removed margin, handled by container */
   min-height: 38px; /* Ensure consistent height */
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 
   &:hover {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.border};
   }
 
   /* Icon and text container */
@@ -514,7 +525,7 @@ const ModelDropdownText = styled.span`
   visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
   transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -531,11 +542,11 @@ const ModelDropdownContent = styled.div`
   bottom: calc(100% + 5px); /* Position above the button with gap */
   left: 15px; /* Align with container padding */
   right: 15px; /* Align with container padding */
-  background: ${props => props.theme.inputBackground};
+  background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 0.5)' : props.theme.inputBackground};
   backdrop-filter: ${props => props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.glassEffect};
   border-radius: 12px;
-  border: 1px solid ${props => props.theme.border}; /* Add border */
+  border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border}; /* Add border */
   box-shadow: 0 5px 15px rgba(0,0,0,0.1);
   z-index: 30;
   overflow: hidden;
@@ -565,11 +576,17 @@ const ModelOption = styled.div`
   margin: 4px; /* Add margin around options */
   cursor: pointer;
   transition: background 0.2s ease;
-  background: ${props => props.isSelected ? 'rgba(255,255,255,0.1)' : 'transparent'};
+  background: ${props => {
+    if (props.isSelected) {
+      return props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.15)' : 'rgba(255,255,255,0.1)';
+    }
+    return 'transparent';
+  }};
   border-radius: 8px; /* Match dropdown button */
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 
   &:hover {
-    background: rgba(255,255,255,0.05);
+    background: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 'rgba(255,255,255,0.05)'};
   }
 `;
 
@@ -590,7 +607,7 @@ const ModelInfo = styled.div`
 
 const ModelName = styled.span`
   font-weight: ${props => props.isSelected ? 'bold' : '500'};
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-size: 0.9rem;
   white-space: nowrap;
   overflow: hidden;
@@ -599,7 +616,7 @@ const ModelName = styled.span`
 
 const ModelDescription = styled.span`
   font-size: 0.8rem;
-  color: ${props => props.theme.text}80;
+  color: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : `${props.theme.text}80`};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -613,7 +630,7 @@ const SidebarButton = styled.button`
   background: transparent;
   border: none;
   border-radius: 10px;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -629,6 +646,7 @@ const SidebarButton = styled.button`
     width: 18px;
     height: 18px;
     opacity: 0.8;
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
   }
 `;
 
@@ -642,7 +660,7 @@ const MobileToggleButton = styled.button`
   display: none; // Hidden by default
   background: transparent;
   border: none;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   border-radius: 4px;
   width: 36px;
   height: 36px;
@@ -668,7 +686,9 @@ const MobileToggleButton = styled.button`
 `;
 
 const SidebarSection = styled.div`
-  border-top: 1px solid ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
+  border-top: 1px solid ${props => 
+    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : 
+    (props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')};
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -691,7 +711,8 @@ const Sidebar = ({
   isLoggedIn,
   username,
   collapsed,
-  setCollapsed
+  setCollapsed,
+  theme
 }) => {
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
@@ -747,8 +768,11 @@ const Sidebar = ({
         {/* Top Bar for Desktop */}
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
            <LogoContainer>
-             <img src="/images/sculptor.svg" alt="Sculptor AI" />
-             <LogoText>Sculptor</LogoText>
+             <img 
+               src={theme && theme.name === 'lakeside' ? 'https://demo-andromeda.me/static/favicon.png' : '/images/sculptor.svg'} 
+               alt={theme && theme.name === 'lakeside' ? 'Andromeda AI' : 'Sculptor AI'} 
+             />
+             <LogoText>{theme && theme.name === 'lakeside' ? 'Andromeda' : 'Sculptor'}</LogoText>
            </LogoContainer>
            
            {/* Left Collapse Button (now on the right) */}
@@ -781,8 +805,11 @@ const Sidebar = ({
         {/* Top Bar for Mobile (Logo + Expander + New Chat) */}
         <TopBarContainer className="mobile-top-bar" style={{ display: 'none' }}> {/* Managed by CSS */}
           <MobileLogoContainer>
-            <img src="/images/sculptor.svg" alt="Sculptor AI" />
-            <MobileLogoText>Sculptor</MobileLogoText>
+            <img 
+              src={theme && theme.name === 'lakeside' ? 'https://demo-andromeda.me/static/favicon.png' : '/images/sculptor.svg'} 
+              alt={theme && theme.name === 'lakeside' ? 'Andromeda AI' : 'Sculptor AI'} 
+            />
+            <MobileLogoText>{theme && theme.name === 'lakeside' ? 'Andromeda' : 'Sculptor'}</MobileLogoText>
           </MobileLogoContainer>
           {/* Group New Chat and Toggle Button */}
           <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
@@ -901,4 +928,5 @@ const Sidebar = ({
   );
 };
 
-export default Sidebar;
+// Wrap our component with withTheme HOC to access the theme context
+export default withTheme(Sidebar);

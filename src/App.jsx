@@ -507,8 +507,8 @@ const AppContent = () => {
           {/* Main greeting that appears at the top of the page */}
           {getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
             <MainGreeting sidebarCollapsed={collapsed}>
-              <h1>
-                {greeting}{user ? `, ${user.username}` : ''} 
+              <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>
+                {settings.theme === 'lakeside' ? 'Andromeda' : `${greeting}${user ? `, ${user.username}` : ''}`}
               </h1>
             </MainGreeting>
           )}

@@ -347,6 +347,15 @@ const ThemeOption = styled.label`
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
+  &.lakeside-theme {
+    background: ${props => props.isSelected ? 
+      'linear-gradient(135deg, #121218, #1a1a22)' : 
+      'linear-gradient(135deg, #12121880, #1a1a2280)'};
+    color: white;
+    border-color: ${props => props.isSelected ? '#DAA520' : 'transparent'};
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  
   &.pride-theme {
     background: ${props => props.isSelected ? 
       'linear-gradient(135deg, #ff0000, #ff9900, #ffff00, #33cc33, #3399ff, #9933ff)' : 
@@ -616,6 +625,19 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     onChange={() => handleChange('theme', 'bisexual')}
                   />
                   Bisexual
+                </ThemeOption>
+                <ThemeOption 
+                  isSelected={localSettings.theme === 'lakeside'}
+                  className="lakeside-theme"
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value="lakeside"
+                    checked={localSettings.theme === 'lakeside'}
+                    onChange={() => handleChange('theme', 'lakeside')}
+                  />
+                  Lakeside
                 </ThemeOption>
               </RadioGroup>
             </SettingGroup>
