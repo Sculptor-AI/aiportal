@@ -405,13 +405,14 @@ const Content = styled.div`
 const Timestamp = styled.div`
   font-size: 0.75rem;
   color: ${props => props.theme.text}80;
-  margin-top: 6px;
-  text-align: right;
+  display: flex;
+  align-items: center;
 `;
 
 const MessageActions = styled.div`
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 10px;
   margin-top: 8px;
   border-top: 1px solid ${props => props.theme.border}30;
@@ -722,11 +723,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
               return <em key={index}>- {part}</em>;
             })
           )}
-          {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
           
           {/* Message action buttons - only show for completed messages (not loading) */}
           {!isLoading && content && (
             <MessageActions>
+              {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
+              <div style={{ flexGrow: 1 }}></div>
               <ActionButton onClick={handleCopyText}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
