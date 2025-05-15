@@ -453,6 +453,28 @@ const pulse = keyframes`
   100% { opacity: 0.5; }
 `;
 
+const spin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const ThinkingContainer = styled.div`
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+  font-style: italic;
+`;
+
+const SpinnerIcon = styled.div`
+  width: 16px;
+  height: 16px;
+  border: 2px solid ${props => props.theme.text}40;
+  border-top: 2px solid ${props => props.theme.text};
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: ${spin} 1s linear infinite;
+`;
+
 const LoadingDots = styled.span`
   display: inline-block;
   animation: ${pulse} 1.5s infinite;
@@ -685,7 +707,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
             </FileAttachmentContainer>
           )}
           {isLoading ? (
-            <LoadingDots>{content}</LoadingDots>
+            <ThinkingContainer>
+              <SpinnerIcon />
+              Thinking
+            </ThinkingContainer>
           ) : (
             // Apply formatting and model signature styling
             content.split('\n\n-').map((part, index) => {
