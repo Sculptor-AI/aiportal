@@ -68,7 +68,24 @@ npm run dev
 yarn dev
 ```
 
-5. Open your browser and navigate to `http://localhost:3009`
+5. Open your browser and navigate to:
+   - Local development: `http://localhost:3009`
+   - Production deployment: `https://ai.explodingcb.com`
+
+## 🚀 Deployment
+
+### Vercel Deployment
+
+The application is deployed on the following URLs:
+
+- Frontend: https://ai.explodingcb.com
+- Backend: https://aiportal-backend.vercel.app
+
+Environment variables are configured in the deployment dashboard for both the frontend and backend projects. The frontend is set to use the backend URL via the `VITE_BACKEND_API_URL` environment variable.
+
+### Custom Deployment
+
+You can deploy this application to your own infrastructure. Make sure to set the appropriate environment variables as described in the Configuration section.
 
 ## 🔧 Configuration
 

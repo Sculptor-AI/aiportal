@@ -10,10 +10,40 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configure CORS with settings for both local development and production
+const corsOptions = {
+  origin: [
+    'http://localhost:3009', 
+    'http://localhost:3010', 
+    'http://127.0.0.1:3009', 
+    'http://127.0.0.1:3010',
+    'https://aiportal-backend.vercel.app',
+    'https://aiportal.vercel.app',
+    'https://ai.explodingcb.com'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
 // Middleware
-app.use(helmet()); // Security headers
-app.use(cors()); // Enable CORS
+// Disable helmet for local development to avoid CORS issues
+// app.use(helmet({ 
+//   crossOriginResourcePolicy: { policy: "cross-origin" } 
+// })); 
+
+// Enable CORS - this must come before other middleware
+app.use(cors(corsOptions));
 app.use(express.json()); // Parse JSON bodies
+
+// Log requests for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Add a preflight route to handle OPTIONS requests
+app.options('*', cors(corsOptions));
 
 // Routes
 app.use('/api', apiRouter);
@@ -35,6 +65,7 @@ app.use((err, req, res, next) => {
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`CORS enabled for: ${corsOptions.origin.join(', ')}`);
 });
 
 export default app; 

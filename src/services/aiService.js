@@ -1,4 +1,5 @@
 import { fetchEventSource } from '@microsoft/fetch-event-source'; // Use a robust SSE client library
+import axios from 'axios';
 
 // Get API keys from environment variables (fallback)
 const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -393,11 +394,14 @@ const parseSSEChunk = (chunk) => {
 };
 
 // Refactored sendMessage as an async generator
-export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null) { 
+export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false) { 
   console.log(`sendMessage (streaming) called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`, 
     imageData ? `imageData: Present` : '',
-    fileTextContent ? `fileTextContent: Present` : ''
+    fileTextContent ? `fileTextContent: Present` : '',
+    `search: ${search}`,
+    `deepResearch: ${deepResearch}`,
+    `imageGen: ${imageGen}`
   );
 
   // Validate inputs
@@ -701,7 +705,28 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.
 
 // Add backend API base URL - ensure this matches your backend server address
-const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL || 'https://aiportal-backend.vercel.app/api';
+const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ? 
+  (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
+    import.meta.env.VITE_BACKEND_API_URL : 
+    `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
+  'https://aiportal-backend.vercel.app/api';
+
+// Debug the actual URL being used
+console.log('Backend API URL being used:', BACKEND_API_BASE);
+
+// Remove duplicated /api in endpoint paths
+const buildApiUrl = (endpoint) => {
+  if (!endpoint) return BACKEND_API_BASE;
+  
+  // If the endpoint already starts with /api, remove it to prevent duplication
+  const cleanEndpoint = endpoint.startsWith('/api/') ? endpoint.substring(4) : 
+                         (endpoint.startsWith('/api') ? endpoint.substring(4) : endpoint);
+  
+  // Ensure endpoint has a leading slash if it doesn't already
+  const formattedEndpoint = cleanEndpoint.startsWith('/') ? cleanEndpoint : `/${cleanEndpoint}`;
+  
+  return `${BACKEND_API_BASE}${formattedEndpoint}`;
+};
 
 /**
  * Fetch available models from the backend
@@ -709,14 +734,18 @@ const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL || 'https://aiport
  */
 export const fetchModelsFromBackend = async () => {
   try {
-    const response = await fetch(`${BACKEND_API_BASE}/models`);
+    const endpointUrl = buildApiUrl('/models');
+    console.log('Fetching models from:', endpointUrl);
+    const response = await fetch(endpointUrl);
     
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('Error response from models endpoint:', errorData);
       throw new Error(errorData.error || 'Failed to fetch models from backend');
     }
     
     const data = await response.json();
+    console.log('Successfully fetched models from backend:', data);
     return data.models.map(model => ({
       id: model.id,
       name: model.name || `${model.provider}: ${model.id.split('/').pop()}`,
@@ -732,58 +761,55 @@ export const fetchModelsFromBackend = async () => {
 
 /**
  * Send a message to the backend for processing
- * @param {string} modelType - The model ID to use
- * @param {string} prompt - The message content
+ * @param {string} modelId - The model ID to use
+ * @param {string} message - The message content
  * @param {boolean} search - Whether to use search feature
  * @param {boolean} deepResearch - Whether to use deep research
  * @param {boolean} imageGen - Whether to generate images
  * @returns {Promise<Object>} The processed response
  */
-export const sendMessageToBackend = async (modelType, prompt, search = false, deepResearch = false, imageGen = false) => {
+export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false) => {
   try {
-    // Create the request packet
-    const requestPacket = {
-      modelType,
-      prompt,
-      search,
-      deepResearch,
-      imageGen
+    // Build the API endpoint URL based on the action requested
+    let endpoint = '/chat';
+    let body = {
+      modelType: modelId,
+      prompt: message,
+      search: search,
+      deepResearch: deepResearch,
+      imageGen: imageGen
     };
     
-    console.log('Sending request to backend:', requestPacket);
-    
-    const response = await fetch(`${BACKEND_API_BASE}/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestPacket)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to process message');
+    // For image generation, use a different endpoint
+    if (imageGen) {
+      endpoint = '/image-generation';
+      body = {
+        prompt: message,
+        modelType: modelId
+      };
     }
     
-    // Get the complete OpenRouter response
-    const data = await response.json();
-    console.log('Received response from OpenRouter via backend');
+    const apiUrl = buildApiUrl(endpoint);
+    console.log(`Sending request to ${apiUrl}`, body);
+    const response = await axios.post(apiUrl, body);
     
-    // Format the response for the UI
+    // For image generation, handle the image URL response
+    if (imageGen && response.data.imageUrl) {
+      return {
+        response: `![Generated Image](${response.data.imageUrl})`,
+        image: response.data.imageUrl
+      };
+    }
+    
+    // For regular responses, return the text content
+    // For search responses, also include the sources if available
     return {
-      response: data.choices[0].message.content,
-      metadata: {
-        modelType: modelType,
-        prompt: prompt,
-        timestamp: new Date().toISOString(),
-        usage: data.usage,
-        model: data.model,
-        id: data.id
-      }
+      response: response.data.choices?.[0]?.message?.content || response.data.content || response.data,
+      sources: response.data.sources || null  // Include sources if they exist
     };
   } catch (error) {
     console.error('Error sending message to backend:', error);
-    throw error;
+    throw new Error(error.response?.data?.error || error.message);
   }
 };
 
@@ -823,7 +849,8 @@ export const streamMessageFromBackend = async (modelType, prompt, onChunk, searc
     console.log('Sending streaming request to backend:', requestPacket);
     
     // Use fetch with streaming enabled
-    const response = await fetch(`${BACKEND_API_BASE}/chat/stream`, {
+    const streamUrl = buildApiUrl('/chat/stream');
+    const response = await fetch(streamUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

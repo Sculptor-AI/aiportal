@@ -11,12 +11,35 @@ export const completeChat = async (req, res) => {
     const { modelType, prompt, search = false, deepResearch = false, imageGen = false } = req.body;
     
     // Log the request (without sensitive data)
-    console.log(`Request received for model: ${modelType}`);
+    console.log(`Request received for model: ${modelType}, search: ${search}`);
     
     // Check against list of available models to prevent abuse
     const allowedModels = process.env.ALLOWED_MODELS?.split(',') || [];
     if (!allowedModels.includes(modelType)) {
       return res.status(400).json({ error: 'Invalid model type requested' });
+    }
+    
+    // If search is enabled, use the search processing functionality
+    if (search) {
+      console.log('Search functionality requested, performing search...');
+      try {
+        // Use internal API call to searchAndProcess
+        const searchResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/search-process`, {
+          query: prompt,
+          max_results: deepResearch ? 5 : 3,
+          model_prompt: "Based on the search results above, please answer this question in a comprehensive way with the most up-to-date information.",
+          modelType: modelType // Pass the model type to use the same model
+        });
+        
+        // Return the search results
+        return res.status(200).json(searchResponse.data);
+      } catch (error) {
+        console.error('Error in search processing:', error);
+        console.error('Error details:', error.response?.data);
+        
+        // Fall back to normal completion if search fails
+        console.log('Search failed, falling back to normal completion');
+      }
     }
     
     // Model-specific adjustments and normalization
@@ -91,12 +114,108 @@ export const streamChat = async (req, res) => {
     const { modelType, prompt, search = false, deepResearch = false, imageGen = false } = req.body;
     
     // Log the request (without sensitive data)
-    console.log(`Streaming request received for model: ${modelType}`);
+    console.log(`Streaming request received for model: ${modelType}, search: ${search}`);
     
     // Check against list of available models
     const allowedModels = process.env.ALLOWED_MODELS?.split(',') || [];
     if (!allowedModels.includes(modelType)) {
       return res.status(400).json({ error: 'Invalid model type requested' });
+    }
+    
+    // Handle search functionality with streaming (not ideal but will use non-streaming for search)
+    if (search) {
+      console.log('Search functionality requested but streaming not supported for search, using non-streaming...');
+      try {
+        // Set up SSE headers first - this must happen before any errors might occur
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        
+        // Use internal API call to searchAndProcess
+        const searchResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/search-process`, {
+          query: prompt,
+          max_results: deepResearch ? 5 : 3,
+          model_prompt: "Based on the search results above, please answer this question in a comprehensive way with the most up-to-date information.",
+          modelType: modelType // Pass the model type to use the same model
+        });
+        
+        // Create a fake streaming response that mimics the structure expected by the client
+        try {
+          // Format a response that looks like a streaming response for compatibility
+          const fakeStreamResponse = {
+            id: `search-${Date.now()}`,
+            object: "chat.completion.chunk",
+            created: Math.floor(Date.now() / 1000),
+            model: modelType,
+            choices: [{
+              index: 0,
+              delta: {
+                content: searchResponse.data.choices[0].message.content || 
+                         "Sorry, couldn't process the search results properly."
+              },
+              finish_reason: null
+            }]
+          };
+          
+          // Send the response as a single chunk
+          res.write(`data: ${JSON.stringify(fakeStreamResponse)}\n\n`);
+          
+          // Send done marker
+          res.write('data: [DONE]\n\n');
+          res.end();
+        } catch (error) {
+          console.error('Error formatting search response for streaming:', error);
+          // If there's an error formatting, send a basic error message
+          const errorResponse = {
+            id: `search-error-${Date.now()}`,
+            object: "chat.completion.chunk",
+            created: Math.floor(Date.now() / 1000),
+            model: modelType,
+            choices: [{
+              index: 0,
+              delta: {
+                content: "Error processing search results. The information couldn't be retrieved properly."
+              },
+              finish_reason: "error"
+            }]
+          };
+          res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
+          res.write('data: [DONE]\n\n');
+          res.end();
+        }
+        return;
+      } catch (error) {
+        console.error('Error in search streaming:', error);
+        console.error('Error details:', error.response?.data);
+        
+        // If headers have been sent, try to send an error in the stream
+        if (res.headersSent) {
+          try {
+            const errorResponse = {
+              id: `search-error-${Date.now()}`,
+              object: "chat.completion.chunk",
+              created: Math.floor(Date.now() / 1000),
+              model: modelType,
+              choices: [{
+                index: 0,
+                delta: {
+                  content: `Error: ${error.message || 'Failed to process search'}`
+                },
+                finish_reason: "error"
+              }]
+            };
+            res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
+            res.write('data: [DONE]\n\n');
+            res.end();
+            return;
+          } catch (e) {
+            console.error('Error sending streaming error:', e);
+          }
+        } else {
+          // Fall back to normal streaming if search fails and headers not sent
+          console.log('Search failed, falling back to normal streaming');
+        }
+      }
     }
     
     // Model-specific adjustments - same as in completeChat

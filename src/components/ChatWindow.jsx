@@ -496,6 +496,9 @@ const ChatWindow = ({
 
     if (!messageToSend && !currentImageData && !currentFileText) return;
     if (isLoading || isProcessingFile || !chat?.id) return; // Prevent sending if already busy or no chat selected
+    
+    // Capture the selected action chip value before resetting
+    const currentActionChip = selectedActionChip;
 
     const currentChatId = chat.id; // Capture chat ID before clearing state
     const currentModel = selectedModel; // Capture selected model
@@ -542,7 +545,10 @@ const ChatWindow = ({
         content: messageToSend,
         image: currentImageData,
         fileInfo: uploadedFileData ? { name: uploadedFileData.name, type: uploadedFileData.type } : undefined,
-        model: currentModel
+        model: currentModel,
+        search: currentActionChip === 'search', 
+        deepResearch: currentActionChip === 'deep-research',
+        imageGen: currentActionChip === 'create-image'
       };
       addMessage(currentChatId, userMessage);
       
@@ -579,7 +585,10 @@ const ChatWindow = ({
       content: messageToSend,
       image: currentImageData,
       fileInfo: uploadedFileData ? { name: uploadedFileData.name, type: uploadedFileData.type } : undefined,
-      model: currentModel // Associate message with model used
+      model: currentModel, // Associate message with model used
+      search: currentActionChip === 'search', 
+      deepResearch: currentActionChip === 'deep-research',
+      imageGen: currentActionChip === 'create-image'
     };
     addMessage(currentChatId, userMessage); // Use the updated addMessage from context
     
@@ -612,15 +621,16 @@ const ChatWindow = ({
         const backendResponse = await sendMessageToBackend(
           currentModel,
           messageToSend,
-          userMessage.search || false,
-          userMessage.deepResearch || false,
-          userMessage.imageGen || false
+          currentActionChip === 'search',
+          currentActionChip === 'deep-research',
+          currentActionChip === 'create-image'
         );
         
         // Update the placeholder message with the backend response
         updateMessage(currentChatId, aiMessageId, { 
           content: backendResponse.response || 'No response from backend', 
-          isLoading: false
+          isLoading: false,
+          sources: backendResponse.sources || null
         });
         console.log(`[ChatWindow] Backend response received for ${currentModel}.`);
       } else {
@@ -644,7 +654,10 @@ const ChatWindow = ({
           },
           currentImageData,  // Pass image data
           currentFileText,   // Pass file text content
-          settings           // Pass settings object
+          settings,          // Pass settings object
+          currentActionChip === 'search',       // Pass search flag
+          currentActionChip === 'deep-research', // Pass deep research flag
+          currentActionChip === 'create-image'   // Pass image generation flag
         );
         // If sendMessage completes without calling the error callback, finalize the message
         updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
@@ -659,6 +672,7 @@ const ChatWindow = ({
         });
     } finally {
       setIsLoading(false); // Turn off loading indicator regardless of outcome
+      setSelectedActionChip(null); // Reset action chip selection
     }
   };
 
@@ -1036,20 +1050,29 @@ const ChatWindow = ({
           
           {/* Action Chips */}
           <ActionChipsContainer>
-            <ActionChip selected={selectedActionChip === 'search'} onClick={() => setSelectedActionChip('search')}>
+            <ActionChip 
+              selected={selectedActionChip === 'search'} 
+              onClick={() => setSelectedActionChip(selectedActionChip === 'search' ? null : 'search')}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
               Search
             </ActionChip>
-            <ActionChip selected={selectedActionChip === 'deep-research'} onClick={() => setSelectedActionChip('deep-research')}>
+            <ActionChip 
+              selected={selectedActionChip === 'deep-research'} 
+              onClick={() => setSelectedActionChip(selectedActionChip === 'deep-research' ? null : 'deep-research')}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
               </svg>
               Deep research
             </ActionChip>
-            <ActionChip selected={selectedActionChip === 'create-image'} onClick={() => setSelectedActionChip('create-image')}>
+            <ActionChip 
+              selected={selectedActionChip === 'create-image'} 
+              onClick={() => setSelectedActionChip(selectedActionChip === 'create-image' ? null : 'create-image')}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <circle cx="8.5" cy="8.5" r="1.5"></circle>

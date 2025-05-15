@@ -529,8 +529,42 @@ const formatTimestamp = (timestamp) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+// New styled components for sources display
+const SourcesContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+`;
+
+const SourceButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  color: ${props => props.theme.text};
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.9)' : 'rgba(45, 45, 45, 0.9)'};
+    border-color: ${props => props.theme.primary.split(',')[0].replace('linear-gradient(145deg', '').trim()};
+  }
+`;
+
+const SourceFavicon = styled.img`
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  border-radius: 2px;
+`;
+
 const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId, image, file } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources } = message;
   
   const getAvatar = () => {
     if (role === 'user') {
@@ -583,6 +617,30 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
     } else {
       console.error('Text-to-speech not supported in this browser');
       // Could show user notification that TTS is not supported
+    }
+  };
+
+  // Determine if the message has sources to display
+  const hasSources = role === 'assistant' && Array.isArray(sources) && sources.length > 0;
+
+  // Extract domain from URL for displaying source name and favicon
+  const extractDomain = (url) => {
+    try {
+      const domain = new URL(url).hostname.replace('www.', '');
+      return domain;
+    } catch (e) {
+      console.error('Error extracting domain:', e);
+      return url;
+    }
+  };
+
+  // Get favicon URL for a domain
+  const getFaviconUrl = (url) => {
+    try {
+      const domain = new URL(url).origin;
+      return `${domain}/favicon.ico`;
+    } catch (e) {
+      return 'https://www.google.com/s2/favicons?domain=' + url;
     }
   };
 
@@ -660,6 +718,18 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
                 Read
               </ActionButton>
             </MessageActions>
+          )}
+          
+          {/* Sources section */}
+          {hasSources && !isLoading && (
+            <SourcesContainer>
+              {sources.map((source, index) => (
+                <SourceButton key={index} onClick={() => window.open(source.url, '_blank')}>
+                  <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src='https://www.google.com/s2/favicons?domain=' + source.url} />
+                  {extractDomain(source.url)}
+                </SourceButton>
+              ))}
+            </SourcesContainer>
           )}
         </Content>
       )}

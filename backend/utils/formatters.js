@@ -33,4 +33,24 @@ export const formatResponsePacket = (modelType, prompt, response) => {
       timestamp: new Date().toISOString()
     }
   };
+};
+
+/**
+ * Format error response
+ * @param {string} message - Error message
+ * @param {Error} [error] - Original error object (optional)
+ * @returns {Object} Formatted error object
+ */
+export const formatError = (message, error = null) => {
+  const errorResponse = {
+    error: message
+  };
+  
+  // Add stack trace in development mode
+  if (error && process.env.NODE_ENV !== 'production') {
+    errorResponse.details = error.message;
+    errorResponse.stack = error.stack;
+  }
+  
+  return errorResponse;
 }; 
