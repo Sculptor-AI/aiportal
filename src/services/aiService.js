@@ -767,9 +767,10 @@ export const fetchModelsFromBackend = async () => {
  * @param {boolean} deepResearch - Whether to use deep research
  * @param {boolean} imageGen - Whether to generate images
  * @param {string} imageData - Optional base64 image data
+ * @param {string} fileTextContent - Optional text content from PDF or text file
  * @returns {Promise<Object>} The response
  */
-export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null) => {
+export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null, fileTextContent = null) => {
   try {
     // Build the API endpoint URL based on the action requested
     let endpoint = '/chat';
@@ -780,6 +781,14 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
       deepResearch: deepResearch,
       imageGen: imageGen
     };
+    
+    console.log("sendMessageToBackend called with:", { 
+      modelId, 
+      messageLength: message?.length,
+      hasImage: !!imageData,
+      hasFileText: !!fileTextContent,
+      fileTextLength: fileTextContent?.length
+    });
     
     // Add image data if provided
     if (imageData) {
@@ -792,6 +801,13 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
         data: base64Data,
         mediaType: mediaType
       };
+      console.log("Added image data to request");
+    }
+    
+    // Add file text content if provided (for PDF or TXT files)
+    if (fileTextContent) {
+      body.fileTextContent = fileTextContent;
+      console.log(`Added ${fileTextContent.length} characters of file text to request`);
     }
     
     // For image generation, use a different endpoint
@@ -829,28 +845,26 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
 
 /**
  * Stream a message from the backend
- * @param {string} modelType - The model ID to use
- * @param {string} prompt - The message content
- * @param {function} onChunk - Callback for each text chunk received
- * @param {boolean} search - Whether to use search feature
+ * @param {string} modelType - The model to use
+ * @param {string} prompt - The user's message
+ * @param {Function} onChunk - Callback for receiving chunks of the response
+ * @param {boolean} search - Whether to use search
  * @param {boolean} deepResearch - Whether to use deep research
  * @param {boolean} imageGen - Whether to generate images
  * @param {string} imageData - Optional base64 image data
- * @returns {Promise<Object>} Final metadata when streaming completes
+ * @param {string} fileTextContent - Optional text content from PDF or text file
+ * @returns {Promise<void>} A promise that resolves when streaming is complete
  */
-export const streamMessageFromBackend = async (modelType, prompt, onChunk, search = false, deepResearch = false, imageGen = false, imageData = null) => {
-  // Validate parameters
-  if (!modelType || !prompt || typeof onChunk !== 'function') {
-    throw new Error('Missing required parameters for streaming');
-  }
-
-  let fullContent = '';
-  let metadata = {
-    modelType,
-    prompt,
-    timestamp: new Date().toISOString()
-  };
-
+export const streamMessageFromBackend = async (
+  modelType, 
+  prompt, 
+  onChunk, 
+  search = false, 
+  deepResearch = false, 
+  imageGen = false, 
+  imageData = null,
+  fileTextContent = null
+) => {
   try {
     // Create the request packet
     const requestPacket = {
@@ -860,6 +874,14 @@ export const streamMessageFromBackend = async (modelType, prompt, onChunk, searc
       deepResearch,
       imageGen
     };
+    
+    console.log("streamMessageFromBackend called with:", { 
+      modelType, 
+      promptLength: prompt?.length,
+      hasImage: !!imageData,
+      hasFileText: !!fileTextContent,
+      fileTextLength: fileTextContent?.length
+    });
     
     // Add image data if provided
     if (imageData) {
@@ -871,6 +893,13 @@ export const streamMessageFromBackend = async (modelType, prompt, onChunk, searc
         data: base64Data,
         mediaType: mediaType
       };
+      console.log("Added image data to streaming request");
+    }
+    
+    // Add file text content if provided (for PDF or TXT files)
+    if (fileTextContent) {
+      requestPacket.fileTextContent = fileTextContent;
+      console.log(`Added ${fileTextContent.length} characters of file text to streaming request`);
     }
     
     console.log('Sending streaming request to backend:', requestPacket);
@@ -894,6 +923,7 @@ export const streamMessageFromBackend = async (modelType, prompt, onChunk, searc
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     
+    // Process the stream chunks
     while (true) {
       const { done, value } = await reader.read();
       
@@ -901,61 +931,41 @@ export const streamMessageFromBackend = async (modelType, prompt, onChunk, searc
         break;
       }
       
-      // Decode the chunk and process each SSE event
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n\n');
+      // Decode the chunk and pass it to the callback
+      const chunk = decoder.decode(value, { stream: true });
+      
+      // Handle SSE format: each message starts with "data: "
+      const lines = chunk.split('\n');
       
       for (const line of lines) {
-        if (!line.trim() || !line.startsWith('data:')) continue;
-        
-        try {
-          const eventData = line.replace('data: ', '').trim();
+        if (line.startsWith('data: ')) {
+          const data = line.substring(6); // Remove "data: " prefix
           
-          // Handle the special "[DONE]" message
-          if (eventData === '[DONE]') {
-            continue;
+          // SSE can send a special [DONE] message to indicate completion
+          if (data === '[DONE]') {
+            return;
           }
           
-          const parsedData = JSON.parse(eventData);
-          
-          // Extract the text chunk based on OpenRouter's streaming format
-          const textChunk = parsedData.choices?.[0]?.delta?.content || '';
-          
-          // Collect usage info if present
-          if (parsedData.usage) {
-            metadata.usage = parsedData.usage;
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content || 
+                           parsed.content || 
+                           '';
+            
+            if (content) {
+              onChunk(content);
+            }
+          } catch (e) {
+            // If it's not valid JSON, just pass it through
+            if (data && data !== '[DONE]') {
+              onChunk(data);
+            }
           }
-          
-          // Save model info if present
-          if (parsedData.model && !metadata.model) {
-            metadata.model = parsedData.model;
-          }
-          
-          // Save ID if present
-          if (parsedData.id && !metadata.id) {
-            metadata.id = parsedData.id;
-          }
-          
-          // Accumulate the full content
-          fullContent += textChunk;
-          
-          // Call the callback with the new chunk
-          onChunk(textChunk);
-        } catch (e) {
-          console.error('Error parsing stream chunk:', e, line);
         }
       }
     }
-    
-    // Return the metadata with the complete response
-    return {
-      ...metadata,
-      fullContent
-    };
   } catch (error) {
     console.error('Error in streaming from backend:', error);
-    // Call onChunk with error message so the user sees it
-    onChunk(`\n[Error: ${error.message}]`);
     throw error;
   }
 };

@@ -137,138 +137,77 @@ export const completeChat = async (req, res) => {
  * @param {Object} res - Express response object
  */
 export const streamChat = async (req, res) => {
+  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent } = req.body;
+  
+  if (!modelType || !prompt) {
+    return res.status(400).json({ error: 'Missing required fields: modelType and prompt' });
+  }
+  
+  console.log("Backend streamChat received:", { 
+    modelType, 
+    promptLength: prompt?.length,
+    hasImage: !!imageData,
+    hasFileText: !!fileTextContent,
+    fileTextLength: fileTextContent?.length
+  });
+  
+  // Set appropriate headers for SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
   try {
-    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null } = req.body;
+    // Convert boolean strings to actual booleans if needed
+    const doSearch = search === 'true' || search === true;
+    const doDeepResearch = deepResearch === 'true' || deepResearch === true;
+    const doImageGen = imageGen === 'true' || imageGen === true;
     
-    // Log the request (without sensitive data)
-    console.log(`Streaming request received for model: ${modelType}, search: ${search}, hasImage: ${!!imageData}`);
-    
-    // Check against list of available models
-    const allowedModels = process.env.ALLOWED_MODELS?.split(',') || [];
-    if (!allowedModels.includes(modelType)) {
-      return res.status(400).json({ error: 'Invalid model type requested' });
+    // Temporarily disabled until search functionality is implemented
+    if (doSearch) {
+      res.write(`data: Searching for information about "${prompt}"...\n\n`);
+      // Future search implementation would go here
     }
     
-    // Handle search functionality with streaming (not ideal but will use non-streaming for search)
-    if (search) {
-      console.log('Search functionality requested but streaming not supported for search, using non-streaming...');
-      try {
-        // Set up SSE headers first - this must happen before any errors might occur
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        
-        // Use internal API call to searchAndProcess
-        const searchResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/search-process`, {
-          query: prompt,
-          max_results: deepResearch ? 5 : 3,
-          model_prompt: "Based on the search results above, please answer this question in a comprehensive way with the most up-to-date information.",
-          modelType: modelType // Pass the model type to use the same model
-        });
-        
-        // Create a fake streaming response that mimics the structure expected by the client
-        try {
-          // Format a response that looks like a streaming response for compatibility
-          const fakeStreamResponse = {
-            id: `search-${Date.now()}`,
-            object: "chat.completion.chunk",
-            created: Math.floor(Date.now() / 1000),
-            model: modelType,
-            choices: [{
-              index: 0,
-              delta: {
-                content: searchResponse.data.choices[0].message.content || 
-                         "Sorry, couldn't process the search results properly."
-              },
-              finish_reason: null
-            }]
-          };
-          
-          // Send the response as a single chunk
-          res.write(`data: ${JSON.stringify(fakeStreamResponse)}\n\n`);
-          
-          // Send done marker
-          res.write('data: [DONE]\n\n');
-          res.end();
-        } catch (error) {
-          console.error('Error formatting search response for streaming:', error);
-          // If there's an error formatting, send a basic error message
-          const errorResponse = {
-            id: `search-error-${Date.now()}`,
-            object: "chat.completion.chunk",
-            created: Math.floor(Date.now() / 1000),
-            model: modelType,
-            choices: [{
-              index: 0,
-              delta: {
-                content: "Error processing search results. The information couldn't be retrieved properly."
-              },
-              finish_reason: "error"
-            }]
-          };
-          res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
-          res.write('data: [DONE]\n\n');
-          res.end();
-        }
-        return;
-      } catch (error) {
-        console.error('Error in search streaming:', error);
-        console.error('Error details:', error.response?.data);
-        
-        // If headers have been sent, try to send an error in the stream
-        if (res.headersSent) {
-          try {
-            const errorResponse = {
-              id: `search-error-${Date.now()}`,
-              object: "chat.completion.chunk",
-              created: Math.floor(Date.now() / 1000),
-              model: modelType,
-              choices: [{
-                index: 0,
-                delta: {
-                  content: `Error: ${error.message || 'Failed to process search'}`
-                },
-                finish_reason: "error"
-              }]
-            };
-            res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
-            res.write('data: [DONE]\n\n');
-            res.end();
-            return;
-          } catch (e) {
-            console.error('Error sending streaming error:', e);
-          }
-        } else {
-          // Fall back to normal streaming if search fails and headers not sent
-          console.log('Search failed, falling back to normal streaming');
-        }
-      }
-    }
-    
-    // Model-specific adjustments - same as in completeChat
+    // Adjusted model name for OpenRouter (they use standardized model names)
     let adjustedModelType = modelType;
     
-    const modelMappings = {
-      'google/gemini-2.5-pro-exp-03-25': 'google/gemini-pro-1.5',
-      'deepseek/deepseek-v3-base:free': 'deepseek/deepseek-chat-v3-0324:free',
-      'deepseek/deepseek-r1:free': 'deepseek/deepseek-r1'
-    };
-    
-    if (modelMappings[modelType]) {
-      console.log(`Adjusting streaming model ID from ${modelType} to ${modelMappings[modelType]}`);
-      adjustedModelType = modelMappings[modelType];
+    // Map to standardized model names for OpenRouter if needed
+    if (modelType === 'chatgpt-4' || modelType === 'gpt-4') {
+      adjustedModelType = 'openai/gpt-4';
+    } else if (modelType === 'chatgpt-4o' || modelType === 'gpt-4o') {
+      adjustedModelType = 'openai/gpt-4o';
+    } else if (modelType === 'chatgpt-3.5-turbo' || modelType === 'gpt-3.5-turbo') {
+      adjustedModelType = 'openai/gpt-3.5-turbo';
+    } else if (modelType === 'claude-3-opus') {
+      adjustedModelType = 'anthropic/claude-3-opus';
+    } else if (modelType === 'claude-3-sonnet') {
+      adjustedModelType = 'anthropic/claude-3-sonnet';
+    } else if (modelType === 'claude-3-haiku') {
+      adjustedModelType = 'anthropic/claude-3-haiku';
     }
     
-    // Set up SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    
-    // Prepare the message content based on whether we have an image or not
+    // Prepare message content based on what was provided
     let messageContent;
     
-    if (imageData && imageData.data && imageData.mediaType) {
-      // Format message content for multimodal models
+    // If we have both image data and PDF text, combine them
+    if (imageData && imageData.data && imageData.mediaType && fileTextContent) {
+      messageContent = [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: imageData.mediaType,
+            data: imageData.data
+          }
+        },
+        {
+          type: "text",
+          text: `File Content:\n${fileTextContent}\n\nUser Message:\n${prompt}`
+        }
+      ];
+    }
+    // If we only have image data
+    else if (imageData && imageData.data && imageData.mediaType) {
       messageContent = [
         {
           type: "image",
@@ -283,11 +222,13 @@ export const streamChat = async (req, res) => {
           text: prompt
         }
       ];
-      
-      // Streaming with images (note: not all models support streaming with images)
-      console.log("Streaming with image data. Note that not all models support this.");
-    } else {
-      // Plain text message
+    }
+    // If we only have PDF text
+    else if (fileTextContent) {
+      messageContent = `File Content:\n${fileTextContent}\n\nUser Message:\n${prompt}`;
+    }
+    // Plain text message
+    else {
       messageContent = prompt;
     }
     
@@ -332,7 +273,6 @@ export const streamChat = async (req, res) => {
     req.on('close', () => {
       response.data.destroy();
     });
-    
   } catch (error) {
     console.error('Error in streaming chat:', error);
     console.error('Error details:', error.response?.data);
@@ -353,5 +293,130 @@ export const streamChat = async (req, res) => {
         console.error('Error sending streaming error:', e);
       }
     }
+  }
+};
+
+/**
+ * Handle chat completion request
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const handleChat = async (req, res) => {
+  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent } = req.body;
+  
+  if (!modelType || !prompt) {
+    return res.status(400).json({ error: 'Missing required fields: modelType and prompt' });
+  }
+  
+  console.log("Backend handleChat received:", { 
+    modelType, 
+    promptLength: prompt?.length,
+    hasImage: !!imageData,
+    hasFileText: !!fileTextContent,
+    fileTextLength: fileTextContent?.length
+  });
+  
+  try {
+    // Adjusted model name for OpenRouter (they use standardized model names)
+    let adjustedModelType = modelType;
+    
+    // Map to standardized model names for OpenRouter if needed
+    if (modelType === 'chatgpt-4' || modelType === 'gpt-4') {
+      adjustedModelType = 'openai/gpt-4';
+    } else if (modelType === 'chatgpt-4o' || modelType === 'gpt-4o') {
+      adjustedModelType = 'openai/gpt-4o';
+    } else if (modelType === 'chatgpt-3.5-turbo' || modelType === 'gpt-3.5-turbo') {
+      adjustedModelType = 'openai/gpt-3.5-turbo';
+    } else if (modelType === 'claude-3-opus') {
+      adjustedModelType = 'anthropic/claude-3-opus';
+    } else if (modelType === 'claude-3-sonnet') {
+      adjustedModelType = 'anthropic/claude-3-sonnet';
+    } else if (modelType === 'claude-3-haiku') {
+      adjustedModelType = 'anthropic/claude-3-haiku';
+    }
+    
+    // Prepare message content based on what was provided
+    let messageContent;
+    
+    // If we have both image data and PDF text, combine them
+    if (imageData && imageData.data && imageData.mediaType && fileTextContent) {
+      messageContent = [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: imageData.mediaType,
+            data: imageData.data
+          }
+        },
+        {
+          type: "text",
+          text: `File Content:\n${fileTextContent}\n\nUser Message:\n${prompt}`
+        }
+      ];
+    }
+    // If we only have image data
+    else if (imageData && imageData.data && imageData.mediaType) {
+      messageContent = [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: imageData.mediaType,
+            data: imageData.data
+          }
+        },
+        {
+          type: "text",
+          text: prompt
+        }
+      ];
+    }
+    // If we only have PDF text
+    else if (fileTextContent) {
+      messageContent = `File Content:\n${fileTextContent}\n\nUser Message:\n${prompt}`;
+    }
+    // Plain text message
+    else {
+      messageContent = prompt;
+    }
+    
+    // Create payload for OpenRouter
+    const openRouterPayload = {
+      model: adjustedModelType,
+      messages: [{ 
+        role: 'user', 
+        content: messageContent 
+      }]
+    };
+    
+    console.log(`Sending request to OpenRouter with model: ${adjustedModelType}`);
+    
+    // Make request to OpenRouter
+    const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', 
+      openRouterPayload, 
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://aiportal.com',
+          'X-Title': 'AI Portal'
+        }
+      }
+    );
+    
+    console.log('OpenRouter response:', response.data);
+    
+    // Send the response
+    res.json(response.data);
+  } catch (error) {
+    console.error('Error in chat:', error);
+    console.error('Error details:', error.response?.data);
+    
+    res.status(500).json({ 
+      error: 'Failed to process chat',
+      details: error.message,
+      modelType: req.body.modelType
+    });
   }
 }; 

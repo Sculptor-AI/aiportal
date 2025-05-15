@@ -407,6 +407,26 @@ const ChatWindow = ({
   const [isProcessingFile, setIsProcessingFile] = useState(false); // State for file processing
   const toast = useToast();
 
+  // Helper function to add alerts/toasts
+  const addAlert = (alertOptions) => {
+    if (toast && toast.showToast) {
+      toast.showToast(alertOptions.message, alertOptions.type, {
+        autoHide: alertOptions.autoHide,
+        actionText: alertOptions.actionText,
+        onAction: alertOptions.onAction
+      });
+    } else {
+      // Fallback if toast context is not available
+      console.warn("Toast notification failed:", alertOptions.message);
+      alert(alertOptions.message);
+    }
+  };
+
+  // Helper function to generate unique IDs for messages
+  const generateId = () => {
+    return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+  };
+
   const chatIsEmpty = !chat || chat.messages.length === 0;
 
   const prevIsEmptyRef = useRef(chatIsEmpty);
@@ -494,6 +514,14 @@ const ChatWindow = ({
     const currentImageData = uploadedFileData?.dataUrl;
     const currentFileText = uploadedFileData?.text;
 
+    console.log("Submit message called with:", { 
+      hasMessage: !!messageToSend, 
+      hasImage: !!currentImageData, 
+      hasFileText: !!currentFileText,
+      fileType: uploadedFileData?.type,
+      fileName: uploadedFileData?.name
+    });
+
     if (!messageToSend && !currentImageData && !currentFileText) return;
     if (isLoading || isProcessingFile || !chat?.id) return; // Prevent sending if already busy or no chat selected
     
@@ -525,94 +553,108 @@ const ChatWindow = ({
         !import.meta.env.VITE_GOOGLE_API_KEY) {
       apiKeyMissing = true;
       apiKeyMessage = "Google API key is missing. Please add it in Settings.";
-    } else if (currentModel.startsWith('claude') && 
-              !settings.anthropicApiKey && 
-              !import.meta.env.VITE_ANTHROPIC_API_KEY) {
-      apiKeyMissing = true;
-      apiKeyMessage = "Anthropic API key is missing. Please add it in Settings.";
-    } else if (currentModel.startsWith('chatgpt') && 
-              !settings.openaiApiKey && 
-              !import.meta.env.VITE_OPENAI_API_KEY) {
+    }
+    
+    // More API key checks, exact check depends on the model
+    if (currentModel.startsWith('gpt-') && 
+        !settings.openaiApiKey && 
+        !import.meta.env.VITE_OPENAI_API_KEY) {
       apiKeyMissing = true;
       apiKeyMessage = "OpenAI API key is missing. Please add it in Settings.";
     }
     
+    if (currentModel.startsWith('claude-') && 
+        !settings.anthropicApiKey && 
+        !import.meta.env.VITE_ANTHROPIC_API_KEY) {
+      apiKeyMissing = true;
+      apiKeyMessage = "Anthropic API key is missing. Please add it in Settings.";
+    }
+    
+    // Handle missing API key
     if (apiKeyMissing) {
-      // Add user message
-      const userMessage = {
-        id: Date.now(),
-        role: 'user',
-        content: messageToSend,
-        image: currentImageData,
-        fileInfo: uploadedFileData ? { name: uploadedFileData.name, type: uploadedFileData.type } : undefined,
-        model: currentModel,
-        search: currentActionChip === 'search', 
-        deepResearch: currentActionChip === 'deep-research',
-        imageGen: currentActionChip === 'create-image'
-      };
-      addMessage(currentChatId, userMessage);
-      
-      // Add error message as assistant response
-      const aiMessageId = userMessage.id + 1;
-      const errorMessage = {
-        id: aiMessageId,
-        role: 'assistant',
-        content: apiKeyMessage,
-        isError: true,
-        modelId: currentModel
-      };
-      addMessage(currentChatId, errorMessage);
-      
-      // Clear input and reset file upload state
-      setInputMessage('');
-      clearUploadedFile();
-      inputRef.current?.style.setProperty('height', 'auto');
-      
-      // Show a toast notification if possible
-      if (toast) {
-        toast.showErrorToast("API Key Required", apiKeyMessage, {
-          duration: 5000
-        });
-      }
-      
+      addAlert({
+        message: apiKeyMessage, 
+        type: 'error', 
+        autoHide: true, 
+        actionText: 'Settings', 
+        onAction: () => setShowSettings(true)
+      });
       return;
     }
-
-    // --- Optimistic UI Update --- 
-    const userMessage = {
-      id: Date.now(), // Use timestamp as temp ID
-      role: 'user',
-      content: messageToSend,
-      image: currentImageData,
-      fileInfo: uploadedFileData ? { name: uploadedFileData.name, type: uploadedFileData.type } : undefined,
-      model: currentModel, // Associate message with model used
-      search: currentActionChip === 'search', 
-      deepResearch: currentActionChip === 'deep-research',
-      imageGen: currentActionChip === 'create-image'
-    };
-    addMessage(currentChatId, userMessage); // Use the updated addMessage from context
     
-    // Add placeholder AI message
-    const aiMessageId = userMessage.id + 1; // Temporary ID for the streaming message
-    const placeholderAiMessage = {
-        id: aiMessageId,
-        role: 'assistant',
-        content: '', // Start empty
-        isLoading: true,
-        modelId: currentModel // Store which model is responding
+    setIsLoading(true); // Start loading state
+    
+    // Add user message to chat
+    const userMessage = {
+      id: generateId(),
+      role: 'user',
+      content: messageToSend || '',
+      timestamp: new Date().toISOString(),
     };
-    addMessage(currentChatId, placeholderAiMessage);
-    // --- End Optimistic UI Update ---
-
-    // Clear input and reset file upload state *after* capturing needed data
+    
+    // Add image to user message if present
+    if (currentImageData) {
+      userMessage.image = currentImageData;
+    }
+    
+    // Add file data to user message if present
+    if (uploadedFileData) {
+      userMessage.file = {
+        type: uploadedFileData.type,
+        name: uploadedFileData.name
+      };
+    }
+    
+    // Add the user message to chat
+    addMessage(currentChatId, userMessage);
+    
+    // Capture file text before clearing state
+    const fileTextToSend = currentFileText;
+    const imageDataToSend = currentImageData;
+    
+    // Clear inputs and reset state for next message
     setInputMessage('');
-    clearUploadedFile(); // Assumes this handles resetting related state
-    inputRef.current?.style.setProperty('height', 'auto'); // Reset input height
-    setIsLoading(true); // Set loading state for the whole operation
-
-    console.log(`[ChatWindow] Attempting to send message to ${currentModel}`); // Log model being used
-    let streamedContent = '';
-
+    setUploadedFileData(null);
+    
+    // Trigger a reset of the file upload component
+    setResetFileUpload(true);
+    setTimeout(() => setResetFileUpload(false), 0);
+    
+    if (onAttachmentChange) {
+      onAttachmentChange(false); // Inform parent attachment was cleared
+    }
+    
+    // Compute message indices for sending to API
+    const formattedHistory = currentHistory.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      ...(msg.image && { image: msg.image })
+    }));
+    
+    // Create placeholder for AI response
+    const aiMessageId = generateId();
+    const aiMessage = {
+      id: aiMessageId,
+      role: 'assistant',
+      content: '',
+      isLoading: true,
+      timestamp: new Date().toISOString(),
+      modelId: currentModel,
+    };
+    
+    // Add the placeholder AI message to chat
+    addMessage(currentChatId, aiMessage);
+    
+    // Update the chat title if it's a new chat
+    if (currentHistory.length === 0) {
+      updateChatTitle(currentChatId, messageToSend);
+    }
+    
+    // Ensure view is scrolled to the latest message
+    setTimeout(scrollToBottom, 100);
+    
+    let streamedContent = ''; // Used for streaming responses
+    
     try {
       // Use backend API if it's a backend model
       if (isBackendModel) {
@@ -633,7 +675,8 @@ const ChatWindow = ({
             currentActionChip === 'search',
             currentActionChip === 'deep-research',
             currentActionChip === 'create-image',
-            currentImageData // Pass the image data
+            imageDataToSend, // Use captured value
+            fileTextToSend  // Use captured value
           );
           
           // Finalize the message when streaming is complete
@@ -647,7 +690,8 @@ const ChatWindow = ({
             currentActionChip === 'search',
             currentActionChip === 'deep-research',
             currentActionChip === 'create-image',
-            currentImageData // Pass the image data to the backend API
+            imageDataToSend, // Use captured value
+            fileTextToSend   // Use captured value
           );
           
           // Update the placeholder message with the backend response
@@ -659,42 +703,43 @@ const ChatWindow = ({
           console.log(`[ChatWindow] Backend response received for ${currentModel}.`);
         }
       } else {
-        // Use direct API for regular models
-        await sendMessage(
-          currentModel,      // Pass captured model
-          messageToSend,     // Pass user input text
-          currentHistory,    // Pass captured history
-          (chunk) => {       // Callback for receiving chunks
-            streamedContent += chunk;
-            // Update the placeholder message content chunk by chunk
-            updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
-          },
-          (error) => {       // Callback for errors during streaming
-            console.error(`Error streaming response from ${currentModel}:`, error);
-            updateMessage(currentChatId, aiMessageId, {
-              content: `Error: ${error.message || 'Failed to get response'}`,
-              isError: true,
-              isLoading: false
-            });
-          },
-          currentImageData,  // Pass image data
-          currentFileText,   // Pass file text content
-          settings,          // Pass settings object
-          currentActionChip === 'search',       // Pass search flag
-          currentActionChip === 'deep-research', // Pass deep research flag
-          currentActionChip === 'create-image'   // Pass image generation flag
+        // Use client-side API for direct models
+        const messageGenerator = sendMessage(
+          messageToSend, 
+          currentModel, 
+          formattedHistory, 
+          imageDataToSend,
+          fileTextToSend, // Use captured value for file text
+          currentActionChip === 'search',
+          currentActionChip === 'deep-research',
+          currentActionChip === 'create-image'
         );
-        // If sendMessage completes without calling the error callback, finalize the message
+        
+        for await (const chunk of messageGenerator) {
+          streamedContent += chunk;
+          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
+        }
+        
+        // Finalize the message when streaming is complete
         updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
-        console.log(`[ChatWindow] Streaming finished successfully for ${currentModel}.`);
+        console.log(`[ChatWindow] Client-side streaming finished for ${currentModel}.`);
       }
-    } catch (error) { // Catch errors thrown directly by sendMessage setup (e.g., network issues)
-       console.error(`Error setting up message for ${currentModel}:`, error);
-        updateMessage(currentChatId, aiMessageId, {
-            content: `Setup Error: ${error.message || 'Failed to initiate connection'}`,
-            isError: true,
-            isLoading: false
-        });
+    } catch (error) {
+      console.error('[ChatWindow] Error generating response:', error);
+      
+      // Show error message to user
+      updateMessage(currentChatId, aiMessageId, { 
+        content: `Error: ${error.message || 'Failed to generate response'}`, 
+        isLoading: false,
+        isError: true
+      });
+      
+      // Add a helpful toast notification
+      addAlert({
+        message: `Error with ${currentModel}: ${error.message || 'Failed to generate response'}`,
+        type: 'error',
+        autoHide: true
+      });
     } finally {
       setIsLoading(false); // Turn off loading indicator regardless of outcome
       setSelectedActionChip(null); // Reset action chip selection
@@ -793,23 +838,48 @@ const ChatWindow = ({
           };
           reader.readAsText(file);
         } else if (isPdf) {
-           // Extract text from PDF
-           const arrayBuffer = await file.arrayBuffer();
-           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-           let fullText = '';
-           for (let i = 1; i <= pdf.numPages; i++) {
-             const page = await pdf.getPage(i);
-             const textContent = await page.getTextContent();
-             fullText += textContent.items.map(item => item.str).join(' ') + '\n'; // Add newline between pages
-           }
-           setUploadedFileData({ 
-             file: file, 
-             type: 'pdf', 
-             content: fullText.trim(), 
-             text: fullText.trim(), // Add text field for PDF content
-             name: file.name 
-           });
-           setIsProcessingFile(false);
+          try {
+            // Extract text from PDF
+            console.log("Starting PDF extraction for:", file.name);
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            console.log(`PDF loaded successfully with ${pdf.numPages} pages`);
+            let fullText = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              fullText += textContent.items.map(item => item.str).join(' ') + '\n'; // Add newline between pages
+            }
+            
+            // Make sure text is not empty
+            if (!fullText.trim()) {
+              console.warn("Extracted empty text from PDF - might be scanned/image-based");
+              fullText = "This appears to be a scanned PDF without extractable text.";
+            }
+            
+            console.log(`Extracted ${fullText.length} characters from PDF`);
+            const trimmedText = fullText.trim();
+            
+            // Make sure we consistently set both content and text fields
+            const fileData = { 
+              file: file, 
+              type: 'pdf', 
+              content: trimmedText, 
+              text: trimmedText, // Essential: This field is used when sending
+              name: file.name 
+            };
+            
+            setUploadedFileData(fileData);
+            console.log("PDF data set to state:", fileData);
+            setIsProcessingFile(false);
+          } catch (error) {
+            console.error('Error extracting PDF text:', error);
+            setIsProcessingFile(false);
+            alert('Error extracting text from PDF: ' + error.message);
+            if (onAttachmentChange) {
+              onAttachmentChange(false);
+            }
+          }
         }
         setResetFileUpload(false); // Ensure reset is false if a valid file is selected
       } catch (error) {
