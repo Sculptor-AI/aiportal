@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import ChatMessage from './ChatMessage';
-import { sendMessage, sendMessageToBackend } from '../services/aiService';
+import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../services/aiService';
 import ModelSelector from './ModelSelector';
 import FileUploadButton from './FileUploadButton';
 import { useToast } from '../contexts/ToastContext';
@@ -618,21 +618,46 @@ const ChatWindow = ({
       if (isBackendModel) {
         console.log(`[ChatWindow] Using backend API for model: ${currentModel}`);
         
-        const backendResponse = await sendMessageToBackend(
-          currentModel,
-          messageToSend,
-          currentActionChip === 'search',
-          currentActionChip === 'deep-research',
-          currentActionChip === 'create-image'
-        );
+        // Check if the model supports streaming
+        const supportsStreaming = currentModelObj?.supportsStreaming !== false;
         
-        // Update the placeholder message with the backend response
-        updateMessage(currentChatId, aiMessageId, { 
-          content: backendResponse.response || 'No response from backend', 
-          isLoading: false,
-          sources: backendResponse.sources || null
-        });
-        console.log(`[ChatWindow] Backend response received for ${currentModel}.`);
+        if (supportsStreaming) {
+          // Use streaming API for backend models that support it
+          await streamMessageFromBackend(
+            currentModel, 
+            messageToSend,
+            (chunk) => {
+              streamedContent += chunk;
+              updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
+            },
+            currentActionChip === 'search',
+            currentActionChip === 'deep-research',
+            currentActionChip === 'create-image',
+            currentImageData // Pass the image data
+          );
+          
+          // Finalize the message when streaming is complete
+          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
+          console.log(`[ChatWindow] Backend streaming finished for ${currentModel}.`);
+        } else {
+          // Use non-streaming API for models that don't support streaming
+          const backendResponse = await sendMessageToBackend(
+            currentModel,
+            messageToSend,
+            currentActionChip === 'search',
+            currentActionChip === 'deep-research',
+            currentActionChip === 'create-image',
+            currentImageData // Pass the image data to the backend API
+          );
+          
+          // Update the placeholder message with the backend response
+          updateMessage(currentChatId, aiMessageId, { 
+            content: backendResponse.response || 'No response from backend', 
+            isLoading: false,
+            sources: backendResponse.sources || null
+          });
+          console.log(`[ChatWindow] Backend response received for ${currentModel}.`);
+        }
       } else {
         // Use direct API for regular models
         await sendMessage(

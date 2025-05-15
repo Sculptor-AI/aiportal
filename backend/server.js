@@ -34,7 +34,10 @@ const corsOptions = {
 
 // Enable CORS - this must come before other middleware
 app.use(cors(corsOptions));
-app.use(express.json()); // Parse JSON bodies
+
+// Increase JSON body size limit to 50MB to handle base64 encoded images
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true })); // Also increase URL-encoded limit
 
 // Log requests for debugging
 app.use((req, res, next) => {

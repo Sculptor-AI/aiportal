@@ -8,10 +8,10 @@ import { formatResponsePacket } from '../utils/formatters.js';
  */
 export const completeChat = async (req, res) => {
   try {
-    const { modelType, prompt, search = false, deepResearch = false, imageGen = false } = req.body;
+    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null } = req.body;
     
     // Log the request (without sensitive data)
-    console.log(`Request received for model: ${modelType}, search: ${search}`);
+    console.log(`Request received for model: ${modelType}, search: ${search}, hasImage: ${!!imageData}`);
     
     // Check against list of available models to prevent abuse
     const allowedModels = process.env.ALLOWED_MODELS?.split(',') || [];
@@ -58,10 +58,37 @@ export const completeChat = async (req, res) => {
       adjustedModelType = modelMappings[modelType];
     }
     
+    // Prepare the message content based on whether we have an image or not
+    let messageContent;
+    
+    if (imageData && imageData.data && imageData.mediaType) {
+      // Format message content for multimodal models
+      messageContent = [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: imageData.mediaType,
+            data: imageData.data
+          }
+        },
+        {
+          type: "text",
+          text: prompt
+        }
+      ];
+    } else {
+      // Plain text message
+      messageContent = prompt;
+    }
+    
     // Create payload for OpenRouter
     const openRouterPayload = {
       model: adjustedModelType,
-      messages: [{ role: 'user', content: prompt }]
+      messages: [{ 
+        role: 'user', 
+        content: messageContent 
+      }]
     };
     
     console.log(`Sending request to OpenRouter with model: ${adjustedModelType}`);
@@ -111,10 +138,10 @@ export const completeChat = async (req, res) => {
  */
 export const streamChat = async (req, res) => {
   try {
-    const { modelType, prompt, search = false, deepResearch = false, imageGen = false } = req.body;
+    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null } = req.body;
     
     // Log the request (without sensitive data)
-    console.log(`Streaming request received for model: ${modelType}, search: ${search}`);
+    console.log(`Streaming request received for model: ${modelType}, search: ${search}, hasImage: ${!!imageData}`);
     
     // Check against list of available models
     const allowedModels = process.env.ALLOWED_MODELS?.split(',') || [];
@@ -237,10 +264,40 @@ export const streamChat = async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     
+    // Prepare the message content based on whether we have an image or not
+    let messageContent;
+    
+    if (imageData && imageData.data && imageData.mediaType) {
+      // Format message content for multimodal models
+      messageContent = [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: imageData.mediaType,
+            data: imageData.data
+          }
+        },
+        {
+          type: "text",
+          text: prompt
+        }
+      ];
+      
+      // Streaming with images (note: not all models support streaming with images)
+      console.log("Streaming with image data. Note that not all models support this.");
+    } else {
+      // Plain text message
+      messageContent = prompt;
+    }
+    
     // Create payload for OpenRouter with streaming enabled
     const openRouterPayload = {
       model: adjustedModelType,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ 
+        role: 'user', 
+        content: messageContent 
+      }],
       stream: true
     };
     

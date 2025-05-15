@@ -760,15 +760,16 @@ export const fetchModelsFromBackend = async () => {
 };
 
 /**
- * Send a message to the backend for processing
+ * Send a message to the backend
  * @param {string} modelId - The model ID to use
  * @param {string} message - The message content
  * @param {boolean} search - Whether to use search feature
  * @param {boolean} deepResearch - Whether to use deep research
  * @param {boolean} imageGen - Whether to generate images
- * @returns {Promise<Object>} The processed response
+ * @param {string} imageData - Optional base64 image data
+ * @returns {Promise<Object>} The response
  */
-export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false) => {
+export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null) => {
   try {
     // Build the API endpoint URL based on the action requested
     let endpoint = '/chat';
@@ -779,6 +780,19 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
       deepResearch: deepResearch,
       imageGen: imageGen
     };
+    
+    // Add image data if provided
+    if (imageData) {
+      // Extract the base64 data from the data URL by removing the prefix
+      // Format is usually: data:image/jpeg;base64,/9j/4AAQSkZJRg...
+      const base64Data = imageData.split(',')[1];
+      const mediaType = imageData.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg';
+      
+      body.imageData = {
+        data: base64Data,
+        mediaType: mediaType
+      };
+    }
     
     // For image generation, use a different endpoint
     if (imageGen) {
@@ -821,9 +835,10 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
  * @param {boolean} search - Whether to use search feature
  * @param {boolean} deepResearch - Whether to use deep research
  * @param {boolean} imageGen - Whether to generate images
+ * @param {string} imageData - Optional base64 image data
  * @returns {Promise<Object>} Final metadata when streaming completes
  */
-export const streamMessageFromBackend = async (modelType, prompt, onChunk, search = false, deepResearch = false, imageGen = false) => {
+export const streamMessageFromBackend = async (modelType, prompt, onChunk, search = false, deepResearch = false, imageGen = false, imageData = null) => {
   // Validate parameters
   if (!modelType || !prompt || typeof onChunk !== 'function') {
     throw new Error('Missing required parameters for streaming');
@@ -845,6 +860,18 @@ export const streamMessageFromBackend = async (modelType, prompt, onChunk, searc
       deepResearch,
       imageGen
     };
+    
+    // Add image data if provided
+    if (imageData) {
+      // Extract the base64 data from the data URL
+      const base64Data = imageData.split(',')[1];
+      const mediaType = imageData.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg';
+      
+      requestPacket.imageData = {
+        data: base64Data,
+        mediaType: mediaType
+      };
+    }
     
     console.log('Sending streaming request to backend:', requestPacket);
     
