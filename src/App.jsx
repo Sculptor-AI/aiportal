@@ -13,6 +13,7 @@ import SharedChatView from './components/SharedChatView';
 import { keyframes } from 'styled-components';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { fetchModelsFromBackend } from './services/aiService';
+import NewSettingsPanel from './components/NewSettingsPanel';
 
 const AppContainer = styled.div`
   display: flex;
@@ -544,7 +545,7 @@ const AppContent = () => {
           />
         
           {isSettingsOpen && (
-            <SettingsModal 
+            <NewSettingsPanel 
               settings={settings}
               updateSettings={updateSettings}
               closeModal={() => setIsSettingsOpen(false)}
