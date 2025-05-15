@@ -73,6 +73,7 @@ const MessageList = styled.div`
   overflow-y: auto;
   overflow-x: hidden;
   padding: 20px;
+  padding-bottom: 115px; /* Add extra padding at the bottom to ensure text isn't hidden behind the input bar */
   display: flex;
   flex-direction: column;
   width: 100%;

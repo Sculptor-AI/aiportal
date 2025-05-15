@@ -16,7 +16,7 @@ export const lightTheme = {
   shadow: 'rgba(0, 0, 0, 0.08)',
   glassBlur: '10px',
   glassEffect: 'blur(10px) saturate(180%)',
-  inputBackground: 'rgba(255, 255, 255, 0.7)',
+  inputBackground: 'rgba(255, 255, 255, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #1E90FF, #007AFF)',
 };
@@ -36,7 +36,7 @@ export const darkTheme = {
   shadow: 'rgba(0, 0, 0, 0.2)',
   glassBlur: '10px',
   glassEffect: 'blur(10px) saturate(180%)',
-  inputBackground: 'rgba(40, 40, 40, 0.7)',
+  inputBackground: 'rgba(40, 40, 40, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #0A84FF, #38B0FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #38B0FF, #0A84FF)',
 };
@@ -57,7 +57,7 @@ export const oledTheme = {
   shadow: 'rgba(0, 0, 0, 0.3)',
   glassBlur: '10px',
   glassEffect: 'blur(10px) saturate(120%)',
-  inputBackground: 'rgba(20, 20, 20, 0.7)',
+  inputBackground: 'rgba(20, 20, 20, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #1E90FF, #007AFF)',
   cardBackground: 'rgba(15, 15, 15, 0.7)'
@@ -82,7 +82,7 @@ export const oceanTheme = {
   shadow: 'rgba(0, 0, 0, 0.4)',
   glassBlur: '10px',
   glassEffect: 'blur(10px) saturate(120%)',
-  inputBackground: 'rgba(10, 40, 60, 0.7)',
+  inputBackground: 'rgba(10, 40, 60, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #039be5, #0277bd)',
   buttonHoverGradient: 'linear-gradient(145deg, #0277bd, #039be5)',
   cardBackground: 'rgba(15, 45, 65, 0.7)'
@@ -107,7 +107,7 @@ export const forestTheme = {
   shadow: 'rgba(0, 0, 0, 0.4)',
   glassBlur: '10px',
   glassEffect: 'blur(10px) saturate(120%)',
-  inputBackground: 'rgba(30, 45, 20, 0.7)',
+  inputBackground: 'rgba(30, 45, 20, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #2e7d32, #388e3c)',
   buttonHoverGradient: 'linear-gradient(145deg, #388e3c, #2e7d32)',
   cardBackground: 'rgba(35, 50, 25, 0.7)'
@@ -136,7 +136,7 @@ export const bisexualTheme = {
   shadow: 'rgba(155, 79, 150, 0.3)',  // Purple-tinted shadow
   glassBlur: '10px',
   glassEffect: 'blur(10px) saturate(180%)',
-  inputBackground: 'rgba(25, 25, 35, 0.6)',
+  inputBackground: 'rgba(25, 25, 35, 1.0)',
   // Bold pink to purple gradient for buttons
   buttonGradient: 'linear-gradient(145deg, #D60270, #9B4F96)',
   // Bold purple to blue gradient for button hover state
@@ -167,7 +167,7 @@ export const prideTheme = {
   shadow: 'rgba(0, 0, 0, 0.5)', // Slightly stronger shadow for depth
   glassBlur: '12px', // Slightly more blur
   glassEffect: 'blur(12px) saturate(180%)', // More saturation for glass
-  inputBackground: 'rgba(40, 40, 55, 0.75)',
+  inputBackground: 'rgba(40, 40, 55, 1.0)',
   // Full, vibrant rainbow gradients for buttons
   buttonGradient: 'linear-gradient(145deg, #E40303, #FF8C00, #FFED00, #008026, #004DFF, #750787)',
   buttonHoverGradient: 'linear-gradient(145deg, #750787, #004DFF, #008026, #FFED00, #FF8C00, #E40303)', // Reversed
@@ -195,7 +195,7 @@ export const transTheme = {
   shadow: 'rgba(0, 0, 0, 0.55)', // Slightly darker shadow for contrast
   glassBlur: '12px',
   glassEffect: 'blur(12px) saturate(190%)', // Increased saturation
-  inputBackground: 'rgba(50, 45, 60, 0.7)',
+  inputBackground: 'rgba(50, 45, 60, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #5BCEFA, #F5A9B8, #FFFFFF)',
   buttonHoverGradient: 'linear-gradient(145deg, #FFFFFF, #F5A9B8, #5BCEFA)',
   cardBackground: 'rgba(45, 40, 55, 0.8)',

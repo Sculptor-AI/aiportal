@@ -409,6 +409,39 @@ const Timestamp = styled.div`
   text-align: right;
 `;
 
+const MessageActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  border-top: 1px solid ${props => props.theme.border}30;
+  padding-top: 8px;
+`;
+
+const ActionButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  color: ${props => props.theme.text}80;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: ${props => props.theme.text}10;
+    color: ${props => props.theme.text};
+  }
+  
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+`;
+
 const ErrorMessage = styled(Content)`
   background: rgba(255, 240, 240, 0.8);
   border: 1px solid rgba(255, 200, 200, 0.4);
@@ -527,6 +560,32 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
   // Check if there's a text file attached to the message
   const hasTextAttachment = file && file.type === 'text';
 
+  // Function to handle copying message content
+  const handleCopyText = () => {
+    navigator.clipboard.writeText(content)
+      .then(() => {
+        // Could add toast notification here if desired
+        console.log('Text copied to clipboard');
+      })
+      .catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+  };
+
+  // Function to handle text-to-speech
+  const handleReadAloud = () => {
+    if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(content);
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.error('Text-to-speech not supported in this browser');
+      // Could show user notification that TTS is not supported
+    }
+  };
+
   return (
     <Message alignment={messageAlignment}>
       {messageAlignment !== 'right' && <Avatar role={role} useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
@@ -581,6 +640,27 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
             })
           )}
           {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
+          
+          {/* Message action buttons - only show for completed messages (not loading) */}
+          {!isLoading && content && (
+            <MessageActions>
+              <ActionButton onClick={handleCopyText}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copy
+              </ActionButton>
+              <ActionButton onClick={handleReadAloud}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                </svg>
+                Read
+              </ActionButton>
+            </MessageActions>
+          )}
         </Content>
       )}
       {messageAlignment === 'right' && <Avatar role={role} useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
