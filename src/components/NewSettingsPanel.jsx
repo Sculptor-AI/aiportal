@@ -29,6 +29,14 @@ const SettingsContainer = styled.div`
   position: relative;
   display: flex;
   
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    border-radius: 0;
+    border: 2px solid;
+    border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+    box-shadow: none;
+  `}
+  
   /* This forces dropdown options to match the background for dark themes */
   option {
     background-color: ${props => 
@@ -65,18 +73,68 @@ const SettingsSidebar = styled.div`
   padding: 20px 0;
   overflow-y: auto;
   
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    border-right: 1px solid ${props.theme.buttonShadowDark};
+    padding: 2px 0;
+  `}
+  
   &::-webkit-scrollbar {
     width: 6px;
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      width: 16px;
+    `}
   }
   
   &::-webkit-scrollbar-track {
     background: transparent;
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      background: ${props.theme.scrollbarTrack};
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    `}
   }
   
   &::-webkit-scrollbar-thumb {
     background: ${props => props.theme.border};
     border-radius: 10px;
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      background: ${props.theme.scrollbarThumb};
+      border-radius: 0;
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+    `}
   }
+  
+  /* Add scroll buttons for retro theme */
+  ${props => props.theme.name === 'retro' && `
+    &::-webkit-scrollbar-button {
+      display: block;
+      background-color: ${props.theme.buttonFace};
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+      height: 16px;
+      width: 16px;
+    }
+    
+    &::-webkit-scrollbar-button:vertical:start {
+      background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10L8 6L12 10" stroke="black" stroke-width="1"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    
+    &::-webkit-scrollbar-button:vertical:end {
+      background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="black" stroke-width="1"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+  `}
   
   @media (max-width: 768px) {
     width: 100%;
@@ -84,6 +142,12 @@ const SettingsSidebar = styled.div`
     border-right: none;
     border-bottom: 1px solid ${props => props.theme.border};
     padding: 10px 0;
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      padding: 2px 0;
+      border-bottom: 1px solid ${props.theme.buttonShadowDark};
+    `}
   }
 `;
 
@@ -92,12 +156,25 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 0 20px 20px;
+  
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    padding: 2px 4px;
+    background-color: ${props.theme.windowTitleBarBackground};
+    color: ${props.theme.windowTitleBarText};
+  `}
 `;
 
 const Title = styled.h2`
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
+  
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    font-size: 1rem;
+    color: ${props.theme.windowTitleBarText};
+  `}
 `;
 
 const CloseButton = styled.button`
@@ -117,9 +194,40 @@ const CloseButton = styled.button`
   height: 32px;
   border-radius: 50%;
   
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    background-color: ${props.theme.buttonFace};
+    border: 1px solid;
+    border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+    box-shadow: 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset;
+    border-radius: 0 !important;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    font-size: 14px;
+    line-height: 14px;
+    opacity: 1;
+    transition: none;
+    margin-right: 2px;
+    margin-top: 2px;
+    color: black;
+    
+    &:active {
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 1px 0 0 1px;
+    }
+  `}
+  
   &:hover {
     opacity: 1;
     background: rgba(0,0,0,0.05);
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      background-color: ${props.theme.buttonFace};
+      opacity: 1;
+    `}
   }
 `;
 
@@ -132,6 +240,15 @@ const NavItem = styled.div`
   background-color: ${props => props.active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
   color: ${props => props.active ? props.theme.primary : props.theme.text};
   font-weight: ${props => props.active ? '500' : 'normal'};
+  
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    padding: 6px 10px;
+    border: ${props.active ? '1px solid' : 'none'};
+    border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    background-color: ${props.active ? props.theme.messageUser : 'transparent'};
+    color: ${props.theme.text};
+  `}
   
   &:hover {
     background-color: rgba(0, 0, 0, 0.05);
@@ -155,18 +272,68 @@ const MainContent = styled.div`
     '#222' : 
     props.theme.background || '#f5f5f7'};
   
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    background-color: ${props.theme.sidebar};
+    padding: 2px;
+  `}
+  
   &::-webkit-scrollbar {
     width: 6px;
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      width: 16px;
+    `}
   }
   
   &::-webkit-scrollbar-track {
     background: transparent;
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      background: ${props.theme.scrollbarTrack};
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    `}
   }
   
   &::-webkit-scrollbar-thumb {
     background: ${props => props.theme.border};
     border-radius: 10px;
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      background: ${props.theme.scrollbarThumb};
+      border-radius: 0;
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+    `}
   }
+  
+  /* Add scroll buttons for retro theme */
+  ${props => props.theme.name === 'retro' && `
+    &::-webkit-scrollbar-button {
+      display: block;
+      background-color: ${props.theme.buttonFace};
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+      height: 16px;
+      width: 16px;
+    }
+    
+    &::-webkit-scrollbar-button:vertical:start {
+      background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10L8 6L12 10" stroke="black" stroke-width="1"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    
+    &::-webkit-scrollbar-button:vertical:end {
+      background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="black" stroke-width="1"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+  `}
   
   @media (max-width: 768px) {
     max-height: calc(90vh - 60px);
@@ -305,6 +472,61 @@ const ThemeOption = styled.label`
   }
 `;
 
+const SelectBox = styled.select`
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid ${props => props.theme.border};
+  background-color: ${props => props.theme.name === 'dark' || props.theme.name === 'oled' ? '#333' : props.theme.cardBackground || '#f5f5f7'};
+  color: ${props => props.theme.text};
+  font-family: inherit;
+  width: 100%;
+  margin-bottom: 15px;
+  font-size: 0.95rem;
+  
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 2px 20px 2px 4px;
+    border: 1px solid;
+    border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    background-color: ${props.theme.inputBackground};
+    background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="black" stroke-width="1"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 2px center;
+    border-radius: 0;
+    box-shadow: none;
+    font-family: ${props.theme.fontFamily};
+    font-size: 0.9rem;
+  `}
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.primary}30;
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: none;
+    `}
+  }
+  
+  option {
+    background-color: ${props => props.theme.name === 'dark' || props.theme.name === 'oled' ? '#333' : props.theme.cardBackground || '#f5f5f7'};
+    color: ${props => props.theme.text};
+    
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      background-color: ${props.theme.inputBackground};
+      color: ${props.theme.text};
+      font-family: ${props.theme.fontFamily};
+      font-size: 0.9rem;
+    `}
+  }
+`;
+
 const RadioOption = styled.label`
   display: flex;
   align-items: center;
@@ -320,10 +542,51 @@ const RadioOption = styled.label`
   transition: all 0.2s ease;
   font-size: 0.95rem;
   
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    background-color: transparent;
+    border: none;
+    padding: 6px 8px;
+    border-radius: 0;
+    transition: none;
+    font-family: ${props.theme.fontFamily};
+    font-size: 0.9rem;
+    
+    input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 13px;
+      height: 13px;
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      background-color: ${props.theme.inputBackground};
+      border-radius: 50% !important;
+      position: relative;
+      margin-right: 6px;
+    }
+    
+    input[type="radio"]:checked:before {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: ${props.theme.text};
+    }
+  `}
+  
   &:hover {
     background-color: ${props => props.isSelected ? 
       `${props.theme.primary}20` : 
       'rgba(0, 0, 0, 0.05)'};
+      
+    /* Specific styling for the retro theme */
+    ${props => props.theme.name === 'retro' && `
+      background-color: transparent;
+    `}
   }
   
   input {
@@ -337,6 +600,14 @@ const ToggleWrapper = styled.div`
   margin-bottom: 18px;
   padding: 10px 0;
   
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    margin-bottom: 10px;
+    padding: 4px 0;
+    font-family: ${props.theme.fontFamily};
+    font-size: 0.9rem;
+  `}
+  
   &:last-child {
     margin-bottom: 0;
   }
@@ -348,6 +619,21 @@ const Toggle = styled.label`
   width: 48px;
   height: 26px;
   margin-right: 12px;
+  
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    
+    input {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      opacity: 0;
+    }
+  `}
   
   input {
     opacity: 0;
@@ -370,6 +656,31 @@ const Slider = styled.span`
   transition: 0.3s;
   border-radius: 26px;
   overflow: visible;
+  
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    border-radius: 0;
+    border: 1px solid;
+    border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    background: ${props.theme.buttonFace};
+    background-image: none;
+    transition: none;
+    
+    &:before {
+      border-radius: 0;
+      background: ${props.theme.buttonFace};
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      height: 16px;
+      width: 16px;
+      transform: ${props.checked ? 'translateX(20px)' : 'translateX(0)'};
+      content: '';
+      background-color: ${props.theme.buttonFace};
+      position: absolute;
+      top: 3px;
+      left: 3px;
+    }
+  `}
   
   &:before {
     position: absolute;
@@ -531,6 +842,26 @@ const SaveButton = styled.button`
   cursor: pointer;
   transition: background-color 0.2s;
   
+  /* Specific styling for the retro theme */
+  ${props => props.theme.name === 'retro' && `
+    background-color: ${props.theme.buttonFace};
+    color: ${props.theme.buttonText};
+    border: 1px solid;
+    border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+    box-shadow: 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset;
+    border-radius: 0;
+    padding: 4px 8px;
+    font-weight: normal;
+    font-size: 0.9rem;
+    transition: none;
+    
+    &:active {
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 5px 7px 3px 9px;
+    }
+  `}
+  
   &:hover {
     background-color: ${props => props.theme.primaryDark || props.theme.primary + 'dd'};
   }
@@ -633,29 +964,6 @@ const SettingLabel = styled.h4`
   font-size: 1.05rem;
   font-weight: 500;
   color: ${props => props.theme.text}dd;
-`;
-
-const SelectBox = styled.select`
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid ${props => props.theme.border};
-  background-color: ${props => props.theme.name === 'dark' || props.theme.name === 'oled' ? '#333' : props.theme.cardBackground || '#f5f5f7'};
-  color: ${props => props.theme.text};
-  font-family: inherit;
-  width: 100%;
-  margin-bottom: 15px;
-  font-size: 0.95rem;
-  
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.primary};
-    box-shadow: 0 0 0 2px ${props => props.theme.primary}30;
-  }
-  
-  option {
-    background-color: ${props => props.theme.name === 'dark' || props.theme.name === 'oled' ? '#333' : props.theme.cardBackground || '#f5f5f7'};
-    color: ${props => props.theme.text};
-  }
 `;
 
 const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
@@ -784,6 +1092,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                   <option value="pride">Pride</option>
                   <option value="trans">Trans</option>
                   <option value="lakeside">Lakeside</option>
+                  <option value="retro">Retro</option>
                 </SelectBox>
               </SettingsRow>
               

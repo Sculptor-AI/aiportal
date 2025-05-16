@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 
@@ -64,7 +64,7 @@ const CollapseButton = styled.button`
   background: transparent;
   border: none;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  display: flex;
+  display: ${props => props.theme.name === 'retro' ? 'none' : 'flex'}; /* Hide for retro theme */
   align-items: center;
   justify-content: center;
   cursor: pointer;
@@ -140,33 +140,65 @@ const MobileLogoText = styled.span`
 `;
 
 const NewChatButton = styled.button`
-  background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)'};
+  background: ${props => {
+    if (props.theme.name === 'retro') return props.theme.buttonFace;
+    return props.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)';
+  }};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border};
-  padding: 12px 15px;
-  border-radius: 12px;
+  border: ${props => {
+    if (props.theme.name === 'retro') {
+      return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
+    }
+    return `1px solid ${props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border}`;
+  }};
+  padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '12px 15px'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
   font-weight: 500;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: ${props => props.theme.name === 'retro' ? 'flex-start' : 'center'};
+  gap: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
   transition: all 0.2s ease;
-  box-shadow: ${props => props.theme.name === 'dark' ? 'none' : '0 1px 2px rgba(0,0,0,0.05)'};
+  box-shadow: ${props => {
+    if (props.theme.name === 'retro') {
+      return `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset`;
+    }
+    return props.theme.name === 'dark' ? 'none' : '0 1px 2px rgba(0,0,0,0.05)';
+  }};
   margin: 8px 16px 16px;
   width: calc(100% - 32px);
   flex-shrink: 0;
 
   &:hover {
-    background: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 
-      (props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)')};
-    transform: translateY(-1px);
-    box-shadow: ${props => props.theme.name === 'dark' ? '0 2px 5px rgba(0,0,0,0.2)' : '0 2px 5px rgba(0,0,0,0.08)'};
+    background: ${props => {
+      if (props.theme.name === 'retro') return props.theme.buttonFace;
+      return props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 
+        (props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)');
+    }};
+    transform: ${props => props.theme.name === 'retro' ? 'none' : 'translateY(-1px)'};
+    box-shadow: ${props => {
+      if (props.theme.name === 'retro') {
+        return `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset`;
+      }
+      return props.theme.name === 'dark' ? '0 2px 5px rgba(0,0,0,0.2)' : '0 2px 5px rgba(0,0,0,0.08)';
+    }};
+  }
+
+  &:active {
+    ${props => props.theme.name === 'retro' && `
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding-top: 9px;
+      padding-left: 16px;
+    `}
   }
 
   svg {
     transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    margin-right: ${props => props.collapsed ? '0' : '8px'};
+    margin-right: ${props => props.collapsed ? '0' : (props.theme.name === 'retro' ? '0' : '8px')};
     color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
+    width: ${props => props.theme.name === 'retro' ? '14px' : '16px'};
+    height: ${props => props.theme.name === 'retro' ? '14px' : '16px'};
   }
 
   span {
@@ -176,13 +208,17 @@ const NewChatButton = styled.button`
     white-space: nowrap;
     transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s;
     transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
+    ${props => props.theme.name === 'retro' && `
+      font-family: 'MSW98UI', 'MS Sans Serif', 'Tahoma', sans-serif;
+      font-size: 12px;
+    `}
   }
 
   @media (max-width: 768px) {
     width: auto;
     margin: 0 10px 10px auto;
-    padding: 10px 14px;
-    border-radius: 10px;
+    padding: ${props => props.theme.name === 'retro' ? '8px 14px' : '10px 14px'};
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '10px'};
     
     span {
         opacity: 1;
@@ -191,7 +227,7 @@ const NewChatButton = styled.button`
         display: inline-block;
     }
     svg {
-        margin-right: 8px;
+        margin-right: ${props => props.theme.name === 'retro' ? '10px' : '8px'};
     }
   }
 `;
@@ -670,8 +706,7 @@ const MobileToggleButton = styled.button`
   justify-content: center;
 
   @media (max-width: 768px) {
-    display: flex; // Shown only on mobile
-    /* Removed position fixed/absolute logic - handled by TopBarContainer */
+    display: ${props => props.theme.name === 'retro' ? 'none' : 'flex'}; // Hide in retro theme on mobile
     margin-left: 8px; /* Add space from logo */
   }
 
@@ -719,6 +754,13 @@ const Sidebar = ({
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
 
+  // Ensure sidebar is always expanded in retro theme
+  useEffect(() => {
+    if (theme && theme.name === 'retro' && collapsed) {
+      setCollapsed(false);
+    }
+  }, [theme, collapsed, setCollapsed]);
+
   // Toggle mobile content visibility
   const toggleMobileExpanded = () => {
     setIsMobileExpanded(!isMobileExpanded);
@@ -726,6 +768,9 @@ const Sidebar = ({
 
   // Toggle desktop sidebar collapsed state
   const toggleCollapsed = () => {
+    // Don't allow collapsing if retro theme
+    if (theme && theme.name === 'retro') return;
+    
     const newState = !collapsed;
     setCollapsed(newState);
     setIsModelDropdownOpen(false); // Close dropdown when collapsing/expanding
@@ -764,7 +809,7 @@ const Sidebar = ({
   return (
     <>
       {/* Main Sidebar container */}
-      <SidebarContainer isExpanded={isMobileExpanded} collapsed={collapsed}>
+      <SidebarContainer isExpanded={isMobileExpanded} collapsed={theme && theme.name === 'retro' ? false : collapsed}>
         {/* Top Bar for Desktop */}
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
            <LogoContainer>
@@ -775,8 +820,8 @@ const Sidebar = ({
              <LogoText>{theme && theme.name === 'lakeside' ? 'Andromeda' : 'Sculptor'}</LogoText>
            </LogoContainer>
            
-           {/* Left Collapse Button (now on the right) */}
-           {!collapsed && (
+           {/* Left Collapse Button (now on the right) - hidden for retro theme */}
+           {!collapsed && theme && theme.name !== 'retro' && (
              <CollapseButton 
                onClick={toggleCollapsed} 
                collapsed={collapsed} 
@@ -790,7 +835,7 @@ const Sidebar = ({
         </TopBarContainer>
         
         {/* New Chat Button as a standalone component below the logo */}
-        {!collapsed && (
+        {(!collapsed || (theme && theme.name === 'retro')) && (
           <NewChatButton 
             onClick={createNewChat} 
             collapsed={collapsed}
@@ -837,10 +882,10 @@ const Sidebar = ({
 
         {/* --- START: Main content area (Scrollable + Bottom fixed) --- */}
         {/* This fragment wrapper is crucial for the original error fix */}
-        {!collapsed && (
+        {(!collapsed || (theme && theme.name === 'retro')) && (
           <>
             {/* Scrollable Area (Models, Chats) */}
-            <ScrollableContent isExpanded={isMobileExpanded}>
+            <ScrollableContent isExpanded={isMobileExpanded || (theme && theme.name === 'retro')}>
 
               {/* Models Section removed as requested */}
 

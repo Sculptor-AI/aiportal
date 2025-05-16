@@ -373,6 +373,13 @@ const ThemeOption = styled.label`
     border-color: ${props => props.isSelected ? '#5BCEFA' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
   }
+  
+  &.retro-theme {
+    background: ${props => props.isSelected ? '#008080' : '#C0C0C0'};
+    color: ${props => props.isSelected ? '#FFFFFF' : '#000000'};
+    border-color: ${props => props.isSelected ? '#000080' : 'transparent'};
+    font-family: "'MS Sans Serif', Tahoma, sans-serif"; /* Optional: specific font for the button */
+  }
 `;
 
 const AboutSection = styled.div`
@@ -638,6 +645,19 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     onChange={() => handleChange('theme', 'lakeside')}
                   />
                   Lakeside
+                </ThemeOption>
+                <ThemeOption 
+                  isSelected={localSettings.theme === 'retro'}
+                  className="retro-theme"
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value="retro"
+                    checked={localSettings.theme === 'retro'}
+                    onChange={() => handleChange('theme', 'retro')}
+                  />
+                  Retro
                 </ThemeOption>
               </RadioGroup>
             </SettingGroup>

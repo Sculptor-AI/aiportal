@@ -225,6 +225,48 @@ export const transTheme = {
   accentGradient: 'linear-gradient(to right, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
 };
 
+// Windows 98 "Retro" Theme
+export const retroTheme = {
+  name: 'retro',
+  background: '#008080', // Teal desktop background
+  sidebar: '#C0C0C0',    // Classic gray for UI elements
+  chat: '#FFFFFF',        // White for chat area (like a document)
+  text: '#000000',        // Black text
+  border: '#808080',      // Dark gray for general borders
+  windowTitleBarBackground: '#000080', // Navy blue for title bars
+  windowTitleBarText: '#FFFFFF',     // White text on title bars
+  messageUser: '#E0E0E0', // Light gray for user messages
+  messageAi: '#D0D0D0',   // Slightly different light gray for AI messages
+  hover: '#B0B0B0',       // Darker gray for hover (general)
+  primary: '#000080',     // Navy blue (active elements, title bars)
+  secondary: '#C0C0C0',   // Silver/Gray (main UI color)
+  shadow: 'none',         // No drop shadows, use beveled edges
+  glassBlur: '0px',
+  glassEffect: 'none',
+  inputBackground: '#FFFFFF',
+  buttonFace: '#C0C0C0',      // Standard button color
+  buttonText: '#000000',
+  // For 3D effect - outer border
+  buttonHighlightLight: '#FFFFFF', // Top/Left outer highlight
+  buttonShadowDark: '#000000',    // Bottom/Right outer shadow
+  // For 3D effect - inner border (slightly softer)
+  buttonHighlightSoft: '#DFDFDF', // Top/Left inner highlight
+  buttonShadowSoft: '#808080',   // Bottom/Right inner shadow
+  buttonGradient: '#C0C0C0', // Fallback, actual style in GlobalStyles
+  buttonHoverGradient: '#B0B0B0', // Fallback for hover
+  cardBackground: '#C0C0C0',
+  scrollbarWidth: '16px',
+  scrollbarTrack: '#C0C0C0',
+  scrollbarThumb: '#808080',
+  scrollbarThumbHover: '#666666',
+  textSelection: '#000080',
+  textSelectionBackground: '#00FFFF',
+  checkboxBorder: '#808080',
+  checkboxBackground: '#FFFFFF',
+  checkmarkColor: '#000000',
+  fontFamily: "'MSW98UI', 'MS Sans Serif', 'Tahoma', 'Microsoft Sans Serif', 'Arial', sans-serif",
+};
+
 // Custom theme for the model icons with enhanced gradients
 export const modelThemes = {
   'gemini-2-flash': {
@@ -266,6 +308,7 @@ export const getTheme = (themeName) => {
     case 'trans': return transTheme;
     case 'bisexual': return bisexualTheme;
     case 'lakeside': return lakesideTheme;
+    case 'retro': return retroTheme;
     default: return lightTheme;
   }
 };
@@ -279,14 +322,14 @@ export const GlobalStyles = createGlobalStyle`
     background: ${props => props.theme.background};
     color: ${props => props.theme.text};
     transition: all 0.3s ease-in-out;
-    font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
+    font-family: ${props => props.theme.fontFamily || "-apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif"};
     margin: 0;
     padding: 0;
   }
   
   button, input, textarea, select {
-    font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
-    border-radius: 10px;
+    font-family: ${props => props.theme.fontFamily || "-apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif"};
+    border-radius: 0px; /* Retro buttons are not rounded */
   }
   
   .font-size-small {
@@ -335,6 +378,279 @@ export const GlobalStyles = createGlobalStyle`
     .selected {
       box-shadow: ${props.theme.borderGlow};
       border-color: rgba(255, 255, 255, 0.3);
+    }
+  `}
+
+  /* Retro theme specific styles */
+  ${props => props.theme.name === 'retro' && `
+    body {
+      font-family: ${props.theme.fontFamily};
+      background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAACKADAAQAAAABAAAACAAAAAAd6oXVAAAAJElEQVQYGWP8z8Dwn4EIwMRAJGAhVgGMUQVEh9F/BgYGdD4qHQB5nwem38x4UgAAAABJRU5ErkJggg==');
+      background-repeat: no-repeat;
+      background-position: left bottom;
+      cursor: default;
+    }
+
+    /* Reset border-radius everywhere */
+    * {
+      border-radius: 0 !important;
+      font-family: ${props.theme.fontFamily};
+    }
+    
+    /* Window styling */
+    .card, 
+    .message-box, 
+    .settings-panel,
+    .dropdown-menu,
+    .modal-content,
+    .notification,
+    .chat-container,
+    .sidebar {
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+      box-shadow: 2px 2px 0 0 ${props.theme.buttonShadowDark};
+      background-color: ${props.theme.sidebar};
+    }
+    
+    /* Window title bars */
+    .card-header,
+    .modal-header,
+    .settings-header,
+    .panel-header {
+      background-color: ${props.theme.windowTitleBarBackground};
+      color: ${props.theme.windowTitleBarText};
+      padding: 2px 4px;
+      font-weight: bold;
+      text-align: left;
+      height: 20px;
+    }
+    
+    /* Standard button styling */
+    button, 
+    input[type="button"], 
+    input[type="submit"], 
+    input[type="reset"],
+    .button {
+      font-family: ${props.theme.fontFamily};
+      background-color: ${props.theme.buttonFace};
+      color: ${props.theme.buttonText};
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+      box-shadow: 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 4px 8px;
+      margin: 2px;
+      border-radius: 0;
+      cursor: default;
+      min-width: 75px;
+      min-height: 23px;
+      text-align: center;
+      outline: none;
+    }
+
+    /* Pressed button state */
+    button:active,
+    input[type="button"]:active,
+    input[type="submit"]:active,
+    input[type="reset"]:active,
+    .button:active {
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 5px 7px 3px 9px;
+    }
+    
+    /* Form controls (text inputs) */
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="search"],
+    textarea,
+    .text-input {
+      font-family: ${props.theme.fontFamily};
+      background-color: ${props.theme.inputBackground};
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: inset 1px 1px 1px ${props.theme.buttonShadowSoft};
+      padding: 3px;
+      border-radius: 0;
+    }
+    
+    /* Select boxes */
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding: 2px 20px 2px 2px;
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      background-color: ${props.theme.buttonFace};
+      background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="black" stroke-width="1"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 2px center;
+      font-family: ${props.theme.fontFamily};
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: ${props.theme.scrollbarWidth};
+      height: ${props.theme.scrollbarWidth};
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: ${props.theme.scrollbarTrack};
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: ${props.theme.scrollbarThumb};
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: ${props.theme.scrollbarThumbHover};
+    }
+    
+    ::-webkit-scrollbar-button {
+      display: block;
+      background-color: ${props.theme.buttonFace};
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+      height: 16px;
+      width: 16px;
+    }
+    
+    ::-webkit-scrollbar-button:vertical:start {
+      background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 10L8 6L12 10" stroke="black" stroke-width="1"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    
+    ::-webkit-scrollbar-button:vertical:end {
+      background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="black" stroke-width="1"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    
+    /* Checkbox styling */
+    input[type="checkbox"],
+    input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 13px;
+      height: 13px;
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      background-color: ${props.theme.checkboxBackground};
+      position: relative;
+      margin: 3px;
+      cursor: default;
+    }
+    
+    input[type="checkbox"]:checked::before {
+      content: "✓";
+      position: absolute;
+      font-size: 11px;
+      top: -2px;
+      left: 1px;
+      color: ${props.theme.checkmarkColor};
+    }
+    
+    input[type="radio"] {
+      border-radius: 50% !important;
+    }
+    
+    input[type="radio"]:checked::before {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background-color: ${props.theme.checkmarkColor};
+    }
+    
+    /* Text selection */
+    ::selection {
+      color: ${props.theme.textSelection};
+      background: ${props.theme.textSelectionBackground};
+    }
+    
+    /* Settings panels - radio buttons and sliders */
+    .radio-group {
+      margin: 5px 0;
+    }
+    
+    .slider {
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} !important;
+      background-color: ${props.theme.buttonFace} !important;
+    }
+    
+    .slider::before {
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} !important;
+      background-color: ${props.theme.buttonFace} !important;
+    }
+    
+    /* Make UI modals more Windows 98-like */
+    .modal-content {
+      border-radius: 0 !important;
+      padding: 2px !important;
+      background-color: ${props.theme.buttonFace} !important;
+    }
+    
+    /* Specific message bubbles */
+    .message-user {
+      background-color: ${props.theme.messageUser} !important;
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    }
+    
+    .message-ai {
+      background-color: ${props.theme.messageAi} !important;
+      border: 1px solid;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    }
+    
+    /* App-specific elements */
+    .settings-container, .chat-container {
+      border: 2px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+    }
+    
+    /* Make toggle switches look like classic checkboxes */
+    .toggle-switch {
+      background: ${props.theme.buttonFace} !important;
+      border: 1px solid !important;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} !important;
+      border-radius: 0 !important;
+    }
+    
+    /* Add start button & taskbar styling - app-specific implementation may vary */
+    .taskbar {
+      background-color: ${props.theme.buttonFace};
+      border-top: 1px solid ${props.theme.buttonHighlightLight};
+      height: 28px;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+    
+    .start-button {
+      background-color: ${props.theme.buttonFace};
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+      padding: 2px 8px;
+      margin: 2px;
+      display: inline-flex;
+      align-items: center;
+    }
+    
+    .windows-logo {
+      margin-right: 5px;
     }
   `}
 `;

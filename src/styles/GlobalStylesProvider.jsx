@@ -2,6 +2,15 @@ import React from 'react';
 import { createGlobalStyle } from 'styled-components';
 
 const GlobalStyle = createGlobalStyle`
+  /* Add Windows 98 font */
+  @font-face {
+    font-family: 'MSW98UI';
+    src: url('/fonts/MSW98UI-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
   :root {
     --font-size: ${props => {
       switch(props.fontSize) {
@@ -50,9 +59,9 @@ const GlobalStyle = createGlobalStyle`
   }
 
   body {
-    font-family: var(--font-family);
-    font-size: var(--font-size);
-    line-height: var(--line-height);
+    font-family: ${props => props.theme?.name === 'retro' ? "'MSW98UI', 'MS Sans Serif', 'Tahoma', sans-serif" : 'var(--font-family)'};
+    font-size: ${props => props.theme?.name === 'retro' ? '12px' : 'var(--font-size)'};
+    line-height: ${props => props.theme?.name === 'retro' ? '1.2' : 'var(--line-height)'};
   }
 
   * {
@@ -88,6 +97,23 @@ const GlobalStyle = createGlobalStyle`
       transition: none !important;
     }
   `}
+
+  /* Apply retro font to all elements when retro theme is active */
+  ${props => props.theme?.name === 'retro' && `
+    * {
+      font-family: 'MSW98UI', 'MS Sans Serif', 'Tahoma', sans-serif !important;
+    }
+    
+    button, input, textarea, select {
+      font-family: 'MSW98UI', 'MS Sans Serif', 'Tahoma', sans-serif !important;
+      font-size: 12px !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'MSW98UI', 'MS Sans Serif', 'Tahoma', sans-serif !important;
+      font-weight: bold !important;
+    }
+  `}
 `;
 
 const GlobalStylesProvider = ({ settings, children }) => {
@@ -101,6 +127,7 @@ const GlobalStylesProvider = ({ settings, children }) => {
         highContrast={settings?.highContrast || false}
         bubbleStyle={settings?.bubbleStyle || 'modern'}
         messageSpacing={settings?.messageSpacing || 'comfortable'}
+        theme={settings?.theme}
       />
       {children}
     </>

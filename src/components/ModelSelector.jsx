@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import ModelIcon from './ModelIcon';
 
 // Remove environment variable imports for UI filtering
@@ -16,58 +16,91 @@ const ModelSelectorContainer = styled.div`
 const ModelButton = styled.button`
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  background: ${props => props.theme.name === 'bisexual' ? 
-    props.theme.modelSelectorBackground : 
-    props.theme.inputBackground};
-  border: none;
-  border-radius: 20px;
-  color: ${props => props.theme.text};
-  font-weight: 500;
-  font-size: 0.9rem;
+  padding: ${props => props.theme.name === 'retro' ? '5px 10px' : '8px 12px'};
+  background: ${props => {
+    if (props.theme.name === 'retro') return props.theme.buttonFace;
+    if (props.theme.name === 'bisexual') return props.theme.modelSelectorBackground;
+    return props.theme.inputBackground;
+  }};
+  border: ${props => props.theme.name === 'retro' ? 
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+    'none'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '20px'};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.text};
+  font-family: ${props => props.theme.name === 'retro' ? 'MSW98UI, MS Sans Serif, Tahoma, sans-serif' : 'inherit'};
+  font-weight: ${props => props.theme.name === 'retro' ? 'normal' : '500'};
+  font-size: ${props => props.theme.name === 'retro' ? '12px' : '0.9rem'};
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: ${props => props.theme.name === 'retro' ? 'none' : 'all 0.2s ease'};
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+    '0 2px 8px rgba(0,0,0,0.1)'};
   
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    background: ${props => props.theme.name === 'bisexual' ? 
-      'linear-gradient(145deg, rgba(40, 40, 60, 0.7), rgba(25, 25, 35, 0.9))' : 
-      props.theme.inputBackground};
+    transform: ${props => props.theme.name === 'retro' ? 'none' : 'translateY(-1px)'};
+    box-shadow: ${props => {
+      if (props.theme.name === 'retro') return `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset`;
+      return '0 4px 12px rgba(0,0,0,0.15)';
+    }};
+    background: ${props => {
+      if (props.theme.name === 'retro') return props.theme.buttonFace;
+      if (props.theme.name === 'bisexual') return 'linear-gradient(145deg, rgba(40, 40, 60, 0.7), rgba(25, 25, 35, 0.9))';
+      return props.theme.inputBackground;
+    }};
   }
+
+  ${props => props.theme.name === 'retro' && css`
+    &:active {
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: ${props.isOpen ? '5px 10px' : '6px 9px 4px 11px'}; /* Adjust padding for pressed state */
+    }
+  `}
   
   span {
-    margin-left: 8px;
+    margin-left: ${props => props.theme.name === 'retro' ? '6px' : '8px'};
+    margin-right: ${props => props.theme.name === 'retro' ? '6px' : '0'};
   }
   
   svg {
     margin-left: 6px;
-    width: 10px;
-    height: 10px;
-    transition: transform 0.2s ease;
+    width: ${props => props.theme.name === 'retro' ? '16px' : '10px'};
+    height: ${props => props.theme.name === 'retro' ? '16px' : '10px'};
+    transition: ${props => props.theme.name === 'retro' ? 'none' : 'transform 0.2s ease'};
     transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0)'};
+    ${props => props.theme.name === 'retro' && css`
+      border-style: solid;
+      border-width: 0 1px 1px 0;
+      display: inline-block;
+      padding: 3px;
+      border-color: ${props.theme.buttonText};
+      transform: ${props.isOpen ? 'translateY(-2px) rotate(225deg)' : 'translateY(-3px) rotate(45deg)' };
+      margin-bottom: ${props.isOpen ? '0px' : '1px' };
+    `}
   }
   
-  /* Ensure the button doesn't look disabled even if it has backend models only */
   opacity: 1;
   pointer-events: auto;
 `;
 
 const DropdownMenu = styled.div`
   position: absolute;
-  top: calc(100% + 5px);
+  top: calc(100% + ${props => props.theme.name === 'retro' ? '1px' : '5px'});
   right: 0;
-  background: ${props => props.theme.inputBackground};
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.inputBackground};
   min-width: 200px;
-  border-radius: 12px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
   overflow: hidden;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `1px 1px 0 0 ${props.theme.buttonHighlightLight}, -1px -1px 0 0 ${props.theme.buttonShadowDark}, 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    '0 5px 20px rgba(0,0,0,0.15)'};
+  border: ${props => props.theme.name === 'retro' ? 
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+    'none'};
   z-index: 1000;
-  backdrop-filter: ${props => props.theme.glassEffect};
-  -webkit-backdrop-filter: ${props => props.theme.glassEffect};
+  backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
+  -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   
-  /* Special styling for bisexual theme */
   ${props => props.theme.name === 'bisexual' && `
     position: relative;
     
@@ -83,9 +116,8 @@ const DropdownMenu = styled.div`
     }
   `}
   
-  /* Animation */
   transform-origin: top right;
-  animation: dropdown 0.2s ease;
+  animation: ${props => props.theme.name === 'retro' ? 'none' : css`dropdown 0.2s ease`};
   
   @keyframes dropdown {
     from {
@@ -102,12 +134,15 @@ const DropdownMenu = styled.div`
 const ModelOption = styled.div`
   display: flex;
   align-items: center;
-  padding: 12px 15px;
+  padding: ${props => props.theme.name === 'retro' ? '6px 10px' : '12px 15px'};
   cursor: pointer;
-  transition: background 0.2s ease;
-  border-left: 3px solid transparent;
-  
-  ${props => props.isSelected && `
+  transition: ${props => props.theme.name === 'retro' ? 'none' : 'background 0.2s ease'};
+  border-left: ${props => props.theme.name === 'retro' ? 'none' : '3px solid transparent'};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'inherit' };
+  font-family: ${props => props.theme.name === 'retro' ? 'MSW98UI, MS Sans Serif, Tahoma, sans-serif' : 'inherit'};
+  font-size: ${props => props.theme.name === 'retro' ? '12px' : 'inherit'};
+
+  ${props => props.isSelected && props.theme.name !== 'retro' && `
     background: rgba(0,0,0,0.1);
     border-left-color: ${props.theme.name === 'bisexual' ? 
       props.theme.primary.split(',')[0].replace('linear-gradient(145deg', '').trim() : 
@@ -115,25 +150,54 @@ const ModelOption = styled.div`
   `}
   
   &:hover {
-    background: rgba(0,0,0,0.1);
+    background: ${props => {
+        if (props.theme.name === 'retro') return props.theme.buttonFace;
+        return 'rgba(0,0,0,0.1)';
+    }};
+    ${props => props.theme.name === 'retro' && css`
+      ${props.isSelected && `
+        box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+        border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      `}
+      ${!props.isSelected && `
+        background: ${props.theme.highlightBackground};
+        color: ${props.theme.highlightText};
+      `}
+    `}
+  }
+
+  ${props => props.isSelected && props.theme.name === 'retro' && css`
+    background: ${props.theme.highlightBackground};
+    color: ${props.theme.highlightText};
+  `}
+
+  & > ${ModelIcon} {
+    ${props => props.theme.name === 'retro' && css`
+      filter: grayscale(1) brightness(0.7);
+      width: 16px; 
+      height: 16px;
+    `}
   }
 `;
 
 const ModelDetails = styled.div`
-  margin-left: 12px;
+  margin-left: ${props => props.theme.name === 'retro' ? '8px' : '12px'};
+  color: inherit;
+  font-family: inherit;
 `;
 
 const ModelName = styled.div`
-  font-weight: 500;
+  font-weight: ${props => props.theme.name === 'retro' ? 'normal' : '500'};
+  font-size: inherit;
 `;
 
 const ModelProvider = styled.div`
-  font-size: 0.8rem;
+  font-size: ${props => props.theme.name === 'retro' ? '11px' : '0.8rem'};
   opacity: 0.7;
   margin-top: 2px;
+  font-size: inherit;
 `;
 
-// Add a new styled component for the backend model indicator
 const BackendModelBadge = styled.span`
   background: ${props => props.theme.primary};
   color: white;
@@ -145,30 +209,26 @@ const BackendModelBadge = styled.span`
   opacity: 0.8;
 `;
 
-const ModelSelector = ({ selectedModel, models, onChange }) => {
+const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
-  // Initialize keys as empty, rely solely on settings storage
   const [apiKeys, setApiKeys] = useState({
     google: '',
     claude: '',
     openai: '',
     nvidia: '',
-    ursa: '' // Assuming custom gguf might have a key too
+    ursa: ''
   });
 
-  // Load API keys from user settings on component mount
   useEffect(() => {
     let userSettings = {};
     try {
-      // Check sessionStorage first
       const userJSON = sessionStorage.getItem('ai_portal_current_user');
       if (userJSON) {
         const user = JSON.parse(userJSON);
         userSettings = user?.settings || {};
         console.log("Loaded settings from sessionStorage:", userSettings);
       } else {
-        // Fall back to localStorage
         const settingsJSON = localStorage.getItem('settings');
         if (settingsJSON) {
           userSettings = JSON.parse(settingsJSON);
@@ -178,41 +238,34 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
         }
       }
 
-      // Update API keys state ONLY with values found in settings
       setApiKeys({
         google: userSettings.googleApiKey || '',
         claude: userSettings.anthropicApiKey || '',
         openai: userSettings.openaiApiKey || '',
         nvidia: userSettings.nvidiaApiKey || '',
-        // Assuming 'customGgufApiKey' corresponds to Ursa/Custom GGUF models
         ursa: userSettings.customGgufApiKey || ''
       });
     } catch (e) {
       console.error('Error reading user settings for API keys:', e);
-      // Ensure keys are reset if parsing fails
-       setApiKeys({ google: '', claude: '', openai: '', nvidia: '', ursa: '' });
+      setApiKeys({ google: '', claude: '', openai: '', nvidia: '', ursa: '' });
     }
-  }, []); // Dependency array is empty, so this runs once on mount
+  }, []);
 
-  // Define all available models
   const baseModels = models || [
     { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
     { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
     { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
     { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
-    { id: 'ursa-minor', name: 'Ursa Minor' } // Represents custom GGUF
+    { id: 'ursa-minor', name: 'Ursa Minor' }
   ];
 
-  // Debug log to see what models are passed into the component
   useEffect(() => {
     console.log("Base models before filtering:", models);
     console.log("Backend models:", models?.filter(m => m.isBackendModel === true));
   }, [models]);
 
-  // Filter models based on available API keys (stricter check)
   const availableModels = baseModels.filter(model => {
-    // If it's a backend model, always include it
     if (model.isBackendModel === true) {
       console.log('Including backend model:', model);
       return true;
@@ -224,49 +277,36 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
     if (model.id.includes('claude')) return checkKey(apiKeys.claude);
     if (model.id.includes('chatgpt') || model.id.includes('gpt')) return checkKey(apiKeys.openai);
     if (model.id.includes('nemotron')) return checkKey(apiKeys.nvidia);
-    // Check 'ursa' key for 'ursa-minor' (custom gguf)
     if (model.id.includes('ursa')) return checkKey(apiKeys.ursa);
-    return false; // Hide if no key found or doesn't match category
+    return false;
   });
 
-   // Debug log for filtered models
    useEffect(() => {
      console.log("Available models after filtering:", availableModels);
    }, [availableModels]);
 
-
-  // Find current model data from the *available* models
-  // If the selected model is no longer available, default to the first available, or the very first base model if none are available
   const currentModel =
     availableModels.find(model => model.id === selectedModel) ||
     availableModels[0] ||
-    baseModels.find(model => model.id === 'gemini-2-flash'); // Fallback to a default like flash
+    baseModels.find(model => model.id === 'gemini-2-flash');
 
-  // If the initially selected model is not available, call onChange with the new default
   useEffect(() => {
     if (selectedModel !== currentModel?.id && availableModels.length > 0) {
       onChange(currentModel.id);
     } else if (availableModels.length === 0 && selectedModel) {
-       // Handle case where no models are available anymore
-       // Perhaps clear selection or select a placeholder?
-       // For now, let's stick with the hardcoded fallback in currentModel definition
        if(selectedModel !== currentModel?.id) {
-           onChange(currentModel.id) // Force selection of the fallback like flash
+           onChange(currentModel.id)
        }
     }
   }, [selectedModel, currentModel, availableModels, onChange]);
 
-
-  // Get provider name for model
   const getProviderName = (model) => {
     const modelId = model.id;
     
-    // If it's a backend model and has provider info, use it
     if (model.isBackendModel && model.provider) {
       return `${model.provider} (via Backend)`;
     }
     
-    // Otherwise fall back to the standard provider logic
     if (modelId.includes('gemini-2.5-pro')) return 'Google AI (2.5 Pro)';
     if (modelId.includes('gemini')) return 'Google AI';
     if (modelId.includes('claude')) return 'Anthropic';
@@ -276,7 +316,6 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
     return 'AI Provider';
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -291,7 +330,6 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
   }, []);
 
   const toggleDropdown = () => {
-    // Only open if there are models to show
     if (availableModels.length > 0) {
       console.log('Toggling dropdown with available models:', availableModels);
       setIsOpen(!isOpen);
@@ -306,39 +344,37 @@ const ModelSelector = ({ selectedModel, models, onChange }) => {
   };
 
   return (
-    <ModelSelectorContainer ref={containerRef}>
-       {/* Only render button if a currentModel could be determined */}
+    <ModelSelectorContainer ref={containerRef} theme={theme}>
        {currentModel ? (
          <ModelButton 
            onClick={toggleDropdown} 
            isOpen={isOpen}
+           theme={theme}
          >
-           <ModelIcon modelId={currentModel.id} size="small" />
+           <ModelIcon modelId={currentModel.id} />
            <span>{currentModel.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</span>
            {currentModel.isBackendModel && (
-             <BackendModelBadge>E</BackendModelBadge>
+             <BackendModelBadge theme={theme}>E</BackendModelBadge>
            )}
-           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-             <polyline points="6 9 12 15 18 9"></polyline>
-           </svg>
          </ModelButton>
        ) : (
-         <ModelButton disabled>No Models Available</ModelButton>
+         <ModelButton disabled theme={theme}>No Models Available</ModelButton>
        )}
 
       {isOpen && (
-        <DropdownMenu>
+        <DropdownMenu theme={theme}>
           {availableModels.map(model => (
             <ModelOption
               key={model.id}
               isSelected={model.id === selectedModel}
               onClick={() => handleSelectModel(model.id)}
+              theme={theme}
             >
-              <ModelIcon modelId={model.id} size="small" />
-              <ModelDetails>
-                <ModelName>{model.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</ModelName>
+              <ModelIcon modelId={model.id} />
+              <ModelDetails theme={theme}>
+                <ModelName theme={theme}>{model.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</ModelName>
                 {model.isBackendModel && (
-                  <BackendModelBadge>External</BackendModelBadge>
+                  <BackendModelBadge theme={theme}>External</BackendModelBadge>
                 )}
               </ModelDetails>
             </ModelOption>

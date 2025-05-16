@@ -1,26 +1,30 @@
 import React, { useRef, useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 
 const UploadButton = styled.button`
   background: transparent;
   border: none;
   color: ${props => props.theme.text};
   cursor: pointer;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: ${props => props.theme.name === 'retro' ? '24px' : '36px'};
+  height: ${props => props.theme.name === 'retro' ? '24px' : '36px'};
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
   position: absolute;
-  left: 15px;
+  left: ${props => props.theme.name === 'retro' ? '-16px' : '15px'};
   top: 50%;
   transform: translateY(-50%);
   z-index: 10;
-  
+  box-shadow: none;
+
   &:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: ${props => props.theme.name === 'retro' ? 'transparent' : 'rgba(0, 0, 0, 0.05)'};
+  }
+
+  &:active:not(:disabled) {
+    padding: ${props => props.theme.name === 'retro' ? '1px 0 0 1px' : '0'};
   }
 
   &:disabled {
@@ -39,10 +43,14 @@ const PreviewContainer = styled.div`
   left: 0;
   margin-bottom: 10px;
   background: ${props => props.theme.inputBackground};
-  border-radius: 12px;
-  border: 1px solid ${props => props.theme.border};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
+  border: ${props => props.theme.name === 'retro' ? 
+    `2px solid ${props.theme.buttonFace}` : 
+    `1px solid ${props.theme.border}`};
   padding: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` : 
+    '0 4px 12px rgba(0,0,0,0.1)'};
   display: ${props => props.show ? 'flex' : 'none'};
   align-items: center; /* Center items vertically */
   max-width: 250px;
@@ -51,8 +59,9 @@ const PreviewContainer = styled.div`
 const PreviewImage = styled.img`
   max-width: 60px; /* Smaller preview for images */
   max-height: 60px;
-  border-radius: 8px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'};
   margin-right: 10px;
+  border: ${props => props.theme.name === 'retro' ? `1px solid ${props.theme.border}` : 'none'};
 `;
 
 const FileInfo = styled.div`
@@ -78,18 +87,31 @@ const CloseButton = styled.button`
   position: absolute;
   top: 5px;
   right: 5px;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 22px;
-  height: 22px;
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'rgba(0, 0, 0, 0.5)'};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'white'};
+  border: ${props => props.theme.name === 'retro' ? 
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+    'none'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
+  width: ${props => props.theme.name === 'retro' ? '18px' : '22px'};
+  height: ${props => props.theme.name === 'retro' ? '18px' : '22px'};
   font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 2;
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+    'none'};
+    
+  &:active {
+    ${props => props.theme.name === 'retro' && `
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 1px 0 0 1px;
+    `}
+  }
 `;
 
 const UploadIcon = styled.div`
@@ -97,6 +119,11 @@ const UploadIcon = styled.div`
   align-items: center;
   justify-content: center;
   opacity: ${props => props.disabled ? 0.5 : 1};
+  
+  img {
+    width: ${props => props.theme?.name === 'retro' ? '14px' : '16px'};
+    height: ${props => props.theme?.name === 'retro' ? '14px' : '16px'};
+  }
 `;
 
 // Generic File Icon (SVG)
@@ -111,6 +138,7 @@ const FileIcon = () => (
 const FileUploadButton = ({ onFileSelected, disabled, resetFile, externalFile }) => {
   const fileInputRef = useRef(null);
   const [previewData, setPreviewData] = useState(null); // { src?: string, name: string, type: string }
+  const theme = useTheme();
   
   // Effect to handle external file for preview (e.g., from paste)
   useEffect(() => {
@@ -216,20 +244,28 @@ const FileUploadButton = ({ onFileSelected, disabled, resetFile, externalFile })
     <>
       <UploadButton onClick={handleButtonClick} disabled={disabled} title="Upload file (Image, PDF, TXT)">
         <UploadIcon disabled={disabled}>
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="22" 
-            height="22" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-            style={{ opacity: 0.7 }}
-          >
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-          </svg>
+          {theme.name === 'retro' ? (
+            <img 
+              src="/images/retroTheme/fileUpload.png" 
+              alt="Upload File" 
+              style={{ width: '16px', height: '16px' }} 
+            />
+          ) : (
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="22" 
+              height="22" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              style={{ opacity: 0.7 }}
+            >
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+            </svg>
+          )}
         </UploadIcon>
       </UploadButton>
       <HiddenInput 

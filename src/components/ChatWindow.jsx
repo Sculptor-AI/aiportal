@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { keyframes, css, useTheme } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../services/aiService';
 import ModelSelector from './ModelSelector';
@@ -17,9 +17,9 @@ const ChatWindowContainer = styled.div`
   flex-direction: column;
   height: 100%;
   width: 100%; /* Ensure it takes full width when sidebar is hidden */
-  background: ${props => props.theme.chat};
-  backdrop-filter: ${props => props.theme.glassEffect};
-  -webkit-backdrop-filter: ${props => props.theme.glassEffect};
+  background: ${props => props.theme.name === 'retro' ? 'rgb(0, 128, 128)' : props.theme.chat};
+  backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
+  -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   font-size: ${props => {
     switch(props.fontSize) {
       case 'small': return '0.9rem';
@@ -54,7 +54,7 @@ const ChatTitle = styled.h2`
   font-size: 1.2rem;
   font-weight: 500;
   margin: 0;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'retro' ? '#FFFFFF' : props.theme.text};
   flex: 1;
   line-height: 1.4; // Improve line height for better visual balance
 `;
@@ -73,7 +73,7 @@ const MessageList = styled.div`
   overflow-y: auto;
   overflow-x: hidden;
   padding: 20px;
-  padding-bottom: 115px; /* Add extra padding at the bottom to ensure text isn't hidden behind the input bar */
+  padding-bottom: ${props => props.theme.name === 'retro' ? '140px' : '115px'}; /* Add extra padding for retro theme */
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -81,16 +81,23 @@ const MessageList = styled.div`
   
   /* Stylish scrollbar */
   &::-webkit-scrollbar {
-    width: 5px;
+    width: ${props => props.theme.name === 'retro' ? '16px' : '5px'};
   }
   
   &::-webkit-scrollbar-track {
-    background: transparent;
+    background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'transparent'};
+    border: ${props => props.theme.name === 'retro' ? `1px solid ${props.theme.border}` : 'none'};
   }
   
   &::-webkit-scrollbar-thumb {
-    background: ${props => props.theme.border};
-    border-radius: 10px;
+    background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.border};
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '10px'};
+    border: ${props => props.theme.name === 'retro' ? 
+      `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+      'none'};
+    box-shadow: ${props => props.theme.name === 'retro' ? 
+      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+      'none'};
   }
 `;
 
@@ -154,10 +161,13 @@ const InputContainer = styled.div`
   padding: 0 !important;
   z-index: 100 !important;
   pointer-events: none;
-  left: 50% !important; // Common style, applied to both states
+  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 140px)'} !important; // Adjust for sidebar
   flex-direction: column;
 
-  ${({ isEmpty, animateDown }) => {
+  ${({ isEmpty, animateDown, theme }) => {
+    const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
+    const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
+    
     if (animateDown) {
       // When animateDown is true, isEmpty is false.
       // The element starts at the centered position and animates to the bottom.
@@ -184,10 +194,10 @@ const InputContainer = styled.div`
     } else { // At bottom, no animation (isEmpty is false, animateDown is false)
       return css`
         top: auto !important;
-        bottom: 30px !important;
+        bottom: ${bottomPosition} !important;
         transform: translateX(-50%) !important;
         @media (max-width: 768px) {
-          bottom: 20px !important;
+          bottom: ${mobileBottomPosition} !important;
         }
       `;
     }
@@ -197,17 +207,21 @@ const InputContainer = styled.div`
 const MessageInputWrapper = styled.div`
   position: relative;
   width: 100%;
-  max-width: 700px !important; /* Match the width from the image */
-  margin: 0 20px !important; /* Add horizontal margins */
+  max-width: ${props => props.theme.name === 'retro' ? '750px' : '700px'} !important;
+  margin: 0 auto !important; /* Center the input horizontally */
   display: flex;
   flex-direction: column;
   align-items: center;
   pointer-events: auto;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important; /* Add subtle shadow for depth */
-  border-radius: 24px !important; /* Match the input's border radius */
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` : 
+    '0 2px 10px rgba(0, 0, 0, 0.1)'} !important;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px'} !important;
   background: ${props => props.theme.inputBackground};
-  border: 1px solid ${props => props.theme.border};
-  padding-bottom: 8px;
+  border: ${props => props.theme.name === 'retro' ? 
+    `2px solid ${props.theme.buttonFace}` : 
+    `1px solid ${props.theme.border}`};
+  padding-bottom: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
 `;
 
 const InputRow = styled.div`
@@ -215,12 +229,29 @@ const InputRow = styled.div`
   width: 100%;
   position: relative;
   align-items: center;
+  
+  ${props => props.theme.name === 'retro' && `
+    &::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 80%;
+      background: ${props.theme.buttonFace};
+      border: 1px solid;
+      border-color: ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
+      box-shadow: 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      z-index: 5;
+    }
+  `}
 `;
 
 const MessageInput = styled.textarea`
   width: 100%;
-  padding: 15px 50px 15px 60px;
-  border-radius: 24px;
+  padding: 15px 50px 15px ${props => props.theme.name === 'retro' ? '50px' : '60px'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px'};
   border: none;
   background: transparent;
   color: ${props => props.theme.text};
@@ -269,18 +300,23 @@ const MessageInput = styled.textarea`
   }
   
   @media (max-width: 768px) {
-    padding: 13px 45px 13px 55px;
+    padding: 13px 45px 13px ${props => props.theme.name === 'retro' ? '48px' : '55px'};
     min-height: 45px;
   }
 `;
 
 const SendButton = styled.button`
-  background: ${props => props.disabled 
-    ? '#ccc' 
-    : props.theme.buttonGradient};
-  color: white;
-  border: none;
-  border-radius: 50%;
+  background: ${props => {
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    return props.disabled ? '#ccc' : props.theme.buttonGradient;
+  }};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'white'};
+  border: ${props => props.theme.name === 'retro' ? 
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+    'none'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
   width: 38px;
   height: 38px;
   position: absolute;
@@ -291,16 +327,34 @@ const SendButton = styled.button`
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+    '0 2px 8px rgba(0,0,0,0.1)'};
   
   &:hover:not(:disabled) {
-    background: ${props => props.theme.buttonHoverGradient};
-    transform: translateY(-50%) scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    background: ${props => props.theme.name === 'retro' ? 
+      props.theme.buttonFace : 
+      props.theme.buttonHoverGradient};
+    transform: translateY(-50%) ${props => props.theme.name === 'retro' ? '' : 'scale(1.05)'};
+    box-shadow: ${props => props.theme.name === 'retro' ? 
+      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+      '0 4px 12px rgba(0,0,0,0.15)'};
+  }
+  
+  &:active:not(:disabled) {
+    ${props => props.theme.name === 'retro' && `
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 1px 0 0 1px;
+    `}
   }
   
   &:disabled {
     cursor: not-allowed;
+    ${props => props.theme.name === 'retro' && `
+      background: ${props.theme.buttonFace};
+      opacity: 0.5;
+    `}
   }
   
   svg {
@@ -318,7 +372,7 @@ const EmptyState = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: ${props => props.theme.text}aa;
+  color: ${props => props.theme.name === 'retro' ? '#FFFFFF' : props.theme.text}aa;
   text-align: center;
   padding: 20px;
   /* backdrop-filter: blur(5px); */ // Apply blur effect to elements behind
@@ -350,11 +404,11 @@ const EmptyState = styled.div`
 const ActionChipsContainer = styled.div`
   display: flex;
   justify-content: flex-start;
-  margin-top: 2px;
-  margin-bottom: 4px;
-  gap: 8px;
+  margin-top: ${props => props.theme.name === 'retro' ? '8px' : '2px'};
+  margin-bottom: ${props => props.theme.name === 'retro' ? '8px' : '4px'};
+  gap: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
   pointer-events: auto;
-  width: 95%;
+  width: ${props => props.theme.name === 'retro' ? '90%' : '95%'};
 `;
 
 const ActionChip = styled.button`
@@ -362,18 +416,48 @@ const ActionChip = styled.button`
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  border-radius: 20px;
-  background-color: ${props => props.selected ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.03)'};
-  border: 1px solid ${props => props.selected ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '20px'};
+  background-color: ${props => {
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    return props.selected ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.03)';
+  }};
+  border: ${props => {
+    if (props.theme.name === 'retro') {
+      return props.selected ? 
+        `1px solid ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark}` : 
+        `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
+    }
+    return props.selected ? '1px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(0, 0, 0, 0.05)';
+  }};
   color: ${props => props.selected ? props.theme.text : props.theme.text + '99'};
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    props.selected ?
+      `-1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+    'none'};
   
   &:hover {
-    background-color: ${props => props.selected ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.06)'};
+    background-color: ${props => {
+      if (props.theme.name === 'retro') {
+        return props.theme.buttonFace;
+      }
+      return props.selected ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.06)';
+    }};
     color: ${props => props.theme.text};
+  }
+
+  &:active:not(:disabled) {
+    ${props => props.theme.name === 'retro' && `
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 7px 11px 5px 13px;
+    `}
   }
 
   svg {
@@ -409,10 +493,12 @@ const ChipDropdownMenu = styled.div`
   top: 100%;
   left: 0;
   margin-top: 5px;
-  background: ${props => props.theme.inputBackground};
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'}; /* Square corners for retro */
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `1px 1px 0 0 ${props.theme.buttonHighlightLight}, -1px -1px 0 0 ${props.theme.buttonShadowDark}, 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    '0 2px 10px rgba(0, 0, 0, 0.1)'};
   width: 150px;
   overflow: hidden;
   z-index: 10;
@@ -424,21 +510,37 @@ const ChipDropdownItem = styled.button`
   gap: 8px;
   width: 100%;
   padding: 8px 12px;
-  background: ${props => props.$active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
+  background: ${props => props.$active && props.theme.name !== 'retro' ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
   border: none;
   text-align: left;
   font-size: 13px;
   cursor: pointer;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.text};
+  font-family: ${props => props.theme.name === 'retro' ? 'MSW98UI, MS Sans Serif, Tahoma, sans-serif' : 'inherit'};
   
   &:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'rgba(0, 0, 0, 0.05)'}; 
+    /* For retro, ensure hover doesn't change background unless it implies selection highlight */
+    ${props => props.theme.name === 'retro' && props.$active && `
+      /* Simulate inset press for active/hovered retro dropdown item */
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    `}
   }
   
   svg {
     width: 14px;
     height: 14px;
+    filter: ${props => props.theme.name === 'retro' ? 'grayscale(1) brightness(0.5)': 'none'}; /* Retro icons might need adjustment */
   }
+`;
+
+// Create a RetroIconWrapper component for ActionChips
+const RetroIconWrapper = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
 `;
 
 const ChatWindow = ({ 
@@ -471,6 +573,7 @@ const ChatWindow = ({
   const inputRef = useRef(null); // Add ref for the textarea
   const [isProcessingFile, setIsProcessingFile] = useState(false); // State for file processing
   const toast = useToast();
+  const theme = useTheme();
 
   // Helper function to add alerts/toasts
   const addAlert = (alertOptions) => {
@@ -1063,7 +1166,7 @@ const ChatWindow = ({
       <ChatWindowContainer fontSize={settings?.fontSize}>
         <EmptyState isExiting={animateEmptyStateOut}>
         </EmptyState>
-        <InputContainer isEmpty={true} animateDown={false}>
+        <InputContainer isEmpty={true} animateDown={false} sidebarCollapsed={sidebarCollapsed}>
           <MessageInputWrapper isEmpty={true}>
             <FileUploadButton 
               onFileSelected={handleFileSelected} 
@@ -1086,10 +1189,14 @@ const ChatWindow = ({
               onClick={submitMessage}
               disabled={true}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 2L11 13"></path>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
+              {theme.name === 'retro' ? (
+                <img src="/images/retroTheme/sendIcon.png" alt="Send" style={{ width: '16px', height: '16px' }} />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2L11 13"></path>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              )}
             </SendButton>
           </MessageInputWrapper>
         </InputContainer>
@@ -1182,6 +1289,7 @@ const ChatWindow = ({
             models={availableModels}
             onChange={handleModelChange}
             key="model-selector"
+            theme={theme}
           />
         </ModelSelectorWrapper>
       </ChatHeader>
@@ -1205,7 +1313,7 @@ const ChatWindow = ({
           </MessageList>
       )}
       
-      <InputContainer isEmpty={chatIsEmpty} animateDown={effectiveAnimateDownSignal}>
+      <InputContainer isEmpty={chatIsEmpty} animateDown={effectiveAnimateDownSignal} sidebarCollapsed={sidebarCollapsed}>
         <MessageInputWrapper isEmpty={chatIsEmpty}>
           <InputRow>
             <FileUploadButton 
@@ -1229,10 +1337,14 @@ const ChatWindow = ({
               onClick={submitMessage} // Changed from handleSendMessage
               disabled={isLoading || isProcessingFile || (!inputMessage.trim() && !uploadedFileData)} // Also disable while processing
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 2L11 13"></path>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
+              {theme.name === 'retro' ? (
+                <img src="/images/retroTheme/sendIcon.png" alt="Send" style={{ width: '16px', height: '16px' }} />
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2L11 13"></path>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              )}
             </SendButton>
           </InputRow>
           
@@ -1243,31 +1355,22 @@ const ChatWindow = ({
               selected={false}
               onClick={() => setShowModeDropdown(!showModeDropdown)}
             >
-              {thinkingMode === 'thinking' ? (
+              {theme.name === 'retro' ? (
+                <RetroIconWrapper>
+                  <img src="/images/retroTheme/modeIcon.png" alt="Mode" style={{ width: '16px', height: '16px' }} />
+                </RetroIconWrapper>
+              ) : thinkingMode === 'thinking' ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
                   <line x1="16" y1="8" x2="2" y2="22"></line>
                   <line x1="17.5" y1="15" x2="9" y2="15"></line>
                 </svg>
-              ) : thinkingMode === 'instant' ? (
+              ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                 </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-                  <rect x="9" y="9" width="6" height="6"></rect>
-                  <line x1="9" y1="2" x2="9" y2="4"></line>
-                  <line x1="15" y1="2" x2="15" y2="4"></line>
-                  <line x1="9" y1="20" x2="9" y2="22"></line>
-                  <line x1="15" y1="20" x2="15" y2="22"></line>
-                  <line x1="20" y1="9" x2="22" y2="9"></line>
-                  <line x1="20" y1="14" x2="22" y2="14"></line>
-                  <line x1="2" y1="9" x2="4" y2="9"></line>
-                  <line x1="2" y1="14" x2="4" y2="14"></line>
-                </svg>
               )}
-              {thinkingMode === 'thinking' ? 'Thinking' : thinkingMode === 'instant' ? 'Instant' : 'Mode'}
+              {thinkingMode === 'thinking' ? 'Thinking' : 'Instant'}
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
@@ -1331,19 +1434,31 @@ const ChatWindow = ({
               selected={selectedActionChip === 'search'} 
               onClick={() => setSelectedActionChip(selectedActionChip === 'search' ? null : 'search')}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
+              {theme.name === 'retro' ? (
+                <RetroIconWrapper>
+                  <img src="/images/retroTheme/searchIcon.png" alt="Search" style={{ width: '16px', height: '16px' }} />
+                </RetroIconWrapper>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              )}
               Search
             </ActionChip>
             <ActionChip 
               selected={selectedActionChip === 'deep-research'} 
               onClick={() => setSelectedActionChip(selectedActionChip === 'deep-research' ? null : 'deep-research')}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
-              </svg>
+              {theme.name === 'retro' ? (
+                <RetroIconWrapper>
+                  <img src="/images/retroTheme/deepResearch.png" alt="Deep Research" style={{ width: '16px', height: '16px' }} />
+                </RetroIconWrapper>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
+                </svg>
+              )}
               Deep research
             </ActionChip>
             <ActionChip 
@@ -1351,7 +1466,11 @@ const ChatWindow = ({
               selected={selectedActionChip === 'create-image' || selectedActionChip === 'create-video'}
               onClick={() => setShowCreateDropdown(!showCreateDropdown)}
             >
-              {createType === 'image' ? (
+              {theme.name === 'retro' ? (
+                <RetroIconWrapper>
+                  <img src="/images/retroTheme/createIcon.png" alt="Create" style={{ width: '16px', height: '16px' }} />
+                </RetroIconWrapper>
+              ) : createType === 'image' ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                   <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -1362,11 +1481,6 @@ const ChatWindow = ({
                   <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
                   <line x1="7" y1="2" x2="7" y2="22"></line>
                   <line x1="17" y1="2" x2="17" y2="22"></line>
-                  <line x1="2" y1="12" x2="22" y2="12"></line>
-                  <line x1="2" y1="7" x2="7" y2="7"></line>
-                  <line x1="2" y1="17" x2="7" y2="17"></line>
-                  <line x1="17" y1="17" x2="22" y2="17"></line>
-                  <line x1="17" y1="7" x2="22" y2="7"></line>
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1427,11 +1541,6 @@ const ChatWindow = ({
                       <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
                       <line x1="7" y1="2" x2="7" y2="22"></line>
                       <line x1="17" y1="2" x2="17" y2="22"></line>
-                      <line x1="2" y1="12" x2="22" y2="12"></line>
-                      <line x1="2" y1="7" x2="7" y2="7"></line>
-                      <line x1="2" y1="17" x2="7" y2="17"></line>
-                      <line x1="17" y1="17" x2="22" y2="17"></line>
-                      <line x1="17" y1="7" x2="22" y2="7"></line>
                     </svg>
                     Video
                   </ChipDropdownItem>
