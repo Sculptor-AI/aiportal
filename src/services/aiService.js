@@ -948,6 +948,21 @@ export const streamMessageFromBackend = async (
           
           try {
             const parsed = JSON.parse(data);
+            
+            // Handle sources special event type
+            if (parsed.type === 'sources' && Array.isArray(parsed.sources)) {
+              console.log('Received sources data:', parsed.sources);
+              // Store the sources data to be attached to the message
+              // We need a way to communicate this back to the ChatWindow component
+              // Don't add sources text to the content anymore
+              // const sourcesMessage = `\n\nSources: ${parsed.sources.map(s => s.title).join(', ')}`;
+              // onChunk(sourcesMessage);
+              
+              // Store the sources globally to be picked up by the ChatWindow component
+              window.__lastSearchSources = parsed.sources;
+              continue;
+            }
+            
             const content = parsed.choices?.[0]?.delta?.content || 
                            parsed.content || 
                            '';

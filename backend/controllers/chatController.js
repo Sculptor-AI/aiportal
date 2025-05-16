@@ -27,7 +27,7 @@ export const completeChat = async (req, res) => {
         const searchResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/search-process`, {
           query: prompt,
           max_results: deepResearch ? 5 : 3,
-          model_prompt: "Based on the search results above, please answer this question in a comprehensive way with the most up-to-date information.",
+          model_prompt: "Based on the search results above, please answer this question in a comprehensive way with the most up-to-date information. DO NOT mention or reference the sources in your answer, as they will be displayed separately.",
           modelType: modelType // Pass the model type to use the same model
         });
         
@@ -162,10 +162,74 @@ export const streamChat = async (req, res) => {
     const doDeepResearch = deepResearch === 'true' || deepResearch === true;
     const doImageGen = imageGen === 'true' || imageGen === true;
     
-    // Temporarily disabled until search functionality is implemented
+    // If search is enabled, use the search processing functionality
     if (doSearch) {
-      res.write(`data: Searching for information about "${prompt}"...\n\n`);
-      // Future search implementation would go here
+      try {
+        // Call the search-process endpoint to get search results
+        const searchResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/search-process`, {
+          query: prompt,
+          max_results: doDeepResearch ? 5 : 3,
+          model_prompt: "Based on the search results above, please answer this question in a comprehensive way with the most up-to-date information. DO NOT mention or reference the sources in your answer, as they will be displayed separately.",
+          modelType: modelType // Pass the model type to use the same model
+        });
+        
+        // If we have sources, include them in the message
+        if (searchResponse.data.sources && searchResponse.data.sources.length > 0) {
+          // Removing this section to eliminate the "Sources found:" text in the response
+          // const sourcesText = searchResponse.data.sources
+          //   .map((source, index) => `${index + 1}. [${source.title}](${source.url})`)
+          //   .join('\n');
+          // 
+          // res.write(`data: Sources found:\n${sourcesText}\n\n`);
+        }
+        
+        // Stream the response content if available
+        if (searchResponse.data.result && searchResponse.data.result.choices && 
+            searchResponse.data.result.choices[0] && 
+            searchResponse.data.result.choices[0].message) {
+          
+          const content = searchResponse.data.result.choices[0].message.content;
+          res.write(`data: ${content}\n\n`);
+        } else if (searchResponse.data.choices && searchResponse.data.choices[0]) {
+          // For OpenRouter format
+          const content = searchResponse.data.choices[0].message.content;
+          res.write(`data: ${content}\n\n`);
+        } else if (searchResponse.data.content) {
+          res.write(`data: ${searchResponse.data.content}\n\n`);
+        } else {
+          // If we can't find the content in the expected structure, try to send the whole response
+          // This is a fallback for unexpected response structures
+          try {
+            const fullResponse = JSON.stringify(searchResponse.data);
+            res.write(`data: Unable to parse structured response. Full data: ${fullResponse}\n\n`);
+          } catch (e) {
+            res.write(`data: Received search results but couldn't parse them.\n\n`);
+          }
+        }
+        
+        // Add sources as structured data in the "sources" property of the message
+        // We'll parse this separately in the frontend
+        if (searchResponse.data.sources && searchResponse.data.sources.length > 0) {
+          const sourceEvent = {
+            type: 'sources',
+            sources: searchResponse.data.sources
+          };
+          res.write(`data: ${JSON.stringify(sourceEvent)}\n\n`);
+        }
+        
+        // End the response
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      } catch (error) {
+        console.error('Error in search processing:', error);
+        console.error('Error details:', error.response?.data);
+        
+        // Send error message to client
+        res.write(`data: Error performing search: ${error.message}\n\n`);
+        res.write('data: Falling back to regular model response.\n\n');
+        
+        // Fall through to regular streaming response
+      }
     }
     
     // Adjusted model name for OpenRouter (they use standardized model names)

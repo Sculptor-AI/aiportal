@@ -293,14 +293,14 @@ const Message = styled.div`
 const Avatar = styled.div`
   width: 36px;
   height: 36px;
-  border-radius: ${props => props.useModelIcon ? '0' : '50%'};
+  border-radius: ${props => props.$useModelIcon ? '0' : '50%'};
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: 14px;
   font-weight: 600;
   flex-shrink: 0;
-  background: ${props => props.useModelIcon 
+  background: ${props => props.$useModelIcon 
     ? 'transparent' 
     : (props.role === 'user' 
         ? props.theme.buttonGradient 
@@ -319,7 +319,7 @@ const Content = styled.div`
   padding: 15px 18px;
   border-radius: ${props => {
     // Apply bubble style
-    const bubbleStyle = props.bubbleStyle || 'modern';
+    const bubbleStyle = props.$bubbleStyle || 'modern';
     switch (bubbleStyle) {
       case 'classic': return '8px';
       case 'minimal': return '0';
@@ -331,7 +331,7 @@ const Content = styled.div`
   white-space: pre-wrap;
   background: ${props => {
     // Apply bubble style
-    const bubbleStyle = props.bubbleStyle || 'modern';
+    const bubbleStyle = props.$bubbleStyle || 'modern';
     if (bubbleStyle === 'minimal') {
       return 'transparent';
     }
@@ -340,7 +340,7 @@ const Content = styled.div`
   color: ${props => props.theme.text};
   box-shadow: ${props => {
     // Apply bubble style
-    const bubbleStyle = props.bubbleStyle || 'modern';
+    const bubbleStyle = props.$bubbleStyle || 'modern';
     if (bubbleStyle === 'minimal') {
       return 'none';
     }
@@ -349,9 +349,9 @@ const Content = styled.div`
   line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
-  backdrop-filter: ${props => props.bubbleStyle === 'minimal' ? 'none' : 'blur(5px)'};
-  -webkit-backdrop-filter: ${props => props.bubbleStyle === 'minimal' ? 'none' : 'blur(5px)'};
-  border: ${props => props.bubbleStyle === 'minimal' ? 'none' : `1px solid ${props.theme.border}`};
+  backdrop-filter: ${props => props.$bubbleStyle === 'minimal' ? 'none' : 'blur(5px)'};
+  -webkit-backdrop-filter: ${props => props.$bubbleStyle === 'minimal' ? 'none' : 'blur(5px)'};
+  border: ${props => props.$bubbleStyle === 'minimal' ? 'none' : `1px solid ${props.theme.border}`};
   
   /* Special border for bisexual theme */
   ${props => props.theme.name === 'bisexual' && `
@@ -669,14 +669,14 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
 
   return (
     <Message alignment={messageAlignment}>
-      {messageAlignment !== 'right' && <Avatar role={role} useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+      {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
       {isError ? (
-        <ErrorMessage role={role} bubbleStyle={bubbleStyle}>
+        <ErrorMessage role={role} $bubbleStyle={bubbleStyle}>
           {content}
           {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
         </ErrorMessage>
       ) : (
-        <Content role={role} bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+        <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
           {image && (
             <MessageImage src={image} alt="Uploaded image" />
           )}
@@ -717,10 +717,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
             content.split('\n\n-').map((part, index) => {
               if (index === 0) {
                 // This is the main content part - process markdown formatting
-                return formatContent(part);
+                return <React.Fragment key={`content-part-${index}`}>{formatContent(part)}</React.Fragment>;
               }
               // This is the model signature part
-              return <em key={index}>- {part}</em>;
+              return <em key={`signature-part-${index}`}>- {part}</em>;
             })
           )}
           
@@ -751,7 +751,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
           {hasSources && !isLoading && (
             <SourcesContainer>
               {sources.map((source, index) => (
-                <SourceButton key={index} onClick={() => window.open(source.url, '_blank')}>
+                <SourceButton key={`source-${index}`} onClick={() => window.open(source.url, '_blank')}>
                   <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src='https://www.google.com/s2/favicons?domain=' + source.url} />
                   {extractDomain(source.url)}
                 </SourceButton>
@@ -760,7 +760,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
           )}
         </Content>
       )}
-      {messageAlignment === 'right' && <Avatar role={role} useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+      {messageAlignment === 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
     </Message>
   );
 };

@@ -424,7 +424,7 @@ const ChipDropdownItem = styled.button`
   gap: 8px;
   width: 100%;
   padding: 8px 12px;
-  background: ${props => props.active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
+  background: ${props => props.$active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
   border: none;
   text-align: left;
   font-size: 13px;
@@ -745,7 +745,18 @@ const ChatWindow = ({
           );
           
           // Finalize the message when streaming is complete
-          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
+          const messageUpdates = { content: streamedContent, isLoading: false };
+          
+          // Check if we have search sources stored from the response
+          if (window.__lastSearchSources && Array.isArray(window.__lastSearchSources) && 
+              (currentActionChip === 'search' || currentActionChip === 'deep-research')) {
+            console.log('Adding sources to message:', window.__lastSearchSources);
+            messageUpdates.sources = window.__lastSearchSources;
+            // Clear the global variable after using it
+            window.__lastSearchSources = null;
+          }
+          
+          updateMessage(currentChatId, aiMessageId, messageUpdates);
           console.log(`[ChatWindow] Backend streaming finished for ${currentModel}.`);
         } else {
           // Use non-streaming API for models that don't support streaming
@@ -1264,7 +1275,7 @@ const ChatWindow = ({
               {showModeDropdown && (
                 <ChipDropdownMenu>
                   <ChipDropdownItem 
-                    active={thinkingMode === null} 
+                    $active={thinkingMode === null} 
                     onClick={(e) => {
                       e.stopPropagation();
                       setThinkingMode(null);
@@ -1286,7 +1297,7 @@ const ChatWindow = ({
                     Default
                   </ChipDropdownItem>
                   <ChipDropdownItem 
-                    active={thinkingMode === 'thinking'} 
+                    $active={thinkingMode === 'thinking'} 
                     onClick={(e) => {
                       e.stopPropagation();
                       setThinkingMode('thinking');
@@ -1301,7 +1312,7 @@ const ChatWindow = ({
                     Thinking
                   </ChipDropdownItem>
                   <ChipDropdownItem 
-                    active={thinkingMode === 'instant'} 
+                    $active={thinkingMode === 'instant'} 
                     onClick={(e) => {
                       e.stopPropagation();
                       setThinkingMode('instant');
@@ -1372,7 +1383,7 @@ const ChatWindow = ({
               {showCreateDropdown && (
                 <ChipDropdownMenu>
                   <ChipDropdownItem 
-                    active={createType === null} 
+                    $active={createType === null} 
                     onClick={(e) => {
                       e.stopPropagation();
                       setCreateType(null);
@@ -1388,7 +1399,7 @@ const ChatWindow = ({
                     Default
                   </ChipDropdownItem>
                   <ChipDropdownItem 
-                    active={createType === 'image'} 
+                    $active={createType === 'image'} 
                     onClick={(e) => {
                       e.stopPropagation();
                       setCreateType('image');
@@ -1404,7 +1415,7 @@ const ChatWindow = ({
                     Image
                   </ChipDropdownItem>
                   <ChipDropdownItem 
-                    active={createType === 'video'} 
+                    $active={createType === 'video'} 
                     onClick={(e) => {
                       e.stopPropagation();
                       setCreateType('video');
