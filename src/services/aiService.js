@@ -394,14 +394,15 @@ const parseSSEChunk = (chunk) => {
 };
 
 // Refactored sendMessage as an async generator
-export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false) { 
+export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false, systemPrompt = null) { 
   console.log(`sendMessage (streaming) called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`, 
     imageData ? `imageData: Present` : '',
     fileTextContent ? `fileTextContent: Present` : '',
     `search: ${search}`,
     `deepResearch: ${deepResearch}`,
-    `imageGen: ${imageGen}`
+    `imageGen: ${imageGen}`,
+    systemPrompt ? `systemPrompt: Present` : ''
   );
 
   // Validate inputs
@@ -506,6 +507,40 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
      // Only add stream: true for non-Gemini models
      ...(modelId.startsWith('gemini') ? {} : { stream: true })
   };
+  
+  // Add system prompt if provided
+  if (systemPrompt) {
+    // Add system message based on model type
+    if (modelId.startsWith('gemini')) {
+      // For Gemini models
+      if (requestPayload.contents && Array.isArray(requestPayload.contents)) {
+        requestPayload.contents.unshift({
+          role: 'user',
+          parts: [{ text: `System: ${systemPrompt}` }]
+        });
+        console.log("Added system prompt to Gemini model as user message");
+      }
+    } else if (modelId.startsWith('claude')) {
+      // For Claude models
+      if (requestPayload.messages && Array.isArray(requestPayload.messages)) {
+        requestPayload.messages.unshift({
+          role: 'system',
+          content: systemPrompt
+        });
+        console.log("Added system prompt to Claude model as system message");
+      }
+    } else if (modelId.startsWith('chatgpt')) {
+      // For ChatGPT models
+      if (requestPayload.messages && Array.isArray(requestPayload.messages)) {
+        requestPayload.messages.unshift({
+          role: 'system',
+          content: systemPrompt
+        });
+        console.log("Added system prompt to ChatGPT model as system message");
+      }
+    }
+    console.log(`System prompt first 50 chars: ${systemPrompt.substring(0, 50)}...`);
+  }
   
   console.log("Final Streaming Request URL:", url);
   console.log("Final Streaming Request Headers:", headers);
@@ -768,9 +803,11 @@ export const fetchModelsFromBackend = async () => {
  * @param {boolean} imageGen - Whether to generate images
  * @param {string} imageData - Optional base64 image data
  * @param {string} fileTextContent - Optional text content from PDF or text file
+ * @param {string} systemPrompt - Optional system prompt for thinking mode
+ * @param {string} mode - Optional mode for the request
  * @returns {Promise<Object>} The response
  */
-export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null, fileTextContent = null) => {
+export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null) => {
   try {
     // Build the API endpoint URL based on the action requested
     let endpoint = '/chat';
@@ -779,16 +816,26 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
       prompt: message,
       search: search,
       deepResearch: deepResearch,
-      imageGen: imageGen
+      imageGen: imageGen,
+      mode: mode
     };
     
     console.log("sendMessageToBackend called with:", { 
       modelId, 
+      mode,
       messageLength: message?.length,
       hasImage: !!imageData,
       hasFileText: !!fileTextContent,
+      hasSystemPrompt: !!systemPrompt,
       fileTextLength: fileTextContent?.length
     });
+    
+    // Add system prompt if provided
+    if (systemPrompt) {
+      body.systemPrompt = systemPrompt;
+      console.log("Added system prompt to backend request");
+      console.log(`System prompt first 50 chars: ${systemPrompt.substring(0, 50)}...`);
+    }
     
     // Add image data if provided
     if (imageData) {
@@ -853,6 +900,8 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
  * @param {boolean} imageGen - Whether to generate images
  * @param {string} imageData - Optional base64 image data
  * @param {string} fileTextContent - Optional text content from PDF or text file
+ * @param {string} systemPrompt - Optional system prompt for thinking mode
+ * @param {string} mode - Optional mode for the request
  * @returns {Promise<void>} A promise that resolves when streaming is complete
  */
 export const streamMessageFromBackend = async (
@@ -863,7 +912,9 @@ export const streamMessageFromBackend = async (
   deepResearch = false, 
   imageGen = false, 
   imageData = null,
-  fileTextContent = null
+  fileTextContent = null,
+  systemPrompt = null,
+  mode = null
 ) => {
   try {
     // Create the request packet
@@ -872,16 +923,26 @@ export const streamMessageFromBackend = async (
       prompt,
       search,
       deepResearch,
-      imageGen
+      imageGen,
+      mode: mode
     };
     
     console.log("streamMessageFromBackend called with:", { 
       modelType, 
+      mode,
       promptLength: prompt?.length,
       hasImage: !!imageData,
       hasFileText: !!fileTextContent,
+      hasSystemPrompt: !!systemPrompt,
       fileTextLength: fileTextContent?.length
     });
+    
+    // Add system prompt if provided
+    if (systemPrompt) {
+      requestPacket.systemPrompt = systemPrompt;
+      console.log("Added system prompt to streaming request");
+      console.log(`System prompt first 50 chars: ${systemPrompt.substring(0, 50)}...`);
+    }
     
     // Add image data if provided
     if (imageData) {

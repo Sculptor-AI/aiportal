@@ -23,12 +23,6 @@ const AppContainer = styled.div`
   background: ${props => props.theme.background};
   color: ${props => props.theme.text};
   transition: background 0.3s ease;
-  
-  ${props => props.sidebarCollapsed && `
-    @media (min-width: 769px) {
-      padding-left: 0;
-    }
-  `}
 `;
 
 // Add back the floating hamburger button
@@ -62,7 +56,7 @@ const FloatingMenuButton = styled.button`
 const MainGreeting = styled.div`
   position: fixed;
   top: 35%; /* Adjusted lower: Default for larger screens */
-  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 140px)'}; /* 140px is half of sidebar width 280px */
+  left: 50%; /* Always centered in viewport */
   transform: translateX(-50%);
   max-width: 800px; /* Keep a max width */
   width: 90%; /* Use percentage width for better flexibility */
@@ -71,7 +65,7 @@ const MainGreeting = styled.div`
   pointer-events: none;
   padding: 0 20px; /* Horizontal padding */
   box-sizing: border-box; /* Include padding in width calculation */
-  transition: left 0.3s ease-out, top 0.3s ease-out; /* Added top to transition */
+  transition: top 0.3s ease-out; /* Only transition top property */
   
   h1 {
     font-size: min(2.2rem, 6vw); /* Adjusted responsive font size */
@@ -87,7 +81,6 @@ const MainGreeting = styled.div`
 
   /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
-    left: 50%; /* Override: Always viewport center on smaller screens */
     top: 30%; /* Adjusted lower: For tablets and smaller */
     max-width: 90%; /* Reduce max-width on smaller screens */
     padding: 0 15px; 
@@ -98,7 +91,6 @@ const MainGreeting = styled.div`
 
   /* Adjustments for very small screens */
   @media (max-width: 480px) {
-    left: 50%; /* Override: Always viewport center on very small screens */
     top: 28%; /* Adjusted lower: For very small screens */
     max-width: 95%; /* Allow slightly more width on very small screens */
     padding: 0 10px; 
@@ -510,7 +502,7 @@ const AppContent = () => {
     <ThemeProvider theme={currentTheme}>
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
-        <AppContainer sidebarCollapsed={collapsed} className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
+        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
           {collapsed && (
             <FloatingMenuButton onClick={() => setCollapsed(false)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

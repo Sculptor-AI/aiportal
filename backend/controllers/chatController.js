@@ -8,14 +8,16 @@ import { formatResponsePacket } from '../utils/formatters.js';
  */
 export const completeChat = async (req, res) => {
   try {
-    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null } = req.body;
+    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null, mode } = req.body;
     
     // Log the request (without sensitive data)
-    console.log(`Request received for model: ${modelType}, search: ${search}, hasImage: ${!!imageData}`);
+    console.log(`Request received for model: ${modelType}, mode: ${mode}, search: ${search}, hasImage: ${!!imageData}`);
     
     // Check against list of available models to prevent abuse
+    // If mode is 'instant', modelType will be overridden, so skip this check for 'instant' mode or ensure 'meta-llama/llama-4-scout' is allowed.
+    // For now, we assume 'meta-llama/llama-4-scout' will be added to ALLOWED_MODELS.
     const allowedModels = process.env.ALLOWED_MODELS?.split(',') || [];
-    if (!allowedModels.includes(modelType)) {
+    if (mode !== 'instant' && !allowedModels.includes(modelType)) {
       return res.status(400).json({ error: 'Invalid model type requested' });
     }
     
@@ -44,18 +46,25 @@ export const completeChat = async (req, res) => {
     
     // Model-specific adjustments and normalization
     let adjustedModelType = modelType;
-    
-    // Some models need specific handling - these mappings may need to be updated
-    // based on OpenRouter's current model IDs
-    const modelMappings = {
-      'google/gemini-2.5-pro-exp-03-25': 'google/gemini-pro-1.5',
-      'deepseek/deepseek-v3-base:free': 'deepseek/deepseek-chat-v3-0324:free',
-      'deepseek/deepseek-r1:free': 'deepseek/deepseek-r1'
-    };
-    
-    if (modelMappings[modelType]) {
-      console.log(`Adjusting model ID from ${modelType} to ${modelMappings[modelType]}`);
-      adjustedModelType = modelMappings[modelType];
+    let providerConfig = null;
+
+    if (mode === 'instant') {
+      adjustedModelType = 'meta-llama/llama-4-scout';
+      providerConfig = { only: ["Cerebras"] };
+      console.log(`Instant mode detected. Overriding model to ${adjustedModelType} with provider Cerebras.`);
+    } else {
+      // Some models need specific handling - these mappings may need to be updated
+      // based on OpenRouter's current model IDs
+      const modelMappings = {
+        'google/gemini-2.5-pro-exp-03-25': 'google/gemini-pro-1.5',
+        'deepseek/deepseek-v3-base:free': 'deepseek/deepseek-chat-v3-0324:free',
+        'deepseek/deepseek-r1:free': 'deepseek/deepseek-r1'
+      };
+      
+      if (modelMappings[modelType]) {
+        console.log(`Adjusting model ID from ${modelType} to ${modelMappings[modelType]}`);
+        adjustedModelType = modelMappings[modelType];
+      }
     }
     
     // Prepare the message content based on whether we have an image or not
@@ -90,8 +99,12 @@ export const completeChat = async (req, res) => {
         content: messageContent 
       }]
     };
+
+    if (providerConfig) {
+      openRouterPayload.provider = providerConfig;
+    }
     
-    console.log(`Sending request to OpenRouter with model: ${adjustedModelType}`);
+    console.log(`Sending request to OpenRouter with payload:`, openRouterPayload);
     
     // Call OpenRouter API
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', openRouterPayload, {
@@ -137,7 +150,7 @@ export const completeChat = async (req, res) => {
  * @param {Object} res - Express response object
  */
 export const streamChat = async (req, res) => {
-  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent } = req.body;
+  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode } = req.body;
   
   if (!modelType || !prompt) {
     return res.status(400).json({ error: 'Missing required fields: modelType and prompt' });
@@ -145,6 +158,7 @@ export const streamChat = async (req, res) => {
   
   console.log("Backend streamChat received:", { 
     modelType, 
+    mode,
     promptLength: prompt?.length,
     hasImage: !!imageData,
     hasFileText: !!fileTextContent,
@@ -234,20 +248,27 @@ export const streamChat = async (req, res) => {
     
     // Adjusted model name for OpenRouter (they use standardized model names)
     let adjustedModelType = modelType;
-    
-    // Map to standardized model names for OpenRouter if needed
-    if (modelType === 'chatgpt-4' || modelType === 'gpt-4') {
-      adjustedModelType = 'openai/gpt-4';
-    } else if (modelType === 'chatgpt-4o' || modelType === 'gpt-4o') {
-      adjustedModelType = 'openai/gpt-4o';
-    } else if (modelType === 'chatgpt-3.5-turbo' || modelType === 'gpt-3.5-turbo') {
-      adjustedModelType = 'openai/gpt-3.5-turbo';
-    } else if (modelType === 'claude-3-opus') {
-      adjustedModelType = 'anthropic/claude-3-opus';
-    } else if (modelType === 'claude-3-sonnet') {
-      adjustedModelType = 'anthropic/claude-3-sonnet';
-    } else if (modelType === 'claude-3-haiku') {
-      adjustedModelType = 'anthropic/claude-3-haiku';
+    let providerConfig = null;
+
+    if (mode === 'instant') {
+      adjustedModelType = 'meta-llama/llama-4-scout';
+      providerConfig = { only: ["Cerebras"] };
+      console.log(`Instant mode detected (streaming). Overriding model to ${adjustedModelType} with provider Cerebras.`);
+    } else {
+      // Map to standardized model names for OpenRouter if needed
+      if (modelType === 'chatgpt-4' || modelType === 'gpt-4') {
+        adjustedModelType = 'openai/gpt-4';
+      } else if (modelType === 'chatgpt-4o' || modelType === 'gpt-4o') {
+        adjustedModelType = 'openai/gpt-4o';
+      } else if (modelType === 'chatgpt-3.5-turbo' || modelType === 'gpt-3.5-turbo') {
+        adjustedModelType = 'openai/gpt-3.5-turbo';
+      } else if (modelType === 'claude-3-opus') {
+        adjustedModelType = 'anthropic/claude-3-opus';
+      } else if (modelType === 'claude-3-sonnet') {
+        adjustedModelType = 'anthropic/claude-3-sonnet';
+      } else if (modelType === 'claude-3-haiku') {
+        adjustedModelType = 'anthropic/claude-3-haiku';
+      }
     }
     
     // Prepare message content based on what was provided
@@ -305,8 +326,12 @@ export const streamChat = async (req, res) => {
       }],
       stream: true
     };
+
+    if (providerConfig) {
+      openRouterPayload.provider = providerConfig;
+    }
     
-    console.log(`Sending streaming request to OpenRouter with model: ${adjustedModelType}`);
+    console.log(`Sending streaming request to OpenRouter with payload:`, openRouterPayload);
     
     // Make a streaming request to OpenRouter
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', 
@@ -366,7 +391,7 @@ export const streamChat = async (req, res) => {
  * @param {Object} res - Express response object
  */
 export const handleChat = async (req, res) => {
-  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent } = req.body;
+  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode } = req.body;
   
   if (!modelType || !prompt) {
     return res.status(400).json({ error: 'Missing required fields: modelType and prompt' });
@@ -374,6 +399,7 @@ export const handleChat = async (req, res) => {
   
   console.log("Backend handleChat received:", { 
     modelType, 
+    mode,
     promptLength: prompt?.length,
     hasImage: !!imageData,
     hasFileText: !!fileTextContent,
@@ -383,20 +409,27 @@ export const handleChat = async (req, res) => {
   try {
     // Adjusted model name for OpenRouter (they use standardized model names)
     let adjustedModelType = modelType;
-    
-    // Map to standardized model names for OpenRouter if needed
-    if (modelType === 'chatgpt-4' || modelType === 'gpt-4') {
-      adjustedModelType = 'openai/gpt-4';
-    } else if (modelType === 'chatgpt-4o' || modelType === 'gpt-4o') {
-      adjustedModelType = 'openai/gpt-4o';
-    } else if (modelType === 'chatgpt-3.5-turbo' || modelType === 'gpt-3.5-turbo') {
-      adjustedModelType = 'openai/gpt-3.5-turbo';
-    } else if (modelType === 'claude-3-opus') {
-      adjustedModelType = 'anthropic/claude-3-opus';
-    } else if (modelType === 'claude-3-sonnet') {
-      adjustedModelType = 'anthropic/claude-3-sonnet';
-    } else if (modelType === 'claude-3-haiku') {
-      adjustedModelType = 'anthropic/claude-3-haiku';
+    let providerConfig = null;
+
+    if (mode === 'instant') {
+      adjustedModelType = 'meta-llama/llama-4-scout';
+      providerConfig = { only: ["Cerebras"] };
+      console.log(`Instant mode detected (handleChat). Overriding model to ${adjustedModelType} with provider Cerebras.`);
+    } else {
+      // Map to standardized model names for OpenRouter if needed
+      if (modelType === 'chatgpt-4' || modelType === 'gpt-4') {
+        adjustedModelType = 'openai/gpt-4';
+      } else if (modelType === 'chatgpt-4o' || modelType === 'gpt-4o') {
+        adjustedModelType = 'openai/gpt-4o';
+      } else if (modelType === 'chatgpt-3.5-turbo' || modelType === 'gpt-3.5-turbo') {
+        adjustedModelType = 'openai/gpt-3.5-turbo';
+      } else if (modelType === 'claude-3-opus') {
+        adjustedModelType = 'anthropic/claude-3-opus';
+      } else if (modelType === 'claude-3-sonnet') {
+        adjustedModelType = 'anthropic/claude-3-sonnet';
+      } else if (modelType === 'claude-3-haiku') {
+        adjustedModelType = 'anthropic/claude-3-haiku';
+      }
     }
     
     // Prepare message content based on what was provided
@@ -454,7 +487,11 @@ export const handleChat = async (req, res) => {
       }]
     };
     
-    console.log(`Sending request to OpenRouter with model: ${adjustedModelType}`);
+    if (providerConfig) {
+      openRouterPayload.provider = providerConfig;
+    }
+
+    console.log(`Sending request to OpenRouter with payload:`, openRouterPayload);
     
     // Make request to OpenRouter
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', 

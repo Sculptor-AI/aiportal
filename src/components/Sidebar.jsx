@@ -4,28 +4,31 @@ import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 
 // Styled Components (Keep all your existing styled components definitions)
 const SidebarContainer = styled.div`
-  display: ${props => props.collapsed ? 'none !important' : 'flex'};
+  display: flex;
   flex-direction: column;
-  width: ${props => props.collapsed ? '0 !important' : '280px'};
+  width: ${props => props.collapsed ? '0' : '280px'};
   height: 100%;
   background: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
   border-right: 1px solid ${props => props.theme.border};
   overflow: hidden;
-  transition: width 0.3s ease, background 0.3s ease;
-  position: relative;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  position: fixed;
+  top: 0;
+  left: ${props => props.collapsed ? '-280px' : '0'};
   z-index: 20;
-  box-shadow: ${props => props.theme.name === 'dark' ? '0 0 20px rgba(0,0,0,0.2)' : 'none'};
+  box-shadow: ${props => props.theme.name === 'dark' ? '0 0 20px rgba(0,0,0,0.2)' : '0 0 10px rgba(0,0,0,0.1)'};
+  opacity: ${props => props.collapsed ? '0' : '1'};
+  transform: translateX(${props => props.collapsed ? '-40px' : '0'});
   
   @media (max-width: 768px) {
-    position: fixed;
     left: ${props => (props.collapsed ? '-100%' : '0')};
     top: 0;
     width: 100%;
     z-index: 100;
     border-right: none;
-    display: flex;
-    transition: left 0.3s ease-in-out, width 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    transform: translateX(${props => props.collapsed ? '-40px' : '0'});
     box-shadow: ${props => props.theme.name === 'dark' ? '0 0 25px rgba(0,0,0,0.3)' : '0 0 20px rgba(0,0,0,0.1)'};
   }
 `;

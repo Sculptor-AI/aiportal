@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 
@@ -6,203 +6,225 @@ import ModelIcon from './ModelIcon';
 const formatContent = (content) => {
   if (!content) return '';
   
-  // Convert markdown syntax to HTML using a more straightforward approach
-  const processText = (text) => {
-    // First, handle code blocks separately to avoid processing markdown inside them
-    if (text.includes('```')) {
-      const segments = [];
-      let lastIndex = 0;
-      let inCodeBlock = false;
-      let currentLang = "";
-      let currentCode = "";
-      let codeBlockCount = 0;
-      
-      // Find all code block markers
-      const lines = text.split('\n');
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        // Start of code block
-        if (line.startsWith('```') && !inCodeBlock) {
-          // Process any text before this code block
-          if (i > 0) {
-            const textBeforeCode = lines.slice(lastIndex, i).join('\n');
-            if (textBeforeCode.trim()) {
-              segments.push(processMarkdown(textBeforeCode));
-            }
-          }
-          
-          inCodeBlock = true;
-          currentLang = line.substring(3).trim() || 'code';
-          currentCode = "";
-          lastIndex = i + 1; // Start collecting code from next line
-          continue;
-        }
-        
-        // End of code block
-        if (line.startsWith('```') && inCodeBlock) {
-          const codeContent = lines.slice(lastIndex, i).join('\n');
-          
-          segments.push(
-            <CodeBlock key={`code-${codeBlockCount++}`} className={currentLang}>
-              <CodeHeader>
-                <CodeLanguage>{currentLang}</CodeLanguage>
-                <CopyButton onClick={() => navigator.clipboard.writeText(codeContent)}>
-                  Copy
-                </CopyButton>
-              </CodeHeader>
-              <Pre>{codeContent}</Pre>
-            </CodeBlock>
-          );
-          
-          inCodeBlock = false;
-          lastIndex = i + 1; // Start collecting text from next line
-          continue;
-        }
-        
-        // Collecting code content when inside a code block
-        if (inCodeBlock) {
-          continue; // We'll collect all lines in the code block at once
-        }
-      }
-      
-      // Add any remaining text after the last code block
-      if (lastIndex < lines.length) {
-        const textAfterCode = lines.slice(lastIndex).join('\n');
-        if (textAfterCode.trim()) {
-          segments.push(processMarkdown(textAfterCode));
-        }
-      }
-      
-      return <>{segments}</>;
-    } else {
-      // No code blocks, process all text as markdown
-      return processMarkdown(text);
-    }
-  };
+  // Extract thinking content if present
+  const thinkingRegex = /<think>([\s\S]*?)<\/think>/;
+  const thinkingMatch = content.match(thinkingRegex);
   
-  // Process regular markdown (bullet points, bold, italic)
-  const processMarkdown = (text) => {
-    const lines = text.split('\n');
-    const result = [];
-    let inList = false;
-    let listItems = [];
+  let mainContent = content;
+  let thinkingContent = null;
+  
+  if (thinkingMatch) {
+    thinkingContent = thinkingMatch[1];
+    // Remove the thinking tags and their content from the main content
+    mainContent = content.replace(thinkingRegex, '').trim();
+  }
+  
+  // If we have thinking content, return an object with both processed contents
+  if (thinkingContent) {
+    return {
+      main: processText(mainContent),
+      thinking: processText(thinkingContent)
+    };
+  }
+  
+  // Otherwise, just process the content normally
+  return processText(mainContent);
+};
+
+// Convert markdown syntax to HTML using a more straightforward approach
+const processText = (text) => {
+  // First, handle code blocks separately to avoid processing markdown inside them
+  if (text.includes('```')) {
+    const segments = [];
+    let lastIndex = 0;
+    let inCodeBlock = false;
+    let currentLang = "";
+    let currentCode = "";
+    let codeBlockCount = 0;
     
-    // Process line by line
+    // Find all code block markers
+    const lines = text.split('\n');
+    
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
+      const line = lines[i];
       
-      // Bullet point
-      if (line.startsWith('* ')) {
-        inList = true;
-        const itemContent = line.substring(2);
-        listItems.push(
-          <li key={`item-${i}`}>{processInlineFormatting(itemContent)}</li>
-        );
-        continue;
-      }
-      
-      // End of a list
-      if (inList && (!line.startsWith('* ') || line === '')) {
-        result.push(
-          <BulletList key={`list-${i}`}>
-            {listItems}
-          </BulletList>
-        );
-        inList = false;
-        listItems = [];
-        
-        if (line !== '') {
-          result.push(
-            <div key={`text-${i}`}>{processInlineFormatting(line)}</div>
-          );
-        } else {
-          result.push(<br key={`br-${i}`} />);
+      // Start of code block
+      if (line.startsWith('```') && !inCodeBlock) {
+        // Process any text before this code block
+        if (i > 0) {
+          const textBeforeCode = lines.slice(lastIndex, i).join('\n');
+          if (textBeforeCode.trim()) {
+            segments.push(processMarkdown(textBeforeCode));
+          }
         }
+        
+        inCodeBlock = true;
+        currentLang = line.substring(3).trim() || 'code';
+        currentCode = "";
+        lastIndex = i + 1; // Start collecting code from next line
         continue;
       }
       
-      // Regular text line
-      if (!inList && line !== '') {
-        result.push(
-          <div key={`text-${i}`}>{processInlineFormatting(line)}</div>
+      // End of code block
+      if (line.startsWith('```') && inCodeBlock) {
+        const codeContent = lines.slice(lastIndex, i).join('\n');
+        
+        segments.push(
+          <CodeBlock key={`code-${codeBlockCount++}`} className={currentLang}>
+            <CodeHeader>
+              <CodeLanguage>{currentLang}</CodeLanguage>
+              <CopyButton onClick={() => navigator.clipboard.writeText(codeContent)}>
+                Copy
+              </CopyButton>
+            </CodeHeader>
+            <Pre>{codeContent}</Pre>
+          </CodeBlock>
         );
-      } else if (!inList) {
-        result.push(<br key={`br-${i}`} />);
+        
+        inCodeBlock = false;
+        lastIndex = i + 1; // Start collecting text from next line
+        continue;
+      }
+      
+      // Collecting code content when inside a code block
+      if (inCodeBlock) {
+        continue; // We'll collect all lines in the code block at once
       }
     }
     
-    // Add any remaining list items
-    if (inList && listItems.length > 0) {
+    // Add any remaining text after the last code block
+    if (lastIndex < lines.length) {
+      const textAfterCode = lines.slice(lastIndex).join('\n');
+      if (textAfterCode.trim()) {
+        segments.push(processMarkdown(textAfterCode));
+      }
+    }
+    
+    return <>{segments}</>;
+  } else {
+    // No code blocks, process all text as markdown
+    return processMarkdown(text);
+  }
+};
+
+// Process regular markdown (bullet points, bold, italic)
+const processMarkdown = (text) => {
+  const lines = text.split('\n');
+  const result = [];
+  let inList = false;
+  let listItems = [];
+  
+  // Process line by line
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Bullet point
+    if (line.startsWith('* ')) {
+      inList = true;
+      const itemContent = line.substring(2);
+      listItems.push(
+        <li key={`item-${i}`}>{processInlineFormatting(itemContent)}</li>
+      );
+      continue;
+    }
+    
+    // End of a list
+    if (inList && (!line.startsWith('* ') || line === '')) {
       result.push(
-        <BulletList key="list-end">
+        <BulletList key={`list-${i}`}>
           {listItems}
         </BulletList>
       );
-    }
-    
-    return <>{result}</>;
-  };
-  
-  // Process inline formatting (bold, italic)
-  const processInlineFormatting = (text) => {
-    // First handle bold text
-    const boldPattern = /\*\*(.*?)\*\*/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-    
-    while ((match = boldPattern.exec(text)) !== null) {
-      // Add text before the bold part
-      if (match.index > lastIndex) {
-        parts.push(processItalic(text.substring(lastIndex, match.index)));
+      inList = false;
+      listItems = [];
+      
+      if (line !== '') {
+        result.push(
+          <div key={`text-${i}`}>{processInlineFormatting(line)}</div>
+        );
+      } else {
+        result.push(<br key={`br-${i}`} />);
       }
-      
-      // Add the bold text (also process any italic within it)
-      parts.push(<Bold key={`bold-${match.index}`}>{processItalic(match[1])}</Bold>);
-      
-      lastIndex = match.index + match[0].length;
+      continue;
     }
     
-    // Add any remaining text
-    if (lastIndex < text.length) {
-      parts.push(processItalic(text.substring(lastIndex)));
+    // Regular text line
+    if (!inList && line !== '') {
+      result.push(
+        <div key={`text-${i}`}>{processInlineFormatting(line)}</div>
+      );
+    } else if (!inList) {
+      result.push(<br key={`br-${i}`} />);
     }
-    
-    return <>{parts}</>;
-  };
+  }
   
-  // Process italic text
-  const processItalic = (text) => {
-    if (!text) return null;
-    
-    const italicPattern = /\*((?!\*).+?)\*/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-    
-    while ((match = italicPattern.exec(text)) !== null) {
-      // Add text before the italic part
-      if (match.index > lastIndex) {
-        parts.push(text.substring(lastIndex, match.index));
-      }
-      
-      // Add the italic text
-      parts.push(<Italic key={`italic-${match.index}`}>{match[1]}</Italic>);
-      
-      lastIndex = match.index + match[0].length;
-    }
-    
-    // Add any remaining text
-    if (lastIndex < text.length) {
-      parts.push(text.substring(lastIndex));
-    }
-    
-    return <>{parts.length > 0 ? parts : text}</>;
-  };
+  // Add any remaining list items
+  if (inList && listItems.length > 0) {
+    result.push(
+      <BulletList key="list-end">
+        {listItems}
+      </BulletList>
+    );
+  }
   
-  return processText(content);
+  return <>{result}</>;
+};
+
+// Process inline formatting (bold, italic)
+const processInlineFormatting = (text) => {
+  // First handle bold text
+  const boldPattern = /\*\*(.*?)\*\*/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = boldPattern.exec(text)) !== null) {
+    // Add text before the bold part
+    if (match.index > lastIndex) {
+      parts.push(processItalic(text.substring(lastIndex, match.index)));
+    }
+    
+    // Add the bold text (also process any italic within it)
+    parts.push(<Bold key={`bold-${match.index}`}>{processItalic(match[1])}</Bold>);
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add any remaining text
+  if (lastIndex < text.length) {
+    parts.push(processItalic(text.substring(lastIndex)));
+  }
+  
+  return <>{parts}</>;
+};
+
+// Process italic text
+const processItalic = (text) => {
+  if (!text) return null;
+  
+  const italicPattern = /\*((?!\*).+?)\*/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = italicPattern.exec(text)) !== null) {
+    // Add text before the italic part
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    
+    // Add the italic text
+    parts.push(<Italic key={`italic-${match.index}`}>{match[1]}</Italic>);
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add any remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+  
+  return <>{parts.length > 0 ? parts : text}</>;
 };
 
 const CodeBlock = styled.div`
@@ -586,6 +608,71 @@ const SourceFavicon = styled.img`
   border-radius: 2px;
 `;
 
+// Add a ThinkingDropdown component
+const ThinkingDropdownContainer = styled.div`
+  margin: 10px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: none;
+`;
+
+const ThinkingHeader = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  color: ${props => props.theme.text}aa;
+  justify-content: flex-start;
+  
+  &:hover {
+    color: ${props => props.theme.text};
+  }
+`;
+
+const ThinkingArrow = styled.span`
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+  transform: ${props => props.expanded ? 'rotate(180deg)' : 'rotate(0deg)'};
+  font-size: 12px;
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+`;
+
+const ThinkingContent = styled.div`
+  padding: ${props => props.expanded ? '10px 0 10px 16px' : '0'};
+  max-height: ${props => props.expanded ? '1000px' : '0'};
+  opacity: ${props => props.expanded ? '1' : '0'};
+  transition: all 0.3s ease;
+  overflow: hidden;
+  border-top: none;
+  margin-bottom: ${props => props.expanded ? '15px' : '0'};
+  margin-left: 10px;
+  border-left: ${props => props.expanded ? `2px solid ${props.theme.text}30` : 'none'};
+`;
+
+const ThinkingDropdown = ({ thinkingContent }) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  const toggleExpanded = () => {
+    setExpanded(!expanded);
+  };
+  
+  return (
+    <ThinkingDropdownContainer>
+      <ThinkingHeader onClick={toggleExpanded}>
+        <span>Thoughts</span>
+        <ThinkingArrow expanded={expanded}>▾</ThinkingArrow>
+      </ThinkingHeader>
+      <ThinkingContent expanded={expanded}>
+        {thinkingContent}
+      </ThinkingContent>
+    </ThinkingDropdownContainer>
+  );
+};
+
 const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources } = message;
   
@@ -713,15 +800,32 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
               Thinking
             </ThinkingContainer>
           ) : (
-            // Apply formatting and model signature styling
-            content.split('\n\n-').map((part, index) => {
-              if (index === 0) {
-                // This is the main content part - process markdown formatting
-                return <React.Fragment key={`content-part-${index}`}>{formatContent(part)}</React.Fragment>;
-              }
-              // This is the model signature part
-              return <em key={`signature-part-${index}`}>- {part}</em>;
-            })
+            <>
+              {/* Process content and show main content + thinking dropdown if applicable */}
+              {(() => {
+                const processedContent = formatContent(content);
+                
+                if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
+                  // If content has thinking tags, show thinking dropdown first, then main content
+                  return (
+                    <>
+                      <ThinkingDropdown thinkingContent={processedContent.thinking} />
+                      {processedContent.main}
+                    </>
+                  );
+                } else {
+                  // If content has no thinking tags, display it normally (as before)
+                  return content.split('\n\n-').map((part, index) => {
+                    if (index === 0) {
+                      // This is the main content part - process markdown formatting
+                      return <React.Fragment key={`content-part-${index}`}>{formatContent(part)}</React.Fragment>;
+                    }
+                    // This is the model signature part
+                    return <em key={`signature-part-${index}`}>- {part}</em>;
+                  });
+                }
+              })()}
+            </>
           )}
           
           {/* Message action buttons - only show for completed messages (not loading) */}

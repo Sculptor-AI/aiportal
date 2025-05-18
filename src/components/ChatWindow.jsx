@@ -17,6 +17,8 @@ const ChatWindowContainer = styled.div`
   flex-direction: column;
   height: 100%;
   width: 100%; /* Ensure it takes full width when sidebar is hidden */
+  margin-left: ${props => props.sidebarCollapsed ? '0' : '280px'};
+  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   background: ${props => props.theme.name === 'retro' ? 'rgb(0, 128, 128)' : props.theme.chat};
   backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
@@ -35,7 +37,7 @@ const ChatHeader = styled.div`
   padding: 15px 20px;
   display: flex;
   align-items: flex-start; // Change from center to flex-start for better alignment
-  justify-content: space-between;
+  justify-content: ${props => props.sidebarCollapsed ? 'space-between' : 'flex-end'};
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   z-index: 10;
@@ -43,7 +45,7 @@ const ChatHeader = styled.div`
 `;
 
 const ChatTitleSection = styled.div`
-  display: flex;
+  display: ${props => props.sidebarCollapsed ? 'flex' : 'none'};
   flex-direction: column;
   flex: 1;
   gap: 4px; // Use gap instead of margin for more consistent spacing
@@ -62,6 +64,7 @@ const ChatTitle = styled.h2`
 const ModelSelectorWrapper = styled.div`
   // Remove the margin-top and use the parent's gap instead
   max-width: 240px;
+  z-index: 10;
   
   @media (max-width: 768px) {
     max-width: 100%;
@@ -156,15 +159,16 @@ const InputContainer = styled.div`
   align-items: center;
   justify-content: center;
   position: fixed !important;
-  width: 100% !important;
-  max-width: 100% !important;
+  width: 100% !important; /* Takes full available width up to max-width */
+  max-width: ${props => props.theme.name === 'retro' ? '750px' : '700px'} !important; /* Apply max-width here */
   padding: 0 !important;
   z-index: 100 !important;
   pointer-events: none;
-  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 140px)'} !important; // Adjust for sidebar
   flex-direction: column;
+  margin-left: 0 !important;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 
-  ${({ isEmpty, animateDown, theme }) => {
+  ${({ isEmpty, animateDown, theme, sidebarCollapsed }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
     
@@ -175,6 +179,7 @@ const InputContainer = styled.div`
         top: 50%; /* Start position for the animation - NO !important */
         transform: translate(-50%, -50%); /* Start position - NO !important */
         bottom: auto; /* Ensure bottom is not conflicting - NO !important */
+        left: 50% !important; /* Always center in viewport */
         
         animation-name: ${moveInputToBottom};
         animation-duration: 0.5s;
@@ -189,13 +194,15 @@ const InputContainer = styled.div`
       return css`
         top: 50% !important;
         transform: translate(-50%, -50%) !important;
-        bottom: auto !important; 
+        bottom: auto !important;
+        left: 50% !important; /* Always center in viewport */
       `;
     } else { // At bottom, no animation (isEmpty is false, animateDown is false)
       return css`
         top: auto !important;
         bottom: ${bottomPosition} !important;
         transform: translateX(-50%) !important;
+        left: 50% !important;
         @media (max-width: 768px) {
           bottom: ${mobileBottomPosition} !important;
         }
@@ -206,9 +213,7 @@ const InputContainer = styled.div`
 
 const MessageInputWrapper = styled.div`
   position: relative;
-  width: 100%;
-  max-width: ${props => props.theme.name === 'retro' ? '750px' : '700px'} !important;
-  margin: 0 auto !important; /* Center the input horizontally */
+  width: 100%; /* Takes full width of InputContainer */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -504,7 +509,7 @@ const ChipDropdownMenu = styled.div`
   z-index: 10;
 `;
 
-const ChipDropdownItem = styled.button`
+const ChipDropdownItem = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -831,11 +836,59 @@ const ChatWindow = ({
         // Check if the model supports streaming
         const supportsStreaming = currentModelObj?.supportsStreaming !== false;
         
+        // Define the thinking mode system prompt
+        const thinkingModeSystemPrompt = thinkingMode === 'thinking' ? 
+          `You are a Deep Analysis Chain of Thought model that provides thorough, well-structured explanations. For every response:
+
+1. FIRST: Put your comprehensive thinking process inside <think></think> tags following these steps:
+   - Begin with problem decomposition - break down the question into its core components and underlying assumptions
+   - Explore the conceptual space deeply, considering multiple perspectives and approaches
+   - When providing solutions (including code):
+     * Focus on developing one high-quality solution
+     * Prioritize clarity and simplicity unless complexity is justified
+     * Think through tradeoffs and design decisions explicitly
+   - Identify potential edge cases, limitations, or hidden assumptions
+   - Perform a critical self-review of your thinking:
+     * Question your reasoning process and initial assumptions
+     * Look for logical gaps, biases, or oversimplifications
+     * Consider counterarguments or alternative perspectives
+   - Evaluate your final solution against these criteria:
+     * Correctness: Does it solve the problem accurately?
+     * Depth: Have you considered the problem deeply enough?
+     * Simplicity: Is this the simplest valid solution?
+     * Completeness: Does it address the core question and handle relevant edge cases?
+
+2. THEN: Provide your answer outside the tags - be concise and focused while maintaining clarity
+
+When explaining concepts:
+- Break your answer into logical paragraphs
+- Use headings only when they improve understanding
+- Include concrete examples that illustrate key points
+- Focus on the most important aspects rather than attempting to cover everything` : null;
+        
+        console.log(`[ChatWindow] Current thinkingMode: ${thinkingMode}, Using system prompt: ${thinkingModeSystemPrompt ? 'YES' : 'NO'}`);
+        if (thinkingModeSystemPrompt) {
+          console.log(`[ChatWindow] System prompt (first 50 chars): ${thinkingModeSystemPrompt.substring(0, 50)}...`);
+        }
+        
+        // For backend models, we need to prepend the system prompt to the user's message
+        let finalMessageToSend = messageToSend;
+        let systemPromptForApi = null;
+        
+        if (isBackendModel && thinkingModeSystemPrompt) {
+          // Prepend the system prompt to the user's message for backend models
+          finalMessageToSend = `System Instructions: ${thinkingModeSystemPrompt}\n\nUser Message: ${messageToSend}`;
+          console.log(`[ChatWindow] Prepended system prompt to user message for backend model.`);
+        } else if (thinkingModeSystemPrompt) {
+          // For client-side models, we'll pass it as a separate parameter
+          systemPromptForApi = thinkingModeSystemPrompt;
+        }
+        
         if (supportsStreaming) {
           // Use streaming API for backend models that support it
           await streamMessageFromBackend(
             currentModel, 
-            messageToSend,
+            finalMessageToSend,
             (chunk) => {
               streamedContent += chunk;
               updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
@@ -844,7 +897,9 @@ const ChatWindow = ({
             currentActionChip === 'deep-research',
             currentActionChip === 'create-image',
             imageDataToSend, // Use captured value
-            fileTextToSend  // Use captured value
+            fileTextToSend,  // Use captured value
+            systemPromptForApi, // Use separate parameter for client-side models
+            thinkingMode // Pass thinkingMode as mode
           );
           
           // Finalize the message when streaming is complete
@@ -865,12 +920,14 @@ const ChatWindow = ({
           // Use non-streaming API for models that don't support streaming
           const backendResponse = await sendMessageToBackend(
             currentModel,
-            messageToSend,
+            finalMessageToSend,
             currentActionChip === 'search',
             currentActionChip === 'deep-research',
             currentActionChip === 'create-image',
             imageDataToSend, // Use captured value
-            fileTextToSend   // Use captured value
+            fileTextToSend,   // Use captured value
+            systemPromptForApi, // Use separate parameter for client-side models
+            thinkingMode // Pass thinkingMode as mode
           );
           
           // Update the placeholder message with the backend response
@@ -891,7 +948,8 @@ const ChatWindow = ({
           fileTextToSend, // Use captured value for file text
           currentActionChip === 'search',
           currentActionChip === 'deep-research',
-          currentActionChip === 'create-image'
+          currentActionChip === 'create-image',
+          thinkingModeSystemPrompt // Keep using system prompt parameter for client-side models
         );
         
         for await (const chunk of messageGenerator) {
@@ -1163,7 +1221,7 @@ const ChatWindow = ({
 
   if (!chat) {
     return (
-      <ChatWindowContainer fontSize={settings?.fontSize}>
+      <ChatWindowContainer fontSize={settings?.fontSize} sidebarCollapsed={sidebarCollapsed}>
         <EmptyState isExiting={animateEmptyStateOut}>
         </EmptyState>
         <InputContainer isEmpty={true} animateDown={false} sidebarCollapsed={sidebarCollapsed}>
@@ -1247,14 +1305,15 @@ const ChatWindow = ({
   };
 
   return (
-    <ChatWindowContainer fontSize={settings?.fontSize}>
+    <ChatWindowContainer fontSize={settings?.fontSize} sidebarCollapsed={sidebarCollapsed}>
       <ChatHeader 
         style={{ 
           opacity: (sidebarCollapsed && isFocused) ? '0' : '1',
           transition: 'opacity 0.3s ease'
         }}
+        sidebarCollapsed={sidebarCollapsed}
       >
-        <ChatTitleSection>
+        <ChatTitleSection sidebarCollapsed={sidebarCollapsed}>
           <ChatTitle>
             {isEditingTitle ? (
               <input
@@ -1283,15 +1342,17 @@ const ChatWindow = ({
         </ChatTitleSection>
         
         {/* Move ModelSelector back to the top right */}
-        <ModelSelectorWrapper>
-          <ModelSelector
-            selectedModel={selectedModel}
-            models={availableModels}
-            onChange={handleModelChange}
-            key="model-selector"
-            theme={theme}
-          />
-        </ModelSelectorWrapper>
+        {thinkingMode !== 'instant' && (
+          <ModelSelectorWrapper>
+            <ModelSelector
+              selectedModel={selectedModel}
+              models={availableModels}
+              onChange={handleModelChange}
+              key="model-selector"
+              theme={theme}
+            />
+          </ModelSelectorWrapper>
+        )}
       </ChatHeader>
       
       {(showEmptyStateStatic || animateEmptyStateOut) && (
@@ -1352,7 +1413,7 @@ const ChatWindow = ({
           <ActionChipsContainer>
             <ActionChip 
               ref={modeDropdownRef}
-              selected={false}
+              selected={thinkingMode !== null}
               onClick={() => setShowModeDropdown(!showModeDropdown)}
             >
               {theme.name === 'retro' ? (
@@ -1365,12 +1426,25 @@ const ChatWindow = ({
                   <line x1="16" y1="8" x2="2" y2="22"></line>
                   <line x1="17.5" y1="15" x2="9" y2="15"></line>
                 </svg>
-              ) : (
+              ) : thinkingMode === 'instant' ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
                 </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                  <rect x="9" y="9" width="6" height="6"></rect>
+                  <line x1="9" y1="2" x2="9" y2="4"></line>
+                  <line x1="15" y1="2" x2="15" y2="4"></line>
+                  <line x1="9" y1="20" x2="9" y2="22"></line>
+                  <line x1="15" y1="20" x2="15" y2="22"></line>
+                  <line x1="20" y1="9" x2="22" y2="9"></line>
+                  <line x1="20" y1="14" x2="22" y2="14"></line>
+                  <line x1="2" y1="9" x2="4" y2="9"></line>
+                  <line x1="2" y1="14" x2="4" y2="14"></line>
+                </svg>
               )}
-              {thinkingMode === 'thinking' ? 'Thinking' : 'Instant'}
+              {thinkingMode === 'thinking' ? 'Thinking' : thinkingMode === 'instant' ? 'Instant' : 'Mode'}
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
@@ -1382,6 +1456,7 @@ const ChatWindow = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setThinkingMode(null);
+                      setSelectedActionChip(null);
                       setShowModeDropdown(false);
                     }}
                   >
@@ -1404,6 +1479,7 @@ const ChatWindow = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setThinkingMode('thinking');
+                      setSelectedActionChip(null);
                       setShowModeDropdown(false);
                     }}
                   >
@@ -1419,6 +1495,7 @@ const ChatWindow = ({
                     onClick={(e) => {
                       e.stopPropagation();
                       setThinkingMode('instant');
+                      setSelectedActionChip(null);
                       setShowModeDropdown(false);
                     }}
                   >
@@ -1432,7 +1509,14 @@ const ChatWindow = ({
             </ActionChip>
             <ActionChip 
               selected={selectedActionChip === 'search'} 
-              onClick={() => setSelectedActionChip(selectedActionChip === 'search' ? null : 'search')}
+              onClick={() => {
+                if (selectedActionChip === 'search') {
+                  setSelectedActionChip(null);
+                } else {
+                  setSelectedActionChip('search');
+                  setThinkingMode(null);
+                }
+              }}
             >
               {theme.name === 'retro' ? (
                 <RetroIconWrapper>
@@ -1448,7 +1532,14 @@ const ChatWindow = ({
             </ActionChip>
             <ActionChip 
               selected={selectedActionChip === 'deep-research'} 
-              onClick={() => setSelectedActionChip(selectedActionChip === 'deep-research' ? null : 'deep-research')}
+              onClick={() => {
+                if (selectedActionChip === 'deep-research') {
+                  setSelectedActionChip(null);
+                } else {
+                  setSelectedActionChip('deep-research');
+                  setThinkingMode(null);
+                }
+              }}
             >
               {theme.name === 'retro' ? (
                 <RetroIconWrapper>
