@@ -1021,7 +1021,7 @@ export const streamMessageFromBackend = async (
               
               // Store the sources globally to be picked up by the ChatWindow component
               window.__lastSearchSources = parsed.sources;
-              continue;
+              continue; // If it's a source event, skip further content processing for this data line
             }
             
             const content = parsed.choices?.[0]?.delta?.content || 
@@ -1032,10 +1032,10 @@ export const streamMessageFromBackend = async (
               onChunk(content);
             }
           } catch (e) {
-            // If it's not valid JSON, just pass it through
-            if (data && data !== '[DONE]') {
-              onChunk(data);
-            }
+            // If JSON.parse fails or another error occurs in the try block
+            console.error('Error processing SSE data line. Raw data:', data, 'Error:', e);
+            // Do NOT pass raw 'data' to onChunk if it couldn't be processed as expected.
+            // The previous logic incorrectly passed raw data on parse failure.
           }
         }
       }
