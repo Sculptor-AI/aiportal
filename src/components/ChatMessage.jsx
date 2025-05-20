@@ -2,33 +2,24 @@ import React, { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 
-// Format markdown text including bold, italic, bullet points and code blocks
-const formatContent = (content) => {
-  if (!content) return '';
-  
-  // Extract thinking content if present
+// Extracts the thinking block and main text from raw content.
+// Returns an object: { thinkingText: string | null, mainText: string }
+const extractThinkAndMainText = (content) => {
+  if (!content) return { thinkingText: null, mainText: '' };
+
   const thinkingRegex = /<think>([\s\S]*?)<\/think>/;
   const thinkingMatch = content.match(thinkingRegex);
-  
-  let mainContent = content;
-  let thinkingContent = null;
-  
+
+  let mainText = content;
+  let thinkingText = null;
+
   if (thinkingMatch) {
-    thinkingContent = thinkingMatch[1];
-    // Remove the thinking tags and their content from the main content
-    mainContent = content.replace(thinkingRegex, '').trim();
+    thinkingText = thinkingMatch[1];
+    // Remove the first occurrence of the thinking block
+    mainText = content.replace(thinkingRegex, '').trim();
   }
-  
-  // If we have thinking content, return an object with both processed contents
-  if (thinkingContent) {
-    return {
-      main: processText(mainContent),
-      thinking: processText(thinkingContent)
-    };
-  }
-  
-  // Otherwise, just process the content normally
-  return processText(mainContent);
+
+  return { thinkingText, mainText };
 };
 
 // Convert markdown syntax to HTML using a more straightforward approach
@@ -109,7 +100,8 @@ const processText = (text) => {
 
 // Process regular markdown (bullet points, bold, italic)
 const processMarkdown = (text) => {
-  const lines = text.split('\n');
+  const normalizedText = text.replace(/\r\n/g, '\n');
+  const lines = normalizedText.split('\n');
   const result = [];
   let inList = false;
   let listItems = [];
@@ -651,6 +643,7 @@ const ThinkingContent = styled.div`
   margin-bottom: ${props => props.expanded ? '15px' : '0'};
   margin-left: 10px;
   border-left: ${props => props.expanded ? `2px solid ${props.theme.text}30` : 'none'};
+  white-space: pre-wrap; // Added this line
 `;
 
 const ThinkingDropdown = ({ thinkingContent }) => {
@@ -801,29 +794,33 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
             </ThinkingContainer>
           ) : (
             <>
-              {/* Process content and show main content + thinking dropdown if applicable */}
               {(() => {
-                const processedContent = formatContent(content);
+                // Get the raw content string from the message prop
+                const rawStringContent = content || ""; // Ensure content is not null/undefined
                 
-                if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
-                  // If content has thinking tags, show thinking dropdown first, then main content
-                  return (
-                    <>
-                      <ThinkingDropdown thinkingContent={processedContent.thinking} />
-                      {processedContent.main}
-                    </>
-                  );
-                } else {
-                  // If content has no thinking tags, display it normally (as before)
-                  return content.split('\n\n-').map((part, index) => {
-                    if (index === 0) {
-                      // This is the main content part - process markdown formatting
-                      return <React.Fragment key={`content-part-${index}`}>{formatContent(part)}</React.Fragment>;
-                    }
-                    // This is the model signature part
-                    return <em key={`signature-part-${index}`}>- {part}</em>;
-                  });
-                }
+                // Split the raw content by \n\n- to separate the messageBodyString from signatureParts
+                const contentParts = rawStringContent.split('\n\n-');
+                const messageBodyString = contentParts[0];
+                const signatureStrings = contentParts.slice(1);
+
+                // Call extractThinkAndMainText(messageBodyString) to get { thinkingText, mainText }
+                const { thinkingText, mainText } = extractThinkAndMainText(messageBodyString);
+
+                // Process these strings to get displayable JSX
+                const thinkingDisplay = thinkingText ? processText(thinkingText) : null;
+                const mainDisplay = mainText ? processText(mainText) : null; 
+                
+                const signatureElements = signatureStrings.map((sig, idx) => (
+                  <em key={`sig-${idx}`}>- {sig}</em>
+                ));
+
+                return (
+                  <>
+                    {thinkingDisplay && <ThinkingDropdown thinkingContent={thinkingDisplay} />}
+                    {mainDisplay}
+                    {signatureElements.length > 0 && signatureElements}
+                  </>
+                );
               })()}
             </>
           )}
