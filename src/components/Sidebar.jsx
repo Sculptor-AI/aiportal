@@ -19,7 +19,7 @@ const SidebarContainer = styled.div`
   z-index: 20;
   box-shadow: ${props => props.theme.name === 'dark' ? '0 0 20px rgba(0,0,0,0.2)' : '0 0 10px rgba(0,0,0,0.1)'};
   opacity: ${props => props.collapsed ? '0' : '1'};
-  transform: translateX(${props => props.collapsed ? '-40px' : '0'});
+  transform: translateX(0); /* Removed extra transform to fix alignment */
   
   @media (max-width: 768px) {
     left: ${props => (props.collapsed ? '-100%' : '0')};
@@ -28,7 +28,7 @@ const SidebarContainer = styled.div`
     z-index: 100;
     border-right: none;
     transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-    transform: translateX(${props => props.collapsed ? '-40px' : '0'});
+    transform: translateX(0); /* Removed extra transform to fix alignment */
     box-shadow: ${props => props.theme.name === 'dark' ? '0 0 25px rgba(0,0,0,0.3)' : '0 0 20px rgba(0,0,0,0.1)'};
   }
 `;
@@ -206,10 +206,10 @@ const NewChatButton = styled.button`
 
   span {
     opacity: ${props => props.collapsed ? '0' : '1'};
-    transform: translateX(${props => props.collapsed ? '-10px' : '0'});
+    transform: translateX(0); /* Removed transform for better alignment */
     visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
     white-space: nowrap;
-    transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s;
+    transition: opacity 0.2s ease, visibility 0.2s;
     transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
     ${props => props.theme.name === 'retro' && `
       font-family: 'MSW98UI', 'MS Sans Serif', 'Tahoma', sans-serif;
@@ -355,7 +355,6 @@ const ChatTitle = styled.div`
   flex: 1; /* Take available space */
   margin-right: 5px; /* Space before delete button */
   opacity: ${props => props.collapsed ? '0' : '1'};
-  /* We hide text using opacity/visibility, not transform, to allow hover effects */
   visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
   transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};

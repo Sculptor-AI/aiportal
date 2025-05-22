@@ -16,9 +16,9 @@ const ChatWindowContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%; /* Ensure it takes full width when sidebar is hidden */
-  margin-left: ${props => props.sidebarCollapsed ? '0' : '280px'};
-  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  width: 100%; /* Always takes full width */
+  margin-left: 0; /* No margin - sidebar will overlay */
+  transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   background: ${props => props.theme.name === 'retro' ? 'rgb(0, 128, 128)' : props.theme.chat};
   backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
@@ -49,7 +49,7 @@ const ChatTitleSection = styled.div`
   flex-direction: column;
   flex: 1;
   gap: 4px; // Use gap instead of margin for more consistent spacing
-  padding-left: 45px; // Add padding to shift title right to align with the logo
+  padding-left: 60px; // Increased padding to better align with the hamburger button (20px left + 40px width)
 `;
 
 const ChatTitle = styled.h2`
@@ -115,7 +115,7 @@ const fadeIn = keyframes`
   }
 `;
 
-// New keyframes for moving input to bottom
+// Create keyframes for moving input to bottom (without left property)
 const moveInputToBottom = keyframes`
   from {
     top: 50%;
@@ -171,6 +171,8 @@ const InputContainer = styled.div`
   ${({ isEmpty, animateDown, theme, sidebarCollapsed }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
+    // Always center at 50% regardless of sidebar state
+    const centerPosition = '50%';
     
     if (animateDown) {
       // When animateDown is true, isEmpty is false.
@@ -179,7 +181,7 @@ const InputContainer = styled.div`
         top: 50%; /* Start position for the animation - NO !important */
         transform: translate(-50%, -50%); /* Start position - NO !important */
         bottom: auto; /* Ensure bottom is not conflicting - NO !important */
-        left: 50% !important; /* Always center in viewport */
+        left: ${centerPosition} !important; /* Always center in viewport */
         
         animation-name: ${moveInputToBottom};
         animation-duration: 0.5s;
@@ -188,6 +190,7 @@ const InputContainer = styled.div`
 
         @media (max-width: 768px) {
           animation-name: ${moveInputToBottomMobile};
+          left: 50% !important; /* On mobile, always center in viewport */
         }
       `;
     } else if (isEmpty) { // Centered, no animation
@@ -195,16 +198,22 @@ const InputContainer = styled.div`
         top: 50% !important;
         transform: translate(-50%, -50%) !important;
         bottom: auto !important;
-        left: 50% !important; /* Always center in viewport */
+        left: ${centerPosition} !important; /* Always center in viewport */
+        
+        @media (max-width: 768px) {
+          left: 50% !important; /* On mobile, always center in viewport */
+        }
       `;
     } else { // At bottom, no animation (isEmpty is false, animateDown is false)
       return css`
         top: auto !important;
         bottom: ${bottomPosition} !important;
         transform: translateX(-50%) !important;
-        left: 50% !important;
+        left: ${centerPosition} !important; /* Always center in viewport */
+        
         @media (max-width: 768px) {
           bottom: ${mobileBottomPosition} !important;
+          left: 50% !important; /* On mobile, always center in viewport */
         }
       `;
     }

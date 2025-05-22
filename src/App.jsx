@@ -56,7 +56,7 @@ const FloatingMenuButton = styled.button`
 const MainGreeting = styled.div`
   position: fixed;
   top: 35%; /* Adjusted lower: Default for larger screens */
-  left: 50%; /* Always centered in viewport */
+  left: 50%; /* Always center in viewport regardless of sidebar state */
   transform: translateX(-50%);
   max-width: 800px; /* Keep a max width */
   width: 90%; /* Use percentage width for better flexibility */
@@ -65,7 +65,7 @@ const MainGreeting = styled.div`
   pointer-events: none;
   padding: 0 20px; /* Horizontal padding */
   box-sizing: border-box; /* Include padding in width calculation */
-  transition: top 0.3s ease-out; /* Only transition top property */
+  transition: all 0.3s ease-out; /* Transition all properties including left */
   
   h1 {
     font-size: min(2.2rem, 6vw); /* Adjusted responsive font size */
@@ -515,7 +515,7 @@ const AppContent = () => {
           
           {/* Main greeting that appears at the top of the page */}
           {getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
-            <MainGreeting sidebarCollapsed={collapsed}>
+            <MainGreeting>
               <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>
                 {settings.theme === 'lakeside' ? 'Andromeda' : `${greeting}${user ? `, ${user.username}` : ''}`}
               </h1>
