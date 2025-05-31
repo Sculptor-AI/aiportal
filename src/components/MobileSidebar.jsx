@@ -162,48 +162,6 @@ const ActionButton = styled.button`
   }
 `;
 
-const ModelSelector = styled.div`
-  padding: 16px 20px;
-  border-top: 1px solid ${props => props.theme.border};
-`;
-
-const ModelButton = styled.button`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: ${props => props.theme.inputBackground};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 12px;
-  color: ${props => props.theme.text};
-  cursor: pointer;
-  touch-action: manipulation;
-  gap: 10px;
-  
-  &:active {
-    background: ${props => props.theme.border};
-  }
-`;
-
-const ModelInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-`;
-
-const ModelName = styled.div`
-  font-size: 16px;
-  font-weight: 500;
-  color: ${props => props.theme.text};
-`;
-
-const ModelProvider = styled.div`
-  font-size: 14px;
-  color: ${props => props.theme.text}66;
-`;
-
 const SidebarFooter = styled.div`
   padding: 16px 20px;
   border-top: 1px solid ${props => props.theme.border};
@@ -241,59 +199,6 @@ const FooterButton = styled.button`
   }
 `;
 
-// NEW: Styled components for the model selection menu
-const ModelMenuOverlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 1002; // Higher than sidebar
-  display: ${props => props.isOpen ? 'block' : 'none'};
-`;
-
-const ModelMenuContainer = styled.div`
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: ${props => props.theme.backgroundSecondary || props.theme.background };
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  z-index: 1003; // Higher than overlay
-  padding: 16px;
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-  max-height: 50vh;
-  overflow-y: auto;
-  transform: translateY(${props => props.isOpen ? '0%' : '100%'});
-  transition: transform 0.3s ease-out;
-`;
-
-const ModelMenuItem = styled.div`
-  display: flex;
-  align-items: center;
-  padding: 12px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  gap: 12px;
-  
-  &:hover {
-    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
-  }
-  
-  &.selected {
-    background: ${props => props.theme.primary + '20'};
-    font-weight: bold;
-  }
-`;
-
-const ModelMenuItemName = styled.span`
-  font-size: 16px;
-  color: ${props => props.theme.text};
-`;
-
 const MobileSidebar = ({
   isOpen,
   onClose,
@@ -311,9 +216,10 @@ const MobileSidebar = ({
   username,
   onModelChange
 }) => {
-  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(null);
+  const [shareLink, setShareLink] = useState('');
 
-  // Prevent body scroll when sidebar is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -384,7 +290,6 @@ const MobileSidebar = ({
     if (onModelChange) {
       onModelChange(modelId);
     }
-    setIsModelMenuOpen(false);
   };
 
   if (!isOpen) return null;
@@ -407,59 +312,30 @@ const MobileSidebar = ({
           <SectionHeader>Conversations</SectionHeader>
           <ChatList>
             {chats.map(chat => (
-              <ChatItem
-                key={chat.id}
-                active={activeChat === chat.id}
+              <ChatItem 
+                key={chat.id} 
+                active={chat.id === activeChat} 
                 onClick={() => handleChatSelect(chat.id)}
               >
                 <ChatItemContent>
-                  <ChatTitle active={activeChat === chat.id}>
-                    {chat.title || `Chat ${chat.id.substring(0, 4)}`}
-                  </ChatTitle>
-                  <ChatPreview>
-                    {getLastMessage(chat)}
-                  </ChatPreview>
+                  <ChatTitle active={chat.id === activeChat}>{chat.title}</ChatTitle>
+                  <ChatPreview>{getLastMessage(chat)}</ChatPreview>
                 </ChatItemContent>
-                
                 <ChatActions>
                   <ActionButton onClick={(e) => handleShareChat(e, chat.id)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-                      <polyline points="16 6 12 2 8 6"></polyline>
-                      <line x1="12" y1="2" x2="12" y2="15"></line>
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                   </ActionButton>
-                  
                   <ActionButton onClick={(e) => handleDeleteChat(e, chat.id)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
-                      <line x1="10" y1="11" x2="10" y2="17"></line>
-                      <line x1="14" y1="11" x2="14" y2="17"></line>
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                   </ActionButton>
                 </ChatActions>
               </ChatItem>
             ))}
           </ChatList>
-          
-          <ModelSelector>
-            <SectionHeader style={{ padding: '0 0 8px 0' }}>AI Model</SectionHeader>
-            <ModelButton onClick={() => setIsModelMenuOpen(true)}>
-              {currentModelDisplay && <ModelIcon modelId={selectedModel} size="small" />}
-              <ModelInfo>
-                <ModelName>{currentModelDisplay.name}</ModelName>
-                <ModelProvider>{currentModelDisplay.provider}</ModelProvider>
-              </ModelInfo>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </ModelButton>
-          </ModelSelector>
         </SidebarContent>
         
         <SidebarFooter>
-          <FooterButton onClick={toggleProfile}>
+          <FooterButton onClick={createNewChat}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
@@ -476,22 +352,6 @@ const MobileSidebar = ({
           </FooterButton>
         </SidebarFooter>
       </SidebarContainer>
-
-      {/* ADD MODEL SELECTION MENU */}
-      <ModelMenuOverlay isOpen={isModelMenuOpen} onClick={() => setIsModelMenuOpen(false)} />
-      <ModelMenuContainer isOpen={isModelMenuOpen}>
-        <SectionHeader style={{padding: '0 0 10px 0', textAlign: 'center'}}>Select AI Model</SectionHeader>
-        {availableModels && availableModels.map(model => (
-          <ModelMenuItem 
-            key={model.id} 
-            onClick={() => handleModelSelect(model.id)}
-            className={selectedModel === model.id ? 'selected' : ''}
-          >
-            <ModelIcon modelId={model.id} size="medium" />
-            <ModelMenuItemName>{model.name || model.id}</ModelMenuItemName>
-          </ModelMenuItem>
-        ))}
-      </ModelMenuContainer>
     </>
   );
 };

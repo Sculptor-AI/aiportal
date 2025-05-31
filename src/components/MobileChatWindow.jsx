@@ -17,6 +17,16 @@ const MobileChatContainer = styled.div`
   position: relative;
 `;
 
+const SectionHeaderStyled = styled.div`
+  padding: 0 0 10px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: ${props => props.theme.text}88;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
 const MessagesContainer = styled.div`
   flex: 1;
   overflow-y: auto;

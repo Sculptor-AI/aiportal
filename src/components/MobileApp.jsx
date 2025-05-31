@@ -10,6 +10,7 @@ import MobileSidebar from './MobileSidebar';
 import MobileSettingsPanel from './MobileSettingsPanel';
 import LoginModal from './LoginModal';
 import ProfileModal from './ProfileModal';
+import ModelIcon from './ModelIcon';
 
 const MobileAppContainer = styled.div`
   display: flex;
@@ -44,6 +45,12 @@ const MobileHeaderLeft = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
+`;
+
+const MobileHeaderCenter = styled.div`
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
 `;
 
 const MobileHeaderRight = styled.div`
@@ -109,6 +116,97 @@ const MobileContent = styled.div`
   flex-direction: column;
   overflow: hidden;
   position: relative;
+`;
+
+const ModelSelectorStyled = styled.div`
+  /* Add any specific styling for the container if needed */
+`;
+
+const ModelButton = styled.button`
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 18px; /* Pill shape */
+  color: ${props => props.theme.text};
+  cursor: pointer;
+  touch-action: manipulation;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  
+  &:active {
+    background: ${props => props.theme.border};
+  }
+
+  svg:last-child {
+    width: 16px;
+    height: 16px;
+    color: ${props => props.theme.text}88;
+  }
+`;
+
+const ModelMenuOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1002; 
+  display: ${props => props.isOpen ? 'block' : 'none'};
+`;
+
+const ModelMenuContainer = styled.div`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: ${props => props.theme.backgroundSecondary || props.theme.background };
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  z-index: 1003; 
+  padding: 16px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  max-height: 50vh;
+  overflow-y: auto;
+  transform: translateY(${props => props.isOpen ? '0%' : '100%'});
+  transition: transform 0.3s ease-out;
+`;
+
+const ModelMenuItem = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 12px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  gap: 12px;
+  
+  &:hover {
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
+  }
+  
+  &.selected {
+    background: ${props => props.theme.primary + '20'};
+    font-weight: bold;
+  }
+`;
+
+const ModelMenuItemName = styled.span`
+  font-size: 16px;
+  color: ${props => props.theme.text};
+`;
+
+const SectionHeaderStyled = styled.div`
+  padding: 0 0 10px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: ${props => props.theme.text}88;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 const MobileAppContent = () => {
@@ -179,6 +277,7 @@ const MobileAppContent = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
 
   // Fetch models from backend
   useEffect(() => {
@@ -233,6 +332,30 @@ const MobileAppContent = () => {
       localStorage.setItem('settings', JSON.stringify(settings));
     }
   }, [settings, user]);
+
+  // Functions for model selector (moved from MobileChatWindow.jsx)
+  const getModelDisplay = (modelId) => {
+    const model = availableModels.find(m => m.id === modelId);
+    if (!model) return { name: 'Select Model', provider: '' };
+    // Basic provider extraction, can be enhanced
+    let provider = model.isBackendModel ? 'Backend' : 'Local';
+    if (model.id.includes('gemini')) provider = 'Google';
+    if (model.id.includes('claude')) provider = 'Anthropic';
+    if (model.id.includes('chatgpt')) provider = 'OpenAI';
+    if (model.id.includes('nemotron')) provider = 'Nvidia';
+
+    return {
+      name: model.name || model.id,
+      provider
+    };
+  };
+
+  const handleModelSelect = (modelId) => {
+    setSelectedModel(modelId); // Directly set selectedModel here
+    setIsModelMenuOpen(false);
+  };
+
+  const currentModelDisplay = getModelDisplay(selectedModel);
 
   // Chat management functions
   const createNewChat = () => {
@@ -364,8 +487,21 @@ const MobileAppContent = () => {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </MenuButton>
-            <AppTitle>Sculptor</AppTitle>
           </MobileHeaderLeft>
+          
+          <MobileHeaderCenter>
+            <ModelSelectorStyled>
+              <ModelButton onClick={() => setIsModelMenuOpen(true)}>
+                {currentModelDisplay && (
+                  <ModelIcon modelId={selectedModel} size="small" />
+                )}
+                <span>{currentModelDisplay.name}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </ModelButton>
+            </ModelSelectorStyled>
+          </MobileHeaderCenter>
           
           <MobileHeaderRight>
             <NewChatButton onClick={createNewChat}>
@@ -385,8 +521,6 @@ const MobileAppContent = () => {
             updateChatTitle={updateChatTitle}
             selectedModel={selectedModel}
             settings={settings}
-            availableModels={availableModels}
-            onModelChange={handleModelChange}
           />
         </MobileContent>
         
@@ -423,6 +557,22 @@ const MobileAppContent = () => {
         {isProfileOpen && (
           <ProfileModal closeModal={() => setIsProfileOpen(false)} />
         )}
+
+        {/* Model Selection Menu */}
+        <ModelMenuOverlay isOpen={isModelMenuOpen} onClick={() => setIsModelMenuOpen(false)} />
+        <ModelMenuContainer isOpen={isModelMenuOpen}>
+          <SectionHeaderStyled>Select AI Model</SectionHeaderStyled>
+          {availableModels && availableModels.map(model => (
+            <ModelMenuItem 
+              key={model.id} 
+              onClick={() => handleModelSelect(model.id)}
+              className={selectedModel === model.id ? 'selected' : ''}
+            >
+              <ModelIcon modelId={model.id} size="medium" />
+              <ModelMenuItemName>{model.name || model.id}</ModelMenuItemName>
+            </ModelMenuItem>
+          ))}
+        </ModelMenuContainer>
       </MobileAppContainer>
     </ThemeProvider>
   );
