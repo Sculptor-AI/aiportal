@@ -5,6 +5,7 @@ import ChatWindow from './components/ChatWindow';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import ProfileModal from './components/ProfileModal';
+import MobileApp from './components/MobileApp';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -55,8 +56,8 @@ const FloatingMenuButton = styled.button`
 // Main Greeting Component
 const MainGreeting = styled.div`
   position: fixed;
-  top: 40%; /* Aligned with text input bar positioning */
-  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 150px)'}; /* Move right to match text input position */
+  top: 35%; /* Adjusted lower: Default for larger screens - REVERTED */
+  left: 50%; /* Always center in viewport regardless of sidebar state - REVERTED */
   transform: translateX(-50%);
   max-width: 800px; /* Keep a max width */
   width: 90%; /* Use percentage width for better flexibility */
@@ -82,7 +83,7 @@ const MainGreeting = styled.div`
   /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
     left: 50% !important; /* Always center on mobile */
-    top: 40%; /* Maintain alignment with text input */
+    top: 40%; /* Maintain alignment with text input - CURRENT MOBILE STYLE */
     max-width: 90%; /* Reduce max-width on smaller screens */
     padding: 0 15px; 
     h1 {
@@ -93,7 +94,7 @@ const MainGreeting = styled.div`
   /* Adjustments for very small screens */
   @media (max-width: 480px) {
     left: 50% !important; /* Always center on mobile */
-    top: 40%; /* Maintain alignment with text input */
+    top: 40%; /* Maintain alignment with text input - CURRENT MOBILE STYLE */
     max-width: 95%; /* Allow slightly more width on very small screens */
     padding: 0 10px; 
     h1 {
@@ -113,10 +114,42 @@ const AppWithAuth = () => {
   );
 };
 
+// Mobile detection hook
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      try {
+        const userAgent = navigator.userAgent;
+        const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+        const isMobileUA = mobileRegex.test(userAgent);
+        const isSmallScreen = window.innerWidth <= 768;
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        const shouldUseMobile = isMobileUA || (isSmallScreen && isTouchDevice);
+        console.log('Mobile detection:', { userAgent, isMobileUA, isSmallScreen, isTouchDevice, shouldUseMobile });
+        setIsMobile(shouldUseMobile);
+      } catch (error) {
+        console.error('Mobile detection error:', error);
+        // Fallback to small screen detection
+        setIsMobile(window.innerWidth <= 768);
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
 // Main app component
 const AppContent = () => {
   const { user, updateSettings: updateUserSettings } = useAuth();
   const toast = useToast();
+  const isMobile = useIsMobile();
   
   // Greeting messages
   const greetingMessages = [
@@ -145,15 +178,12 @@ const AppContent = () => {
     "Ah, my favorite daily interruption",
     "Another day, another panic request",
     "Are we avoiding responsibilities again?",
-    "This better be good—I paused my existential dread for you",
     "I see procrastination is your love language",
     "Here we go again—brace for impact",
     "Just admit you miss my digital sass",
     "Already? Give me time to recharge my sarcasm",
     "I'm sensing a pattern—and it's exhausting",
-    "Tell me, who else tolerates your last-minute drama?",
     "Did reality disappoint you again?",
-    "Ah, the endless cycle of your urgent questions",
     "Can't say I'm surprised to see you",
     "Community guidelines, prepare to be ignored"
   ];
@@ -499,7 +529,15 @@ const AppContent = () => {
     );
   }
 
-  // Otherwise, render the main app layout
+  // Debug info
+  console.log('App render:', { isMobile, windowWidth: window.innerWidth });
+
+  // Render mobile app for mobile devices
+  if (isMobile) {
+    return <MobileApp />;
+  }
+
+  // Otherwise, render the desktop app layout
   return (
     <ThemeProvider theme={currentTheme}>
       <GlobalStylesProvider settings={settings}>

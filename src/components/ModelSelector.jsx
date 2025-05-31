@@ -16,37 +16,29 @@ const ModelSelectorContainer = styled.div`
 const ModelButton = styled.button`
   display: flex;
   align-items: center;
-  padding: ${props => props.theme.name === 'retro' ? '5px 10px' : '8px 12px'};
-  background: ${props => {
-    if (props.theme.name === 'retro') return props.theme.buttonFace;
-    if (props.theme.name === 'bisexual') return props.theme.modelSelectorBackground;
-    return props.theme.inputBackground;
-  }};
-  border: ${props => props.theme.name === 'retro' ? 
-    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
-    'none'};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '20px'};
+  padding: ${props => props.theme.name === 'retro' ? '5px 8px' : '8px 12px'};
+  background: transparent;
+  border: none;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'};
   color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.text};
   font-family: ${props => props.theme.name === 'retro' ? 'MSW98UI, MS Sans Serif, Tahoma, sans-serif' : 'inherit'};
-  font-weight: ${props => props.theme.name === 'retro' ? 'normal' : '500'};
-  font-size: ${props => props.theme.name === 'retro' ? '12px' : '0.9rem'};
+  font-weight: ${props => props.theme.name === 'retro' ? 'normal' : '600'};
+  font-size: ${props => props.theme.name === 'retro' ? '11px' : '13px'};
   cursor: pointer;
   transition: ${props => props.theme.name === 'retro' ? 'none' : 'all 0.2s ease'};
   box-shadow: ${props => props.theme.name === 'retro' ? 
     `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-    '0 2px 8px rgba(0,0,0,0.1)'};
+    'none'};
+  min-width: 120px;
+  justify-content: space-between;
   
   &:hover {
-    transform: ${props => props.theme.name === 'retro' ? 'none' : 'translateY(-1px)'};
+    transform: ${props => props.theme.name === 'retro' ? 'none' : 'none'};
     box-shadow: ${props => {
       if (props.theme.name === 'retro') return `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset`;
-      return '0 4px 12px rgba(0,0,0,0.15)';
+      return 'none';
     }};
-    background: ${props => {
-      if (props.theme.name === 'retro') return props.theme.buttonFace;
-      if (props.theme.name === 'bisexual') return 'linear-gradient(145deg, rgba(40, 40, 60, 0.7), rgba(25, 25, 35, 0.9))';
-      return props.theme.inputBackground;
-    }};
+    background: rgba(0, 0, 0, 0.05);
   }
 
   ${props => props.theme.name === 'retro' && css`
@@ -57,15 +49,21 @@ const ModelButton = styled.button`
     }
   `}
   
-  span {
-    margin-left: ${props => props.theme.name === 'retro' ? '6px' : '8px'};
-    margin-right: ${props => props.theme.name === 'retro' ? '6px' : '0'};
+  .model-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
   }
   
-  svg {
+  span {
+    margin-left: ${props => props.theme.name === 'retro' ? '4px' : '6px'};
+    margin-right: ${props => props.theme.name === 'retro' ? '4px' : '0'};
+  }
+  
+  .dropdown-arrow {
     margin-left: 6px;
-    width: ${props => props.theme.name === 'retro' ? '16px' : '10px'};
-    height: ${props => props.theme.name === 'retro' ? '16px' : '10px'};
+    width: ${props => props.theme.name === 'retro' ? '12px' : '14px'};
+    height: ${props => props.theme.name === 'retro' ? '12px' : '14px'};
     transition: ${props => props.theme.name === 'retro' ? 'none' : 'transform 0.2s ease'};
     transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0)'};
     ${props => props.theme.name === 'retro' && css`
@@ -86,7 +84,7 @@ const ModelButton = styled.button`
 const DropdownMenu = styled.div`
   position: absolute;
   top: calc(100% + ${props => props.theme.name === 'retro' ? '1px' : '5px'});
-  right: 0;
+  left: 0;
   background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.inputBackground};
   min-width: 200px;
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
@@ -116,7 +114,7 @@ const DropdownMenu = styled.div`
     }
   `}
   
-  transform-origin: top right;
+  transform-origin: top left;
   animation: ${props => props.theme.name === 'retro' ? 'none' : css`dropdown 0.2s ease`};
   
   @keyframes dropdown {
@@ -351,10 +349,30 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
            isOpen={isOpen}
            theme={theme}
          >
-           <ModelIcon modelId={currentModel.id} />
-           <span>{currentModel.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</span>
-           {currentModel.isBackendModel && (
-             <BackendModelBadge theme={theme}>E</BackendModelBadge>
+           <div className="model-info">
+             <ModelIcon modelId={currentModel.id} />
+             <span>{currentModel.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</span>
+             {currentModel.isBackendModel && (
+               <BackendModelBadge theme={theme}>E</BackendModelBadge>
+             )}
+           </div>
+           {theme.name === 'retro' ? (
+             <div className="dropdown-arrow"></div>
+           ) : (
+             <svg 
+               className="dropdown-arrow" 
+               xmlns="http://www.w3.org/2000/svg" 
+               width="16" 
+               height="16" 
+               viewBox="0 0 24 24" 
+               fill="none" 
+               stroke="currentColor" 
+               strokeWidth="2" 
+               strokeLinecap="round" 
+               strokeLinejoin="round"
+             >
+               <polyline points="6 9 12 15 18 9"></polyline>
+             </svg>
            )}
          </ModelButton>
        ) : (

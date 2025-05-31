@@ -16,9 +16,9 @@ const ChatWindowContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%;
-  margin-left: ${props => props.sidebarCollapsed ? '0' : '280px'}; /* Push content when sidebar is expanded */
-  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  width: 100%; /* Always takes full width - REVERTED */
+  margin-left: 0; /* No margin - sidebar will overlay - REVERTED */
+  transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   background: ${props => props.theme.name === 'retro' ? 'rgb(0, 128, 128)' : props.theme.chat};
   backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
@@ -33,15 +33,15 @@ const ChatWindowContainer = styled.div`
   overflow: hidden;
   
   @media (max-width: 768px) {
-    margin-left: 0; /* No margin on mobile - sidebar overlays */
+    margin-left: 0; /* No margin on mobile - sidebar overlays - CURRENT MOBILE STYLE */
   }
 `;
 
 const ChatHeader = styled.div`
-  padding: 15px 20px;
+  padding: 5px 20px 15px 45px; // Reduced top padding to align with hamburger menu
   display: flex;
   align-items: flex-start; // Change from center to flex-start for better alignment
-  justify-content: ${props => props.sidebarCollapsed ? 'space-between' : 'flex-end'};
+  justify-content: flex-start;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   z-index: 10;
@@ -49,11 +49,12 @@ const ChatHeader = styled.div`
 `;
 
 const ChatTitleSection = styled.div`
-  display: ${props => props.sidebarCollapsed ? 'flex' : 'none'};
+  display: flex;
   flex-direction: column;
   flex: 1;
   gap: 4px; // Use gap instead of margin for more consistent spacing
-  padding-left: 60px; // Increased padding to better align with the hamburger button (20px left + 40px width)
+  padding-left: ${props => props.sidebarCollapsed ? '20px' : '-45px'}; // Move further left when sidebar is open since hamburger disappears
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
 const ChatTitle = styled.h2`
@@ -175,8 +176,8 @@ const InputContainer = styled.div`
   ${({ isEmpty, animateDown, theme, sidebarCollapsed }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
-    // Simple calculation: when sidebar is open, barely shift right
-    const centerPosition = sidebarCollapsed ? '50%' : 'calc(50% - 0px)';
+    // Always center at 50% regardless of sidebar state - REVERTED
+    const centerPosition = '50%';
     
     if (animateDown) {
       // When animateDown is true, isEmpty is false.
@@ -194,7 +195,7 @@ const InputContainer = styled.div`
 
         @media (max-width: 768px) {
           animation-name: ${moveInputToBottomMobile};
-          left: 50% !important; /* On mobile, always center in viewport */
+          left: 50% !important; /* On mobile, always center in viewport - CURRENT MOBILE STYLE */
         }
       `;
     } else if (isEmpty) { // Centered, no animation
@@ -205,7 +206,7 @@ const InputContainer = styled.div`
         left: ${centerPosition} !important;
         
         @media (max-width: 768px) {
-          left: 50% !important; /* On mobile, always center in viewport */
+          left: 50% !important; /* On mobile, always center in viewport - CURRENT MOBILE STYLE */
         }
       `;
     } else { // At bottom, no animation (isEmpty is false, animateDown is false)
@@ -217,7 +218,7 @@ const InputContainer = styled.div`
         
         @media (max-width: 768px) {
           bottom: ${mobileBottomPosition} !important;
-          left: 50% !important; /* On mobile, always center in viewport */
+          left: 50% !important; /* On mobile, always center in viewport - CURRENT MOBILE STYLE */
         }
       `;
     }
@@ -1327,36 +1328,7 @@ When explaining concepts:
         sidebarCollapsed={sidebarCollapsed}
       >
         <ChatTitleSection sidebarCollapsed={sidebarCollapsed}>
-          <ChatTitle>
-            {isEditingTitle ? (
-              <input
-                type="text"
-                value={editedTitle}
-                onChange={handleTitleChange}
-                onBlur={handleTitleSave}
-                onKeyDown={handleTitleKeyDown}
-                autoFocus
-                style={{ 
-                  fontSize: '1.2rem', 
-                  fontWeight: '500', 
-                  width: '100%', 
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: `1px solid ${props => props.theme.border}`,
-                  color: 'inherit'
-                }}
-              />
-            ) : (
-              <div onClick={handleStartEditing} style={{ cursor: 'pointer' }}>
-                {chat?.title || 'New Conversation'}
-              </div>
-            )}
-          </ChatTitle>
-        </ChatTitleSection>
-        
-        {/* Move ModelSelector back to the top right */}
-        {thinkingMode !== 'instant' && (
-          <ModelSelectorWrapper>
+          {thinkingMode !== 'instant' && (
             <ModelSelector
               selectedModel={selectedModel}
               models={availableModels}
@@ -1364,8 +1336,8 @@ When explaining concepts:
               key="model-selector"
               theme={theme}
             />
-          </ModelSelectorWrapper>
-        )}
+          )}
+        </ChatTitleSection>
       </ChatHeader>
       
       {(showEmptyStateStatic || animateEmptyStateOut) && (

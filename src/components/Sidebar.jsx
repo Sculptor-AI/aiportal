@@ -40,11 +40,9 @@ const LogoContainer = styled.div`
 
   img {
     height: 26px;
-    width: auto;
+    width: 26px; /* Explicit width */
     margin-right: 10px;
-    ${props => props.theme.name === 'lakeside' && `
-      filter: brightness(0) saturate(100%) invert(58%) sepia(53%) saturate(804%) hue-rotate(20deg) brightness(91%) contrast(85%);
-    `}
+    object-fit: contain; /* Added for better SVG scaling */
   }
 
   @media (max-width: 768px) {
@@ -124,9 +122,6 @@ const MobileLogoContainer = styled.div`
   img {
     height: 30px;
     margin-right: 5px;
-    ${props => props.theme.name === 'lakeside' && `
-      filter: brightness(0) saturate(100%) invert(58%) sepia(53%) saturate(804%) hue-rotate(20deg) brightness(91%) contrast(85%);
-    `}
   }
 
   @media (max-width: 768px) {
@@ -816,10 +811,10 @@ const Sidebar = ({
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
            <LogoContainer>
              <img 
-               src={theme && theme.name === 'lakeside' ? 'https://demo-andromeda.me/static/favicon.png' : '/images/sculptor.svg'} 
-               alt={theme && theme.name === 'lakeside' ? 'Andromeda AI' : 'Sculptor AI'} 
+               src={'/images/sculptor.svg'} 
+               alt={'Sculptor AI'} 
              />
-             <LogoText>{theme && theme.name === 'lakeside' ? 'Andromeda' : 'Sculptor'}</LogoText>
+             <LogoText>{'Sculptor'}</LogoText>
            </LogoContainer>
            
            {/* Left Collapse Button (now on the right) - hidden for retro theme */}
@@ -853,10 +848,10 @@ const Sidebar = ({
         <TopBarContainer className="mobile-top-bar" style={{ display: 'none' }}> {/* Managed by CSS */}
           <MobileLogoContainer>
             <img 
-              src={theme && theme.name === 'lakeside' ? 'https://demo-andromeda.me/static/favicon.png' : '/images/sculptor.svg'} 
-              alt={theme && theme.name === 'lakeside' ? 'Andromeda AI' : 'Sculptor AI'} 
+              src={'/images/sculptor.svg'} 
+              alt={'Sculptor AI'} 
             />
-            <MobileLogoText>{theme && theme.name === 'lakeside' ? 'Andromeda' : 'Sculptor'}</MobileLogoText>
+            <MobileLogoText>{'Sculptor'}</MobileLogoText>
           </MobileLogoContainer>
           {/* Group New Chat and Toggle Button */}
           <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
