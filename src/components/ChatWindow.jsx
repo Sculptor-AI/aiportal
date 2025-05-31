@@ -16,9 +16,9 @@ const ChatWindowContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%; /* Always takes full width */
-  margin-left: 0; /* No margin - sidebar will overlay */
-  transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  width: 100%;
+  margin-left: ${props => props.sidebarCollapsed ? '0' : '280px'}; /* Push content when sidebar is expanded */
+  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   background: ${props => props.theme.name === 'retro' ? 'rgb(0, 128, 128)' : props.theme.chat};
   backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
@@ -31,6 +31,10 @@ const ChatWindowContainer = styled.div`
   }};
   position: relative;
   overflow: hidden;
+  
+  @media (max-width: 768px) {
+    margin-left: 0; /* No margin on mobile - sidebar overlays */
+  }
 `;
 
 const ChatHeader = styled.div`
@@ -115,7 +119,7 @@ const fadeIn = keyframes`
   }
 `;
 
-// Create keyframes for moving input to bottom (without left property)
+// Create keyframes for moving input to bottom
 const moveInputToBottom = keyframes`
   from {
     top: 50%;
@@ -159,8 +163,8 @@ const InputContainer = styled.div`
   align-items: center;
   justify-content: center;
   position: fixed !important;
-  width: 100% !important; /* Takes full available width up to max-width */
-  max-width: ${props => props.theme.name === 'retro' ? '750px' : '700px'} !important; /* Apply max-width here */
+  width: 100% !important;
+  max-width: ${props => props.theme.name === 'retro' ? '750px' : '700px'} !important;
   padding: 0 !important;
   z-index: 100 !important;
   pointer-events: none;
@@ -171,17 +175,17 @@ const InputContainer = styled.div`
   ${({ isEmpty, animateDown, theme, sidebarCollapsed }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
-    // Always center at 50% regardless of sidebar state
-    const centerPosition = '50%';
+    // Simple calculation: when sidebar is open, barely shift right
+    const centerPosition = sidebarCollapsed ? '50%' : 'calc(50% - 0px)';
     
     if (animateDown) {
       // When animateDown is true, isEmpty is false.
       // The element starts at the centered position and animates to the bottom.
       return css`
-        top: 50%; /* Start position for the animation - NO !important */
-        transform: translate(-50%, -50%); /* Start position - NO !important */
-        bottom: auto; /* Ensure bottom is not conflicting - NO !important */
-        left: ${centerPosition} !important; /* Always center in viewport */
+        top: 50%;
+        transform: translate(-50%, -50%);
+        bottom: auto;
+        left: ${centerPosition} !important;
         
         animation-name: ${moveInputToBottom};
         animation-duration: 0.5s;
@@ -198,7 +202,7 @@ const InputContainer = styled.div`
         top: 50% !important;
         transform: translate(-50%, -50%) !important;
         bottom: auto !important;
-        left: ${centerPosition} !important; /* Always center in viewport */
+        left: ${centerPosition} !important;
         
         @media (max-width: 768px) {
           left: 50% !important; /* On mobile, always center in viewport */
@@ -209,7 +213,7 @@ const InputContainer = styled.div`
         top: auto !important;
         bottom: ${bottomPosition} !important;
         transform: translateX(-50%) !important;
-        left: ${centerPosition} !important; /* Always center in viewport */
+        left: ${centerPosition} !important;
         
         @media (max-width: 768px) {
           bottom: ${mobileBottomPosition} !important;

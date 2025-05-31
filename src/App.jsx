@@ -55,8 +55,8 @@ const FloatingMenuButton = styled.button`
 // Main Greeting Component
 const MainGreeting = styled.div`
   position: fixed;
-  top: 35%; /* Adjusted lower: Default for larger screens */
-  left: 50%; /* Always center in viewport regardless of sidebar state */
+  top: 40%; /* Aligned with text input bar positioning */
+  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 150px)'}; /* Move right to match text input position */
   transform: translateX(-50%);
   max-width: 800px; /* Keep a max width */
   width: 90%; /* Use percentage width for better flexibility */
@@ -81,7 +81,8 @@ const MainGreeting = styled.div`
 
   /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
-    top: 30%; /* Adjusted lower: For tablets and smaller */
+    left: 50% !important; /* Always center on mobile */
+    top: 40%; /* Maintain alignment with text input */
     max-width: 90%; /* Reduce max-width on smaller screens */
     padding: 0 15px; 
     h1 {
@@ -91,7 +92,8 @@ const MainGreeting = styled.div`
 
   /* Adjustments for very small screens */
   @media (max-width: 480px) {
-    top: 28%; /* Adjusted lower: For very small screens */
+    left: 50% !important; /* Always center on mobile */
+    top: 40%; /* Maintain alignment with text input */
     max-width: 95%; /* Allow slightly more width on very small screens */
     padding: 0 10px; 
     h1 {
@@ -515,7 +517,7 @@ const AppContent = () => {
           
           {/* Main greeting that appears at the top of the page */}
           {getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
-            <MainGreeting>
+            <MainGreeting sidebarCollapsed={collapsed}>
               <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>
                 {settings.theme === 'lakeside' ? 'Andromeda' : `${greeting}${user ? `, ${user.username}` : ''}`}
               </h1>
