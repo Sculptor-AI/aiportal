@@ -16,9 +16,9 @@ const ChatWindowContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%; /* Always takes full width - REVERTED */
-  margin-left: 0; /* No margin - sidebar will overlay - REVERTED */
-  transition: width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  width: 100%;
+  margin-left: ${props => props.sidebarCollapsed ? '0' : '280px'}; /* Push content when sidebar is expanded */
+  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   background: ${props => props.theme.name === 'retro' ? 'rgb(0, 128, 128)' : props.theme.chat};
   backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
@@ -33,7 +33,7 @@ const ChatWindowContainer = styled.div`
   overflow: hidden;
   
   @media (max-width: 768px) {
-    margin-left: 0; /* No margin on mobile - sidebar overlays - CURRENT MOBILE STYLE */
+    margin-left: 0; /* No margin on mobile - sidebar overlays */
   }
 `;
 
@@ -170,18 +170,15 @@ const InputContainer = styled.div`
   z-index: 100 !important;
   pointer-events: none;
   flex-direction: column;
-  margin-left: 0 !important;
+  /* margin-left will be handled by the left property based on sidebarCollapsed */
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 
   ${({ isEmpty, animateDown, theme, sidebarCollapsed }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
-    // Always center at 50% regardless of sidebar state - REVERTED
-    const centerPosition = '50%';
+    const centerPosition = sidebarCollapsed ? '50%' : 'calc(50% - 0px)'; // Reverting to the specific commit value
     
     if (animateDown) {
-      // When animateDown is true, isEmpty is false.
-      // The element starts at the centered position and animates to the bottom.
       return css`
         top: 50%;
         transform: translate(-50%, -50%);
