@@ -1,6 +1,6 @@
 {
-  "name": "AI Portal",
-  "short_name": "AI Portal",
+  "name": "Sculptor",
+  "short_name": "Sculptor",
   "description": "Advanced AI chat interface with multiple model support",
   "start_url": "/",
   "display": "standalone",
@@ -25,6 +25,12 @@
     }
   ],
   "icons": [
+    {
+      "src": "/images/sculptor.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "/images/icon-192.png",
       "sizes": "192x192",
