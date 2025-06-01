@@ -661,6 +661,10 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
         } catch (e) {
           console.error("Error parsing SSE data chunk:", event.data, e);
           // Don't abort immediately, maybe the next chunk is fine
+          // FIX: Properly handle the error to terminate the stream processing
+          streamError = e; // Signal error to the generator
+          ctrl.abort();    // Stop the event source
+          enqueueMessage(null); // Ensure any pending getNextMessage resolves to end the loop
         }
       },
 
@@ -1033,9 +1037,11 @@ export const streamMessageFromBackend = async (
             }
           } catch (e) {
             // If JSON.parse fails or another error occurs in the try block
-            console.error('Error processing SSE data line. Raw data:', data, 'Error:', e);
+            console.error('Error processing SSE data line or in onChunk. Raw data:', data, 'Error:', e);
             // Do NOT pass raw 'data' to onChunk if it couldn't be processed as expected.
             // The previous logic incorrectly passed raw data on parse failure.
+            // Re-throw the error to ensure it's not silently caught and the stream processing stops.
+            throw e;
           }
         }
       }

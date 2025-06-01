@@ -8,11 +8,13 @@ const SidebarOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
   opacity: ${props => props.isOpen ? 1 : 0};
   visibility: ${props => props.isOpen ? 'visible' : 'hidden'};
-  transition: opacity 0.3s ease, visibility 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   touch-action: none;
 `;
 
@@ -26,11 +28,27 @@ const SidebarContainer = styled.div`
   border-right: 1px solid ${props => props.theme.border};
   z-index: 1001;
   transform: translateX(${props => props.isOpen ? '0' : '-100%'});
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   padding-top: env(safe-area-inset-top);
+  box-shadow: ${props => props.isOpen ? '0 0 30px rgba(0, 0, 0, 0.2)' : 'none'};
+  
+  @keyframes slideIn {
+    from {
+      transform: translateX(-100%);
+      opacity: 0.8;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  ${props => props.isOpen && `
+    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  `}
 `;
 
 const SidebarHeader = styled.div`
@@ -40,6 +58,18 @@ const SidebarHeader = styled.div`
   padding: 16px 20px;
   border-bottom: 1px solid ${props => props.theme.border};
   background: ${props => props.theme.background};
+`;
+
+const SidebarTitleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const SidebarLogo = styled.img`
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 `;
 
 const SidebarTitle = styled.h2`
@@ -60,14 +90,26 @@ const CloseButton = styled.button`
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: ${props => props.theme.border};
+    transform: scale(1.05);
+  }
   
   &:active {
     background: ${props => props.theme.border};
+    transform: scale(0.95);
   }
   
   svg {
     width: 20px;
     height: 20px;
+    transition: transform 0.2s ease;
+  }
+  
+  &:hover svg {
+    transform: rotate(90deg);
   }
 `;
 
@@ -103,9 +145,28 @@ const ChatItem = styled.div`
   cursor: pointer;
   touch-action: manipulation;
   background: ${props => props.active ? (props.theme.primary + '20') : 'transparent'};
-  transition: background 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: ${props => props.theme.primary};
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  &:hover::before {
+    opacity: 0.05;
+  }
   
   &:active {
+    transform: scale(0.98);
     background: ${props => props.active ? (props.theme.primary + '30') : props.theme.border};
   }
 `;
@@ -151,14 +212,28 @@ const ActionButton = styled.button`
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
+  transition: all 0.2s ease;
+  position: relative;
+  
+  &:hover {
+    background: ${props => props.theme.border};
+    color: ${props => props.theme.text};
+    transform: translateY(-1px);
+  }
   
   &:active {
     background: ${props => props.theme.border};
+    transform: translateY(0);
   }
   
   svg {
     width: 16px;
     height: 16px;
+    transition: transform 0.2s ease;
+  }
+  
+  &:hover svg {
+    transform: scale(1.1);
   }
 `;
 
@@ -183,19 +258,55 @@ const FooterButton = styled.button`
   cursor: pointer;
   touch-action: manipulation;
   margin-bottom: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
   
   &:last-child {
     margin-bottom: 0;
   }
   
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: ${props => props.theme.primary};
+    opacity: 0.1;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+  }
+  
+  &:hover::before {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+  }
+  
+  &:hover {
+    background: ${props => props.theme.border}33;
+    transform: translateX(4px);
+  }
+  
   &:active {
     background: ${props => props.theme.border};
+    transform: translateX(2px);
   }
   
   svg {
     width: 20px;
     height: 20px;
     color: ${props => props.theme.text}88;
+    transition: all 0.2s ease;
+    z-index: 1;
+  }
+  
+  &:hover svg {
+    color: ${props => props.theme.primary};
+    transform: rotate(5deg) scale(1.1);
   }
 `;
 
@@ -299,7 +410,10 @@ const MobileSidebar = ({
       <SidebarOverlay isOpen={isOpen} onClick={onClose} />
       <SidebarContainer isOpen={isOpen}>
         <SidebarHeader>
-          <SidebarTitle>Sculptor</SidebarTitle>
+          <SidebarTitleContainer>
+            <SidebarLogo src="/images/sculptor.svg" alt="Sculptor Logo" />
+            <SidebarTitle>Sculptor</SidebarTitle>
+          </SidebarTitleContainer>
           <CloseButton onClick={onClose}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>

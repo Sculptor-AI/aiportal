@@ -357,6 +357,22 @@ const MobileAppContent = () => {
 
   const currentModelDisplay = getModelDisplay(selectedModel);
 
+  // Helper function to clean up model names for display
+  const getCleanModelName = (modelName) => {
+    if (!modelName) return '';
+    
+    // Remove provider prefix (everything before the colon)
+    let cleanName = modelName;
+    if (cleanName.includes(':')) {
+      cleanName = cleanName.split(':')[1].trim();
+    }
+    
+    // Remove "(free)" text
+    cleanName = cleanName.replace(/\s*\(free\)\s*$/i, '');
+    
+    return cleanName;
+  };
+
   // Chat management functions
   const createNewChat = () => {
     const newChat = {
@@ -495,7 +511,7 @@ const MobileAppContent = () => {
                 {currentModelDisplay && (
                   <ModelIcon modelId={selectedModel} size="small" />
                 )}
-                <span>{currentModelDisplay.name}</span>
+                <span>{getCleanModelName(currentModelDisplay.name)}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
@@ -521,6 +537,8 @@ const MobileAppContent = () => {
             updateChatTitle={updateChatTitle}
             selectedModel={selectedModel}
             settings={settings}
+            availableModels={availableModels}
+            onModelChange={handleModelChange}
           />
         </MobileContent>
         
@@ -569,7 +587,7 @@ const MobileAppContent = () => {
               className={selectedModel === model.id ? 'selected' : ''}
             >
               <ModelIcon modelId={model.id} size="medium" />
-              <ModelMenuItemName>{model.name || model.id}</ModelMenuItemName>
+              <ModelMenuItemName>{getCleanModelName(model.name || model.id)}</ModelMenuItemName>
             </ModelMenuItem>
           ))}
         </ModelMenuContainer>

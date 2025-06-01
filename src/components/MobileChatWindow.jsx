@@ -302,20 +302,61 @@ const MobileChatWindow = ({
   };
 
   const handleSendMessage = async () => {
+    console.log('[Mobile] Send button clicked');
+    
     const messageToSend = inputMessage.trim();
     const currentImageData = uploadedFile?.dataUrl;
     const currentFileText = uploadedFile?.text;
 
-    if (!messageToSend && !currentImageData && !currentFileText) return;
-    if (isLoading || isProcessingFile || !chat?.id) return;
+    console.log('[Mobile] Message state:', {
+      messageToSend,
+      hasImage: !!currentImageData,
+      hasFile: !!currentFileText,
+      uploadedFile
+    });
+
+    if (!messageToSend && !currentImageData && !currentFileText) {
+      console.log('[Mobile] No content to send, returning early');
+      return;
+    }
+    
+    console.log('[Mobile] Loading states:', {
+      isLoading,
+      isProcessingFile,
+      chatId: chat?.id,
+      hasChat: !!chat
+    });
+    
+    if (isLoading || isProcessingFile || !chat?.id) {
+      console.log('[Mobile] Blocked by loading state or missing chat, returning early');
+      return;
+    }
 
     const currentChatId = chat.id;
     const currentModel = selectedModel;
     const currentHistory = chat.messages;
 
+    console.log('[Mobile] Model check:', {
+      selectedModel,
+      availableModels: availableModels?.length,
+      currentModel
+    });
+
     // Find the full model object for the current model
-    const currentModelObj = availableModels.find(model => model.id === currentModel);
+    const currentModelObj = availableModels?.find(model => model.id === currentModel);
     const isBackendModel = currentModelObj?.isBackendModel === true;
+
+    console.log('[Mobile] Model details:', {
+      currentModelObj,
+      isBackendModel,
+      availableModelsExists: !!availableModels,
+      modelCount: availableModels?.length || 0
+    });
+
+    // If we can't find the model config, log a warning
+    if (!currentModelObj && availableModels?.length > 0) {
+      console.warn('[Mobile] Model not found in availableModels:', currentModel);
+    }
 
     setIsLoading(true);
 
@@ -471,6 +512,19 @@ const MobileChatWindow = ({
     return "Message";
   };
 
+  const isSendButtonDisabled = isLoading || isProcessingFile || (!inputMessage.trim() && !uploadedFile);
+  
+  // Log button state changes
+  useEffect(() => {
+    console.log('[Mobile] Send button disabled state:', {
+      disabled: isSendButtonDisabled,
+      isLoading,
+      isProcessingFile,
+      hasMessage: !!inputMessage.trim(),
+      hasFile: !!uploadedFile
+    });
+  }, [isSendButtonDisabled, isLoading, isProcessingFile, inputMessage, uploadedFile]);
+
   if (!chat) {
     return (
       <MobileChatContainer>
@@ -526,7 +580,14 @@ const MobileChatWindow = ({
           
           <SendButton
             onClick={handleSendMessage}
-            disabled={isLoading || isProcessingFile || (!inputMessage.trim() && !uploadedFile)}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              console.log('[Mobile] Touch end on send button');
+              if (!isSendButtonDisabled) {
+                handleSendMessage();
+              }
+            }}
+            disabled={isSendButtonDisabled}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 2L11 13"></path>
