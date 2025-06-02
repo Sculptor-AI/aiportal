@@ -16,7 +16,7 @@ const SidebarContainer = styled.div`
   position: fixed;
   top: 0;
   left: ${props => props.collapsed ? '-280px' : '0'};
-  z-index: 20;
+  z-index: 101;
   box-shadow: ${props => props.theme.name === 'dark' ? '0 0 20px rgba(0,0,0,0.2)' : '0 0 10px rgba(0,0,0,0.1)'};
   opacity: ${props => props.collapsed ? '0' : '1'};
   transform: translateX(0); /* Removed extra transform to fix alignment */

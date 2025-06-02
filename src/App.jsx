@@ -56,7 +56,7 @@ const FloatingMenuButton = styled.button`
 // Main Greeting Component
 const MainGreeting = styled.div`
   position: fixed;
-  top: 40%; /* Aligned with text input bar positioning */
+  top: 35%; /* Aligned with text input bar positioning */
   left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 140px)'}; /* Consistent shift with InputContainer */
   transform: translateX(-50%);
   max-width: 800px; /* Keep a max width */
@@ -83,7 +83,7 @@ const MainGreeting = styled.div`
   /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
     left: 50% !important; /* Always center on mobile */
-    top: 40%; /* Maintain alignment with text input */
+    top: 30%; /* Maintain alignment with text input */
     max-width: 90%; /* Reduce max-width on smaller screens */
     padding: 0 15px; 
     h1 {
@@ -94,7 +94,7 @@ const MainGreeting = styled.div`
   /* Adjustments for very small screens */
   @media (max-width: 480px) {
     left: 50% !important; /* Always center on mobile */
-    top: 40%; /* Maintain alignment with text input */
+    top: 30%; /* Maintain alignment with text input */
     max-width: 95%; /* Allow slightly more width on very small screens */
     padding: 0 10px; 
     h1 {
