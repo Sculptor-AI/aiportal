@@ -200,7 +200,7 @@ The frontend will automatically connect to the backend if the proper environment
 ---
 
 <div align="center">
-  <p>Made with ❤️ by Chase & Kellen</p>
+  <p>Made with ❤️ by Team Sculptor/p>
   <p>
     <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">v0.1.0</span>
   </p>
