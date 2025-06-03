@@ -1304,6 +1304,18 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                   </Toggle>
                   Focus mode (hide UI elements while typing)
                 </ToggleWrapper>
+
+                <ToggleWrapper>
+                  <Toggle checked={localSettings.showGreeting !== false}>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.showGreeting !== false}
+                      onChange={() => handleChange('showGreeting', localSettings.showGreeting === false ? true : false)}
+                    />
+                    <Slider checked={localSettings.showGreeting !== false} />
+                  </Toggle>
+                  Show greeting message on empty chat
+                </ToggleWrapper>
               </SettingGroup>
               
               <SettingGroup>

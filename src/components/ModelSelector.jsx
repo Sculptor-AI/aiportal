@@ -45,7 +45,7 @@ const ModelButton = styled.button`
     &:active {
       border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
       box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
-      padding: ${props.isOpen ? '5px 10px' : '6px 9px 4px 11px'}; /* Adjust padding for pressed state */
+      padding: ${props => props.$isOpen ? '5px 10px' : '6px 9px 4px 11px'}; /* Adjust padding for pressed state */
     }
   `}
   
@@ -65,15 +65,15 @@ const ModelButton = styled.button`
     width: ${props => props.theme.name === 'retro' ? '12px' : '14px'};
     height: ${props => props.theme.name === 'retro' ? '12px' : '14px'};
     transition: ${props => props.theme.name === 'retro' ? 'none' : 'transform 0.2s ease'};
-    transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0)'};
+    transform: ${props => props.$isOpen ? 'rotate(180deg)' : 'rotate(0)'};
     ${props => props.theme.name === 'retro' && css`
       border-style: solid;
       border-width: 0 1px 1px 0;
       display: inline-block;
       padding: 3px;
       border-color: ${props.theme.buttonText};
-      transform: ${props.isOpen ? 'translateY(-2px) rotate(225deg)' : 'translateY(-3px) rotate(45deg)' };
-      margin-bottom: ${props.isOpen ? '0px' : '1px' };
+      transform: ${props => props.$isOpen ? 'translateY(-2px) rotate(225deg)' : 'translateY(-3px) rotate(45deg)' };
+      margin-bottom: ${props => props.$isOpen ? '0px' : '1px' };
     `}
   }
   
@@ -140,7 +140,7 @@ const ModelOption = styled.div`
   font-family: ${props => props.theme.name === 'retro' ? 'MSW98UI, MS Sans Serif, Tahoma, sans-serif' : 'inherit'};
   font-size: ${props => props.theme.name === 'retro' ? '12px' : 'inherit'};
 
-  ${props => props.isSelected && props.theme.name !== 'retro' && `
+  ${props => props.$isSelected && props.theme.name !== 'retro' && `
     background: rgba(0,0,0,0.1);
     border-left-color: ${props.theme.name === 'bisexual' ? 
       props.theme.primary.split(',')[0].replace('linear-gradient(145deg', '').trim() : 
@@ -153,27 +153,27 @@ const ModelOption = styled.div`
         return 'rgba(0,0,0,0.1)';
     }};
     ${props => props.theme.name === 'retro' && css`
-      ${props.isSelected && `
+      ${props.$isSelected && `
         box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
         border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
       `}
-      ${!props.isSelected && `
+      ${!props.$isSelected && `
         background: ${props.theme.highlightBackground};
         color: ${props.theme.highlightText};
       `}
     `}
   }
 
-  ${props => props.isSelected && props.theme.name === 'retro' && css`
+  ${props => props.$isSelected && props.theme.name === 'retro' && css`
     background: ${props.theme.highlightBackground};
     color: ${props.theme.highlightText};
   `}
 
-  & > ${ModelIcon} {
+  & > div { 
     ${props => props.theme.name === 'retro' && css`
-      filter: grayscale(1) brightness(0.7);
-      width: 16px; 
-      height: 16px;
+      & > img, & > svg {
+        filter: grayscale(1) brightness(0.7);
+      }
     `}
   }
 `;
@@ -346,7 +346,7 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
        {currentModel ? (
          <ModelButton 
            onClick={toggleDropdown} 
-           isOpen={isOpen}
+           $isOpen={isOpen}
            theme={theme}
          >
            <div className="model-info">
@@ -384,7 +384,7 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
           {availableModels.map(model => (
             <ModelOption
               key={model.id}
-              isSelected={model.id === selectedModel}
+              $isSelected={model.id === selectedModel}
               onClick={() => handleSelectModel(model.id)}
               theme={theme}
             >

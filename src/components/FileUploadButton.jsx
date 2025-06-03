@@ -39,21 +39,19 @@ const HiddenInput = styled.input`
 
 const PreviewContainer = styled.div`
   position: absolute;
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 10px;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
   background: ${props => props.theme.inputBackground};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
-  border: ${props => props.theme.name === 'retro' ? 
-    `2px solid ${props.theme.buttonFace}` : 
-    `1px solid ${props.theme.border}`};
-  padding: 10px;
-  box-shadow: ${props => props.theme.name === 'retro' ? 
-    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` : 
-    '0 4px 12px rgba(0,0,0,0.1)'};
-  display: ${props => props.show ? 'flex' : 'none'};
-  align-items: center; /* Center items vertically */
-  max-width: 250px;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border: 1px solid ${props => props.theme.border};
+  z-index: 10;
+  max-width: calc(100% - 16px);
+  display: ${props => props.$show ? 'flex' : 'none'};
+  align-items: center;
+  gap: 8px;
 `;
 
 const PreviewImage = styled.img`
@@ -274,7 +272,7 @@ const FileUploadButton = ({ onFileSelected, disabled, resetFile, externalFile })
         accept="image/jpeg, image/png, image/gif, image/webp, application/pdf, text/plain"
         onChange={handleFileChange}
       />
-      <PreviewContainer show={previewData !== null}>
+      <PreviewContainer $show={previewData !== null} theme={theme}>
         {previewData && (
           <>
             <CloseButton onClick={clearFile}>×</CloseButton>

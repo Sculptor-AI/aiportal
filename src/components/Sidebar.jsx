@@ -6,7 +6,7 @@ import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 const SidebarContainer = styled.div`
   display: flex;
   flex-direction: column;
-  width: ${props => props.collapsed ? '0' : '280px'};
+  width: ${props => props.$collapsed ? '0' : '280px'};
   height: 100%;
   background: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
@@ -15,14 +15,14 @@ const SidebarContainer = styled.div`
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   position: fixed;
   top: 0;
-  left: ${props => props.collapsed ? '-280px' : '0'};
+  left: ${props => props.$collapsed ? '-280px' : '0'};
   z-index: 101;
   box-shadow: ${props => props.theme.name === 'dark' ? '0 0 20px rgba(0,0,0,0.2)' : '0 0 10px rgba(0,0,0,0.1)'};
-  opacity: ${props => props.collapsed ? '0' : '1'};
+  opacity: ${props => props.$collapsed ? '0' : '1'};
   transform: translateX(0); /* Removed extra transform to fix alignment */
   
   @media (max-width: 768px) {
-    left: ${props => (props.collapsed ? '-100%' : '0')};
+    left: ${props => (props.$collapsed ? '-100%' : '0')};
     top: 0;
     width: 100%;
     z-index: 100;
@@ -70,9 +70,9 @@ const CollapseButton = styled.button`
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  position: ${props => props.collapsed ? 'fixed' : 'relative'};
-  top: ${props => props.collapsed ? '14px' : '0'};
-  left: ${props => props.collapsed ? '18px' : '0'};
+  position: ${props => props.$collapsed ? 'fixed' : 'relative'};
+  top: ${props => props.$collapsed ? '14px' : '0'};
+  left: ${props => props.$collapsed ? '18px' : '0'};
   z-index: 30;
   opacity: 0.7;
 
@@ -83,8 +83,8 @@ const CollapseButton = styled.button`
   }
 
   &:hover {
-    background: ${props => props.collapsed ? 'transparent' : 'rgba(255,255,255,0.08)'};
-    border-radius: ${props => props.collapsed ? '0' : '6px'};
+    background: ${props => props.$collapsed ? 'transparent' : 'rgba(255,255,255,0.08)'};
+    border-radius: ${props => props.$collapsed ? '0' : '6px'};
     opacity: 1;
   }
 
@@ -193,19 +193,19 @@ const NewChatButton = styled.button`
 
   svg {
     transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    margin-right: ${props => props.collapsed ? '0' : (props.theme.name === 'retro' ? '0' : '8px')};
+    margin-right: ${props => props.$collapsed ? '0' : (props.theme.name === 'retro' ? '0' : '8px')};
     color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
     width: ${props => props.theme.name === 'retro' ? '14px' : '16px'};
     height: ${props => props.theme.name === 'retro' ? '14px' : '16px'};
   }
 
   span {
-    opacity: ${props => props.collapsed ? '0' : '1'};
+    opacity: ${props => props.$collapsed ? '0' : '1'};
     transform: translateX(0); /* Removed transform for better alignment */
-    visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+    visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
     white-space: nowrap;
     transition: opacity 0.2s ease, visibility 0.2s;
-    transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
+    transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
     ${props => props.theme.name === 'retro' && `
       font-family: 'MSW98UI', 'MS Sans Serif', 'Tahoma', sans-serif;
       font-size: 12px;
@@ -238,7 +238,7 @@ const ScrollableContent = styled.div`
   margin-top: 5px;
 
   @media (max-width: 768px) {
-    display: ${props => props.isExpanded ? 'flex' : 'none'};
+    display: ${props => props.$isExpanded ? 'flex' : 'none'};
     overflow-y: auto;
     max-height: calc(40vh - 60px);
   }
@@ -247,10 +247,10 @@ const ScrollableContent = styled.div`
 const ChatList = styled.div`
   flex-grow: 1;
   overflow-y: auto;
-  padding: 0 ${props => props.collapsed ? '8px' : '12px'};
+  padding: 0 ${props => props.$collapsed ? '8px' : '12px'};
   display: flex;
   flex-direction: column;
-  align-items: ${props => props.collapsed ? 'center' : 'stretch'};
+  align-items: ${props => props.$collapsed ? 'center' : 'stretch'};
   margin-bottom: 10px;
   gap: 4px;
 
@@ -280,9 +280,9 @@ const ChatItem = styled.div`
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: ${props => props.collapsed ? 'center' : 'space-between'};
+  justify-content: ${props => props.$collapsed ? 'center' : 'space-between'};
   background: ${props => {
-    if (!props.active) return 'transparent';
+    if (!props.$active) return 'transparent';
     if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.1)';
     if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.15)';
     if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.12)';
@@ -295,7 +295,7 @@ const ChatItem = styled.div`
   
   &:hover {
     background: ${props => {
-      if (props.active) {
+      if (props.$active) {
         if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
         if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.20)';
         if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.15)';
@@ -310,7 +310,7 @@ const ChatItem = styled.div`
   }
 
   /* Special styling for lakeside theme active items */
-  ${props => props.theme.name === 'lakeside' && props.active && `
+  ${props => props.theme.name === 'lakeside' && props.$active && `
     &::before {
       content: '';
       position: absolute;
@@ -324,17 +324,17 @@ const ChatItem = styled.div`
   `}
 
   /* Special styling for dark theme active items */
-  ${props => props.theme.name === 'dark' && props.active && `
+  ${props => props.theme.name === 'dark' && props.$active && `
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
   `}
   
   /* Special styling for light theme active items */
-  ${props => props.theme.name === 'light' && props.active && `
+  ${props => props.theme.name === 'light' && props.$active && `
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   `}
   
   /* Common active item styling */
-  ${props => props.active && `
+  ${props => props.$active && `
     font-weight: 500;
   `}
 
@@ -349,10 +349,10 @@ const ChatTitle = styled.div`
   text-overflow: ellipsis;
   flex: 1; /* Take available space */
   margin-right: 5px; /* Space before delete button */
-  opacity: ${props => props.collapsed ? '0' : '1'};
-  visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+  opacity: ${props => props.$collapsed ? '0' : '1'};
+  visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
-  transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
+  transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
 
   @media (max-width: 768px) {
@@ -379,8 +379,8 @@ const ShareButton = styled.button`
 
   /* Show on ChatItem hover only when not collapsed */
   ${ChatItem}:hover & {
-      opacity: ${props => props.collapsed ? '0' : '1'};
-      visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+      opacity: ${props => props.$collapsed ? '0' : '1'};
+      visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
   &:hover {
@@ -416,8 +416,8 @@ const DeleteButton = styled.button`
 
   /* Show on ChatItem hover only when not collapsed */
   ${ChatItem}:hover & {
-      opacity: ${props => props.collapsed ? '0' : '1'};
-      visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+      opacity: ${props => props.$collapsed ? '0' : '1'};
+      visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
   &:hover {
@@ -448,8 +448,8 @@ const ButtonContainer = styled.div`
   transition: opacity 0.2s ease, visibility 0.2s ease;
 
   ${ChatItem}:hover & {
-      opacity: ${props => props.collapsed ? '0' : '1'};
-      visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+      opacity: ${props => props.$collapsed ? '0' : '1'};
+      visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
   /* Ensure buttons are always visible on mobile */
@@ -464,7 +464,7 @@ const ButtonContainer = styled.div`
 `;
 
 const BottomSection = styled.div`
-  padding: ${props => props.collapsed ? '10px 5px' : '15px'};
+  padding: ${props => props.$collapsed ? '10px 5px' : '15px'};
   border-top: 1px solid ${props => props.theme.border};
   margin-top: auto; /* Push to bottom */
   flex-shrink: 0; /* Prevent shrinking */
@@ -483,10 +483,10 @@ const SectionHeader = styled.div`
   font-size: 12px;
   text-transform: uppercase;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  opacity: ${props => props.collapsed ? '0' : (props.theme.name === 'lakeside' ? '1' : '0.7')};
-  visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+  opacity: ${props => props.$collapsed ? '0' : (props.theme.name === 'lakeside' ? '1' : '0.7')};
+  visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
-  transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
+  transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
 
   @media (max-width: 768px) {
       opacity: ${props => props.theme.name === 'lakeside' ? '1' : '0.7'};
@@ -510,10 +510,10 @@ const ModelDropdownButton = styled.button`
   background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 0.5)' : props.theme.inputBackground};
   border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border};
   border-radius: 12px;
-  padding: ${props => props.collapsed ? '8px' : '10px 12px'}; /* Adjust padding */
+  padding: ${props => props.$collapsed ? '8px' : '10px 12px'}; /* Adjust padding */
   display: flex;
   align-items: center;
-  justify-content: ${props => props.collapsed ? 'center' : 'space-between'};
+  justify-content: ${props => props.$collapsed ? 'center' : 'space-between'};
   cursor: pointer;
   transition: all 0.2s ease;
   backdrop-filter: blur(5px);
@@ -537,10 +537,10 @@ const ModelDropdownButton = styled.button`
   /* Dropdown arrow */
   > svg:last-child {
       transition: transform 0.2s;
-      transform: ${props => props.isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
+      transform: ${props => props.$isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
       flex-shrink: 0; /* Prevent arrow shrinking */
-      opacity: ${props => props.collapsed ? '0' : '1'};
-      visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+      opacity: ${props => props.$collapsed ? '0' : '1'};
+      visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
   @media (max-width: 768px) {
@@ -554,10 +554,10 @@ const ModelDropdownButton = styled.button`
 `;
 
 const ModelDropdownText = styled.span`
-  opacity: ${props => props.collapsed ? '0' : '1'};
-  visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+  opacity: ${props => props.$collapsed ? '0' : '1'};
+  visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
-  transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
+  transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-weight: 500;
   white-space: nowrap;
@@ -585,7 +585,7 @@ const ModelDropdownContent = styled.div`
   overflow: hidden;
   max-height: 200px; /* Limit height */
   overflow-y: auto; /* Allow scrolling if needed */
-  display: ${props => props.isOpen ? 'block' : 'none'};
+  display: ${props => props.$isOpen ? 'block' : 'none'};
   animation: fadeIn 0.2s ease;
 
   @keyframes fadeIn {
@@ -610,7 +610,7 @@ const ModelOption = styled.div`
   cursor: pointer;
   transition: background 0.2s ease;
   background: ${props => {
-    if (props.isSelected) {
+    if (props.$isSelected) {
       return props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.15)' : 'rgba(255,255,255,0.1)';
     }
     return 'transparent';
@@ -627,10 +627,10 @@ const ModelInfo = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Prevent text overflow */
-  opacity: ${props => props.collapsed ? '0' : '1'};
-  visibility: ${props => props.collapsed ? 'hidden' : 'visible'};
+  opacity: ${props => props.$collapsed ? '0' : '1'};
+  visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease, visibility 0.2s;
-  transition-delay: ${props => props.collapsed ? '0s' : '0.05s'};
+  transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
 
   @media (max-width: 768px) {
       opacity: 1; /* Always visible on mobile */
@@ -639,7 +639,7 @@ const ModelInfo = styled.div`
 `;
 
 const ModelName = styled.span`
-  font-weight: ${props => props.isSelected ? 'bold' : '500'};
+  font-weight: ${props => props.$isSelected ? 'bold' : '500'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-size: 0.9rem;
   white-space: nowrap;
@@ -713,7 +713,7 @@ const MobileToggleButton = styled.button`
 
   svg {
     transition: transform 0.3s ease;
-    transform: ${props => props.isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};
+    transform: ${props => props.$isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};
   }
 `;
 
@@ -742,7 +742,7 @@ const Sidebar = ({
   toggleProfile,
   isLoggedIn,
   username,
-  collapsed,
+  collapsed: $collapsed,
   setCollapsed,
   theme
 }) => {
@@ -753,10 +753,10 @@ const Sidebar = ({
 
   // Ensure sidebar is always expanded in retro theme
   useEffect(() => {
-    if (theme && theme.name === 'retro' && collapsed) {
+    if (theme && theme.name === 'retro' && $collapsed) {
       setCollapsed(false);
     }
-  }, [theme, collapsed, setCollapsed]);
+  }, [theme, $collapsed, setCollapsed]);
 
   // Toggle mobile content visibility
   const toggleMobileExpanded = () => {
@@ -768,7 +768,7 @@ const Sidebar = ({
     // Don't allow collapsing if retro theme
     if (theme && theme.name === 'retro') return;
     
-    const newState = !collapsed;
+    const newState = !$collapsed;
     setCollapsed(newState);
     setIsModelDropdownOpen(false); // Close dropdown when collapsing/expanding
 
@@ -806,7 +806,7 @@ const Sidebar = ({
   return (
     <>
       {/* Main Sidebar container */}
-      <SidebarContainer isExpanded={isMobileExpanded} collapsed={theme && theme.name === 'retro' ? false : collapsed}>
+      <SidebarContainer $isExpanded={isMobileExpanded} $collapsed={theme && theme.name === 'retro' ? false : $collapsed}>
         {/* Top Bar for Desktop */}
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
            <LogoContainer>
@@ -818,10 +818,10 @@ const Sidebar = ({
            </LogoContainer>
            
            {/* Left Collapse Button (now on the right) - hidden for retro theme */}
-           {!collapsed && theme && theme.name !== 'retro' && (
+           {!$collapsed && theme && theme.name !== 'retro' && (
              <CollapseButton 
                onClick={toggleCollapsed} 
-               collapsed={collapsed} 
+               $collapsed={$collapsed} 
                title="Collapse Sidebar"
                style={{ marginLeft: 'auto' }}>
                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -832,10 +832,10 @@ const Sidebar = ({
         </TopBarContainer>
         
         {/* New Chat Button as a standalone component below the logo */}
-        {(!collapsed || (theme && theme.name === 'retro')) && (
+        {(!$collapsed || (theme && theme.name === 'retro')) && (
           <NewChatButton 
             onClick={createNewChat} 
-            collapsed={collapsed}
+            $collapsed={$collapsed}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
@@ -855,7 +855,7 @@ const Sidebar = ({
           </MobileLogoContainer>
           {/* Group New Chat and Toggle Button */}
           <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
-             <NewChatButton onClick={createNewChat} collapsed={collapsed}>
+             <NewChatButton onClick={createNewChat} $collapsed={$collapsed}>
                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                      <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
                  </svg>
@@ -863,7 +863,7 @@ const Sidebar = ({
              </NewChatButton>
              <MobileToggleButton
                  onClick={toggleMobileExpanded}
-                 isExpanded={isMobileExpanded}
+                 $isExpanded={isMobileExpanded}
                  title={isMobileExpanded ? "Collapse Menu" : "Expand Menu"}
              >
                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -879,35 +879,36 @@ const Sidebar = ({
 
         {/* --- START: Main content area (Scrollable + Bottom fixed) --- */}
         {/* This fragment wrapper is crucial for the original error fix */}
-        {(!collapsed || (theme && theme.name === 'retro')) && (
+        {(!$collapsed || (theme && theme.name === 'retro')) && (
           <>
             {/* Scrollable Area (Models, Chats) */}
-            <ScrollableContent isExpanded={isMobileExpanded || (theme && theme.name === 'retro')}>
+            <ScrollableContent $isExpanded={isMobileExpanded || (theme && theme.name === 'retro')}>
 
               {/* Models Section removed as requested */}
 
 
               {/* --- Chats Section --- */}
-              <SectionHeader collapsed={collapsed}>Chats</SectionHeader>
-              <ChatList collapsed={collapsed}>
+              <SectionHeader $collapsed={$collapsed}>Chats</SectionHeader>
+              <ChatList $collapsed={$collapsed}>
                 {(chats || []).map(chat => (
                   <ChatItem
                     key={chat.id}
-                    active={activeChat === chat.id}
+                    $active={activeChat === chat.id}
                     onClick={() => setActiveChat(chat.id)}
-                    collapsed={collapsed}
+                    $collapsed={$collapsed}
                     title={chat.title || `Chat ${chat.id.substring(0, 4)}`}
                   >
                     {/* TODO: Add chat icon if desired */}
-                    <ChatTitle collapsed={collapsed}>{chat.title || `Chat ${chat.id.substring(0, 4)}`}</ChatTitle>
+                    <ChatTitle $collapsed={$collapsed}>{chat.title || `Chat ${chat.id.substring(0, 4)}`}</ChatTitle>
                     {/* Container for action buttons */}
-                    <ButtonContainer collapsed={collapsed}>
+                    <ButtonContainer $collapsed={$collapsed}>
                       <ShareButton
                         title="Share Chat"
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent chat selection
                           handleShareChat(chat.id);
                         }}
+                        $collapsed={$collapsed}
                       >
                         {/* Share Icon (Feather Icons) */}
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -922,6 +923,7 @@ const Sidebar = ({
                           e.stopPropagation(); // Prevent chat selection
                           deleteChat(chat.id);
                         }}
+                        $collapsed={$collapsed}
                       >
                         {/* Trash Icon (Feather Icons) */}
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

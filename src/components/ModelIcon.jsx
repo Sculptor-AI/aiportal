@@ -1,23 +1,14 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { modelThemes } from '../styles/themes';
+import { useAuth } from '../contexts/AuthContext';
 
-const IconContainer = styled.div`
-  width: ${props => props.size || '28px'};
-  height: ${props => props.size || '28px'};
-  border-radius: ${props => (!props.useImage && props.inMessage) ? '50%' : '8px'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: ${props => props.noMargin ? '0' : '10px'};
-  flex-shrink: 0;
-  background: ${props => props.useImage ? 'transparent' : (props.gradient || props.background || '#f0f0f0')};
-  color: white;
-  font-weight: bold;
-  font-size: calc(${props => props.size || '28px'} * 0.45);
-  box-shadow: ${props => props.useImage && props.inMessage ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)'};
-  overflow: hidden;
-`;
+// Moved sizeMap to module scope
+const sizeMap = {
+  small: { width: '24px', height: '24px', fontSize: '11px', padding: '3px' }, // Adjusted fontSize for small
+  medium: { width: '32px', height: '32px', fontSize: '14px', padding: '6px' },
+  large: { width: '40px', height: '40px', fontSize: '16px', padding: '8px' }
+};
 
 const ModelImage = styled.img`
   width: 100%;
@@ -81,7 +72,33 @@ const MODEL_LOGOS = {
   'ursa-minor': '/images/sculptor.svg'
 };
 
-const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
+const ModelIconContainer = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${props => props.$useImage ? 'transparent' : (props.theme.modelIconBackground || '#f0f0f0')};
+  border-radius: ${props => (!props.$useImage && props.$inMessage) ? '50%' : '8px'};
+  padding: ${props => sizeMap[props.size]?.padding || sizeMap.medium.padding};
+  width: ${props => sizeMap[props.size]?.width || sizeMap.medium.width};
+  height: ${props => sizeMap[props.size]?.height || sizeMap.medium.height};
+  font-size: ${props => sizeMap[props.size]?.fontSize || sizeMap.medium.fontSize}; // Added font-size from sizeMap
+  color: white; // Ensure fallback text (like the letter) is white
+  font-weight: bold; // Ensure fallback text is bold
+  box-shadow: ${props => props.$useImage && props.$inMessage ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)'};
+  transition: all 0.2s ease-in-out;
+  margin: ${props => props.$noMargin ? '0' : '0 0px'}; /* Adjusted default margin for alignment */
+  flex-shrink: 0; /* Prevent shrinking in flex layouts */
+
+  img, svg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+`;
+
+const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
+  const theme = useTheme();
+  const { settings } = useAuth(); // Access settings from AuthContext
   let iconComponent;
   let iconBackground;
   
@@ -133,22 +150,17 @@ const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
     }
   }
   
-  // Adjust size based on prop
-  const sizeMap = {
-    small: { width: '24px', height: '24px', fontSize: '12px' },
-    medium: { width: '32px', height: '32px', fontSize: '14px' },
-    large: { width: '40px', height: '40px', fontSize: '16px' }
-  };
-  
-  const sizeStyle = sizeMap[size] || sizeMap.medium;
-  
+  const $useImage = !!imageUrl;
+  const $noMargin = $inMessage && !!imageUrl; // Determine if margin should be applied
+
   return (
-    <IconContainer 
-      gradient={!imageUrl ? iconBackground : undefined}
-      style={sizeStyle}
-      inMessage={inMessage}
-      useImage={!!imageUrl}
-      noMargin={inMessage && !!imageUrl}
+    <ModelIconContainer 
+      size={size} 
+      theme={theme} 
+      $inMessage={$inMessage} 
+      $useImage={$useImage} 
+      $noMargin={$noMargin}
+      title={`${model?.name || modelId} (${model?.provider || 'Local'})`}
     >
       {imageUrl ? (
         <img 
@@ -158,13 +170,13 @@ const ModelIcon = ({ modelId, size = 'medium', inMessage = false }) => {
             width: '100%', 
             height: '100%', 
             objectFit: 'contain',
-            filter: inMessage ? 'drop-shadow(0px 1px 2px rgba(0,0,0,0.2))' : 'none'
+            filter: $inMessage ? 'drop-shadow(0px 1px 2px rgba(0,0,0,0.2))' : 'none'
           }} 
         />
       ) : (
         iconComponent
       )}
-    </IconContainer>
+    </ModelIconContainer>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
@@ -6,6 +6,9 @@ import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import ProfileModal from './components/ProfileModal';
 import MobileApp from './components/MobileApp';
+import WhiteboardModal from './components/WhiteboardModal';
+import EquationEditorModal from './components/EquationEditorModal';
+import GraphingModal from './components/GraphingModal';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -24,6 +27,21 @@ const AppContainer = styled.div`
   background: ${props => props.theme.background};
   color: ${props => props.theme.text};
   transition: background 0.3s ease;
+`;
+
+const MainContentArea = styled.div`
+  flex: 1;
+  display: flex;
+  height: 100%;
+  margin-right: ${props => {
+    // Handle multiple panels being open
+    let totalMargin = 0;
+    if (props.$whiteboardOpen) totalMargin += 450;
+    if (props.$equationEditorOpen) totalMargin += 450;
+    if (props.$graphingOpen) totalMargin += 600; // Graphing panel is wider
+    return `${totalMargin}px`;
+  }};
+  transition: margin-right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
 // Add back the floating hamburger button
@@ -57,7 +75,14 @@ const FloatingMenuButton = styled.button`
 const MainGreeting = styled.div`
   position: fixed;
   top: 35%; /* Aligned with text input bar positioning */
-  left: ${props => props.sidebarCollapsed ? '50%' : 'calc(50% + 140px)'}; /* Consistent shift with InputContainer */
+  left: ${props => {
+    const sidebarOffset = props.$sidebarCollapsed ? 0 : 140;
+    let rightPanelOffset = 0;
+    if (props.$whiteboardOpen) rightPanelOffset -= 225;
+    if (props.$equationEditorOpen) rightPanelOffset -= 225;
+    if (props.$graphingOpen) rightPanelOffset -= 300; // Half of 600px
+    return `calc(50% + ${sidebarOffset}px + ${rightPanelOffset}px)`;
+  }};
   transform: translateX(-50%);
   max-width: 800px; /* Keep a max width */
   width: 90%; /* Use percentage width for better flexibility */
@@ -310,7 +335,8 @@ const AppContent = () => {
       focusMode: false,
       highContrast: false,
       reducedMotion: false,
-      lineSpacing: 'normal'
+      lineSpacing: 'normal',
+      showGreeting: true
     };
   });
   
@@ -319,6 +345,10 @@ const AppContent = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
+  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const [isEquationEditorOpen, setIsEquationEditorOpen] = useState(false);
+  const [isGraphingOpen, setIsGraphingOpen] = useState(false);
+  const chatWindowRef = useRef(null);
 
   // Update settings when user changes
   useEffect(() => {
@@ -543,54 +573,112 @@ const AppContent = () => {
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
         <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
-          {collapsed && (
-            <FloatingMenuButton onClick={() => setCollapsed(false)}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
-            </FloatingMenuButton>
-          )}
+          <MainContentArea 
+            $whiteboardOpen={isWhiteboardOpen} 
+            $equationEditorOpen={isEquationEditorOpen}
+            $graphingOpen={isGraphingOpen}
+          >
+            {collapsed && (
+              <FloatingMenuButton onClick={() => setCollapsed(false)}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+              </FloatingMenuButton>
+            )}
+            
+            {/* Main greeting that appears at the top of the page */}
+            {settings.showGreeting && getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
+              <MainGreeting 
+                $sidebarCollapsed={collapsed} 
+                $whiteboardOpen={isWhiteboardOpen}
+                $equationEditorOpen={isEquationEditorOpen}
+                $graphingOpen={isGraphingOpen}
+              >
+                <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>
+                  {settings.theme === 'lakeside' ? 'Andromeda' : `${greeting}${user ? `, ${user.username}` : ''}`}
+                </h1>
+              </MainGreeting>
+            )}
+            
+            <Sidebar 
+              chats={chats}
+              activeChat={activeChat}
+              setActiveChat={setActiveChat}
+              createNewChat={createNewChat}
+              deleteChat={deleteChat}
+              availableModels={availableModels}
+              selectedModel={selectedModel}
+              setSelectedModel={setSelectedModel}
+              toggleSettings={toggleSettings}
+              toggleProfile={toggleProfile}
+              isLoggedIn={!!user}
+              username={user?.username}
+              onModelChange={handleModelChange}
+              collapsed={collapsed} 
+              setCollapsed={setCollapsed} 
+            />
+            {console.log('Available models for ChatWindow:', availableModels)}
+            <ChatWindow 
+              ref={chatWindowRef}
+              chat={currentChat}
+              addMessage={addMessage}
+              updateMessage={updateMessage}
+              updateChatTitle={updateChatTitle}
+              selectedModel={selectedModel}
+              settings={settings}
+              $sidebarCollapsed={collapsed}
+              availableModels={availableModels}
+              onAttachmentChange={setHasAttachment}
+              onModelChange={handleModelChange}
+              showGreeting={settings.showGreeting}
+              isWhiteboardOpen={isWhiteboardOpen}
+              onToggleWhiteboard={() => setIsWhiteboardOpen(prev => !prev)}
+              onCloseWhiteboard={() => setIsWhiteboardOpen(false)}
+              isEquationEditorOpen={isEquationEditorOpen}
+              onToggleEquationEditor={() => setIsEquationEditorOpen(prev => !prev)}
+              onCloseEquationEditor={() => setIsEquationEditorOpen(false)}
+              isGraphingOpen={isGraphingOpen}
+              onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
+              onCloseGraphing={() => setIsGraphingOpen(false)}
+            />
+          </MainContentArea>
           
-          {/* Main greeting that appears at the top of the page */}
-          {getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
-            <MainGreeting sidebarCollapsed={collapsed}>
-              <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>
-                {settings.theme === 'lakeside' ? 'Andromeda' : `${greeting}${user ? `, ${user.username}` : ''}`}
-              </h1>
-            </MainGreeting>
-          )}
-          
-          <Sidebar 
-            chats={chats}
-            activeChat={activeChat}
-            setActiveChat={setActiveChat}
-            createNewChat={createNewChat}
-            deleteChat={deleteChat}
-            availableModels={availableModels}
-            selectedModel={selectedModel}
-            setSelectedModel={setSelectedModel}
-            toggleSettings={toggleSettings}
-            toggleProfile={toggleProfile}
-            isLoggedIn={!!user}
-            username={user?.username}
-            onModelChange={handleModelChange}
-            collapsed={collapsed} 
-            setCollapsed={setCollapsed} 
+          {/* Render panels in order: whiteboard, equation editor, graphing */}
+          <WhiteboardModal
+            isOpen={isWhiteboardOpen}
+            onClose={() => setIsWhiteboardOpen(false)}
+            onSubmit={(file) => {
+              // Handle whiteboard submission through ChatWindow's file handler
+              if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                chatWindowRef.current.handleFileSelected(file);
+              }
+              setIsWhiteboardOpen(false);
+            }}
+            theme={currentTheme}
+            otherPanelsOpen={(isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
           />
-          {console.log('Available models for ChatWindow:', availableModels)}
-          <ChatWindow 
-            chat={currentChat}
-            addMessage={addMessage}
-            updateMessage={updateMessage}
-            updateChatTitle={updateChatTitle}
-            selectedModel={selectedModel}
-            settings={settings}
-            sidebarCollapsed={collapsed}
-            availableModels={availableModels}
-            onAttachmentChange={setHasAttachment}
-            onModelChange={handleModelChange}
+          
+          <EquationEditorModal
+            isOpen={isEquationEditorOpen}
+            onClose={() => setIsEquationEditorOpen(false)}
+            onSubmit={(latex) => {
+              // Handle equation submission - add to chat input
+              if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
+                chatWindowRef.current.appendToInput(`$${latex}$$ `);
+              }
+              setIsEquationEditorOpen(false);
+            }}
+            theme={currentTheme}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+          />
+          
+          <GraphingModal
+            isOpen={isGraphingOpen}
+            onClose={() => setIsGraphingOpen(false)}
+            theme={currentTheme}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0)}
           />
         
           {isSettingsOpen && (

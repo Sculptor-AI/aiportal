@@ -19,9 +19,11 @@
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
+    "katex": "^0.16.22",
     "pdfjs-dist": "^4.8.69",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-latex-next": "^3.0.0",
     "react-router-dom": "^6.29.0",
     "styled-components": "^6.1.15",
     "uuid": "^11.1.0"
@@ -29,5 +31,6 @@
   "devDependencies": {
     "vite": "^6.2.0",
     "wrangler": "^3.109.3"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

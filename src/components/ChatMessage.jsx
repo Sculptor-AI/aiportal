@@ -680,7 +680,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
     if (role === 'user') {
       return 'U';
     } else if (showModelIcons && modelId) {
-      return <ModelIcon modelId={modelId} size="small" inMessage={true} />;
+      const modelIconProps = {
+        modelId,
+        size: "small",
+        $inMessage: true,
+      };
+      
+      return <ModelIcon {...modelIconProps} />;
     } else {
       return 'AI';
     }

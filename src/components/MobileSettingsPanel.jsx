@@ -348,6 +348,19 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                 />
               </SettingControl>
             </SettingItem>
+
+            <SettingItem>
+              <SettingLabel>
+                <SettingName>Show Greeting</SettingName>
+                <SettingDescription>Display greeting on empty chat</SettingDescription>
+              </SettingLabel>
+              <SettingControl>
+                <Toggle
+                  enabled={localSettings.showGreeting !== false}
+                  onClick={() => handleSettingChange('showGreeting', localSettings.showGreeting === false ? true : false)}
+                />
+              </SettingControl>
+            </SettingItem>
             
             <SettingItem>
               <SettingLabel>
