@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
-import Latex from 'react-latex-next';
+import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css'; // Required for KaTeX styling
 
-// Import a LaTeX rendering library, e.g., react-latex-next
-// We'll assume KaTeX is installed or react-latex-next handles it.
-// import Latex from 'react-latex-next';
+// Import a LaTeX rendering library, now using @pkasila/react-katex
+// We'll assume KaTeX is installed or @pkasila/react-katex handles it.
+// import ReactKatex from '@pkasila/react-katex';
 // import 'katex/dist/katex.min.css'; // Required for KaTeX
 
 const EquationContainer = styled.div`
@@ -348,7 +348,7 @@ const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen
         />
         <PreviewArea theme={theme}>
           {latexOutput.trim() ? (
-            <Latex strict={false}>{`$$${latexOutput}$$`}</Latex>
+            <ReactKatex displayMode={true}>{latexOutput}</ReactKatex>
           ) : (
             <p style={{ opacity: 0.6 }}>Preview will appear here...</p>
           )}
