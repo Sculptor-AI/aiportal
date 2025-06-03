@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useTheme } from 'styled-components';
 import FileUploadButton from './FileUploadButton';
-import ToolMenuModal from './ToolMenuModal';
+import PopupMenu from './ToolMenuModal';
 import {
   InputContainer,
   MessageInputWrapper,
@@ -47,10 +47,14 @@ const ChatInputArea = forwardRef(({
   const [thinkingMode, setThinkingMode] = useState(null);
   const [createType, setCreateType] = useState(null);
   const [showToolbar, setShowToolbar] = useState(false);
+  const [modeMenuRect, setModeMenuRect] = useState(null);
+  const [createMenuRect, setCreateMenuRect] = useState(null);
 
   const inputRef = useRef(null);
   const toolbarRef = useRef(null);
   const toolbarContainerRef = useRef(null);
+  const modeAnchorRef = useRef(null);
+  const createAnchorRef = useRef(null);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -212,8 +216,19 @@ const ChatInputArea = forwardRef(({
           </HammerButton>
           
           <ActionChip
+            ref={modeAnchorRef}
             selected={thinkingMode !== null}
-            onClick={() => setShowModeModal(true)}
+            onClick={() => {
+              if (modeAnchorRef.current) {
+                // Force a reflow before getting the rect might help in some edge cases
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                modeAnchorRef.current.offsetHeight;
+                const currentRect = modeAnchorRef.current.getBoundingClientRect();
+                console.log('[ChatInputArea] Mode Chip - Captured Rect:', JSON.stringify(currentRect));
+                setModeMenuRect(currentRect);
+              }
+              setShowModeModal(true);
+            }}
           >
             {theme.name === 'retro' ? (
               <RetroIconWrapper>
@@ -280,8 +295,18 @@ const ChatInputArea = forwardRef(({
           </ActionChip>
           
           <ActionChip
+            ref={createAnchorRef}
             selected={selectedActionChip === 'create-image' || selectedActionChip === 'create-video'}
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              if (createAnchorRef.current) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                createAnchorRef.current.offsetHeight;
+                const currentRect = createAnchorRef.current.getBoundingClientRect();
+                console.log('[ChatInputArea] Create Chip - Captured Rect:', JSON.stringify(currentRect));
+                setCreateMenuRect(currentRect);
+              }
+              setShowCreateModal(true);
+            }}
           >
             {theme.name === 'retro' ? ( <RetroIconWrapper><img src="/images/retroTheme/createIcon.png" alt="Create" style={{ width: '16px', height: '16px' }} /></RetroIconWrapper> ) : createType === 'image' ? ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> ) : createType === 'video' ? ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line></svg> ) : ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> )}
             {createType === 'image' ? 'Create image' : createType === 'video' ? 'Create video' : 'Create'}
@@ -316,22 +341,24 @@ const ChatInputArea = forwardRef(({
         </ToolbarContainer>
       </MessageInputWrapper>
       
-      <ToolMenuModal
+      <PopupMenu 
         isOpen={showModeModal}
         onClose={() => setShowModeModal(false)}
         menuType="mode"
         currentValue={thinkingMode}
         onSelect={handleModeSelect}
         theme={theme}
+        rect={modeMenuRect}
       />
       
-      <ToolMenuModal
+      <PopupMenu
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         menuType="create"
         currentValue={createType}
         onSelect={handleCreateSelect}
         theme={theme}
+        rect={createMenuRect}
       />
     </InputContainer>
   );
