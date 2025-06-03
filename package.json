@@ -16,6 +16,7 @@
   "description": "",
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
+    "@pkasila/react-katex": "^1.2.2",
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
