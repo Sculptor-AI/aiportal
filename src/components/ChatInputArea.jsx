@@ -329,15 +329,6 @@ const ChatInputArea = forwardRef(({
               <polyline points="17 6 23 6 23 12"></polyline>
             </svg>
           </ToolbarItem>
-          <ToolbarItem title="Settings Tool">
-             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6"></path><path d="M12 17v6"></path><path d="M4.22 4.22l4.24 4.24"></path><path d="M15.54 15.54l4.24 4.24"></path><path d="M21 12h-6"></path><path d="M3 12h6"></path><path d="M19.78 4.22l-4.24 4.24"></path><path d="M8.46 15.54l-4.24 4.24"></path></svg>
-          </ToolbarItem>
-          <ToolbarItem title="Link Tool">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-          </ToolbarItem>
-          <ToolbarItem title="Code Tool">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-          </ToolbarItem>
         </ToolbarContainer>
       </MessageInputWrapper>
       
