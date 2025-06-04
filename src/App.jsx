@@ -74,7 +74,7 @@ const FloatingMenuButton = styled.button`
 // Main Greeting Component
 const MainGreeting = styled.div`
   position: fixed;
-  top: 35%; /* Aligned with text input bar positioning */
+  top: ${props => props.$toolbarOpen ? '32%' : '35%'}; /* Adjust when toolbar is open */
   left: ${props => {
     const sidebarOffset = props.$sidebarCollapsed ? 0 : 140;
     let rightPanelOffset = 0;
@@ -108,7 +108,7 @@ const MainGreeting = styled.div`
   /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
     left: 50% !important; /* Always center on mobile */
-    top: 30%; /* Maintain alignment with text input */
+    top: ${props => props.$toolbarOpen ? '27%' : '30%'}; /* Adjust on mobile */
     max-width: 90%; /* Reduce max-width on smaller screens */
     padding: 0 15px; 
     h1 {
@@ -119,7 +119,7 @@ const MainGreeting = styled.div`
   /* Adjustments for very small screens */
   @media (max-width: 480px) {
     left: 50% !important; /* Always center on mobile */
-    top: 30%; /* Maintain alignment with text input */
+    top: ${props => props.$toolbarOpen ? '27%' : '30%'}; /* Adjust on small screens */
     max-width: 95%; /* Allow slightly more width on very small screens */
     padding: 0 10px; 
     h1 {
@@ -348,6 +348,7 @@ const AppContent = () => {
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [isEquationEditorOpen, setIsEquationEditorOpen] = useState(false);
   const [isGraphingOpen, setIsGraphingOpen] = useState(false);
+  const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const chatWindowRef = useRef(null);
 
   // Update settings when user changes
@@ -590,11 +591,12 @@ const AppContent = () => {
             
             {/* Main greeting that appears at the top of the page */}
             {settings.showGreeting && getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
-              <MainGreeting 
-                $sidebarCollapsed={collapsed} 
+              <MainGreeting
+                $sidebarCollapsed={collapsed}
                 $whiteboardOpen={isWhiteboardOpen}
                 $equationEditorOpen={isEquationEditorOpen}
                 $graphingOpen={isGraphingOpen}
+                $toolbarOpen={isToolbarOpen}
               >
                 <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>
                   {settings.theme === 'lakeside' ? 'Andromeda' : `${greeting}${user ? `, ${user.username}` : ''}`}
@@ -642,6 +644,7 @@ const AppContent = () => {
               isGraphingOpen={isGraphingOpen}
               onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
               onCloseGraphing={() => setIsGraphingOpen(false)}
+              onToolbarToggle={setIsToolbarOpen}
             />
           </MainContentArea>
           

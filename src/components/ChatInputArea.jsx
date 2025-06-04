@@ -38,6 +38,7 @@ const ChatInputArea = forwardRef(({
   isGraphingOpen, // New prop for graphing tool
   onToggleGraphing, // New prop for toggling graphing
   onCloseGraphing, // New prop for closing graphing
+  onToolbarToggle,
 }, ref) => {
   const theme = useTheme();
   const [inputMessage, setInputMessage] = useState('');
@@ -83,6 +84,12 @@ const ChatInputArea = forwardRef(({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showToolbar]);
+
+  useEffect(() => {
+    if (onToolbarToggle) {
+      onToolbarToggle(showToolbar);
+    }
+  }, [showToolbar, onToolbarToggle]);
 
   const handleInternalSubmit = () => {
     if (isLoading || isProcessingFile) return;

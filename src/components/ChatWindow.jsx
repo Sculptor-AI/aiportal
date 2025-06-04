@@ -38,7 +38,8 @@ const ChatWindow = forwardRef(({
   onCloseEquationEditor,
   isGraphingOpen,
   onToggleGraphing,
-  onCloseGraphing
+  onCloseGraphing,
+  onToolbarToggle
 }, ref) => {
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
   const [isProcessingFile, setIsProcessingFile] = useState(false); 
@@ -358,8 +359,9 @@ const ChatWindow = forwardRef(({
         isGraphingOpen={isGraphingOpen}
         onToggleGraphing={onToggleGraphing}
         onCloseGraphing={onCloseGraphing}
+        onToolbarToggle={onToolbarToggle}
         // Pass inputFocusChange if ChatInputArea needs to inform ChatWindow about focus for header opacity effect
-        // onInputFocusChange={inputFocusChange} 
+        // onInputFocusChange={inputFocusChange}
       />
     </ChatWindowContainer>
   );
