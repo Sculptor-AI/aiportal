@@ -338,7 +338,8 @@ export const searchAndProcess = async (req, res) => {
     console.log('Step 1: Performing Brave search');
     let searchResults = [];
     try {
-      const searchResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/search`, {
+      const INTERNAL_API_BASE_URL = process.env.INTERNAL_API_BASE_URL || 'http://localhost:3000';
+      const searchResponse = await axios.post(`${INTERNAL_API_BASE_URL}/api/search`, {
         query,
         max_results: 5 // Request more results so we can filter them
       });
