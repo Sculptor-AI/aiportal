@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useTheme } from 'styled-components';
 import FileUploadButton from './FileUploadButton';
-import ToolMenuModal from './ToolMenuModal';
+import PopupMenu from './ToolMenuModal';
 import {
   InputContainer,
   MessageInputWrapper,
@@ -47,10 +47,14 @@ const ChatInputArea = forwardRef(({
   const [thinkingMode, setThinkingMode] = useState(null);
   const [createType, setCreateType] = useState(null);
   const [showToolbar, setShowToolbar] = useState(false);
+  const [modeMenuRect, setModeMenuRect] = useState(null);
+  const [createMenuRect, setCreateMenuRect] = useState(null);
 
   const inputRef = useRef(null);
   const toolbarRef = useRef(null);
   const toolbarContainerRef = useRef(null);
+  const modeAnchorRef = useRef(null);
+  const createAnchorRef = useRef(null);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -212,8 +216,19 @@ const ChatInputArea = forwardRef(({
           </HammerButton>
           
           <ActionChip
+            ref={modeAnchorRef}
             selected={thinkingMode !== null}
-            onClick={() => setShowModeModal(true)}
+            onClick={() => {
+              if (modeAnchorRef.current) {
+                // Force a reflow before getting the rect might help in some edge cases
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                modeAnchorRef.current.offsetHeight;
+                const currentRect = modeAnchorRef.current.getBoundingClientRect();
+                console.log('[ChatInputArea] Mode Chip - Captured Rect:', JSON.stringify(currentRect));
+                setModeMenuRect(currentRect);
+              }
+              setShowModeModal(true);
+            }}
           >
             {theme.name === 'retro' ? (
               <RetroIconWrapper>
@@ -280,8 +295,18 @@ const ChatInputArea = forwardRef(({
           </ActionChip>
           
           <ActionChip
+            ref={createAnchorRef}
             selected={selectedActionChip === 'create-image' || selectedActionChip === 'create-video'}
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              if (createAnchorRef.current) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                createAnchorRef.current.offsetHeight;
+                const currentRect = createAnchorRef.current.getBoundingClientRect();
+                console.log('[ChatInputArea] Create Chip - Captured Rect:', JSON.stringify(currentRect));
+                setCreateMenuRect(currentRect);
+              }
+              setShowCreateModal(true);
+            }}
           >
             {theme.name === 'retro' ? ( <RetroIconWrapper><img src="/images/retroTheme/createIcon.png" alt="Create" style={{ width: '16px', height: '16px' }} /></RetroIconWrapper> ) : createType === 'image' ? ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> ) : createType === 'video' ? ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line></svg> ) : ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> )}
             {createType === 'image' ? 'Create image' : createType === 'video' ? 'Create video' : 'Create'}
@@ -304,34 +329,27 @@ const ChatInputArea = forwardRef(({
               <polyline points="17 6 23 6 23 12"></polyline>
             </svg>
           </ToolbarItem>
-          <ToolbarItem title="Settings Tool">
-             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 1v6"></path><path d="M12 17v6"></path><path d="M4.22 4.22l4.24 4.24"></path><path d="M15.54 15.54l4.24 4.24"></path><path d="M21 12h-6"></path><path d="M3 12h6"></path><path d="M19.78 4.22l-4.24 4.24"></path><path d="M8.46 15.54l-4.24 4.24"></path></svg>
-          </ToolbarItem>
-          <ToolbarItem title="Link Tool">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-          </ToolbarItem>
-          <ToolbarItem title="Code Tool">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-          </ToolbarItem>
         </ToolbarContainer>
       </MessageInputWrapper>
       
-      <ToolMenuModal
+      <PopupMenu 
         isOpen={showModeModal}
         onClose={() => setShowModeModal(false)}
         menuType="mode"
         currentValue={thinkingMode}
         onSelect={handleModeSelect}
         theme={theme}
+        rect={modeMenuRect}
       />
       
-      <ToolMenuModal
+      <PopupMenu
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         menuType="create"
         currentValue={createType}
         onSelect={handleCreateSelect}
         theme={theme}
+        rect={createMenuRect}
       />
     </InputContainer>
   );

@@ -24,7 +24,7 @@
     "pdfjs-dist": "^4.8.69",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-latex-next": "^3.0.0",
+    "@pkasila/react-katex": "^1.2.2",
     "react-router-dom": "^6.29.0",
     "styled-components": "^6.1.15",
     "uuid": "^11.1.0"
