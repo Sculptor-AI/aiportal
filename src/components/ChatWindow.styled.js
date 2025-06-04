@@ -19,7 +19,8 @@ export const ChatWindowContainer = styled.div`
     }
   }};
   position: relative;
-  overflow: hidden;
+  /* Use visible overflow so dropdown menus (e.g., model selector) aren't clipped */
+  overflow: visible;
   
   @media (max-width: 768px) {
     margin-left: 0; /* No margin on mobile - sidebar overlays */
