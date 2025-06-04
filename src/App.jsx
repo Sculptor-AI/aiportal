@@ -350,6 +350,12 @@ const AppContent = () => {
   const [isGraphingOpen, setIsGraphingOpen] = useState(false);
   const chatWindowRef = useRef(null);
 
+  const openPanel = (panel) => {
+    setIsWhiteboardOpen(panel === 'whiteboard');
+    setIsEquationEditorOpen(panel === 'equation');
+    setIsGraphingOpen(panel === 'graphing');
+  };
+
   // Update settings when user changes
   useEffect(() => {
     if (user && user.settings) {
@@ -634,27 +640,27 @@ const AppContent = () => {
               onModelChange={handleModelChange}
               showGreeting={settings.showGreeting}
               isWhiteboardOpen={isWhiteboardOpen}
-              onToggleWhiteboard={() => setIsWhiteboardOpen(prev => !prev)}
-              onCloseWhiteboard={() => setIsWhiteboardOpen(false)}
+              onToggleWhiteboard={() => openPanel(isWhiteboardOpen ? null : 'whiteboard')}
+              onCloseWhiteboard={() => openPanel(null)}
               isEquationEditorOpen={isEquationEditorOpen}
-              onToggleEquationEditor={() => setIsEquationEditorOpen(prev => !prev)}
-              onCloseEquationEditor={() => setIsEquationEditorOpen(false)}
+              onToggleEquationEditor={() => openPanel(isEquationEditorOpen ? null : 'equation')}
+              onCloseEquationEditor={() => openPanel(null)}
               isGraphingOpen={isGraphingOpen}
-              onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
-              onCloseGraphing={() => setIsGraphingOpen(false)}
+              onToggleGraphing={() => openPanel(isGraphingOpen ? null : 'graphing')}
+              onCloseGraphing={() => openPanel(null)}
             />
           </MainContentArea>
           
           {/* Render panels in order: whiteboard, equation editor, graphing */}
           <WhiteboardModal
             isOpen={isWhiteboardOpen}
-            onClose={() => setIsWhiteboardOpen(false)}
+            onClose={() => openPanel(null)}
             onSubmit={(file) => {
               // Handle whiteboard submission through ChatWindow's file handler
               if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
                 chatWindowRef.current.handleFileSelected(file);
               }
-              setIsWhiteboardOpen(false);
+              openPanel(null);
             }}
             theme={currentTheme}
             otherPanelsOpen={(isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
@@ -662,13 +668,13 @@ const AppContent = () => {
           
           <EquationEditorModal
             isOpen={isEquationEditorOpen}
-            onClose={() => setIsEquationEditorOpen(false)}
+            onClose={() => openPanel(null)}
             onSubmit={(latex) => {
               // Handle equation submission - add to chat input
               if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
                 chatWindowRef.current.appendToInput(`$${latex}$$ `);
               }
-              setIsEquationEditorOpen(false);
+              openPanel(null);
             }}
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
@@ -676,7 +682,7 @@ const AppContent = () => {
           
           <GraphingModal
             isOpen={isGraphingOpen}
-            onClose={() => setIsGraphingOpen(false)}
+            onClose={() => openPanel(null)}
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0)}
           />
