@@ -18,7 +18,7 @@
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin: 20px 0;">
   <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
     <h3>🌈 Multiple Themes</h3>
-    <p>Choose from 8 beautiful themes including Light, Dark, OLED, Ocean, Forest, Pride, Bisexual, and Trans themes</p>
+    <p>Choose from 15 fun themes including Light, Dark, OLED, Ocean, Forest, Pride, Bisexual, Trans, Lakeside, Retro, Galaxy, Sunset, Cyberpunk, Bubblegum, and Desert themes</p>
   </div>
   <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
     <h3>🤖 Multiple AI Models</h3>
@@ -122,6 +122,13 @@ Sculptor offers extensive customization options:
 - 🌈 Pride
 - 💖 Bisexual
 - 💙 Trans
+- 🏞️ Lakeside
+- 💾 Retro
+- 🌌 Galaxy
+- 🌇 Sunset
+- 🕶️ Cyberpunk
+- 🍬 Bubblegum
+- 🏜️ Desert
 
 ### Accessibility Features
 - High contrast mode

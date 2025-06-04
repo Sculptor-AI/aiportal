@@ -227,6 +227,118 @@ export const transTheme = {
   accentGradient: 'linear-gradient(to right, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)',
 };
 
+// Galaxy-inspired deep space theme
+export const galaxyTheme = {
+  name: 'galaxy',
+  background: 'linear-gradient(135deg, #0f052b, #12063b, #1b0a4a)',
+  backgroundAttachment: 'fixed',
+  sidebar: 'rgba(15, 10, 40, 0.85)',
+  chat: 'rgba(20, 15, 50, 0.7)',
+  text: '#e0e0ff',
+  border: 'rgba(255, 255, 255, 0.1)',
+  messageUser: 'rgba(35, 25, 70, 0.8)',
+  messageAi: 'rgba(25, 20, 60, 0.8)',
+  hover: 'rgba(90, 60, 150, 0.5)',
+  primary: '#7b61ff',
+  secondary: '#a18aff',
+  shadow: 'rgba(0, 0, 0, 0.4)',
+  glassBlur: '12px',
+  glassEffect: 'blur(12px) saturate(150%)',
+  inputBackground: 'rgba(25, 20, 60, 1)',
+  buttonGradient: 'linear-gradient(145deg, #7b61ff, #a18aff)',
+  buttonHoverGradient: 'linear-gradient(145deg, #a18aff, #7b61ff)',
+  cardBackground: 'rgba(25, 20, 55, 0.7)'
+};
+
+// Warm sunset oranges and pinks
+export const sunsetTheme = {
+  name: 'sunset',
+  background: 'linear-gradient(145deg, #ff7e5f, #feb47b)',
+  sidebar: 'rgba(255, 126, 95, 0.8)',
+  chat: 'rgba(254, 180, 123, 0.6)',
+  text: '#2d0b00',
+  border: 'rgba(0, 0, 0, 0.1)',
+  messageUser: 'rgba(255, 230, 200, 0.8)',
+  messageAi: 'rgba(255, 210, 180, 0.8)',
+  hover: 'rgba(255, 150, 110, 0.6)',
+  primary: '#ff7e5f',
+  secondary: '#feb47b',
+  shadow: 'rgba(0, 0, 0, 0.2)',
+  glassBlur: '8px',
+  glassEffect: 'blur(8px) saturate(150%)',
+  inputBackground: 'rgba(255, 235, 205, 1)',
+  buttonGradient: 'linear-gradient(145deg, #ff7e5f, #feb47b)',
+  buttonHoverGradient: 'linear-gradient(145deg, #feb47b, #ff7e5f)',
+  cardBackground: 'rgba(255, 230, 210, 0.8)'
+};
+
+// Neon cyberpunk aesthetic
+export const cyberpunkTheme = {
+  name: 'cyberpunk',
+  background: 'linear-gradient(145deg, #0f0c29, #302b63, #24243e)',
+  backgroundAttachment: 'fixed',
+  sidebar: 'rgba(0, 0, 0, 0.8)',
+  chat: 'rgba(15, 15, 30, 0.6)',
+  text: '#f5f5f5',
+  border: 'rgba(255, 0, 255, 0.2)',
+  messageUser: 'rgba(50, 10, 60, 0.8)',
+  messageAi: 'rgba(10, 40, 70, 0.8)',
+  hover: 'rgba(255, 0, 255, 0.3)',
+  primary: '#ff00cc',
+  secondary: '#3333ff',
+  shadow: 'rgba(0, 0, 0, 0.6)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(160%)',
+  inputBackground: 'rgba(20, 20, 40, 1)',
+  buttonGradient: 'linear-gradient(145deg, #ff00cc, #3333ff)',
+  buttonHoverGradient: 'linear-gradient(145deg, #3333ff, #ff00cc)',
+  cardBackground: 'rgba(25, 25, 50, 0.8)'
+};
+
+// Sweet bubblegum pinks
+export const bubblegumTheme = {
+  name: 'bubblegum',
+  background: 'linear-gradient(145deg, #ff9a9e, #fad0c4)',
+  sidebar: 'rgba(255, 150, 180, 0.8)',
+  chat: 'rgba(255, 200, 220, 0.6)',
+  text: '#551133',
+  border: 'rgba(255, 0, 128, 0.2)',
+  messageUser: 'rgba(255, 182, 193, 0.8)',
+  messageAi: 'rgba(255, 192, 203, 0.8)',
+  hover: 'rgba(255, 105, 180, 0.6)',
+  primary: '#ff69b4',
+  secondary: '#ffaec9',
+  shadow: 'rgba(0, 0, 0, 0.2)',
+  glassBlur: '10px',
+  glassEffect: 'blur(10px) saturate(170%)',
+  inputBackground: 'rgba(255, 220, 230, 1)',
+  buttonGradient: 'linear-gradient(145deg, #ff69b4, #ffaec9)',
+  buttonHoverGradient: 'linear-gradient(145deg, #ffaec9, #ff69b4)',
+  cardBackground: 'rgba(255, 200, 215, 0.8)'
+};
+
+// Sandy desert browns
+export const desertTheme = {
+  name: 'desert',
+  background: 'linear-gradient(145deg, #c79081, #dfa579)',
+  sidebar: 'rgba(199, 144, 129, 0.85)',
+  chat: 'rgba(223, 165, 121, 0.6)',
+  text: '#3e2b1f',
+  border: 'rgba(60, 30, 20, 0.2)',
+  messageUser: 'rgba(238, 194, 150, 0.8)',
+  messageAi: 'rgba(210, 160, 120, 0.8)',
+  hover: 'rgba(230, 170, 120, 0.5)',
+  primary: '#d86f45',
+  secondary: '#f4a460',
+  shadow: 'rgba(0, 0, 0, 0.3)',
+  glassBlur: '8px',
+  glassEffect: 'blur(8px) saturate(140%)',
+  inputBackground: 'rgba(240, 220, 180, 1)',
+  buttonGradient: 'linear-gradient(145deg, #d86f45, #f4a460)',
+  buttonHoverGradient: 'linear-gradient(145deg, #f4a460, #d86f45)',
+  cardBackground: 'rgba(235, 200, 160, 0.8)'
+};
+
 // Windows 98 "Retro" Theme
 export const retroTheme = {
   name: 'retro',
@@ -309,6 +421,11 @@ export const getTheme = (themeName) => {
     case 'pride': return prideTheme;
     case 'trans': return transTheme;
     case 'bisexual': return bisexualTheme;
+    case 'galaxy': return galaxyTheme;
+    case 'sunset': return sunsetTheme;
+    case 'cyberpunk': return cyberpunkTheme;
+    case 'bubblegum': return bubblegumTheme;
+    case 'desert': return desertTheme;
     case 'lakeside': return lakesideTheme;
     case 'retro': return retroTheme;
     default: return lightTheme;
