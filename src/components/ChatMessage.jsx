@@ -860,12 +860,30 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
           {/* Sources section */}
           {hasSources && !isLoading && (
             <SourcesContainer>
-              {sources.map((source, index) => (
-                <SourceButton key={`source-${index}`} onClick={() => window.open(source.url, '_blank')}>
-                  <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src='https://www.google.com/s2/favicons?domain=' + source.url} />
-                  {extractDomain(source.url)}
-                </SourceButton>
-              ))}
+              {sources.map((source, index) => {
+                // Sanitize URL before use with window.open
+                let safeUrl = source.url;
+                if (safeUrl && !safeUrl.startsWith('http:') && !safeUrl.startsWith('https:')) {
+                  console.warn(`Blocked potentially unsafe source URL: ${safeUrl}`);
+                  // Fallback to a non-navigable or clearly marked invalid state if desired,
+                  // or simply don't open it. For now, let's prevent opening.
+                  safeUrl = '#'; // Or null, and disable the button
+                }
+                return (
+                  <SourceButton 
+                    key={`source-${index}`} 
+                    onClick={() => {
+                      if (safeUrl && safeUrl !== '#') {
+                        window.open(safeUrl, '_blank');
+                      }
+                    }}
+                    disabled={!safeUrl || safeUrl === '#'} // Disable if URL is unsafe/invalid
+                  >
+                    <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src='https://www.google.com/s2/favicons?domain=' + source.url} />
+                    {extractDomain(source.url)}
+                  </SourceButton>
+                );
+              })}
             </SourcesContainer>
           )}
         </Content>

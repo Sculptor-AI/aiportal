@@ -1,6 +1,71 @@
 import axios from 'axios';
 import cheerio from 'cheerio';
 import { formatError } from '../utils/formatters.js';
+import dns from 'dns';
+import { Address4, Address6 } from 'ip-address'; // Added for IP validation
+
+// Helper function to escape HTML entities
+function escapeHtml(unsafe) {
+  if (typeof unsafe !== 'string') {
+    // If it's not a string, or if it's null/undefined, return it as is.
+    // This check also handles cases where unsafe might be, for example, a number or boolean.
+    if (unsafe === null || typeof unsafe === 'undefined') return unsafe;
+    // For other non-string types, it might be safer to convert to string or handle specifically,
+    // but for typical JSON responses, non-string values are usually fine as they are.
+    // However, to be absolutely sure in contexts where a non-string might be stringified
+    // and then insecurely rendered, one might consider String(unsafe) and then escaping,
+    // but that's often too aggressive. For now, only escape strings.
+    return unsafe;
+  }
+  return unsafe
+       .replace(/&/g, "&amp;")
+       .replace(/</g, "&lt;")
+       .replace(/>/g, "&gt;")
+       .replace(/"/g, "&quot;")
+       .replace(/'/g, "&#039;");
+}
+
+// Helper function to check for private or reserved IP addresses
+const isPrivateOrReservedIp = (ipString) => {
+  if (!ipString) return false;
+
+  try {
+    let address;
+    if (ipString.includes(':')) { // IPv6
+      address = new Address6(ipString);
+      if (
+        address.isLoopback() ||
+        address.isLinkLocal() ||
+        address.isUniqueLocal() || // ULA (fc00::/7)
+        address.isTeredo() ||
+        address.is6to4() ||
+        address.isSpecial() || // Covers others like documentation, benchmark
+        address.isInSubnet(new Address6('2001:db8::/32')) // Documentation block
+      ) {
+        return true;
+      }
+    } else { // IPv4
+      address = new Address4(ipString);
+      if (
+        address.isLoopback() || // 127.0.0.0/8
+        address.isPrivate() ||  // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+        address.isLinkLocal() || // 169.254.0.0/16
+        address.isBroadcast() || // e.g. 255.255.255.255
+        address.isMulticast() || // 224.0.0.0/4
+        address.isInSubnet(new Address4('192.0.2.0/24')) || // TEST-NET-1, documentation
+        address.isInSubnet(new Address4('198.51.100.0/24')) ||// TEST-NET-2
+        address.isInSubnet(new Address4('203.0.113.0/24')) || // TEST-NET-3
+        address.isInSubnet(new Address4('0.0.0.0/8')) // Current network (only valid as source address)
+      ) {
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn(`Failed to parse IP address for check: ${ipString}`, e);
+    return true; // Treat unparseable IPs as potentially problematic/restricted
+  }
+  return false;
+};
 
 /**
  * Perform a search using Brave Search API
@@ -41,9 +106,9 @@ export const searchWeb = async (req, res) => {
     
     const searchResultsRaw = response.data?.web?.results || [];
     const results = searchResultsRaw.slice(0, max_results).map(item => ({
-      title: item.title || 'N/A',
+      title: escapeHtml(item.title || 'N/A'),
       url: item.url,
-      snippet: item.description || ''
+      snippet: escapeHtml(item.description || '')
     }));
     
     return res.status(200).json({ results });
@@ -67,7 +132,46 @@ export const scrapeUrl = async (req, res) => {
       return res.status(400).json(formatError('URL is required and must be a string'));
     }
     
-    console.log(`Attempting to scrape URL: ${url}`);
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(url);
+    } catch (parseError) {
+      console.error(`Invalid URL received: ${url}`, parseError);
+      return res.status(400).json(formatError('Invalid URL format'));
+    }
+    
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      console.warn(`Blocked request to non-HTTP/HTTPS URL: ${url}`);
+      return res.status(400).json(formatError('Invalid URL protocol. Only HTTP and HTTPS are allowed.'));
+    }
+    
+    // Quick check for common loopback hostnames
+    const hostname = parsedUrl.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]') {
+      console.warn(`Blocked request to loopback hostname: ${hostname} for URL: ${url}`);
+      return res.status(400).json(formatError('Requests to loopback hostnames are not permitted.'));
+    }
+
+    // Resolve hostname to IP and check against private/reserved ranges
+    try {
+      const { address: resolvedIp } = await dns.promises.lookup(hostname);
+      console.log(`Resolved ${hostname} to ${resolvedIp} for URL: ${url}`);
+
+      if (isPrivateOrReservedIp(resolvedIp)) {
+        console.warn(`Blocked request to private/reserved IP ${resolvedIp} (from hostname ${hostname}) for URL: ${url}`);
+        return res.status(400).json(formatError('Requests to this IP address are not permitted due to security policy.'));
+      }
+    } catch (dnsError) {
+      console.error(`DNS lookup failed for ${hostname} (from URL ${url}):`, dnsError.message);
+      // Log the full error for more details if needed, but don't send verbose errors to client
+      // console.error(dnsError);
+      return res.status(400).json(formatError(`Could not resolve URL hostname: ${hostname}. Please check the URL.`));
+    }
+    
+    // The old check for localhost IP is now covered by isPrivateOrReservedIp
+    // if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1') { ... }
+
+    console.log(`Scraping allowed for URL: ${parsedUrl.href} (resolved to safe IP)`);
     
     // Use a more browser-like user agent to avoid being blocked
     const headers = {
@@ -79,17 +183,17 @@ export const scrapeUrl = async (req, res) => {
     };
     
     try {
-      const response = await axios.get(url, {
+      const response = await axios.get(parsedUrl.href, {
         headers,
         timeout: 20000,
         maxRedirects: 5
       });
       
       const contentType = response.headers['content-type'] || '';
-      console.log(`Content type for ${url}: ${contentType}`);
+      console.log(`Content type for ${parsedUrl.href}: ${contentType}`);
       
       if (!contentType.includes('html')) {
-        return res.status(400).json(formatError('URL does not contain HTML content'));
+        return res.status(400).json(formatError(escapeHtml('URL does not contain HTML content')));
       }
       
       const html = response.data;
@@ -102,7 +206,7 @@ export const scrapeUrl = async (req, res) => {
       let extractedText = '';
       
       // 1. Try for Wikipedia-specific extraction
-      if (url.includes('wikipedia.org')) {
+      if (parsedUrl.href.includes('wikipedia.org')) {
         // For Wikipedia, focus on the content div and remove unwanted elements
         console.log("Using Wikipedia-specific extraction");
         const content = $('#content, #mw-content-text');
@@ -122,13 +226,13 @@ export const scrapeUrl = async (req, res) => {
       }
       
       // 3. Government website extraction
-      if (!extractedText && (url.includes('.gov') || url.includes('whitehouse'))) {
+      if (!extractedText && (parsedUrl.href.includes('.gov') || parsedUrl.href.includes('whitehouse'))) {
         console.log("Using government website extraction");
         // First remove common navigation elements
         $('nav, header, footer, .menu, .navigation, #navigation, .sidebar, #sidebar, script, style').remove();
         
         // For whitehouse.gov specifically
-        if (url.includes('whitehouse.gov')) {
+        if (parsedUrl.href.includes('whitehouse.gov')) {
           // Extract what we can from the main content sections
           const mainContent = $('#main-content, .main-content, main, .usa-content, .usa-section');
           if (mainContent.length) {
@@ -205,7 +309,7 @@ export const scrapeUrl = async (req, res) => {
         .join('\n');
       
       // Process content to extract specific information for certain sites
-      if (url.includes('whitehouse.gov')) {
+      if (parsedUrl.href.includes('whitehouse.gov')) {
         // Look for President mentions
         const presidentMatch = cleanedContent.match(/President [\w\s\.]+(Trump|Biden)/i);
         if (presidentMatch) {
@@ -233,7 +337,7 @@ export const scrapeUrl = async (req, res) => {
       }
       
       // If snippets indicate information about the president, add them
-      if (url.includes('whitehouse.gov') || url.includes('president')) {
+      if (parsedUrl.href.includes('whitehouse.gov') || parsedUrl.href.includes('president')) {
         const html = response.data;
         // Look for specific mentions of the president in the full HTML
         if (html.includes('Donald J. Trump') || html.includes('Donald Trump')) {
@@ -243,22 +347,23 @@ export const scrapeUrl = async (req, res) => {
         }
       }
       
+      const finalContentString = cleanedContent || 'No substantial content could be extracted';
       return res.status(200).json({ 
-        url: response.request.res.responseUrl || url,
-        title: pageTitle,
-        content: cleanedContent || 'No substantial content could be extracted',
-        length: cleanedContent.length
+        url: response.request.res.responseUrl || parsedUrl.href,
+        title: escapeHtml(pageTitle),
+        content: escapeHtml(finalContentString),
+        length: finalContentString.length
       });
       
     } catch (error) {
-      console.error(`Error fetching URL ${url}:`, error.message);
+      console.error(`Error fetching URL ${parsedUrl.href}:`, error.message);
       
       // Try a fallback method - use browser emulation
       try {
-        console.log(`Attempting fallback method for ${url}`);
+        console.log(`Attempting fallback method for ${parsedUrl.href}`);
         
         // For sites that might block us, try a different approach
-        const response = await axios.get(url, {
+        const response = await axios.get(parsedUrl.href, {
           headers: {
             ...headers,
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
@@ -273,7 +378,7 @@ export const scrapeUrl = async (req, res) => {
         const pageTitle = $('title').text().trim() || 'No title';
         
         // For Brave search results, try to extract directly from the snippet
-        if (url.includes('whitehouse.gov')) {
+        if (parsedUrl.href.includes('whitehouse.gov')) {
           // Check HTML for president mentions
           let presidentInfo = '';
           if (html.includes('Donald J. Trump') || html.includes('Donald Trump')) {
@@ -284,9 +389,9 @@ export const scrapeUrl = async (req, res) => {
           
           if (presidentInfo) {
             return res.status(200).json({
-              url: url,
-              title: pageTitle,
-              content: presidentInfo,
+              url: parsedUrl.href,
+              title: escapeHtml(pageTitle),
+              content: escapeHtml(presidentInfo),
               length: presidentInfo.length
             });
           }
@@ -296,22 +401,24 @@ export const scrapeUrl = async (req, res) => {
         const paragraphs = $('p').map((i, el) => $(el).text().trim()).get();
         const cleanedContent = paragraphs.join('\n\n');
         
+        const finalFallbackContent = cleanedContent || 'No substantial content could be extracted with fallback method';
+        
         return res.status(200).json({
-          url: response.request.res.responseUrl || url,
-          title: pageTitle,
-          content: cleanedContent || 'No substantial content could be extracted with fallback method',
-          length: cleanedContent.length
+          url: response.request.res.responseUrl || parsedUrl.href,
+          title: escapeHtml(pageTitle),
+          content: escapeHtml(finalFallbackContent),
+          length: finalFallbackContent.length
         });
         
       } catch (fallbackError) {
-        console.error(`Fallback method also failed for ${url}:`, fallbackError.message);
-        return res.status(500).json(formatError(`Failed to scrape URL after multiple attempts: ${error.message}`, error));
+        console.error(`Fallback method also failed for ${parsedUrl.href}:`, fallbackError.message);
+        return res.status(500).json(formatError(escapeHtml(`Failed to scrape URL after multiple attempts: ${error.message}`), error));
       }
     }
     
   } catch (error) {
     console.error('Scraping error:', error);
-    return res.status(500).json(formatError('Failed to scrape URL', error));
+    return res.status(500).json(formatError(escapeHtml('Failed to scrape URL'), error));
   }
 };
 
@@ -324,6 +431,8 @@ export const searchAndProcess = async (req, res) => {
   try {
     const { query, max_results = 2, model_prompt, modelType = 'meta-llama/llama-4-maverick:free' } = req.body;
     
+    const INTERNAL_API_BASE = `http://localhost:${process.env.PORT || 3000}`;
+
     if (!query || typeof query !== 'string') {
       return res.status(400).json(formatError('Query is required and must be a string'));
     }
@@ -338,7 +447,7 @@ export const searchAndProcess = async (req, res) => {
     console.log('Step 1: Performing Brave search');
     let searchResults = [];
     try {
-      const searchResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/search`, {
+      const searchResponse = await axios.post(`${INTERNAL_API_BASE}/api/search`, {
         query,
         max_results: 5 // Request more results so we can filter them
       });
@@ -405,7 +514,7 @@ export const searchAndProcess = async (req, res) => {
     for (const result of filteredResults) {
       try {
         console.log(`Scraping URL: ${result.url}`);
-        const scrapeResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/scrape`, {
+        const scrapeResponse = await axios.post(`${INTERNAL_API_BASE}/api/scrape`, {
           url: result.url
         });
         
@@ -465,7 +574,7 @@ If the search results do not contain sufficient information to answer the query,
     console.log(`Final prompt size: ${finalPrompt.length} characters`);
     
     try {
-      const chatResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/chat`, {
+      const chatResponse = await axios.post(`${INTERNAL_API_BASE}/api/chat`, {
         modelType: modelType, // Use the model selected by the user
         prompt: finalPrompt,
         search: false // Don't trigger another search
@@ -476,13 +585,30 @@ If the search results do not contain sufficient information to answer the query,
       // Add sources to the response data for display in the frontend
       const responseData = chatResponse.data;
       
-      // Add the sources information to the response
-      responseData.sources = filteredResults.map(source => ({
-        title: source.title,
-        url: source.url
-      }));
+      // Escape LLM's main textual response, expecting OpenRouter structure
+      if (responseData && 
+          responseData.choices && 
+          Array.isArray(responseData.choices) && 
+          responseData.choices.length > 0 &&
+          responseData.choices[0].message && 
+          typeof responseData.choices[0].message.content === 'string') {
+        responseData.choices[0].message.content = escapeHtml(responseData.choices[0].message.content);
+        console.log("HTML-escaped LLM response in choices[0].message.content");
+      }
       
-      console.log(`Returning response with ${filteredResults.length} sources`);
+      // Add the sources information to the response, escaping titles
+      // Ensure filteredResults is an array before mapping
+      if (Array.isArray(filteredResults)) {
+          responseData.sources = filteredResults.map(source => ({
+            title: escapeHtml(source.title),
+            url: source.url 
+          }));
+      } else {
+          // Initialize sources as an empty array if filteredResults isn't an array (e.g. undefined)
+          responseData.sources = [];
+      }
+      
+      console.log(`Returning response with ${responseData.sources.length} sources`);
       
       // Return the data directly instead of nesting it in 'result'
       return res.status(200).json(responseData);
