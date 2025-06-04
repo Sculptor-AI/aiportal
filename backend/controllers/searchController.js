@@ -405,7 +405,7 @@ export const searchAndProcess = async (req, res) => {
     for (const result of filteredResults) {
       try {
         console.log(`Scraping URL: ${result.url}`);
-        const INTERNAL_API_BASE_URL = "http://localhost";
+        const INTERNAL_API_BASE_URL = process.env.INTERNAL_API_BASE_URL || "http://localhost";
         const scrapeResponse = await axios.post(`${INTERNAL_API_BASE_URL}/api/scrape`, {
           url: result.url
         });
