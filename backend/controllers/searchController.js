@@ -465,7 +465,8 @@ If the search results do not contain sufficient information to answer the query,
     console.log(`Final prompt size: ${finalPrompt.length} characters`);
     
     try {
-      const chatResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/chat`, {
+      const BASE_API_URL = process.env.BASE_API_URL || 'http://localhost:3000'; // Use a trusted base URL
+      const chatResponse = await axios.post(`${BASE_API_URL}/api/chat`, {
         modelType: modelType, // Use the model selected by the user
         prompt: finalPrompt,
         search: false // Don't trigger another search
