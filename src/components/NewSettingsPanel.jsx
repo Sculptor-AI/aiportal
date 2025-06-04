@@ -1093,6 +1093,11 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                   <option value="trans">Trans</option>
                   <option value="lakeside">Lakeside</option>
                   <option value="retro">Retro</option>
+                  <option value="galaxy">Galaxy</option>
+                  <option value="sunset">Sunset</option>
+                  <option value="cyberpunk">Cyberpunk</option>
+                  <option value="bubblegum">Bubblegum</option>
+                  <option value="desert">Desert</option>
                 </SelectBox>
               </SettingsRow>
               
