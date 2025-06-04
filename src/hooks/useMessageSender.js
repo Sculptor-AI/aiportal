@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../services/aiService';
+import { sendMessage, sendMessageToBackend, streamMessageFromBackend, generateChatTitle } from '../services/aiService';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 
 // Helper function (can be outside or passed in if it uses external context like toast)
@@ -133,6 +133,7 @@ const useMessageSender = ({
 
     if (scrollToBottom) setTimeout(scrollToBottom, 100);
     let streamedContent = '';
+    let finalAssistantContent = '';
 
     try {
         const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
@@ -185,14 +186,16 @@ When explaining concepts:
             window.__lastSearchSources = null;
           }
           updateMessage(currentChatId, aiMessageId, messageUpdates);
+          finalAssistantContent = streamedContent;
         } else {
           const backendResponse = await sendMessageToBackend(
             currentModel, finalMessageToSend,
             currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
             imageDataToSend, fileTextToSend, systemPromptForApi, thinkingMode
           );
+          finalAssistantContent = backendResponse.response || 'No response from backend';
           updateMessage(currentChatId, aiMessageId, {
-            content: backendResponse.response || 'No response from backend',
+            content: finalAssistantContent,
             isLoading: false,
             sources: backendResponse.sources || null
           });
@@ -207,6 +210,7 @@ When explaining concepts:
           streamedContent += chunk;
           updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
         }
+        finalAssistantContent = streamedContent;
         updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
       }
     } catch (error) {
@@ -221,6 +225,13 @@ When explaining concepts:
       });
     } finally {
       setIsLoading(false);
+      if (currentHistory.length === 0 && messageToSend && finalAssistantContent) {
+        generateChatTitle(messageToSend, finalAssistantContent).then(title => {
+          if (title && updateChatTitle) {
+            updateChatTitle(currentChatId, title);
+          }
+        });
+      }
     }
   };
 
