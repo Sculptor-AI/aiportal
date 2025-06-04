@@ -67,6 +67,19 @@ export const scrapeUrl = async (req, res) => {
       return res.status(400).json(formatError('URL is required and must be a string'));
     }
     
+    // Validate the URL against an allow-list of trusted domains
+    const trustedDomains = ['example.com', 'whitehouse.gov'];
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(url);
+    } catch (error) {
+      return res.status(400).json(formatError('Invalid URL format'));
+    }
+    
+    if (!trustedDomains.includes(parsedUrl.hostname)) {
+      return res.status(403).json(formatError('URL hostname is not allowed'));
+    }
+    
     console.log(`Attempting to scrape URL: ${url}`);
     
     // Use a more browser-like user agent to avoid being blocked
@@ -258,7 +271,7 @@ export const scrapeUrl = async (req, res) => {
         console.log(`Attempting fallback method for ${url}`);
         
         // For sites that might block us, try a different approach
-        const response = await axios.get(url, {
+        const response = await axios.get(parsedUrl.href, {
           headers: {
             ...headers,
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15',
