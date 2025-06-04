@@ -217,6 +217,7 @@ export const streamChat = async (req, res) => {
             const fullResponse = JSON.stringify(searchResponse.data);
             res.write(`data: ${JSON.stringify({ content: `Unable to parse structured response. Full data: ${fullResponse}` })}\n\n`);
           } catch (e) {
+            console.error('Error parsing search results:', e);
             res.write(`data: ${JSON.stringify({ content: "Received search results but couldn't parse them." })}\n\n`);
           }
         }
