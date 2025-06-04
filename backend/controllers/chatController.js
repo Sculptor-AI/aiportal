@@ -186,7 +186,11 @@ export const streamChat = async (req, res) => {
     if (doSearch) {
       try {
         // Call the search-process endpoint to get search results
-        const searchResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/search-process`, {
+        const internalApiBaseUrl = process.env.INTERNAL_API_BASE_URL;
+        if (!internalApiBaseUrl) {
+          throw new Error("INTERNAL_API_BASE_URL is not configured");
+        }
+        const searchResponse = await axios.post(`${internalApiBaseUrl}/api/search-process`, {
           query: prompt,
           max_results: doDeepResearch ? 5 : 3,
           model_prompt: "Based on the search results above, please answer this question in a comprehensive way with the most up-to-date information. DO NOT mention or reference the sources in your answer, as they will be displayed separately.",
