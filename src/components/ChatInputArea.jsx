@@ -38,6 +38,12 @@ const ChatInputArea = forwardRef(({
   isGraphingOpen, // New prop for graphing tool
   onToggleGraphing, // New prop for toggling graphing
   onCloseGraphing, // New prop for closing graphing
+  isSummarizerOpen,
+  onToggleSummarizer,
+  onCloseSummarizer,
+  isCodeRunnerOpen,
+  onToggleCodeRunner,
+  onCloseCodeRunner,
   onToolbarToggle,
 }, ref) => {
   const theme = useTheme();
@@ -153,7 +159,7 @@ const ChatInputArea = forwardRef(({
     }
   };
 
-  const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen;
+  const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen || isSummarizerOpen || isCodeRunnerOpen;
 
   // Expose methods through ref
   useImperativeHandle(ref, () => ({
@@ -335,6 +341,12 @@ const ChatInputArea = forwardRef(({
               <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
               <polyline points="17 6 23 6 23 12"></polyline>
             </svg>
+          </ToolbarItem>
+          <ToolbarItem title="Summarizer" onClick={onToggleSummarizer}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v2"/><path d="M17 17l-5-5"/><path d="M12 12l-5 5"/></svg>
+          </ToolbarItem>
+          <ToolbarItem title="Code Runner" onClick={onToggleCodeRunner}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
           </ToolbarItem>
         </ToolbarContainer>
       </MessageInputWrapper>

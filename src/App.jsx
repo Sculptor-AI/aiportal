@@ -9,6 +9,8 @@ import MobileApp from './components/MobileApp';
 import WhiteboardModal from './components/WhiteboardModal';
 import EquationEditorModal from './components/EquationEditorModal';
 import GraphingModal from './components/GraphingModal';
+import SummarizerModal from './components/SummarizerModal';
+import CodeRunnerModal from './components/CodeRunnerModal';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -39,6 +41,8 @@ const MainContentArea = styled.div`
     if (props.$whiteboardOpen) totalMargin += 450;
     if (props.$equationEditorOpen) totalMargin += 450;
     if (props.$graphingOpen) totalMargin += 600; // Graphing panel is wider
+    if (props.$summarizerOpen) totalMargin += 450;
+    if (props.$codeRunnerOpen) totalMargin += 450;
     return `${totalMargin}px`;
   }};
   transition: margin-right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -348,6 +352,8 @@ const AppContent = () => {
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [isEquationEditorOpen, setIsEquationEditorOpen] = useState(false);
   const [isGraphingOpen, setIsGraphingOpen] = useState(false);
+  const [isSummarizerOpen, setIsSummarizerOpen] = useState(false);
+  const [isCodeRunnerOpen, setIsCodeRunnerOpen] = useState(false);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const chatWindowRef = useRef(null);
 
@@ -574,10 +580,12 @@ const AppContent = () => {
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
         <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
-          <MainContentArea 
-            $whiteboardOpen={isWhiteboardOpen} 
+          <MainContentArea
+            $whiteboardOpen={isWhiteboardOpen}
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}
+            $summarizerOpen={isSummarizerOpen}
+            $codeRunnerOpen={isCodeRunnerOpen}
           >
             {collapsed && (
               <FloatingMenuButton onClick={() => setCollapsed(false)}>
@@ -644,6 +652,12 @@ const AppContent = () => {
               isGraphingOpen={isGraphingOpen}
               onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
               onCloseGraphing={() => setIsGraphingOpen(false)}
+              isSummarizerOpen={isSummarizerOpen}
+              onToggleSummarizer={() => setIsSummarizerOpen(prev => !prev)}
+              onCloseSummarizer={() => setIsSummarizerOpen(false)}
+              isCodeRunnerOpen={isCodeRunnerOpen}
+              onToggleCodeRunner={() => setIsCodeRunnerOpen(prev => !prev)}
+              onCloseCodeRunner={() => setIsCodeRunnerOpen(false)}
               onToolbarToggle={setIsToolbarOpen}
             />
           </MainContentArea>
@@ -682,6 +696,30 @@ const AppContent = () => {
             onClose={() => setIsGraphingOpen(false)}
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0)}
+          />
+
+          <SummarizerModal
+            isOpen={isSummarizerOpen}
+            onClose={() => setIsSummarizerOpen(false)}
+            onInsert={(text) => {
+              if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
+                chatWindowRef.current.appendToInput(text);
+              }
+            }}
+            modelId={selectedModel}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+          />
+
+          <CodeRunnerModal
+            isOpen={isCodeRunnerOpen}
+            onClose={() => setIsCodeRunnerOpen(false)}
+            onInsert={(text) => {
+              if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
+                chatWindowRef.current.appendToInput(text);
+              }
+            }}
+            modelId={selectedModel}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isSummarizerOpen ? 1 : 0)}
           />
         
           {isSettingsOpen && (
