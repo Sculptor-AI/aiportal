@@ -246,6 +246,23 @@ const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen
     // Pi
     latex = latex.replace(/(?<!\\\\)\bpi\b/g, '\\pi');
 
+    // Common greek letters
+    const greekMap = {
+      alpha: '\\alpha',
+      beta: '\\beta',
+      gamma: '\\gamma',
+      delta: '\\delta',
+      theta: '\\theta',
+      lambda: '\\lambda',
+      mu: '\\mu',
+      sigma: '\\sigma',
+      omega: '\\omega'
+    };
+    Object.entries(greekMap).forEach(([word, cmd]) => {
+      const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'gi');
+      latex = latex.replace(regex, cmd);
+    });
+
     // Comparisons
     latex = latex.replace(/\s*(>=|=>)\s*/g, ' \\geq ');
     latex = latex.replace(/\s*(<=|=<)\s*/g, ' \\leq ');
@@ -348,7 +365,7 @@ const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen
         />
         <PreviewArea theme={theme}>
           {latexOutput.trim() ? (
-            <ReactKatex displayMode={true}>{latexOutput}</ReactKatex>
+            <ReactKatex displayMode={true}>{`$$${latexOutput}$$`}</ReactKatex>
           ) : (
             <p style={{ opacity: 0.6 }}>Preview will appear here...</p>
           )}
