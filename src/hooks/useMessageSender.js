@@ -135,8 +135,8 @@ const useMessageSender = ({
     let streamedContent = '';
 
     try {
-      const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
-          `You are a Deep Analysis Chain of Thought model that provides thorough, well-structured explanations. For every response:
+        const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
+            `You are a Deep Analysis Chain of Thought model that provides thorough, well-structured explanations. For every response:
 
 1. FIRST: Put your comprehensive thinking process inside <think></think> tags following these steps:
    - Begin with problem decomposition - break down the question into its core components and underlying assumptions
@@ -164,15 +164,10 @@ When explaining concepts:
 - Include concrete examples that illustrate key points
 - Focus on the most important aspects rather than attempting to cover everything` : null;
 
-      if (isBackendModel) {
-        const supportsStreaming = currentModelObj?.supportsStreaming !== false;
-        let finalMessageToSend = messageToSend;
-        let systemPromptForApi = null;
-        if (isBackendModel && thinkingModeSystemPrompt) {
-          finalMessageToSend = `System Instructions: ${thinkingModeSystemPrompt}\n\nUser Message: ${messageToSend}`;
-        } else if (thinkingModeSystemPrompt) {
-          systemPromptForApi = thinkingModeSystemPrompt;
-        }
+        if (isBackendModel) {
+          const supportsStreaming = currentModelObj?.supportsStreaming !== false;
+          const finalMessageToSend = messageToSend;
+          const systemPromptForApi = thinkingModeSystemPrompt || null;
 
         if (supportsStreaming) {
           await streamMessageFromBackend(
