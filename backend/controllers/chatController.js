@@ -203,21 +203,22 @@ export const streamChat = async (req, res) => {
             searchResponse.data.result.choices[0].message) {
           
           const content = searchResponse.data.result.choices[0].message.content;
-          res.write(`data: ${content}\n\n`);
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
         } else if (searchResponse.data.choices && searchResponse.data.choices[0]) {
           // For OpenRouter format
           const content = searchResponse.data.choices[0].message.content;
-          res.write(`data: ${content}\n\n`);
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
         } else if (searchResponse.data.content) {
-          res.write(`data: ${searchResponse.data.content}\n\n`);
+          res.write(`data: ${JSON.stringify({ content: searchResponse.data.content })}\n\n`);
         } else {
           // If we can't find the content in the expected structure, try to send the whole response
           // This is a fallback for unexpected response structures
           try {
             const fullResponse = JSON.stringify(searchResponse.data);
-            res.write(`data: Unable to parse structured response. Full data: ${fullResponse}\n\n`);
+            res.write(`data: ${JSON.stringify({ content: `Unable to parse structured response. Full data: ${fullResponse}` })}\n\n`);
           } catch (e) {
-            res.write(`data: Received search results but couldn't parse them.\n\n`);
+            console.error('Error parsing search results:', e);
+            res.write(`data: ${JSON.stringify({ content: "Received search results but couldn't parse them." })}\n\n`);
           }
         }
         
