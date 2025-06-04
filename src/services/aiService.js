@@ -987,21 +987,24 @@ export const streamMessageFromBackend = async (
     // Get the reader from the response body stream
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    
+
+    let buffer = '';
+
     // Process the stream chunks
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) {
         break;
       }
-      
-      // Decode the chunk and pass it to the callback
-      const chunk = decoder.decode(value, { stream: true });
-      
+
+      // Decode the chunk and accumulate it
+      buffer += decoder.decode(value, { stream: true });
+
       // Handle SSE format: each message starts with "data: "
-      const lines = chunk.split('\n');
-      
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const data = line.substring(6); // Remove "data: " prefix
@@ -1042,6 +1045,36 @@ export const streamMessageFromBackend = async (
             // The previous logic incorrectly passed raw data on parse failure.
             // Re-throw the error to ensure it's not silently caught and the stream processing stops.
             throw e;
+          }
+        }
+      }
+    }
+
+    // Process any remaining buffered data
+    if (buffer) {
+      const remainingLines = buffer.split('\n');
+      for (const line of remainingLines) {
+        if (line.startsWith('data: ')) {
+          const data = line.substring(6);
+          if (data !== '') {
+            if (data === '[DONE]') {
+              return;
+            }
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.type === 'sources' && Array.isArray(parsed.sources)) {
+                console.log('Received sources data:', parsed.sources);
+                window.__lastSearchSources = parsed.sources;
+                continue;
+              }
+              const content = parsed.choices?.[0]?.delta?.content || parsed.content || '';
+              if (content) {
+                onChunk(content);
+              }
+            } catch (e) {
+              console.error('Error processing SSE data line or in onChunk. Raw data:', data, 'Error:', e);
+              throw e;
+            }
           }
         }
       }
