@@ -15,7 +15,7 @@ console.log("Loaded API keys from environment:", {
   nvidia: NVIDIA_API_KEY ? "Present (value hidden)" : "Missing"
 });
 
-// Map updated model IDs to their respective API endpoints and fornpmmats
+// Map updated model IDs to their respective API endpoints and formats
 const MODEL_CONFIGS = {
   'gemini-2-flash': {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
