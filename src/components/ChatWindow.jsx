@@ -39,7 +39,8 @@ const ChatWindow = forwardRef(({
   isGraphingOpen,
   onToggleGraphing,
   onCloseGraphing,
-  onToolbarToggle
+  onToolbarToggle,
+  onOpenImageGenerator
 }, ref) => {
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
   const [isProcessingFile, setIsProcessingFile] = useState(false); 
@@ -360,6 +361,7 @@ const ChatWindow = forwardRef(({
         onToggleGraphing={onToggleGraphing}
         onCloseGraphing={onCloseGraphing}
         onToolbarToggle={onToolbarToggle}
+        onOpenImageGenerator={onOpenImageGenerator}
         // Pass inputFocusChange if ChatInputArea needs to inform ChatWindow about focus for header opacity effect
         // onInputFocusChange={inputFocusChange}
       />

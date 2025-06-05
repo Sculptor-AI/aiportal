@@ -39,6 +39,7 @@ const ChatInputArea = forwardRef(({
   onToggleGraphing, // New prop for toggling graphing
   onCloseGraphing, // New prop for closing graphing
   onToolbarToggle,
+  onOpenImageGenerator, // <-- 1. Add new prop here
 }, ref) => {
   const theme = useTheme();
   const [inputMessage, setInputMessage] = useState('');
@@ -146,11 +147,16 @@ const ChatInputArea = forwardRef(({
     setCreateType(type);
     if (type === 'image') {
       setSelectedActionChip('create-image');
+      if (onOpenImageGenerator) { // <-- 2. Call the prop
+        onOpenImageGenerator();
+      }
     } else if (type === 'video') {
       setSelectedActionChip('create-video');
+      // Potentially call onOpenVideoGenerator here if that feature exists
     } else {
       setSelectedActionChip(null);
     }
+    // The PopupMenu (ToolMenuModal) calls onClose itself after onSelect, so no need to setShowCreateModal(false) here.
   };
 
   const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen;

@@ -9,6 +9,7 @@ import MobileApp from './components/MobileApp';
 import WhiteboardModal from './components/WhiteboardModal';
 import EquationEditorModal from './components/EquationEditorModal';
 import GraphingModal from './components/GraphingModal';
+import ImageGenerator from './components/ImageGenerator';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -39,6 +40,7 @@ const MainContentArea = styled.div`
     if (props.$whiteboardOpen) totalMargin += 450;
     if (props.$equationEditorOpen) totalMargin += 450;
     if (props.$graphingOpen) totalMargin += 600; // Graphing panel is wider
+    if (props.$imageGeneratorOpen) totalMargin += 450;
     return `${totalMargin}px`;
   }};
   transition: margin-right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -81,6 +83,7 @@ const MainGreeting = styled.div`
     if (props.$whiteboardOpen) rightPanelOffset -= 225;
     if (props.$equationEditorOpen) rightPanelOffset -= 225;
     if (props.$graphingOpen) rightPanelOffset -= 300; // Half of 600px
+    if (props.$imageGeneratorOpen) rightPanelOffset -= 225;
     return `calc(50% + ${sidebarOffset}px + ${rightPanelOffset}px)`;
   }};
   transform: translateX(-50%);
@@ -349,6 +352,7 @@ const AppContent = () => {
   const [isEquationEditorOpen, setIsEquationEditorOpen] = useState(false);
   const [isGraphingOpen, setIsGraphingOpen] = useState(false);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
+  const [isImageGeneratorOpen, setIsImageGeneratorOpen] = useState(false);
   const chatWindowRef = useRef(null);
 
   // Update settings when user changes
@@ -578,6 +582,7 @@ const AppContent = () => {
             $whiteboardOpen={isWhiteboardOpen} 
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}
+            $imageGeneratorOpen={isImageGeneratorOpen}
           >
             {collapsed && (
               <FloatingMenuButton onClick={() => setCollapsed(false)}>
@@ -596,6 +601,7 @@ const AppContent = () => {
                 $whiteboardOpen={isWhiteboardOpen}
                 $equationEditorOpen={isEquationEditorOpen}
                 $graphingOpen={isGraphingOpen}
+                $imageGeneratorOpen={isImageGeneratorOpen}
                 $toolbarOpen={isToolbarOpen}
               >
                 <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>
@@ -645,6 +651,7 @@ const AppContent = () => {
               onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
               onCloseGraphing={() => setIsGraphingOpen(false)}
               onToolbarToggle={setIsToolbarOpen}
+              onOpenImageGenerator={() => setIsImageGeneratorOpen(true)}
             />
           </MainContentArea>
           
@@ -660,7 +667,7 @@ const AppContent = () => {
               setIsWhiteboardOpen(false);
             }}
             theme={currentTheme}
-            otherPanelsOpen={(isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+            otherPanelsOpen={(isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isImageGeneratorOpen ? 1 : 0)}
           />
           
           <EquationEditorModal
@@ -674,14 +681,14 @@ const AppContent = () => {
               setIsEquationEditorOpen(false);
             }}
             theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isImageGeneratorOpen ? 1 : 0)}
           />
           
           <GraphingModal
             isOpen={isGraphingOpen}
             onClose={() => setIsGraphingOpen(false)}
             theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0)}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isImageGeneratorOpen ? 1 : 0)}
           />
         
           {isSettingsOpen && (
@@ -699,6 +706,12 @@ const AppContent = () => {
           {isProfileOpen && (
             <ProfileModal closeModal={() => setIsProfileOpen(false)} />
           )}
+
+          <ImageGenerator
+            isOpen={isImageGeneratorOpen}
+            onClose={() => setIsImageGeneratorOpen(false)}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+          />
         </AppContainer>
       </GlobalStylesProvider>
     </ThemeProvider>
