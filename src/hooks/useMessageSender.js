@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend, generateChatTitle } from '../services/aiService';
+import { generateImageApi } from '../services/imageService';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 
 // Helper function (can be outside or passed in if it uses external context like toast)
@@ -38,7 +39,87 @@ const useMessageSender = ({
     }
   };
 
-  const submitMessage = async (messageText, attachedFile, actionChip, thinkingMode, createType) => {
+  const submitMessage = async (messagePayload) => {
+    // Check if this is an image generation request
+    if (messagePayload.type === 'generate-image') {
+      const prompt = messagePayload.prompt;
+      
+      if (!prompt || !chat?.id) return;
+      
+      setIsLoading(true);
+      
+      // Add user message indicating the prompt
+      const userPromptMessage = {
+        id: generateId(),
+        role: 'user',
+        content: `Generate image: "${prompt}"`,
+        timestamp: new Date().toISOString(),
+      };
+      addMessage(chat.id, userPromptMessage);
+      
+      // Add placeholder message for the generated image
+      const imagePlaceholderId = generateId();
+      const imagePlaceholderMessage = {
+        id: imagePlaceholderId,
+        role: 'assistant',
+        type: 'generated-image',
+        prompt: prompt,
+        status: 'loading',
+        imageUrl: null,
+        content: '',
+        timestamp: new Date().toISOString(),
+        modelId: 'image-generator',
+      };
+      addMessage(chat.id, imagePlaceholderMessage);
+      
+      if (scrollToBottom) setTimeout(scrollToBottom, 100);
+      
+      try {
+        const response = await generateImageApi(prompt);
+        const imageUrl = response.imageData || response.imageUrl;
+        
+        if (!imageUrl) {
+          throw new Error('No image URL returned from API');
+        }
+        
+        updateMessage(chat.id, imagePlaceholderId, { 
+          status: 'completed', 
+          imageUrl: imageUrl, 
+          isLoading: false 
+        });
+        
+        // Generate title for new chat if this is the first message
+        if (chat.messages.length === 0) {
+          const title = `Image: ${prompt.substring(0, 30)}${prompt.length > 30 ? '...' : ''}`;
+          if (updateChatTitle) updateChatTitle(chat.id, title);
+        }
+      } catch (error) {
+        console.error('[useMessageSender] Error generating image:', error);
+        updateMessage(chat.id, imagePlaceholderId, { 
+          status: 'error', 
+          content: error.message || 'Failed to generate image', 
+          isLoading: false, 
+          isError: true 
+        });
+        addAlert({
+          message: `Image generation failed: ${error.message || 'Unknown error'}`,
+          type: 'error',
+          autoHide: true
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      
+      return;
+    }
+    
+    // Extract values from messagePayload for regular messages
+    const messageText = messagePayload.text;
+    const attachedFile = messagePayload.file;
+    const actionChip = messagePayload.actionChip;
+    const thinkingMode = messagePayload.mode;
+    const createType = messagePayload.createType;
+    
     const messageToSend = messageText ? messageText.trim() : '';
     const currentImageData = attachedFile?.type === 'image' ? attachedFile.dataUrl : null;
     const currentFileText = (attachedFile?.type === 'text' || attachedFile?.type === 'pdf') ? attachedFile.text : null;
