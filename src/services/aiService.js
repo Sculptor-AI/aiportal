@@ -15,7 +15,7 @@ console.log("Loaded API keys from environment:", {
   nvidia: NVIDIA_API_KEY ? "Present (value hidden)" : "Missing"
 });
 
-// Map updated model IDs to their respective API endpoints and formats
+// Map updated model IDs to their respective API endpoints and fornpmmats
 const MODEL_CONFIGS = {
   'gemini-2-flash': {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
@@ -909,10 +909,10 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
  * @returns {Promise<void>} A promise that resolves when streaming is complete
  */
 export const streamMessageFromBackend = async (
-  modelType, 
-  prompt, 
-  onChunk, 
-  search = false, 
+  modelType,
+  prompt,
+  onChunk,
+  search = false,
   deepResearch = false, 
   imageGen = false, 
   imageData = null,
@@ -987,21 +987,24 @@ export const streamMessageFromBackend = async (
     // Get the reader from the response body stream
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    
+
+    let buffer = '';
+
     // Process the stream chunks
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) {
         break;
       }
-      
-      // Decode the chunk and pass it to the callback
-      const chunk = decoder.decode(value, { stream: true });
-      
+
+      // Decode the chunk and accumulate it
+      buffer += decoder.decode(value, { stream: true });
+
       // Handle SSE format: each message starts with "data: "
-      const lines = chunk.split('\n');
-      
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const data = line.substring(6); // Remove "data: " prefix
@@ -1012,6 +1015,7 @@ export const streamMessageFromBackend = async (
           }
           
           try {
+            console.log("Attempting to parse SSE data (first block):", data); // Added for debugging
             const parsed = JSON.parse(data);
             
             // Handle sources special event type
@@ -1037,7 +1041,7 @@ export const streamMessageFromBackend = async (
             }
           } catch (e) {
             // If JSON.parse fails or another error occurs in the try block
-            console.error('Error processing SSE data line or in onChunk. Raw data:', data, 'Error:', e);
+            console.error('Failed to parse SSE data in first block. Raw data was:', data, 'Error:', e); // Enhanced logging
             // Do NOT pass raw 'data' to onChunk if it couldn't be processed as expected.
             // The previous logic incorrectly passed raw data on parse failure.
             // Re-throw the error to ensure it's not silently caught and the stream processing stops.
@@ -1046,8 +1050,63 @@ export const streamMessageFromBackend = async (
         }
       }
     }
+
+    // Process any remaining buffered data
+    if (buffer) {
+      const remainingLines = buffer.split('\n');
+      for (const line of remainingLines) {
+        if (line.startsWith('data: ')) {
+          const data = line.substring(6);
+          if (data !== '') {
+            if (data === '[DONE]') {
+              return;
+            }
+            try {
+              console.log("Attempting to parse SSE data (second block):", data); // Added for debugging
+              const parsed = JSON.parse(data);
+              if (parsed.type === 'sources' && Array.isArray(parsed.sources)) {
+                console.log('Received sources data:', parsed.sources);
+                window.__lastSearchSources = parsed.sources;
+                continue;
+              }
+              const content = parsed.choices?.[0]?.delta?.content || parsed.content || '';
+              if (content) {
+                onChunk(content);
+              }
+            } catch (e) {
+              console.error('Failed to parse SSE data in second block. Raw data was:', data, 'Error:', e); // Enhanced logging
+              throw e;
+            }
+          }
+        }
+      }
+    }
   } catch (error) {
     console.error('Error in streaming from backend:', error);
     throw error;
   }
+};
+
+/**
+ * Generate a short chat title summarizing the user and assistant messages
+ * using the Llama 4 Maverick model on the backend.
+ * @param {string} userPrompt - The user's prompt
+ * @param {string} assistantResponse - The assistant's full response
+ * @returns {Promise<string|null>} The generated title or null on failure
+ */
+export const generateChatTitle = async (userPrompt, assistantResponse) => {
+  const titlePrompt = `Summarize the following conversation in 3-4 words for a chat title.\n` +
+    `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\nTitle:`;
+  try {
+    const result = await sendMessageToBackend(
+      'meta-llama/llama-4-maverick:free',
+      titlePrompt
+    );
+    if (result && result.response) {
+      return result.response.trim().replace(/^"|"$/g, '');
+    }
+  } catch (err) {
+    console.error('Error generating chat title:', err);
+  }
+  return null;
 };

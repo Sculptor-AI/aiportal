@@ -9,6 +9,7 @@
     "build": "echo 'Build completed successfully'"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.7.9",
     "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",

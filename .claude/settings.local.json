@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(npm uninstall:*)",
+      "Bash(grep:*)",
+      "Bash(rm:*)",
+      "Bash(node server.js)",
+      "Bash(npm run lint:*)",
+      "Bash(rg:*)",
+      "Bash(cat:*)"
     ],
     "deny": []
   }

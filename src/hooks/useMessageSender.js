@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../services/aiService';
+import { sendMessage, sendMessageToBackend, streamMessageFromBackend, generateChatTitle } from '../services/aiService';
+import { generateImageApi } from '../services/imageService';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 
 // Helper function (can be outside or passed in if it uses external context like toast)
@@ -38,7 +39,87 @@ const useMessageSender = ({
     }
   };
 
-  const submitMessage = async (messageText, attachedFile, actionChip, thinkingMode, createType) => {
+  const submitMessage = async (messagePayload) => {
+    // Check if this is an image generation request
+    if (messagePayload.type === 'generate-image') {
+      const prompt = messagePayload.prompt;
+      
+      if (!prompt || !chat?.id) return;
+      
+      setIsLoading(true);
+      
+      // Add user message indicating the prompt
+      const userPromptMessage = {
+        id: generateId(),
+        role: 'user',
+        content: `Generate image: "${prompt}"`,
+        timestamp: new Date().toISOString(),
+      };
+      addMessage(chat.id, userPromptMessage);
+      
+      // Add placeholder message for the generated image
+      const imagePlaceholderId = generateId();
+      const imagePlaceholderMessage = {
+        id: imagePlaceholderId,
+        role: 'assistant',
+        type: 'generated-image',
+        prompt: prompt,
+        status: 'loading',
+        imageUrl: null,
+        content: '',
+        timestamp: new Date().toISOString(),
+        modelId: 'image-generator',
+      };
+      addMessage(chat.id, imagePlaceholderMessage);
+      
+      if (scrollToBottom) setTimeout(scrollToBottom, 100);
+      
+      try {
+        const response = await generateImageApi(prompt);
+        const imageUrl = response.imageData || response.imageUrl;
+        
+        if (!imageUrl) {
+          throw new Error('No image URL returned from API');
+        }
+        
+        updateMessage(chat.id, imagePlaceholderId, { 
+          status: 'completed', 
+          imageUrl: imageUrl, 
+          isLoading: false 
+        });
+        
+        // Generate title for new chat if this is the first message
+        if (chat.messages.length === 0) {
+          const title = `Image: ${prompt.substring(0, 30)}${prompt.length > 30 ? '...' : ''}`;
+          if (updateChatTitle) updateChatTitle(chat.id, title);
+        }
+      } catch (error) {
+        console.error('[useMessageSender] Error generating image:', error);
+        updateMessage(chat.id, imagePlaceholderId, { 
+          status: 'error', 
+          content: error.message || 'Failed to generate image', 
+          isLoading: false, 
+          isError: true 
+        });
+        addAlert({
+          message: `Image generation failed: ${error.message || 'Unknown error'}`,
+          type: 'error',
+          autoHide: true
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      
+      return;
+    }
+    
+    // Extract values from messagePayload for regular messages
+    const messageText = messagePayload.text;
+    const attachedFile = messagePayload.file;
+    const actionChip = messagePayload.actionChip;
+    const thinkingMode = messagePayload.mode;
+    const createType = messagePayload.createType;
+    
     const messageToSend = messageText ? messageText.trim() : '';
     const currentImageData = attachedFile?.type === 'image' ? attachedFile.dataUrl : null;
     const currentFileText = (attachedFile?.type === 'text' || attachedFile?.type === 'pdf') ? attachedFile.text : null;
@@ -133,10 +214,11 @@ const useMessageSender = ({
 
     if (scrollToBottom) setTimeout(scrollToBottom, 100);
     let streamedContent = '';
+    let finalAssistantContent = '';
 
     try {
-      const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
-          `You are a Deep Analysis Chain of Thought model that provides thorough, well-structured explanations. For every response:
+        const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
+            `You are a Deep Analysis Chain of Thought model that provides thorough, well-structured explanations. For every response:
 
 1. FIRST: Put your comprehensive thinking process inside <think></think> tags following these steps:
    - Begin with problem decomposition - break down the question into its core components and underlying assumptions
@@ -164,15 +246,10 @@ When explaining concepts:
 - Include concrete examples that illustrate key points
 - Focus on the most important aspects rather than attempting to cover everything` : null;
 
-      if (isBackendModel) {
-        const supportsStreaming = currentModelObj?.supportsStreaming !== false;
-        let finalMessageToSend = messageToSend;
-        let systemPromptForApi = null;
-        if (isBackendModel && thinkingModeSystemPrompt) {
-          finalMessageToSend = `System Instructions: ${thinkingModeSystemPrompt}\n\nUser Message: ${messageToSend}`;
-        } else if (thinkingModeSystemPrompt) {
-          systemPromptForApi = thinkingModeSystemPrompt;
-        }
+        if (isBackendModel) {
+          const supportsStreaming = currentModelObj?.supportsStreaming !== false;
+          const finalMessageToSend = messageToSend;
+          const systemPromptForApi = thinkingModeSystemPrompt || null;
 
         if (supportsStreaming) {
           await streamMessageFromBackend(
@@ -190,14 +267,16 @@ When explaining concepts:
             window.__lastSearchSources = null;
           }
           updateMessage(currentChatId, aiMessageId, messageUpdates);
+          finalAssistantContent = streamedContent;
         } else {
           const backendResponse = await sendMessageToBackend(
             currentModel, finalMessageToSend,
             currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
             imageDataToSend, fileTextToSend, systemPromptForApi, thinkingMode
           );
+          finalAssistantContent = backendResponse.response || 'No response from backend';
           updateMessage(currentChatId, aiMessageId, {
-            content: backendResponse.response || 'No response from backend',
+            content: finalAssistantContent,
             isLoading: false,
             sources: backendResponse.sources || null
           });
@@ -212,6 +291,7 @@ When explaining concepts:
           streamedContent += chunk;
           updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
         }
+        finalAssistantContent = streamedContent;
         updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
       }
     } catch (error) {
@@ -226,6 +306,13 @@ When explaining concepts:
       });
     } finally {
       setIsLoading(false);
+      if (currentHistory.length === 0 && messageToSend && finalAssistantContent) {
+        generateChatTitle(messageToSend, finalAssistantContent).then(title => {
+          if (title && updateChatTitle) {
+            updateChatTitle(currentChatId, title);
+          }
+        });
+      }
     }
   };
 

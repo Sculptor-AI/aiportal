@@ -38,6 +38,7 @@ const ChatInputArea = forwardRef(({
   isGraphingOpen, // New prop for graphing tool
   onToggleGraphing, // New prop for toggling graphing
   onCloseGraphing, // New prop for closing graphing
+  onToolbarToggle,
 }, ref) => {
   const theme = useTheme();
   const [inputMessage, setInputMessage] = useState('');
@@ -49,6 +50,7 @@ const ChatInputArea = forwardRef(({
   const [showToolbar, setShowToolbar] = useState(false);
   const [modeMenuRect, setModeMenuRect] = useState(null);
   const [createMenuRect, setCreateMenuRect] = useState(null);
+  const [isImagePromptMode, setIsImagePromptMode] = useState(false);
 
   const inputRef = useRef(null);
   const toolbarRef = useRef(null);
@@ -84,9 +86,35 @@ const ChatInputArea = forwardRef(({
     };
   }, [showToolbar]);
 
+  useEffect(() => {
+    if (onToolbarToggle) {
+      onToolbarToggle(showToolbar);
+    }
+  }, [showToolbar, onToolbarToggle]);
+
   const handleInternalSubmit = () => {
     if (isLoading || isProcessingFile) return;
-    onSubmitMessage(inputMessage, uploadedFile, selectedActionChip, thinkingMode, createType);
+    
+    // Handle image generation mode
+    if (isImagePromptMode) {
+      if (inputMessage.trim()) {
+        onSubmitMessage({ type: 'generate-image', prompt: inputMessage.trim() });
+        setInputMessage('');
+        setIsImagePromptMode(false);
+        setCreateType(null);
+        setSelectedActionChip(null);
+      }
+      return;
+    }
+    
+    // Handle regular messages
+    onSubmitMessage({
+      text: inputMessage,
+      file: uploadedFile,
+      actionChip: selectedActionChip,
+      mode: thinkingMode,
+      createType: createType
+    });
     setInputMessage(''); // Clear input after submission attempt
     // Clearing uploadedFile and selectedActionChip should be handled by parent via props or after successful submission
   };
@@ -120,6 +148,7 @@ const ChatInputArea = forwardRef(({
   };
 
   const getPlaceholderText = () => {
+    if (isImagePromptMode) return "Enter prompt for image generation...";
     if (isLoading) return "Waiting for response...";
     if (isProcessingFile) return "Processing file...";
     if (uploadedFile) return `Attached: ${uploadedFile.name}. Add text or send.`;
@@ -139,11 +168,15 @@ const ChatInputArea = forwardRef(({
     setCreateType(type);
     if (type === 'image') {
       setSelectedActionChip('create-image');
+      setIsImagePromptMode(true);
+      setInputMessage('');
     } else if (type === 'video') {
       setSelectedActionChip('create-video');
+      // Potentially call onOpenVideoGenerator here if that feature exists
     } else {
       setSelectedActionChip(null);
     }
+    // The PopupMenu (ToolMenuModal) calls onClose itself after onSelect, so no need to setShowCreateModal(false) here.
   };
 
   const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen;

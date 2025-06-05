@@ -674,7 +674,7 @@ const ThinkingDropdown = ({ thinkingContent }) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt } = message;
   
   const getAvatar = () => {
     if (role === 'user') {
@@ -759,6 +759,67 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
       return 'https://www.google.com/s2/favicons?domain=' + url;
     }
   };
+
+  // Handle generated image message type
+  if (type === 'generated-image') {
+    let generatedImageContent;
+    if (status === 'loading') {
+      generatedImageContent = (
+        <ThinkingContainer>
+          <SpinnerIcon />
+          Generating image for: "{imagePrompt || 'your prompt'}"...
+        </ThinkingContainer>
+      );
+    } else if (status === 'completed' && imageUrl) {
+      generatedImageContent = (
+        <>
+          {imagePrompt && (
+            <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
+              Prompt: "{imagePrompt}"
+            </p>
+          )}
+          <MessageImage src={imageUrl} alt={imagePrompt || 'Generated AI image'} style={{ maxHeight: '400px' }} />
+        </>
+      );
+    } else if (status === 'error') {
+      generatedImageContent = (
+        <div>
+          <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
+            Image Generation Failed
+          </p>
+          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Prompt: "{imagePrompt}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
+        </div>
+      );
+    }
+
+    return (
+      <Message alignment={messageAlignment}>
+        {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+          {generatedImageContent}
+          {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
+            <MessageActions>
+              <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
+              {status === 'completed' && imageUrl && (
+                <>
+                  <div style={{ flexGrow: 1 }}></div>
+                  <ActionButton onClick={() => navigator.clipboard.writeText(imageUrl).then(() => console.log('Image URL copied'))}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy URL
+                  </ActionButton>
+                </>
+              )}
+            </MessageActions>
+          )}
+        </Content>
+        {messageAlignment === 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+      </Message>
+    );
+  }
 
   return (
     <Message alignment={messageAlignment}>

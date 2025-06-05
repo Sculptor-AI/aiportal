@@ -8,7 +8,7 @@ import { formatResponsePacket } from '../utils/formatters.js';
  */
 export const completeChat = async (req, res) => {
   try {
-    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null, mode } = req.body;
+    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null, mode, systemPrompt } = req.body;
     
     // Log the request (without sensitive data)
     console.log(`Request received for model: ${modelType}, mode: ${mode}, search: ${search}, hasImage: ${!!imageData}`);
@@ -94,11 +94,17 @@ export const completeChat = async (req, res) => {
     // Create payload for OpenRouter
     const openRouterPayload = {
       model: adjustedModelType,
-      messages: [{ 
-        role: 'user', 
-        content: messageContent 
-      }]
+      messages: []
     };
+
+    if (systemPrompt) {
+      openRouterPayload.messages.push({ role: 'system', content: systemPrompt });
+    }
+
+    openRouterPayload.messages.push({
+      role: 'user',
+      content: messageContent
+    });
 
     if (providerConfig) {
       openRouterPayload.provider = providerConfig;
@@ -150,7 +156,7 @@ export const completeChat = async (req, res) => {
  * @param {Object} res - Express response object
  */
 export const streamChat = async (req, res) => {
-  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode } = req.body;
+  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode, systemPrompt } = req.body;
   
   if (!modelType || !prompt) {
     return res.status(400).json({ error: 'Missing required fields: modelType and prompt' });
@@ -203,21 +209,22 @@ export const streamChat = async (req, res) => {
             searchResponse.data.result.choices[0].message) {
           
           const content = searchResponse.data.result.choices[0].message.content;
-          res.write(`data: ${content}\n\n`);
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
         } else if (searchResponse.data.choices && searchResponse.data.choices[0]) {
           // For OpenRouter format
           const content = searchResponse.data.choices[0].message.content;
-          res.write(`data: ${content}\n\n`);
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
         } else if (searchResponse.data.content) {
-          res.write(`data: ${searchResponse.data.content}\n\n`);
+          res.write(`data: ${JSON.stringify({ content: searchResponse.data.content })}\n\n`);
         } else {
           // If we can't find the content in the expected structure, try to send the whole response
           // This is a fallback for unexpected response structures
           try {
             const fullResponse = JSON.stringify(searchResponse.data);
-            res.write(`data: Unable to parse structured response. Full data: ${fullResponse}\n\n`);
+            res.write(`data: ${JSON.stringify({ content: `Unable to parse structured response. Full data: ${fullResponse}` })}\n\n`);
           } catch (e) {
-            res.write(`data: Received search results but couldn't parse them.\n\n`);
+            console.error('Error parsing search results:', e);
+            res.write(`data: ${JSON.stringify({ content: "Received search results but couldn't parse them." })}\n\n`);
           }
         }
         
@@ -320,12 +327,18 @@ export const streamChat = async (req, res) => {
     // Create payload for OpenRouter with streaming enabled
     const openRouterPayload = {
       model: adjustedModelType,
-      messages: [{ 
-        role: 'user', 
-        content: messageContent 
-      }],
+      messages: [],
       stream: true
     };
+
+    if (systemPrompt) {
+      openRouterPayload.messages.push({ role: 'system', content: systemPrompt });
+    }
+
+    openRouterPayload.messages.push({
+      role: 'user',
+      content: messageContent
+    });
 
     if (providerConfig) {
       openRouterPayload.provider = providerConfig;
@@ -391,7 +404,7 @@ export const streamChat = async (req, res) => {
  * @param {Object} res - Express response object
  */
 export const handleChat = async (req, res) => {
-  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode } = req.body;
+  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode, systemPrompt } = req.body;
   
   if (!modelType || !prompt) {
     return res.status(400).json({ error: 'Missing required fields: modelType and prompt' });
@@ -481,11 +494,17 @@ export const handleChat = async (req, res) => {
     // Create payload for OpenRouter
     const openRouterPayload = {
       model: adjustedModelType,
-      messages: [{ 
-        role: 'user', 
-        content: messageContent 
-      }]
+      messages: []
     };
+
+    if (systemPrompt) {
+      openRouterPayload.messages.push({ role: 'system', content: systemPrompt });
+    }
+
+    openRouterPayload.messages.push({
+      role: 'user',
+      content: messageContent
+    });
     
     if (providerConfig) {
       openRouterPayload.provider = providerConfig;
