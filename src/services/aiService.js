@@ -15,7 +15,7 @@ console.log("Loaded API keys from environment:", {
   nvidia: NVIDIA_API_KEY ? "Present (value hidden)" : "Missing"
 });
 
-// Map updated model IDs to their respective API endpoints and formats
+// Map updated model IDs to their respective API endpoints and fornpmmats
 const MODEL_CONFIGS = {
   'gemini-2-flash': {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
@@ -1015,6 +1015,7 @@ export const streamMessageFromBackend = async (
           }
           
           try {
+            console.log("Attempting to parse SSE data (first block):", data); // Added for debugging
             const parsed = JSON.parse(data);
             
             // Handle sources special event type
@@ -1040,7 +1041,7 @@ export const streamMessageFromBackend = async (
             }
           } catch (e) {
             // If JSON.parse fails or another error occurs in the try block
-            console.error('Error processing SSE data line or in onChunk. Raw data:', data, 'Error:', e);
+            console.error('Failed to parse SSE data in first block. Raw data was:', data, 'Error:', e); // Enhanced logging
             // Do NOT pass raw 'data' to onChunk if it couldn't be processed as expected.
             // The previous logic incorrectly passed raw data on parse failure.
             // Re-throw the error to ensure it's not silently caught and the stream processing stops.
@@ -1061,6 +1062,7 @@ export const streamMessageFromBackend = async (
               return;
             }
             try {
+              console.log("Attempting to parse SSE data (second block):", data); // Added for debugging
               const parsed = JSON.parse(data);
               if (parsed.type === 'sources' && Array.isArray(parsed.sources)) {
                 console.log('Received sources data:', parsed.sources);
@@ -1072,7 +1074,7 @@ export const streamMessageFromBackend = async (
                 onChunk(content);
               }
             } catch (e) {
-              console.error('Error processing SSE data line or in onChunk. Raw data:', data, 'Error:', e);
+              console.error('Failed to parse SSE data in second block. Raw data was:', data, 'Error:', e); // Enhanced logging
               throw e;
             }
           }
