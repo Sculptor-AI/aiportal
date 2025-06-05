@@ -4,6 +4,12 @@ import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../
 import { useToast } from '../contexts/ToastContext';
 import MobileChatMessage from './MobileChatMessage';
 import MobileFileUpload from './MobileFileUpload';
+import PopupMenu from './ToolMenuModal';
+import {
+  ActionChipsContainer,
+  ActionChip,
+  RetroIconWrapper
+} from './ChatWindow.styled';
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 
@@ -174,9 +180,18 @@ const MobileChatWindow = ({
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [selectedActionChip, setSelectedActionChip] = useState(null);
+  const [thinkingMode, setThinkingMode] = useState(null);
+  const [createType, setCreateType] = useState(null);
+  const [showModeModal, setShowModeModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [modeMenuRect, setModeMenuRect] = useState(null);
+  const [createMenuRect, setCreateMenuRect] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const modeAnchorRef = useRef(null);
+  const createAnchorRef = useRef(null);
   const toast = useToast();
   const theme = useTheme();
 
@@ -301,12 +316,56 @@ const MobileChatWindow = ({
     }
   };
 
+  const handleModeSelect = (mode) => {
+    setThinkingMode(mode);
+    setSelectedActionChip(null);
+  };
+
+  const handleCreateSelect = (type) => {
+    setCreateType(type);
+    if (type === 'image') {
+      setSelectedActionChip('create-image');
+    } else if (type === 'video') {
+      setSelectedActionChip('create-video');
+    } else {
+      setSelectedActionChip(null);
+    }
+  };
+
   const handleSendMessage = async () => {
     console.log('[Mobile] Send button clicked');
-    
+
     const messageToSend = inputMessage.trim();
     const currentImageData = uploadedFile?.dataUrl;
     const currentFileText = uploadedFile?.text;
+    const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
+      `You are a Deep Analysis Chain of Thought model that provides thorough, well-structured explanations. For every response:
+
+1. FIRST: Put your comprehensive thinking process inside <think></think> tags following these steps:
+   - Begin with problem decomposition - break down the question into its core components and underlying assumptions
+   - Explore the conceptual space deeply, considering multiple perspectives and approaches
+   - When providing solutions (including code):
+     * Focus on developing one high-quality solution
+     * Prioritize clarity and simplicity unless complexity is justified
+     * Think through tradeoffs and design decisions explicitly
+   - Identify potential edge cases, limitations, or hidden assumptions
+   - Perform a critical self-review of your thinking:
+     * Question your reasoning process and initial assumptions
+     * Look for logical gaps, biases, or oversimplifications
+     * Consider counterarguments or alternative perspectives
+   - Evaluate your final solution against these criteria:
+     * Correctness: Does it solve the problem accurately?
+     * Depth: Have you considered the problem deeply enough?
+     * Simplicity: Is this the simplest valid solution?
+     * Completeness: Does it address the core question and handle relevant edge cases?
+
+2. THEN: Provide your answer outside the tags - be concise and focused while maintaining clarity
+
+When explaining concepts:
+- Break your answer into logical paragraphs
+- Use headings only when they improve understanding
+- Include concrete examples that illustrate key points
+- Focus on the most important aspects rather than attempting to cover everything` : null;
 
     console.log('[Mobile] Message state:', {
       messageToSend,
@@ -419,11 +478,13 @@ const MobileChatWindow = ({
               streamedContent += chunk;
               updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
             },
-            false, // search
-            false, // deep research
-            false, // create image
+            selectedActionChip === 'search',
+            selectedActionChip === 'deep-research',
+            selectedActionChip === 'create-image',
             currentImageData,
-            currentFileText
+            currentFileText,
+            thinkingModeSystemPrompt,
+            thinkingMode
           );
 
           updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
@@ -431,11 +492,13 @@ const MobileChatWindow = ({
           const backendResponse = await sendMessageToBackend(
             currentModel,
             messageToSend,
-            false, // search
-            false, // deep research  
-            false, // create image
+            selectedActionChip === 'search',
+            selectedActionChip === 'deep-research',
+            selectedActionChip === 'create-image',
             currentImageData,
-            currentFileText
+            currentFileText,
+            thinkingModeSystemPrompt,
+            thinkingMode
           );
 
           updateMessage(currentChatId, aiMessageId, {
@@ -458,9 +521,10 @@ const MobileChatWindow = ({
           formattedHistory,
           currentImageData,
           currentFileText,
-          false, // search
-          false, // deep research
-          false  // create image
+          selectedActionChip === 'search',
+          selectedActionChip === 'deep-research',
+          selectedActionChip === 'create-image',
+          thinkingModeSystemPrompt
         );
 
         for await (const chunk of messageGenerator) {
@@ -595,6 +659,145 @@ const MobileChatWindow = ({
             </svg>
           </SendButton>
         </InputWrapper>
+
+        <ActionChipsContainer>
+          <ActionChip
+            ref={modeAnchorRef}
+            selected={thinkingMode !== null}
+            onClick={() => {
+              if (modeAnchorRef.current) {
+                modeAnchorRef.current.offsetHeight;
+                const currentRect = modeAnchorRef.current.getBoundingClientRect();
+                setModeMenuRect(currentRect);
+              }
+              setShowModeModal(true);
+            }}
+          >
+            {theme.name === 'retro' ? (
+              <RetroIconWrapper>
+                <img src="/images/retroTheme/modeIcon.png" alt="Mode" style={{ width: '16px', height: '16px' }} />
+              </RetroIconWrapper>
+            ) : thinkingMode === 'thinking' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+                <line x1="16" y1="8" x2="2" y2="22"></line>
+                <line x1="17.5" y1="15" x2="9" y2="15"></line>
+              </svg>
+            ) : thinkingMode === 'instant' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                <rect x="9" y="9" width="6" height="6"></rect>
+                <line x1="9" y1="2" x2="9" y2="4"></line>
+                <line x1="15" y1="2" x2="15" y2="4"></line>
+                <line x1="9" y1="20" x2="9" y2="22"></line>
+                <line x1="15" y1="20" x2="15" y2="22"></line>
+                <line x1="20" y1="9" x2="22" y2="9"></line>
+                <line x1="20" y1="14" x2="22" y2="14"></line>
+                <line x1="2" y1="9" x2="4" y2="9"></line>
+                <line x1="2" y1="14" x2="4" y2="14"></line>
+              </svg>
+            )}
+            {thinkingMode === 'thinking' ? 'Thinking' : thinkingMode === 'instant' ? 'Instant' : 'Mode'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </ActionChip>
+
+          <ActionChip
+            selected={selectedActionChip === 'search'}
+            onClick={() => {
+              if (selectedActionChip === 'search') {
+                setSelectedActionChip(null);
+              } else {
+                setSelectedActionChip('search');
+                setThinkingMode(null);
+              }
+            }}
+          >
+            {theme.name === 'retro' ? (
+              <RetroIconWrapper>
+                <img src="/images/retroTheme/searchIcon.png" alt="Search" style={{ width: '16px', height: '16px' }} />
+              </RetroIconWrapper>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            )}
+            Search
+          </ActionChip>
+
+          <ActionChip
+            selected={selectedActionChip === 'deep-research'}
+            onClick={() => {
+              if (selectedActionChip === 'deep-research') {
+                setSelectedActionChip(null);
+              } else {
+                setSelectedActionChip('deep-research');
+                setThinkingMode(null);
+              }
+            }}
+          >
+            {theme.name === 'retro' ? (
+              <RetroIconWrapper>
+                <img src="/images/retroTheme/deepResearch.png" alt="Deep Research" style={{ width: '16px', height: '16px' }} />
+              </RetroIconWrapper>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg>
+            )}
+            Deep research
+          </ActionChip>
+
+          <ActionChip
+            ref={createAnchorRef}
+            selected={selectedActionChip === 'create-image' || selectedActionChip === 'create-video'}
+            onClick={() => {
+              if (createAnchorRef.current) {
+                createAnchorRef.current.offsetHeight;
+                const currentRect = createAnchorRef.current.getBoundingClientRect();
+                setCreateMenuRect(currentRect);
+              }
+              setShowCreateModal(true);
+            }}
+          >
+            {theme.name === 'retro' ? (
+              <RetroIconWrapper>
+                <img src="/images/retroTheme/createIcon.png" alt="Create" style={{ width: '16px', height: '16px' }} />
+              </RetroIconWrapper>
+            ) : createType === 'image' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            ) : createType === 'video' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            )}
+            {createType === 'image' ? 'Create image' : createType === 'video' ? 'Create video' : 'Create'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </ActionChip>
+        </ActionChipsContainer>
+
+        <PopupMenu
+          isOpen={showModeModal}
+          onClose={() => setShowModeModal(false)}
+          menuType="mode"
+          currentValue={thinkingMode}
+          onSelect={handleModeSelect}
+          theme={theme}
+          rect={modeMenuRect}
+        />
+
+        <PopupMenu
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          menuType="create"
+          currentValue={createType}
+          onSelect={handleCreateSelect}
+          theme={theme}
+          rect={createMenuRect}
+        />
         
         <input
           ref={fileInputRef}
