@@ -132,11 +132,30 @@ const ToolMenuModal = ({
 
   useEffect(() => {
     if (isOpen && rect) { 
-      const newPosition = {
-        top: rect.bottom + 5, // rect.bottom from getBoundingClientRect is viewport-relative
-        left: rect.left,      // rect.left from getBoundingClientRect is viewport-relative
-        visibility: 'visible'
-      };
+      const menuHeight = 200; // Estimated menu height
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      let newPosition;
+      
+      // If there's not enough space below and there's more space above, flip upward
+      if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+        console.log('Flipping menu upward - spaceBelow:', spaceBelow, 'spaceAbove:', spaceAbove);
+        newPosition = {
+          top: rect.top - menuHeight - 5, // Position above the trigger
+          left: rect.left,
+          visibility: 'visible'
+        };
+      } else {
+        console.log('Positioning menu below - spaceBelow:', spaceBelow, 'spaceAbove:', spaceAbove);
+        newPosition = {
+          top: rect.bottom + 5, // rect.bottom from getBoundingClientRect is viewport-relative
+          left: rect.left,      // rect.left from getBoundingClientRect is viewport-relative
+          visibility: 'visible'
+        };
+      }
+      
       setMenuPosition(newPosition);
     } else {
       setMenuPosition(prev => ({ ...prev, visibility: 'hidden' }));
