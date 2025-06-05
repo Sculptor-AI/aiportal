@@ -9,8 +9,8 @@ export const ChatWindowContainer = styled.div`
   margin-left: ${props => props.$sidebarCollapsed ? '0' : '280px'}; /* Push content when sidebar is expanded */
   transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   background: ${props => props.theme.name === 'retro' ? 'rgb(0, 128, 128)' : props.theme.chat};
-  backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
-  -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
+  // backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
+  // -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   font-size: ${props => {
     switch(props.fontSize) {
       case 'small': return '0.9rem';
@@ -19,6 +19,7 @@ export const ChatWindowContainer = styled.div`
     }
   }};
   position: relative;
+  z-index: 5; // Added z-index to be above MainGreeting
   /* Use visible overflow so dropdown menus (e.g., model selector) aren't clipped */
   overflow: visible;
   
@@ -34,7 +35,7 @@ export const ChatHeader = styled.div`
   justify-content: flex-start;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
-  z-index: 10;
+  z-index: 101; // Changed from 10 to 101
   position: relative;
 `;
 

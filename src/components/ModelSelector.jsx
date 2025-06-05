@@ -10,7 +10,7 @@ import ModelIcon from './ModelIcon';
 
 const ModelSelectorContainer = styled.div`
   position: relative;
-  z-index: 10;
+  z-index: 105;
 `;
 
 const ModelButton = styled.button`
