@@ -909,10 +909,10 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
  * @returns {Promise<void>} A promise that resolves when streaming is complete
  */
 export const streamMessageFromBackend = async (
-  modelType, 
-  prompt, 
-  onChunk, 
-  search = false, 
+  modelType,
+  prompt,
+  onChunk,
+  search = false,
   deepResearch = false, 
   imageGen = false, 
   imageData = null,
@@ -1083,4 +1083,28 @@ export const streamMessageFromBackend = async (
     console.error('Error in streaming from backend:', error);
     throw error;
   }
+};
+
+/**
+ * Generate a short chat title summarizing the user and assistant messages
+ * using the Llama 4 Maverick model on the backend.
+ * @param {string} userPrompt - The user's prompt
+ * @param {string} assistantResponse - The assistant's full response
+ * @returns {Promise<string|null>} The generated title or null on failure
+ */
+export const generateChatTitle = async (userPrompt, assistantResponse) => {
+  const titlePrompt = `Summarize the following conversation in 3-4 words for a chat title.\n` +
+    `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\nTitle:`;
+  try {
+    const result = await sendMessageToBackend(
+      'meta-llama/llama-4-maverick:free',
+      titlePrompt
+    );
+    if (result && result.response) {
+      return result.response.trim().replace(/^"|"$/g, '');
+    }
+  } catch (err) {
+    console.error('Error generating chat title:', err);
+  }
+  return null;
 };
