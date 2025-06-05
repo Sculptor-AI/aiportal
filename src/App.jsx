@@ -76,7 +76,7 @@ const MainGreeting = styled.div`
   position: fixed;
   top: ${props => props.$toolbarOpen ? '32%' : '35%'}; /* Adjust when toolbar is open */
   left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 0 : 140;
+    const sidebarOffset = 0; // Set to 0 to keep it centered in viewport
     let rightPanelOffset = 0;
     if (props.$whiteboardOpen) rightPanelOffset -= 225;
     if (props.$equationEditorOpen) rightPanelOffset -= 225;
@@ -96,7 +96,7 @@ const MainGreeting = styled.div`
   h1 {
     font-size: min(2.2rem, 6vw); /* Adjusted responsive font size */
     font-weight: 500;
-    color: ${props => props.theme.text};
+    color: #000000;
     margin: 0;
     padding: 0;
     /* Removed flex properties, let natural wrapping occur */
@@ -598,7 +598,7 @@ const AppContent = () => {
                 $graphingOpen={isGraphingOpen}
                 $toolbarOpen={isToolbarOpen}
               >
-                <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>
+                <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : { color: '#000000' }}>
                   {settings.theme === 'lakeside' ? 'Andromeda' : `${greeting}${user ? `, ${user.username}` : ''}`}
                 </h1>
               </MainGreeting>
