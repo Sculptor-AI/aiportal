@@ -81,16 +81,17 @@ const MainGreeting = styled.div`
   left: ${props => {
     const sidebarOffset = 0; // Set to 0 to keep it centered in viewport
     let rightPanelOffset = 0;
-    if (props.$whiteboardOpen) rightPanelOffset -= 225;
-    if (props.$equationEditorOpen) rightPanelOffset -= 225;
-    if (props.$graphingOpen) rightPanelOffset -= 300; // Half of 600px
+    // Removed the rightPanelOffset adjustments so tool windows overlay the text instead of pushing it
+    // if (props.$whiteboardOpen) rightPanelOffset -= 225;
+    // if (props.$equationEditorOpen) rightPanelOffset -= 225;
+    // if (props.$graphingOpen) rightPanelOffset -= 300; // Half of 600px
     return `calc(50% + ${sidebarOffset}px + ${rightPanelOffset}px)`;
   }};
   transform: translateX(-50%);
   max-width: 800px; /* Keep a max width */
   width: 90%; /* Use percentage width for better flexibility */
   text-align: center;
-  z-index: 4;
+  z-index: 1000;
   pointer-events: none;
   padding: 0 20px; /* Horizontal padding */
   box-sizing: border-box; /* Include padding in width calculation */
@@ -102,10 +103,8 @@ const MainGreeting = styled.div`
     color: #000000; // Changed from props.theme.text to ensure it's black
     margin: 0;
     padding: 0;
-    /* Removed flex properties, let natural wrapping occur */
-    line-height: 1.2; 
-    word-wrap: break-word; /* Ensure long words break if needed */
-    overflow-wrap: break-word; /* More modern property for word breaking */
+    text-shadow: none;
+    line-height: 1.2;
   }
 
   /* Adjustments for medium to small screens */
