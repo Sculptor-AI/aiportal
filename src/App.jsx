@@ -18,6 +18,9 @@ import { keyframes } from 'styled-components';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { fetchModelsFromBackend } from './services/aiService';
 import NewSettingsPanel from './components/NewSettingsPanel';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import MediaPage from './pages/MediaPage';
+import NewsPage from './pages/NewsPage';
 
 const AppContainer = styled.div`
   display: flex;
@@ -175,6 +178,7 @@ const AppContent = () => {
   const { user, updateSettings: updateUserSettings } = useAuth();
   const toast = useToast();
   const isMobile = useIsMobile();
+  const location = useLocation();
   
   // Greeting messages
   const greetingMessages = [
@@ -590,7 +594,7 @@ const AppContent = () => {
             )}
             
             {/* Main greeting that appears at the top of the page */}
-            {settings.showGreeting && getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
+            {location.pathname === '/' && settings.showGreeting && getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
               <MainGreeting
                 $sidebarCollapsed={collapsed}
                 $whiteboardOpen={isWhiteboardOpen}
@@ -622,30 +626,36 @@ const AppContent = () => {
               setCollapsed={setCollapsed} 
             />
             {console.log('Available models for ChatWindow:', availableModels)}
-            <ChatWindow 
-              ref={chatWindowRef}
-              chat={currentChat}
-              addMessage={addMessage}
-              updateMessage={updateMessage}
-              updateChatTitle={updateChatTitle}
-              selectedModel={selectedModel}
-              settings={settings}
-              $sidebarCollapsed={collapsed}
-              availableModels={availableModels}
-              onAttachmentChange={setHasAttachment}
-              onModelChange={handleModelChange}
-              showGreeting={settings.showGreeting}
-              isWhiteboardOpen={isWhiteboardOpen}
-              onToggleWhiteboard={() => setIsWhiteboardOpen(prev => !prev)}
-              onCloseWhiteboard={() => setIsWhiteboardOpen(false)}
-              isEquationEditorOpen={isEquationEditorOpen}
-              onToggleEquationEditor={() => setIsEquationEditorOpen(prev => !prev)}
-              onCloseEquationEditor={() => setIsEquationEditorOpen(false)}
-              isGraphingOpen={isGraphingOpen}
-              onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
-              onCloseGraphing={() => setIsGraphingOpen(false)}
-              onToolbarToggle={setIsToolbarOpen}
-            />
+            <Routes>
+              <Route path="/" element={
+                <ChatWindow 
+                  ref={chatWindowRef}
+                  chat={currentChat}
+                  addMessage={addMessage}
+                  updateMessage={updateMessage}
+                  updateChatTitle={updateChatTitle}
+                  selectedModel={selectedModel}
+                  settings={settings}
+                  $sidebarCollapsed={collapsed}
+                  availableModels={availableModels}
+                  onAttachmentChange={setHasAttachment}
+                  onModelChange={handleModelChange}
+                  showGreeting={settings.showGreeting}
+                  isWhiteboardOpen={isWhiteboardOpen}
+                  onToggleWhiteboard={() => setIsWhiteboardOpen(prev => !prev)}
+                  onCloseWhiteboard={() => setIsWhiteboardOpen(false)}
+                  isEquationEditorOpen={isEquationEditorOpen}
+                  onToggleEquationEditor={() => setIsEquationEditorOpen(prev => !prev)}
+                  onCloseEquationEditor={() => setIsEquationEditorOpen(false)}
+                  isGraphingOpen={isGraphingOpen}
+                  onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
+                  onCloseGraphing={() => setIsGraphingOpen(false)}
+                  onToolbarToggle={setIsToolbarOpen}
+                />
+              } />
+              <Route path="/media" element={<MediaPage />} />
+              <Route path="/news" element={<NewsPage />} />
+            </Routes>
           </MainContentArea>
           
           {/* Render panels in order: whiteboard, equation editor, graphing */}

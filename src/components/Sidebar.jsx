@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
+import { Link, useLocation } from 'react-router-dom';
 
 // Styled Components (Keep all your existing styled components definitions)
 const SidebarContainer = styled.div`
@@ -17,7 +18,6 @@ const SidebarContainer = styled.div`
   top: 0;
   left: ${props => props.$collapsed ? '-280px' : '0'};
   z-index: 101;
-  box-shadow: ${props => props.theme.name === 'dark' ? '0 0 20px rgba(0,0,0,0.2)' : '0 0 10px rgba(0,0,0,0.1)'};
   opacity: ${props => props.$collapsed ? '0' : '1'};
   transform: translateX(0); /* Removed extra transform to fix alignment */
   
@@ -29,7 +29,6 @@ const SidebarContainer = styled.div`
     border-right: none;
     transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
     transform: translateX(0); /* Removed extra transform to fix alignment */
-    box-shadow: ${props => props.theme.name === 'dark' ? '0 0 25px rgba(0,0,0,0.3)' : '0 0 20px rgba(0,0,0,0.1)'};
   }
 `;
 
@@ -507,7 +506,7 @@ const ModelDropdownContainer = styled.div`
 
 const ModelDropdownButton = styled.button`
   width: 100%;
-  background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 0.5)' : props.theme.inputBackground};
+  background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : props.theme.inputBackground};
   border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border};
   border-radius: 12px;
   padding: ${props => props.$collapsed ? '8px' : '10px 12px'}; /* Adjust padding */
@@ -516,13 +515,10 @@ const ModelDropdownButton = styled.button`
   justify-content: ${props => props.$collapsed ? 'center' : 'space-between'};
   cursor: pointer;
   transition: all 0.2s ease;
-  backdrop-filter: blur(5px);
-  /* margin-bottom: 10px; Removed margin, handled by container */
   min-height: 38px; /* Ensure consistent height */
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 
   &:hover {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.border};
   }
 
@@ -575,12 +571,9 @@ const ModelDropdownContent = styled.div`
   bottom: calc(100% + 5px); /* Position above the button with gap */
   left: 15px; /* Align with container padding */
   right: 15px; /* Align with container padding */
-  background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 0.5)' : props.theme.inputBackground};
-  backdrop-filter: ${props => props.theme.glassEffect};
-  -webkit-backdrop-filter: ${props => props.theme.glassEffect};
+  background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : props.theme.inputBackground};
   border-radius: 12px;
   border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border}; /* Add border */
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
   z-index: 30;
   overflow: hidden;
   max-height: 200px; /* Limit height */
@@ -727,6 +720,35 @@ const SidebarSection = styled.div`
   gap: 10px;
 `;
 
+const NavLink = styled(Link)`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  justify-content: flex-start;
+  text-decoration: none;
+  
+  &:hover {
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.03)'};
+  }
+  
+  svg {
+    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
+  }
+`;
+
 // --- React Component ---
 
 const Sidebar = ({
@@ -750,6 +772,7 @@ const Sidebar = ({
   const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
+  const location = useLocation();
 
   // Ensure sidebar is always expanded in retro theme
   useEffect(() => {
@@ -842,6 +865,36 @@ const Sidebar = ({
             </svg>
             <span>New Chat</span>
           </NewChatButton>
+        )}
+
+        {/* --- Navigation Section --- */}
+        {(!$collapsed || (theme && theme.name === 'retro')) && (
+          <SidebarSection style={{ paddingTop: '0', paddingBottom: '0' }}>
+            {location.pathname !== '/' && (
+              <NavLink to="/">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Chat</span>
+              </NavLink>
+            )}
+            {location.pathname !== '/media' && (
+              <NavLink to="/media">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>Media</span>
+              </NavLink>
+            )}
+            {location.pathname !== '/news' && (
+              <NavLink to="/news">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                </svg>
+                <span>News</span>
+              </NavLink>
+            )}
+          </SidebarSection>
         )}
 
         {/* Top Bar for Mobile (Logo + Expander + New Chat) */}

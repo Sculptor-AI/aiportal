@@ -25,7 +25,7 @@ const ModalOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 1050;
   animation: ${fadeIn} 0.3s ease;
 `;
 

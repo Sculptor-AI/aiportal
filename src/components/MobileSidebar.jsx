@@ -8,9 +8,7 @@ const SidebarOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 1);
   z-index: 1000;
   opacity: ${props => props.isOpen ? 1 : 0};
   visibility: ${props => props.isOpen ? 'visible' : 'hidden'};
@@ -33,12 +31,11 @@ const SidebarContainer = styled.div`
   flex-direction: column;
   overflow: hidden;
   padding-top: env(safe-area-inset-top);
-  box-shadow: ${props => props.isOpen ? '0 0 30px rgba(0, 0, 0, 0.2)' : 'none'};
   
   @keyframes slideIn {
     from {
       transform: translateX(-100%);
-      opacity: 0.8;
+      opacity: 1;
     }
     to {
       transform: translateX(0);
