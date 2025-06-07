@@ -641,13 +641,25 @@ const AppContent = () => {
                   onModelChange={handleModelChange}
                   showGreeting={settings.showGreeting}
                   isWhiteboardOpen={isWhiteboardOpen}
-                  onToggleWhiteboard={() => setIsWhiteboardOpen(prev => !prev)}
+                  onToggleWhiteboard={() => {
+                    setIsEquationEditorOpen(false);
+                    setIsGraphingOpen(false);
+                    setIsWhiteboardOpen(prev => !prev);
+                  }}
                   onCloseWhiteboard={() => setIsWhiteboardOpen(false)}
                   isEquationEditorOpen={isEquationEditorOpen}
-                  onToggleEquationEditor={() => setIsEquationEditorOpen(prev => !prev)}
+                  onToggleEquationEditor={() => {
+                    setIsWhiteboardOpen(false);
+                    setIsGraphingOpen(false);
+                    setIsEquationEditorOpen(prev => !prev);
+                  }}
                   onCloseEquationEditor={() => setIsEquationEditorOpen(false)}
                   isGraphingOpen={isGraphingOpen}
-                  onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
+                  onToggleGraphing={() => {
+                    setIsWhiteboardOpen(false);
+                    setIsEquationEditorOpen(false);
+                    setIsGraphingOpen(prev => !prev);
+                  }}
                   onCloseGraphing={() => setIsGraphingOpen(false)}
                   onToolbarToggle={setIsToolbarOpen}
                 />
@@ -657,7 +669,7 @@ const AppContent = () => {
             </Routes>
           </MainContentArea>
           
-          {/* Render panels in order: whiteboard, equation editor, graphing */}
+          {/* Render panels - now only one can be open at a time */}
           <WhiteboardModal
             isOpen={isWhiteboardOpen}
             onClose={() => setIsWhiteboardOpen(false)}
@@ -669,7 +681,7 @@ const AppContent = () => {
               setIsWhiteboardOpen(false);
             }}
             theme={currentTheme}
-            otherPanelsOpen={(isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+            otherPanelsOpen={0}
           />
           
           <EquationEditorModal
@@ -683,14 +695,14 @@ const AppContent = () => {
               setIsEquationEditorOpen(false);
             }}
             theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+            otherPanelsOpen={0}
           />
           
           <GraphingModal
             isOpen={isGraphingOpen}
             onClose={() => setIsGraphingOpen(false)}
             theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0)}
+            otherPanelsOpen={0}
           />
         
           {isSettingsOpen && (
