@@ -1,0 +1,57 @@
+# Google Gemini API Configuration
+# Get your API key from https://ai.google.dev/
+API_KEY=your_google_gemini_api_key_here
+
+# Server Configuration
+PORT=3001
+NODE_ENV=development
+
+# API Configuration
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# CORS Settings (comma-separated origins)
+ALLOWED_ORIGINS=http://localhost:3001,http://localhost:5173
+
+# News Generation Configuration
+# How often to run the news generation cycle (cron format)
+# Examples:
+# - "*/30 * * * *" = Every 30 minutes
+# - "0 */2 * * *" = Every 2 hours
+# - "0 0 * * *" = Daily at midnight
+# - "0 9,18 * * *" = Twice daily at 9 AM and 6 PM
+NEWS_GENERATION_SCHEDULE=0 */6 * * *
+
+# News Article Lifecycle Configuration
+# Target number of articles to maintain
+TARGET_ARTICLE_COUNT=20
+
+# Minimum and maximum articles to have at any time
+MIN_ARTICLE_COUNT=10
+MAX_ARTICLE_COUNT=30
+
+# Article lifetime in hours (articles older than this will be removed)
+ARTICLE_LIFETIME_HOURS=72
+
+# Number of research agents per article (1-5)
+RESEARCH_AGENTS_PER_ARTICLE=5
+
+# Enable/disable automatic news generation on startup
+AUTO_START_GENERATION=false
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_TO_FILE=true
+
+# Database Configuration (for persistent storage)
+# Currently uses in-memory storage, but can be extended
+USE_PERSISTENT_STORAGE=false
+DATABASE_PATH=./data/news.db
+
+# Advanced Gemini Configuration
+GEMINI_TEXT_MODEL=gemini-1.5-flash-latest
+GEMINI_SYNTHESIS_MODEL=gemini-1.5-pro-latest
+
+# Performance Configuration
+MAX_CONCURRENT_ARTICLE_GENERATION=3
+GENERATION_TIMEOUT_MS=300000

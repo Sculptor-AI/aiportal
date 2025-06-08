@@ -1,0 +1,30 @@
+# Backend Configuration Example
+# Copy this file to .env and fill in your values
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+
+# --- AI & External API Keys ---
+# Used by main backend, deep research, and news APIs
+GEMINI_API_KEY=your_google_gemini_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here # For existing chat features
+BRAVE_API_KEY=your_brave_api_key_here           # For existing search features
+
+# --- Deep Research API Settings ---
+RESEARCH_MAX_CONCURRENT_TASKS=5
+RESEARCH_TASK_RETENTION_HOURS=24
+
+# --- News API Settings ---
+NEWS_GENERATION_SCHEDULE="0 */4 * * *" # Every 4 hours (cron format)
+NEWS_TARGET_ARTICLE_COUNT=25
+NEWS_ARTICLE_LIFETIME_HOURS=72
+NEWS_RESEARCH_AGENTS_PER_ARTICLE=3
+NEWS_MAX_CONCURRENT_ARTICLE_GENERATION=2
+
+# --- General App Settings ---
+ALLOWED_ORIGINS=http://localhost:5173,https://your-frontend-domain.com
+
+# --- Rate Limiting ---
+RATE_LIMIT_WINDOW_MS=900000    # 15 minutes
+RATE_LIMIT_MAX_REQUESTS=100 

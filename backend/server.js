@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { router as apiRouter } from './routes/api.js';
 import imageGenerationRoutes from './routes/imageGenerationRoutes.js';
+import { initializeGeminiService as initializeDeepResearch } from './services/deep-research/geminiService.js';
 
 // Load environment variables
 dotenv.config();
@@ -11,33 +12,55 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configure CORS with settings for both local development and production
+// Initialize integrated services
+try {
+  // Initialize Gemini service for deep research
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+  if (!geminiApiKey) {
+    console.error('WARNING: GEMINI_API_KEY not set. Deep research features will not work.');
+  } else {
+    initializeDeepResearch(geminiApiKey);
+    console.log('✅ Deep Research service initialized');
+    
+    // Start news generation scheduler
+    const { schedulerService } = await import('./services/news/schedulerService.js');
+    schedulerService.start();
+    console.log('✅ News generation scheduler started');
+  }
+  
+  // Note: News service uses storage
+  console.log('✅ News service ready');
+  
+} catch (error) {
+  console.error('Error initializing services:', error);
+}
+
+// CORS configuration
 const corsOptions = {
-  origin: [
-    'http://localhost:3009', 
-    'http://localhost:3010', 
-    'http://127.0.0.1:3009', 
-    'http://127.0.0.1:3010',
-    'https://aiportal.vercel.app',
-    'https://ai.explodingcb.com'
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  origin: function (origin, callback) {
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:5173',
+      'http://localhost:3000'
+    ];
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
 };
 
-// Middleware
-// Disable helmet for local development to avoid CORS issues
-// app.use(helmet({ 
-//   crossOriginResourcePolicy: { policy: "cross-origin" } 
-// })); 
-
-// Enable CORS - this must come before other middleware
 app.use(cors(corsOptions));
+app.use(helmet());
 
 // Increase JSON body size limit to 50MB to handle base64 encoded images
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true })); // Also increase URL-encoded limit
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Log requests for debugging
 app.use((req, res, next) => {
@@ -54,7 +77,14 @@ app.use('/api/v1/images', imageGenerationRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Server is running' });
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    services: {
+      deepResearch: process.env.GEMINI_API_KEY ? 'active' : 'inactive',
+      news: 'active'
+    }
+  });
 });
 
 // Error handling middleware
@@ -69,7 +99,10 @@ app.use((err, req, res, next) => {
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`CORS enabled for: ${corsOptions.origin.join(', ')}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('Integrated services:');
+  console.log('- Deep Research API: /api/research/*');
+  console.log('- News API: /api/news/*');
 });
 
 export default app; 

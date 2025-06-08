@@ -1,0 +1,82 @@
+{
+  "topics": [
+    {
+      "id": "ai-technology",
+      "name": "Artificial Intelligence & Technology",
+      "description": "Latest developments in AI, machine learning, and emerging technologies",
+      "keywords": ["artificial intelligence", "machine learning", "deep learning", "neural networks", "AI ethics", "AGI", "robotics"],
+      "priority": 1,
+      "minArticles": 3,
+      "maxArticles": 6
+    },
+    {
+      "id": "climate-environment",
+      "name": "Climate & Environment",
+      "description": "Climate change, environmental policies, and sustainability initiatives",
+      "keywords": ["climate change", "global warming", "renewable energy", "sustainability", "carbon emissions", "environmental policy"],
+      "priority": 1,
+      "minArticles": 2,
+      "maxArticles": 5
+    },
+    {
+      "id": "health-medicine",
+      "name": "Health & Medicine",
+      "description": "Medical breakthroughs, public health, and healthcare innovations",
+      "keywords": ["medical research", "healthcare", "pharmaceuticals", "public health", "medical technology", "disease treatment"],
+      "priority": 1,
+      "minArticles": 2,
+      "maxArticles": 5
+    },
+    {
+      "id": "space-science",
+      "name": "Space & Science",
+      "description": "Space exploration, scientific discoveries, and research breakthroughs",
+      "keywords": ["space exploration", "NASA", "astronomy", "physics", "scientific research", "space technology"],
+      "priority": 2,
+      "minArticles": 1,
+      "maxArticles": 4
+    },
+    {
+      "id": "economy-finance",
+      "name": "Economy & Finance",
+      "description": "Global economic trends, financial markets, and economic policy",
+      "keywords": ["economy", "stock market", "cryptocurrency", "inflation", "monetary policy", "global trade"],
+      "priority": 2,
+      "minArticles": 2,
+      "maxArticles": 4
+    },
+    {
+      "id": "geopolitics",
+      "name": "Geopolitics & International Relations",
+      "description": "International affairs, diplomacy, and global political developments",
+      "keywords": ["international relations", "diplomacy", "global politics", "foreign policy", "international conflicts"],
+      "priority": 2,
+      "minArticles": 1,
+      "maxArticles": 3
+    },
+    {
+      "id": "cybersecurity",
+      "name": "Cybersecurity & Privacy",
+      "description": "Digital security, data privacy, and cyber threats",
+      "keywords": ["cybersecurity", "data privacy", "hacking", "digital security", "encryption", "cyber threats"],
+      "priority": 3,
+      "minArticles": 1,
+      "maxArticles": 3
+    },
+    {
+      "id": "energy-innovation",
+      "name": "Energy & Innovation",
+      "description": "Energy technologies, renewable resources, and innovation in power generation",
+      "keywords": ["renewable energy", "solar power", "wind energy", "nuclear fusion", "energy storage", "green technology"],
+      "priority": 3,
+      "minArticles": 1,
+      "maxArticles": 3
+    }
+  ],
+  "settings": {
+    "balanceTopics": true,
+    "priorityWeight": 0.7,
+    "randomWeight": 0.3,
+    "refreshTopicsHours": 168
+  }
+} 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled, { withTheme } from 'styled-components';
+import { API_URL } from '../config/api';
 
 const placeholderArticles = [
   {
@@ -781,6 +782,9 @@ const filters = [
 const NewsPage = () => {
   const [activeFilter, setActiveFilter] = useState('Top');
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [savedArticles, setSavedArticles] = useState(() => {
     try {
       const saved = window.localStorage.getItem('savedNewsArticles');
@@ -790,6 +794,45 @@ const NewsPage = () => {
       return [];
     }
   });
+
+  // Fetch articles from API
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${API_URL}/api/news/feed?limit=50`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch news articles');
+        }
+        
+        const data = await response.json();
+        
+        // Transform API data to match component structure
+        const transformedArticles = data.articles.map((article, index) => ({
+          ...article,
+          image: article.imageUrl || `https://images.unsplash.com/photo-1585241936939-be4099591252?w=500&auto=format&fit=crop&q=60`,
+          description: article.summary,
+          source: article.source || 'AI Generated',
+          size: index === 0 ? 'featured' : 
+                index % 5 === 1 ? 'wide' : 
+                index % 7 === 2 ? 'compact' : 'standard'
+        }));
+        
+        setArticles(transformedArticles);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching articles:', err);
+        setError(err.message);
+        // Fall back to placeholder articles if API fails
+        setArticles(placeholderArticles);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArticles();
+  }, []);
 
   useEffect(() => {
     try {
@@ -840,41 +883,53 @@ const NewsPage = () => {
         ))}
       </FilterBar>
 
-      <ArticlesGrid>
-        {placeholderArticles
-          .filter(article => {
-            if (activeFilter === 'Top') return true;
-            if (activeFilter === 'Saved') return savedArticles.includes(article.id);
-            return article.category === activeFilter.toLowerCase();
-          })
-          .map(article => {
-            const filter = filters.find(f => f.name.toLowerCase() === article.category);
-            const isSaved = savedArticles.includes(article.id);
-            return (
-              <ArticleCard key={article.id} $size={article.size} onClick={() => handleArticleClick(article)}>
-                <ArticleImage src={article.image} alt={article.title} $size={article.size} />
-                <ArticleContent $size={article.size}>
-                  <ArticleTitle $size={article.size}>{article.title}</ArticleTitle>
-                  {filter && (
-                    <ArticleTag>
-                      {filter.icon}
-                      <span>{filter.name}</span>
-                    </ArticleTag>
-                  )}
-                  <ArticleDescription $size={article.size}>{article.description}</ArticleDescription>
-                  <ArticleFooter>
-                    <ArticleSource>{article.source}</ArticleSource>
-                    <BookmarkIcon onClick={(e) => handleSaveArticle(e, article.id)}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
-                      </svg>
-                    </BookmarkIcon>
-                  </ArticleFooter>
-                </ArticleContent>
-              </ArticleCard>
-            )
-          })}
-      </ArticlesGrid>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '50px', color: 'gray' }}>
+          <div style={{ fontSize: '1.5rem', marginBottom: '10px' }}>Loading news articles...</div>
+          <div style={{ fontSize: '3rem' }}>📰</div>
+        </div>
+      ) : error ? (
+        <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
+          <div style={{ fontSize: '1.2rem', marginBottom: '10px' }}>Error loading news: {error}</div>
+          <div style={{ fontSize: '0.9rem', color: 'gray' }}>Showing cached articles instead</div>
+        </div>
+      ) : (
+        <ArticlesGrid>
+          {articles
+            .filter(article => {
+              if (activeFilter === 'Top') return true;
+              if (activeFilter === 'Saved') return savedArticles.includes(article.id);
+              return article.category === activeFilter.toLowerCase();
+            })
+            .map(article => {
+              const filter = filters.find(f => f.name.toLowerCase() === article.category);
+              const isSaved = savedArticles.includes(article.id);
+              return (
+                <ArticleCard key={article.id} $size={article.size} onClick={() => handleArticleClick(article)}>
+                  <ArticleImage src={article.image} alt={article.title} $size={article.size} />
+                  <ArticleContent $size={article.size}>
+                    <ArticleTitle $size={article.size}>{article.title}</ArticleTitle>
+                    {filter && (
+                      <ArticleTag>
+                        {filter.icon}
+                        <span>{filter.name}</span>
+                      </ArticleTag>
+                    )}
+                    <ArticleDescription $size={article.size}>{article.description}</ArticleDescription>
+                    <ArticleFooter>
+                      <ArticleSource>{article.source}</ArticleSource>
+                      <BookmarkIcon onClick={(e) => handleSaveArticle(e, article.id)}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
+                        </svg>
+                      </BookmarkIcon>
+                    </ArticleFooter>
+                  </ArticleContent>
+                </ArticleCard>
+              )
+            })}
+        </ArticlesGrid>
+      )}
 
       {selectedArticle && (
         <ArticleDetailView article={selectedArticle} onClose={handleCloseArticle} />
