@@ -673,7 +673,11 @@ const ThinkingDropdown = ({ thinkingContent }) => {
   );
 };
 
-const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
+const ChatMessage = ({ 
+  message, 
+  showModelIcons = true, 
+  settings = {} 
+}) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt } = message;
   
   const getAvatar = () => {
