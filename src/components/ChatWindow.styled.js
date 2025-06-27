@@ -157,15 +157,23 @@ export const InputContainer = styled.div`
   max-width: ${props => props.theme.name === 'retro' ? '750px' : '700px'} !important;
   padding: 0 !important;
   z-index: 100 !important;
-  pointer-events: ${props => props.$modalOpen ? 'auto' : 'none'};
+  pointer-events: ${props => props.$isWhiteboardOpen || props.$isEquationEditorOpen || props.$isGraphingOpen ? 'auto' : 'none'};
   flex-direction: column;
   /* margin-left will be handled by the left property based on $sidebarCollapsed */
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 
-  ${({ $isEmpty, $animateDown, theme, $sidebarCollapsed, $modalOpen }) => {
+  ${({ $isEmpty, $animateDown, theme, $sidebarCollapsed, $isWhiteboardOpen, $isEquationEditorOpen, $isGraphingOpen }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
-    const centerPosition = $sidebarCollapsed ? '50%' : 'calc(50% - 0px)'; // Simple centering
+    
+    let rightPanelOffset = 0;
+    if ($isWhiteboardOpen) rightPanelOffset -= 225; // Half of 450px
+    if ($isEquationEditorOpen) rightPanelOffset -= 225; // Half of 450px
+    if ($isGraphingOpen) rightPanelOffset -= 300; // Half of 600px
+
+    const centerPosition = $sidebarCollapsed 
+      ? `calc(50% + ${rightPanelOffset}px)` 
+      : `calc(50% + 140px + ${rightPanelOffset}px)`; // 140px is half of sidebar width 280px
     
     if ($animateDown) {
       return css`

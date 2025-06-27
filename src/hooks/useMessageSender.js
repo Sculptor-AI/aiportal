@@ -218,33 +218,22 @@ const useMessageSender = ({
 
     try {
         const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
-            `You are a Deep Analysis Chain of Thought model that provides thorough, well-structured explanations. For every response:
+            `You are a Deep Analysis Chain of Thought model. You MUST provide both thinking and a final answer.
 
-1. FIRST: Put your comprehensive thinking process inside <think></think> tags following these steps:
-   - Begin with problem decomposition - break down the question into its core components and underlying assumptions
-   - Explore the conceptual space deeply, considering multiple perspectives and approaches
-   - When providing solutions (including code):
-     * Focus on developing one high-quality solution
-     * Prioritize clarity and simplicity unless complexity is justified
-     * Think through tradeoffs and design decisions explicitly
-   - Identify potential edge cases, limitations, or hidden assumptions
-   - Perform a critical self-review of your thinking:
-     * Question your reasoning process and initial assumptions
-     * Look for logical gaps, biases, or oversimplifications
-     * Consider counterarguments or alternative perspectives
-   - Evaluate your final solution against these criteria:
-     * Correctness: Does it solve the problem accurately?
-     * Depth: Have you considered the problem deeply enough?
-     * Simplicity: Is this the simplest valid solution?
-     * Completeness: Does it address the core question and handle relevant edge cases?
+CRITICAL: Your response must have TWO parts:
 
-2. THEN: Provide your answer outside the tags - be concise and focused while maintaining clarity
+1. FIRST: Put your thinking inside <think></think> tags with your reasoning process.
 
-When explaining concepts:
-- Break your answer into logical paragraphs
-- Use headings only when they improve understanding
-- Include concrete examples that illustrate key points
-- Focus on the most important aspects rather than attempting to cover everything` : null;
+2. SECOND: After the </think> tag, you MUST provide your actual answer to the user's question. Do not stop after the thinking block.
+
+Example format:
+<think>
+[Your reasoning here]
+</think>
+
+[Your actual answer here]
+
+IMPORTANT: Always provide content after the </think> tag. Never end your response with just the thinking block.` : null;
 
         if (isBackendModel) {
           const supportsStreaming = currentModelObj?.supportsStreaming !== false;

@@ -79,7 +79,7 @@ const MainGreeting = styled.div`
   position: fixed;
   top: ${props => props.$toolbarOpen ? '32%' : '35%'}; /* Adjust when toolbar is open */
   left: ${props => {
-    const sidebarOffset = 0; // Set to 0 to keep it centered in viewport
+    const sidebarOffset = props.$sidebarCollapsed ? 0 : 140; // 140 is half of sidebar width 280px
     let rightPanelOffset = 0;
     if (props.$whiteboardOpen) rightPanelOffset -= 225;
     if (props.$equationEditorOpen) rightPanelOffset -= 225;
@@ -594,17 +594,15 @@ const AppContent = () => {
             )}
             
             {/* Main greeting that appears at the top of the page */}
-            {location.pathname === '/' && settings.showGreeting && getCurrentChat()?.messages?.length === 0 && !hasAttachment && (
+            {getCurrentChat()?.messages.length === 0 && settings.showGreeting && !isMobile && (
               <MainGreeting
-                $sidebarCollapsed={collapsed}
+                $toolbarOpen={isToolbarOpen}
                 $whiteboardOpen={isWhiteboardOpen}
                 $equationEditorOpen={isEquationEditorOpen}
                 $graphingOpen={isGraphingOpen}
-                $toolbarOpen={isToolbarOpen}
+                $sidebarCollapsed={collapsed}
               >
-                <h1 style={settings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : { color: '#000000' }}>
-                  {settings.theme === 'lakeside' ? 'Andromeda' : `${greeting}${user ? `, ${user.username}` : ''}`}
-                </h1>
+                <h1>{greeting}</h1>
               </MainGreeting>
             )}
             

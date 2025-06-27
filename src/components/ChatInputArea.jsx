@@ -196,7 +196,9 @@ const ChatInputArea = forwardRef(({
       $isEmpty={chatIsEmpty} 
       $animateDown={animateDown} 
       $sidebarCollapsed={$sidebarCollapsed}
-      $modalOpen={isAnyModalOpen}
+      $isWhiteboardOpen={isWhiteboardOpen}
+      $isEquationEditorOpen={isEquationEditorOpen}
+      $isGraphingOpen={isGraphingOpen}
     >
       <MessageInputWrapper $isEmpty={chatIsEmpty}>
         <InputRow>

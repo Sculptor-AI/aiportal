@@ -1015,7 +1015,6 @@ export const streamMessageFromBackend = async (
           }
           
           try {
-            console.log("Attempting to parse SSE data (first block):", data); // Added for debugging
             const parsed = JSON.parse(data);
             
             // Handle sources special event type
@@ -1062,7 +1061,6 @@ export const streamMessageFromBackend = async (
               return;
             }
             try {
-              console.log("Attempting to parse SSE data (second block):", data); // Added for debugging
               const parsed = JSON.parse(data);
               if (parsed.type === 'sources' && Array.isArray(parsed.sources)) {
                 console.log('Received sources data:', parsed.sources);
