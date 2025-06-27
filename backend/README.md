@@ -18,14 +18,21 @@ a
    npm install
    ```
 
-2. Create a `.env` file based on the `.env.example` with the following variables:
+2. Create a `.env` file with the following variables:
    ```
    PORT=3000
    OPENROUTER_API_KEY=your_openrouter_api_key
-   PUBLIC_KEY=your_public_key
-   PRIVATE_KEY=your_private_key
+   BRAVE_API_KEY=your_brave_search_api_key
+   GEMINI_API_KEY=your_gemini_api_key
+   UNSPLASH_ACCESS_KEY=your_unsplash_access_key (optional)
    ALLOWED_MODELS=openai/gpt-4o,anthropic/claude-3-haiku,anthropic/claude-3-opus,anthropic/claude-3-sonnet,meta-llama/llama-2-70b-chat,google/gemini-pro
    ```
+
+   **API Keys:**
+   - `OPENROUTER_API_KEY`: Required for AI chat functionality
+   - `BRAVE_API_KEY`: Required for web search functionality
+   - `GEMINI_API_KEY`: Required for image generation
+   - `UNSPLASH_ACCESS_KEY`: Optional - for automatic image fetching in news feeds. Get a free key at https://unsplash.com/developers. Without this, the system uses curated stock photos.
 
 3. Start the server:
    ```

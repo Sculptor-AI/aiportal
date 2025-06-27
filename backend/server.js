@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { router as apiRouter } from './routes/api.js';
 import imageGenerationRoutes from './routes/imageGenerationRoutes.js';
+import rssRoutes from './routes/rssRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -51,6 +52,7 @@ app.options('*', cors(corsOptions));
 // Routes
 app.use('/api', apiRouter);
 app.use('/api/v1/images', imageGenerationRoutes);
+app.use('/api/rss', rssRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
