@@ -3,148 +3,51 @@
 ## Deployment Status
 
 **Last Updated:** 2025-06-28  
-**Status:** ✅ **Deployed - Awaiting DNS Configuration**
+**Status:** ✅ **Fully Deployed & Operational**
 
 ### Frontend (Cloudflare Pages)
-- **URL:** [https://ai.kaileh.dev](https://ai.kaileh.dev) *(requires DNS setup)*
-- **Worker URL:** [https://ai-portal-frontend-production.kellenhe.workers.dev](https://ai-portal-frontend-production.kellenhe.workers.dev) *(working now)*
+- **URL:** [https://ai.kaileh.dev](https://ai.kaileh.dev) ✅
+- **Worker URL:** [https://ai-portal-frontend-production.kellenhe.workers.dev](https://ai-portal-frontend-production.kellenhe.workers.dev) ✅
 - **Status:** ✅ **Deployed & Working**
-- **Version ID:** `4f09234b-f33e-41d5-ab08-6cc3d77d629d`
+- **Version ID:** `6b65edf9-90ca-409e-b0ed-938c8ff40579`
 - **Notes:**
-  - Frontend successfully deployed with corrected backend URLs
-  - All service files now point to `https://aiapi.kaileh.dev/api`
-  - Worker URL is fully functional
-  - Custom domain requires DNS records to be added
+  - Frontend successfully deployed with all fixes
+  - No longer requires API keys in settings for backend models
+  - Using Cloudflare backend with embedded secrets
+  - Custom domain is working (DNS configured)
 
 ### Backend (Cloudflare Workers)
-- **URL:** [https://aiapi.kaileh.dev](https://aiapi.kaileh.dev) *(requires DNS setup)*
-- **Worker URL:** [https://ai-portal-backend-production.kellenhe.workers.dev](https://ai-portal-backend-production.kellenhe.workers.dev) *(working now)*
+- **URL:** [https://aiapi.kaileh.dev](https://aiapi.kaileh.dev) ✅
+- **Worker URL:** [https://ai-portal-backend-production.kellenhe.workers.dev](https://ai-portal-backend-production.kellenhe.workers.dev) ✅
 - **Status:** ✅ **Deployed & Working**
 - **Version ID:** `fb57d220-6396-4d8a-b878-1c11ec0e171e`
 - **Notes:**
-  - All API endpoints converted to Cloudflare Workers format
+  - All API endpoints working with Cloudflare Workers
   - Secrets configured: `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `BRAVE_API_KEY`
   - CORS configured for frontend domains
-  - Worker URL is fully functional
+  - Backend models use embedded API keys
 
-### 🚨 Action Required: DNS Setup
+### ✅ Recent Fixes (2025-06-28)
+1. **Fixed frontend service URLs** - Removed invalid `env.BACKEND_URL` check
+2. **Fixed API key validation** - Frontend no longer requires API keys for backend models
+3. **DNS configured** - Custom domains now working
+4. **Backend using Cloudflare secrets** - API keys embedded in Workers environment
 
-To enable custom domains, you need to add DNS records in Cloudflare:
+### Key Features Working
+- ✅ Chat with multiple AI models (ChatGPT, Claude, Gemini, etc.)
+- ✅ Image generation
+- ✅ Web search integration
+- ✅ PDF/Text file upload and processing
+- ✅ No API keys required in frontend settings
+- ✅ All models use backend's embedded API keys
 
-1. **For ai.kaileh.dev:**
-   - Type: AAAA
-   - Name: `ai`
-   - IPv6: `100::`
-   - Proxy: ON (orange cloud)
-
-2. **For aiapi.kaileh.dev:**
-   - Type: AAAA
-   - Name: `aiapi`
-   - IPv6: `100::`
-   - Proxy: ON (orange cloud)
-
-See `DNS_SETUP_INSTRUCTIONS.md` for detailed steps.
-
-### Recent Changes (2025-06-28)
-- Fixed frontend service files to remove invalid `env.BACKEND_URL` check
-- Updated all service endpoints to use Cloudflare backend
-- Successfully rebuilt and redeployed frontend
-- Created comprehensive DNS setup documentation
-
-### Next Steps
-1. Add DNS records in Cloudflare dashboard
-2. Wait 1-2 minutes for propagation
-3. Test custom domains
-4. Clear browser cache if needed
+### Documentation
+- See `DNS_SETUP_INSTRUCTIONS.md` for DNS configuration
+- See `CLOUDFLARE_DEPLOYMENT_PLAN.md` for architecture details
+- See `CONTROLLER_ADAPTATION_GUIDE.md` for backend conversion guide
 
 ### 🌐 Working URLs
+- **Frontend:** https://ai.kaileh.dev
+- **Backend API:** https://aiapi.kaileh.dev
 
-#### Via Workers.dev (Immediately Available):
-- **Frontend**: https://ai-portal-frontend-production.kellenhe.workers.dev ✅
-- **Backend API**: https://ai-portal-backend-production.kellenhe.workers.dev ✅
-- **Backend Health Check**: https://ai-portal-backend-production.kellenhe.workers.dev/health ✅
-
-#### Custom Domains (DNS Propagating):
-- **Frontend**: https://ai.kaileh.dev (DNS propagating, check in 10-30 minutes)
-- **Backend API**: https://aiapi.kaileh.dev (DNS propagating, check in 10-30 minutes)
-
-### 📝 What Was Done
-
-1. **Backend Worker Deployment** (ai-portal-backend-production)
-   - Converted Express.js controllers to Workers-compatible format
-   - Deployed to aiapi.kaileh.dev
-   - All endpoints operational (chat, search, RSS, image generation)
-   - Current Version ID: fb57d220-6396-4d8a-b878-1c11ec0e171e
-
-2. **Frontend Worker Deployment** (ai-portal-frontend-production)
-   - Built React app for production
-   - Deployed static assets to Workers Sites using KV asset handler
-   - Fixed worker errors by implementing proper asset handling
-   - Fixed backend URLs from localhost to Cloudflare backend
-   - Current Version ID: eeede8e8-6f46-4560-9aa7-41f9dc445c03
-
-3. **Secrets Configured**
-   - ✅ OPENROUTER_API_KEY
-   - ✅ GEMINI_API_KEY
-   - ✅ BRAVE_API_KEY
-
-4. **GitHub Integration**
-   - All code pushed to `cloudflare` branch at https://github.com/Sculptor-AI/aiportal/tree/cloudflare
-   - GitHub Actions workflow created for automatic deployment
-   - All worker fixes committed and tested
-
-### 🐛 Issues Fixed
-1. **Error 1101**: Fixed frontend worker exception by updating worker.js
-2. **Error 1042**: Fixed by enabling workers_dev in wrangler.toml
-3. **Asset Handling**: Implemented proper KV asset handler for static files
-4. **Localhost Issue**: Fixed frontend trying to connect to localhost:3000 instead of Cloudflare backend
-   - Updated `aiService.js`, `rssService.js`, and `imageService.js` to use `https://aiapi.kaileh.dev`
-   - Rebuilt and redeployed frontend with correct backend URLs
-
-### ✅ Verified Working
-- Backend API endpoints tested and responding correctly
-- RSS feeds loading successfully
-- Models endpoint returning available AI models
-- CORS properly configured for cross-origin requests
-
-### 🔧 Next Steps
-
-1. **Clear Browser Cache**: If you still see localhost errors, clear your browser cache or use incognito mode
-
-2. **Verify Custom Domains**: 
-   - DNS typically takes 10-30 minutes to propagate globally
-   - Use workers.dev URLs in the meantime
-
-3. **Set up GitHub Actions**: 
-   - Go to https://github.com/Sculptor-AI/aiportal/settings/secrets/actions
-   - Add these repository secrets:
-     - `CLOUDFLARE_API_TOKEN` (Create at: https://dash.cloudflare.com/profile/api-tokens)
-     - `CLOUDFLARE_ACCOUNT_ID` (Found at: https://dash.cloudflare.com/)
-   - Once configured, merge cloudflare branch to main for automatic deployments
-
-4. **Monitor Performance**:
-   ```bash
-   # View real-time logs
-   wrangler tail --env production
-   
-   # View backend logs
-   cd backend-worker && wrangler tail --env production
-   ```
-
-### 📚 Documentation
-
-- Full deployment plan: `CLOUDFLARE_DEPLOYMENT_PLAN.md`
-- Deployment checklist: `CLOUDFLARE_DEPLOYMENT_CHECKLIST.md`
-- Controller adaptation guide: `CONTROLLER_ADAPTATION_GUIDE.md`
-
-### 🎉 Success!
-
-Your AI Portal is now live on Cloudflare's global edge network with:
-- ⚡ Automatic SSL/TLS encryption
-- 🌍 Global CDN distribution (195+ cities)
-- 📈 Serverless auto-scaling
-- ✅ All features migrated and operational
-- 🚀 Zero cold starts with Workers
-- 🔗 Correct backend connections (no more localhost!)
-
-The application is fully functional and ready to use! 
+Your AI Portal is now fully operational on Cloudflare Workers with embedded API keys! 
