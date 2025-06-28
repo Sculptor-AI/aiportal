@@ -138,17 +138,20 @@ const useMessageSender = ({
     let apiKeyMessage = "";
     const activeSettings = settings || {};
 
-    if (currentModel.startsWith('gemini') && !activeSettings.googleApiKey && !import.meta.env.VITE_GOOGLE_API_KEY) {
-      apiKeyMissing = true;
-      apiKeyMessage = "Google API key is missing. Please add it in Settings.";
-    }
-    if (currentModel.startsWith('gpt-') && !activeSettings.openaiApiKey && !import.meta.env.VITE_OPENAI_API_KEY) {
-      apiKeyMissing = true;
-      apiKeyMessage = "OpenAI API key is missing. Please add it in Settings.";
-    }
-    if (currentModel.startsWith('claude-') && !activeSettings.anthropicApiKey && !import.meta.env.VITE_ANTHROPIC_API_KEY) {
-      apiKeyMissing = true;
-      apiKeyMessage = "Anthropic API key is missing. Please add it in Settings.";
+    // Only check for API keys if NOT using a backend model
+    if (!isBackendModel) {
+      if (currentModel.startsWith('gemini') && !activeSettings.googleApiKey && !import.meta.env.VITE_GOOGLE_API_KEY) {
+        apiKeyMissing = true;
+        apiKeyMessage = "Google API key is missing. Please add it in Settings.";
+      }
+      if (currentModel.startsWith('gpt-') && !activeSettings.openaiApiKey && !import.meta.env.VITE_OPENAI_API_KEY) {
+        apiKeyMissing = true;
+        apiKeyMessage = "OpenAI API key is missing. Please add it in Settings.";
+      }
+      if (currentModel.startsWith('claude-') && !activeSettings.anthropicApiKey && !import.meta.env.VITE_ANTHROPIC_API_KEY) {
+        apiKeyMissing = true;
+        apiKeyMessage = "Anthropic API key is missing. Please add it in Settings.";
+      }
     }
 
     if (apiKeyMissing) {
