@@ -1,8 +1,28 @@
 # AI Portal Cloudflare Workers Deployment Status
 
-## ✅ Deployment Complete (Final Update - All Issues Resolved)
+## Deployment Status
 
-Your AI Portal has been successfully deployed to Cloudflare Workers and is now fully operational!
+**Deployment Date:** 2025-06-28
+
+### Frontend (Cloudflare Pages)
+- **URL:** [https://ai.kaileh.dev](https://ai.kaileh.dev)
+- **Worker URL:** [https://ai-portal-frontend-production.kellenhe.workers.dev](https://ai-portal-frontend-production.kellenhe.workers.dev)
+- **Status:** <font color="green">**Operational**</font>
+- **Version ID:** `06c90bc9-8a28-4290-828b-7aa0004324a5`
+- **Notes:**
+  - The frontend has been successfully deployed and is serving the React application.
+  - All service files have been updated to point to the new Cloudflare backend.
+  - All build issues have been resolved. The application should now be fully functional.
+
+### Backend (Cloudflare Workers)
+- **URL:** [https://aiapi.kaileh.dev](https://aiapi.kaileh.dev)
+- **Worker URL:** [https://ai-portal-backend-production.kellenhe.workers.dev](https://ai-portal-backend-production.kellenhe.workers.dev)
+- **Status:** <font color="green">**Operational**</font>
+- **Version ID:** `fb57d220-6396-4d8a-b878-1c11ec0e171e`
+- **Notes:**
+  - All API endpoints have been converted from Express to the Cloudflare Workers format.
+  - Secrets for `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, and `BRAVE_API_KEY` have been set.
+  - CORS is configured to allow requests from the frontend domain.
 
 ### 🌐 Working URLs
 

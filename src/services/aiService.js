@@ -744,9 +744,7 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.
 
 // Add backend API base URL - ensure this matches your backend server address
-const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || 
-  import.meta.env.VITE_BACKEND_API_URL || 
-  'https://aiapi.kaileh.dev';  // Use Cloudflare backend as default
+const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || 'https://aiapi.kaileh.dev/api';
 
 // Debug the actual URL being used
 console.log('Backend API URL being used:', BACKEND_API_BASE);

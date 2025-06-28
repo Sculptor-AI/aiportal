@@ -1,85 +1,49 @@
-// RSS Service for fetching articles from backend
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://aiapi.kaileh.dev/api';
 
-// Import the backend URL from aiService to ensure consistency
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 
-  import.meta.env.VITE_BACKEND_API_URL || 
-  'https://aiapi.kaileh.dev';
+const buildUrl = (path) => {
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return `${BACKEND_URL}/${cleanPath}`;
+};
 
 /**
- * Fetch articles by category
- * @param {string} category - The category to fetch articles for
- * @param {number} limit - Maximum number of articles to fetch
- * @returns {Promise<Array>} Array of articles
+ * Fetches and parses an RSS feed from the backend.
+ * @param {string} feedUrl - The URL of the RSS feed to fetch.
+ * @returns {Promise<object>} The parsed RSS feed data.
  */
-export const fetchArticlesByCategory = async (category, limit = 20) => {
+export const fetchRssFeed = async (feedUrl) => {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/rss/articles/${category}?limit=${limit}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const response = await fetch(buildUrl('rss'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feedUrl }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch articles: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.articles || [];
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
   } catch (error) {
-    console.error(`Error fetching articles for category ${category}:`, error);
+    console.error('Error fetching RSS feed:', error);
     throw error;
   }
 };
 
-/**
- * Fetch articles from all categories
- * @param {number} limit - Maximum number of articles to fetch
- * @returns {Promise<Array>} Array of articles
- */
-export const fetchAllArticles = async (limit = 50) => {
+export const fetchArticleContent = async (articleUrl) => {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/rss/articles?limit=${limit}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const response = await fetch(buildUrl('rss/content'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleUrl }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch articles: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.articles || [];
-  } catch (error) {
-    console.error('Error fetching all articles:', error);
-    throw error;
-  }
-};
-
-/**
- * Fetch full article content by scraping the URL
- * @param {string} url - The article URL to scrape
- * @returns {Promise<Object>} Article content and metadata
- */
-export const fetchArticleContent = async (url) => {
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/rss/article-content?url=${encodeURIComponent(url)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch article content: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data;
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
   } catch (error) {
     console.error('Error fetching article content:', error);
     throw error;
   }
+};
+
+export const fetchArticlesByCategory = async (category) => {
+    // This is a placeholder. You'll need to implement the logic to fetch articles
+    // based on a category. This might involve a different backend endpoint
+    // or filtering on the client side.
+    console.log(`Fetching articles for category: ${category}`);
+    return []; 
 }; 
