@@ -2,27 +2,60 @@
 
 ## Deployment Status
 
-**Deployment Date:** 2025-06-28
+**Last Updated:** 2025-06-28  
+**Status:** ✅ **Deployed - Awaiting DNS Configuration**
 
 ### Frontend (Cloudflare Pages)
-- **URL:** [https://ai.kaileh.dev](https://ai.kaileh.dev)
-- **Worker URL:** [https://ai-portal-frontend-production.kellenhe.workers.dev](https://ai-portal-frontend-production.kellenhe.workers.dev)
-- **Status:** <font color="green">**Operational**</font>
-- **Version ID:** `06c90bc9-8a28-4290-828b-7aa0004324a5`
+- **URL:** [https://ai.kaileh.dev](https://ai.kaileh.dev) *(requires DNS setup)*
+- **Worker URL:** [https://ai-portal-frontend-production.kellenhe.workers.dev](https://ai-portal-frontend-production.kellenhe.workers.dev) *(working now)*
+- **Status:** ✅ **Deployed & Working**
+- **Version ID:** `4f09234b-f33e-41d5-ab08-6cc3d77d629d`
 - **Notes:**
-  - The frontend has been successfully deployed and is serving the React application.
-  - All service files have been updated to point to the new Cloudflare backend.
-  - All build issues have been resolved. The application should now be fully functional.
+  - Frontend successfully deployed with corrected backend URLs
+  - All service files now point to `https://aiapi.kaileh.dev/api`
+  - Worker URL is fully functional
+  - Custom domain requires DNS records to be added
 
 ### Backend (Cloudflare Workers)
-- **URL:** [https://aiapi.kaileh.dev](https://aiapi.kaileh.dev)
-- **Worker URL:** [https://ai-portal-backend-production.kellenhe.workers.dev](https://ai-portal-backend-production.kellenhe.workers.dev)
-- **Status:** <font color="green">**Operational**</font>
+- **URL:** [https://aiapi.kaileh.dev](https://aiapi.kaileh.dev) *(requires DNS setup)*
+- **Worker URL:** [https://ai-portal-backend-production.kellenhe.workers.dev](https://ai-portal-backend-production.kellenhe.workers.dev) *(working now)*
+- **Status:** ✅ **Deployed & Working**
 - **Version ID:** `fb57d220-6396-4d8a-b878-1c11ec0e171e`
 - **Notes:**
-  - All API endpoints have been converted from Express to the Cloudflare Workers format.
-  - Secrets for `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, and `BRAVE_API_KEY` have been set.
-  - CORS is configured to allow requests from the frontend domain.
+  - All API endpoints converted to Cloudflare Workers format
+  - Secrets configured: `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `BRAVE_API_KEY`
+  - CORS configured for frontend domains
+  - Worker URL is fully functional
+
+### 🚨 Action Required: DNS Setup
+
+To enable custom domains, you need to add DNS records in Cloudflare:
+
+1. **For ai.kaileh.dev:**
+   - Type: AAAA
+   - Name: `ai`
+   - IPv6: `100::`
+   - Proxy: ON (orange cloud)
+
+2. **For aiapi.kaileh.dev:**
+   - Type: AAAA
+   - Name: `aiapi`
+   - IPv6: `100::`
+   - Proxy: ON (orange cloud)
+
+See `DNS_SETUP_INSTRUCTIONS.md` for detailed steps.
+
+### Recent Changes (2025-06-28)
+- Fixed frontend service files to remove invalid `env.BACKEND_URL` check
+- Updated all service endpoints to use Cloudflare backend
+- Successfully rebuilt and redeployed frontend
+- Created comprehensive DNS setup documentation
+
+### Next Steps
+1. Add DNS records in Cloudflare dashboard
+2. Wait 1-2 minutes for propagation
+3. Test custom domains
+4. Clear browser cache if needed
 
 ### 🌐 Working URLs
 
