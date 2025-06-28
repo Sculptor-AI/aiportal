@@ -753,15 +753,11 @@ console.log('Backend API URL being used:', BACKEND_API_BASE);
 const buildApiUrl = (endpoint) => {
   if (!endpoint) return BACKEND_API_BASE;
   
-  // Clean the endpoint to avoid double slashes or double /api
+  // Clean the endpoint to avoid double slashes
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // If BACKEND_API_BASE already ends with /api, don't add it again
-  const baseUrl = BACKEND_API_BASE.endsWith('/api') ? 
-    BACKEND_API_BASE.slice(0, -4) : BACKEND_API_BASE;
-    
-  // Remove trailing slash from baseUrl if present
-  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  // Remove trailing slash from base URL if present
+  const cleanBase = BACKEND_API_BASE.endsWith('/') ? BACKEND_API_BASE.slice(0, -1) : BACKEND_API_BASE;
   
   // Construct the full URL
   const fullUrl = `${cleanBase}${cleanEndpoint}`;
