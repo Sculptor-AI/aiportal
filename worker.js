@@ -1,31 +1,46 @@
+import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
+import manifestJSON from '__STATIC_CONTENT_MANIFEST';
+const assetManifest = JSON.parse(manifestJSON);
+
 // Simple worker to serve the React SPA with proper error handling
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    
     try {
-      const url = new URL(request.url);
-      
-      // Try to fetch the requested path
-      try {
-        // First try to get the exact path
-        const response = await env.ASSETS.fetch(request);
-        if (response.status === 200) {
-          return response;
+      // Attempt to serve the asset from KV
+      return await getAssetFromKV(
+        {
+          request,
+          waitUntil: ctx.waitUntil.bind(ctx),
+        },
+        {
+          ASSET_NAMESPACE: env.__STATIC_CONTENT,
+          ASSET_MANIFEST: assetManifest,
         }
-      } catch (e) {
-        // If exact path fails, continue to fallback
+      );
+    } catch (e) {
+      // If the asset is not found, serve index.html for client-side routing
+      if (e.status === 404) {
+        try {
+          const indexRequest = new Request(`${url.origin}/index.html`, request);
+          return await getAssetFromKV(
+            {
+              request: indexRequest,
+              waitUntil: ctx.waitUntil.bind(ctx),
+            },
+            {
+              ASSET_NAMESPACE: env.__STATIC_CONTENT,
+              ASSET_MANIFEST: assetManifest,
+            }
+          );
+        } catch (e) {
+          return new Response('Page not found', { status: 404 });
+        }
       }
       
-      // For any path that doesn't exist, return index.html for client-side routing
-      // This handles React Router paths
-      const indexRequest = new Request(`${url.origin}/index.html`);
-      return await env.ASSETS.fetch(indexRequest);
-      
-    } catch (error) {
-      // If something goes wrong, return a proper error response
-      return new Response(`Error: ${error.message}`, { 
-        status: 500,
-        headers: { 'Content-Type': 'text/plain' }
-      });
+      // For any other error, return a 500
+      return new Response(`Internal Error: ${e.message}`, { status: 500 });
     }
   }
 };

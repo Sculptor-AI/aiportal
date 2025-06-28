@@ -1,9 +1,13 @@
 name = "ai-portal-frontend"
 main = "./worker.js"
 compatibility_date = "2024-01-01"
+workers_dev = true
 
 [site]
 bucket = "./dist"
+
+[env.production]
+workers_dev = true
 
 [env.production.vars]
 BACKEND_URL = "https://aiapi.kaileh.dev"
