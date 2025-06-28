@@ -1,0 +1,48 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_BACKEND_URL: https://aiapi.kaileh.dev
+      
+      - name: Prepare backend worker
+        run: |
+          chmod +x scripts/setup-workers.sh
+          ./scripts/setup-workers.sh --ci
+          
+      - name: Deploy Backend Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          workingDirectory: backend-worker
+          environment: production
+          command: deploy
+          
+      - name: Deploy Frontend Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          environment: production
+          command: deploy

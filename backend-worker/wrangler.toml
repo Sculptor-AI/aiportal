@@ -1,0 +1,13 @@
+name = "ai-portal-backend"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+[env.production]
+vars = { 
+  ALLOWED_MODELS = "openai/gpt-4o,anthropic/claude-3-sonnet,google/gemini-pro-1.5,meta-llama/llama-4-scout,deepseek/deepseek-chat-v3-0324:free,nvidia/llama-3.3-nemotron-super-49b-v1",
+  ALLOWED_ORIGINS = "https://ai.kaileh.dev,http://localhost:3009,http://localhost:3010"
+}
+
+[env.production.routes]
+pattern = "aiapi.kaileh.dev/*"
+zone_name = "kaileh.dev"

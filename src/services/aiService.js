@@ -744,27 +744,33 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.
 
 // Add backend API base URL - ensure this matches your backend server address
-const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ? 
-  (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
-    import.meta.env.VITE_BACKEND_API_URL : 
-    `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
-  'https://aiportal-backend.vercel.app/api';
+const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || 
+  import.meta.env.VITE_BACKEND_API_URL || 
+  'http://localhost:3000';
 
 // Debug the actual URL being used
 console.log('Backend API URL being used:', BACKEND_API_BASE);
 
-// Remove duplicated /api in endpoint paths
+// Build API URL with proper path handling
 const buildApiUrl = (endpoint) => {
   if (!endpoint) return BACKEND_API_BASE;
   
-  // If the endpoint already starts with /api, remove it to prevent duplication
-  const cleanEndpoint = endpoint.startsWith('/api/') ? endpoint.substring(4) : 
-                         (endpoint.startsWith('/api') ? endpoint.substring(4) : endpoint);
+  // Clean the endpoint to avoid double slashes or double /api
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   
-  // Ensure endpoint has a leading slash if it doesn't already
-  const formattedEndpoint = cleanEndpoint.startsWith('/') ? cleanEndpoint : `/${cleanEndpoint}`;
+  // If BACKEND_API_BASE already ends with /api, don't add it again
+  const baseUrl = BACKEND_API_BASE.endsWith('/api') ? 
+    BACKEND_API_BASE.slice(0, -4) : BACKEND_API_BASE;
+    
+  // Remove trailing slash from baseUrl if present
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   
-  return `${BACKEND_API_BASE}${formattedEndpoint}`;
+  // Construct the full URL
+  const fullUrl = `${cleanBase}${cleanEndpoint}`;
+  
+  console.log(`Building API URL: base=${cleanBase}, endpoint=${cleanEndpoint}, full=${fullUrl}`);
+  
+  return fullUrl;
 };
 
 /**

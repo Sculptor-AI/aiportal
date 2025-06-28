@@ -1,21 +1,15 @@
-name = "ai-portal"
+name = "ai-portal-frontend"
 main = "./worker.js"
-compatibility_date = "2024-02-24"
+compatibility_date = "2024-01-01"
 
-# Configure your Pages site
 [site]
 bucket = "./dist"
 
-# Set environment variables (you'll need to replace these with your actual API keys in the Cloudflare dashboard)
-[vars]
-VITE_OPENAI_API_KEY = ""
-VITE_CLAUDE_API_KEY = ""
-VITE_GEMINI_API_KEY = ""
+[env.production]
+vars = { 
+  BACKEND_URL = "https://aiapi.kaileh.dev"
+}
 
-# Configure deployment to Workers
-[build]
-command = "npm run build"
-
-# Enable static asset hosting for your React app - this handles SPA routing
-[site.static]
-spa = true
+[env.production.routes]
+pattern = "ai.kaileh.dev/*"
+zone_name = "kaileh.dev"
