@@ -196,15 +196,17 @@ const ModelProvider = styled.div`
   font-size: inherit;
 `;
 
-const BackendModelBadge = styled.span`
-  background: ${props => props.theme.primary};
-  color: white;
-  font-size: 0.6rem;
-  padding: 2px 4px;
+const ProviderLogo = styled.img`
+  width: 16px;
+  height: 16px;
+  margin-left: 6px;
+  opacity: 0.9;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
-  margin-left: 5px;
-  font-weight: bold;
-  opacity: 0.8;
+  padding: 2px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 `;
 
 const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
@@ -250,8 +252,8 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   }, []);
 
   const baseModels = models || [
-    { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
     { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
     { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
     { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
@@ -286,7 +288,7 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   const currentModel =
     availableModels.find(model => model.id === selectedModel) ||
     availableModels[0] ||
-    baseModels.find(model => model.id === 'gemini-2-flash');
+    baseModels.find(model => model.id === 'gemini-2.5-pro');
 
   useEffect(() => {
     if (selectedModel !== currentModel?.id && availableModels.length > 0) {
@@ -298,10 +300,57 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
     }
   }, [selectedModel, currentModel, availableModels, onChange]);
 
+  const getProviderSource = (model) => {
+    // For backend models, use the source field
+    if (model.isBackendModel && model.source) {
+      return model.source;
+    }
+    
+    // For frontend models, determine source based on model ID
+    const modelId = model.id?.toLowerCase() || '';
+    
+    // Check for Google/Gemini models
+    if (modelId.includes('gemini') || modelId.includes('google/')) {
+      return 'gemini';
+    }
+    
+    // Check for Anthropic/Claude models  
+    if (modelId.includes('claude') || modelId.includes('anthropic/')) {
+      return 'anthropic';
+    }
+    
+    // Check for OpenAI models
+    if (modelId.includes('gpt') || modelId.includes('chatgpt') || modelId.includes('openai/')) {
+      return 'openai';
+    }
+    
+    // Check for Meta/Llama models
+    if (modelId.includes('llama') || modelId.includes('meta-llama/') || modelId.includes('meta/')) {
+      return 'meta';
+    }
+    
+    // Check for DeepSeek models
+    if (modelId.includes('deepseek')) {
+      return 'deepseek';
+    }
+    
+    // Default to openrouter for other backend models
+    if (model.isBackendModel) {
+      return 'openrouter';
+    }
+    
+    return null;
+  };
+
   const getProviderName = (model) => {
     const modelId = model.id;
     
-    if (model.isBackendModel && model.provider) {
+    if (model.isBackendModel) {
+      if (model.source === 'gemini') {
+        return 'Google Gemini API';
+      } else if (model.source === 'openrouter') {
+        return `${model.provider} (via OpenRouter)`;
+      }
       return `${model.provider} (via Backend)`;
     }
     
@@ -352,8 +401,19 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
            <div className="model-info">
              <ModelIcon modelId={currentModel.id} />
              <span>{currentModel.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</span>
-             {currentModel.isBackendModel && (
-               <BackendModelBadge theme={theme}>E</BackendModelBadge>
+             {getProviderSource(currentModel) === 'gemini' && (
+               <ProviderLogo 
+                 src="/images/google.png" 
+                 alt="Google" 
+                 title="Google Gemini API"
+               />
+             )}
+             {getProviderSource(currentModel) === 'openrouter' && (
+               <ProviderLogo 
+                 src="/images/openrouter.png" 
+                 alt="OpenRouter" 
+                 title="OpenRouter API"
+               />
              )}
            </div>
            {theme.name === 'retro' ? (
@@ -390,10 +450,23 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
             >
               <ModelIcon modelId={model.id} />
               <ModelDetails theme={theme}>
-                <ModelName theme={theme}>{model.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</ModelName>
-                {model.isBackendModel && (
-                  <BackendModelBadge theme={theme}>External</BackendModelBadge>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ModelName theme={theme}>{model.name.replace(/^[^:]*:\s*/, '').replace(/\s*\([^)]*\)$/, '')}</ModelName>
+                  {getProviderSource(model) === 'gemini' && (
+                    <ProviderLogo 
+                      src="/images/google.png" 
+                      alt="Google" 
+                      title="Google Gemini API"
+                    />
+                  )}
+                  {getProviderSource(model) === 'openrouter' && (
+                    <ProviderLogo 
+                      src="/images/openrouter.png" 
+                      alt="OpenRouter" 
+                      title="OpenRouter API"
+                    />
+                  )}
+                </div>
               </ModelDetails>
             </ModelOption>
           ))}

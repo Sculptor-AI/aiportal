@@ -1,5 +1,8 @@
 import axios from 'axios';
 import { formatResponsePacket } from '../utils/formatters.js';
+import { isGeminiModel, processGeminiChat, streamGeminiChat } from '../services/geminiService.js';
+import { isAnthropicModel, processAnthropicChat, streamAnthropicChat } from '../services/anthropicService.js';
+import { isOpenAIModel, processOpenAIChat, streamOpenAIChat } from '../services/openaiService.js';
 
 /**
  * Process a chat completion request
@@ -14,10 +17,13 @@ export const completeChat = async (req, res) => {
     console.log(`Request received for model: ${modelType}, mode: ${mode}, search: ${search}, hasImage: ${!!imageData}`);
     
     // Check against list of available models to prevent abuse
-    // If mode is 'instant', modelType will be overridden, so skip this check for 'instant' mode or ensure 'meta-llama/llama-4-scout' is allowed.
-    // For now, we assume 'meta-llama/llama-4-scout' will be added to ALLOWED_MODELS.
+    // Skip this check for:
+    // 1. Instant mode (uses meta-llama/llama-4-scout)
+    // 2. Direct provider models (Anthropic, OpenAI, Gemini)
     const allowedModels = process.env.ALLOWED_MODELS?.split(',') || [];
-    if (mode !== 'instant' && !allowedModels.includes(modelType)) {
+    const isDirectProviderModel = isAnthropicModel(modelType) || isOpenAIModel(modelType) || isGeminiModel(modelType);
+    
+    if (mode !== 'instant' && !isDirectProviderModel && !allowedModels.includes(modelType)) {
       return res.status(400).json({ error: 'Invalid model type requested' });
     }
     
@@ -44,7 +50,58 @@ export const completeChat = async (req, res) => {
       }
     }
     
-    // Model-specific adjustments and normalization
+    // Check if this is an Anthropic model
+    if (isAnthropicModel(modelType)) {
+      console.log(`Detected Anthropic model: ${modelType}`);
+      
+      try {
+        const anthropicResponse = await processAnthropicChat(modelType, prompt, imageData, systemPrompt);
+        return res.status(200).json(anthropicResponse);
+      } catch (error) {
+        console.error('Error processing Anthropic request:', error);
+        return res.status(500).json({
+          error: 'Anthropic API error',
+          details: error.message,
+          modelType: modelType
+        });
+      }
+    }
+    
+    // Check if this is an OpenAI model
+    if (isOpenAIModel(modelType)) {
+      console.log(`Detected OpenAI model: ${modelType}`);
+      
+      try {
+        const openaiResponse = await processOpenAIChat(modelType, prompt, imageData, systemPrompt);
+        return res.status(200).json(openaiResponse);
+      } catch (error) {
+        console.error('Error processing OpenAI request:', error);
+        return res.status(500).json({
+          error: 'OpenAI API error',
+          details: error.message,
+          modelType: modelType
+        });
+      }
+    }
+    
+    // Check if this is a Gemini model
+    if (isGeminiModel(modelType)) {
+      console.log(`Detected Gemini model: ${modelType}`);
+      
+      try {
+        const geminiResponse = await processGeminiChat(modelType, prompt, imageData, systemPrompt);
+        return res.status(200).json(geminiResponse);
+      } catch (error) {
+        console.error('Error processing Gemini request:', error);
+        return res.status(500).json({
+          error: 'Gemini API error',
+          details: error.message,
+          modelType: modelType
+        });
+      }
+    }
+    
+    // Model-specific adjustments and normalization for OpenRouter
     let adjustedModelType = modelType;
     let providerConfig = null;
 
@@ -56,7 +113,6 @@ export const completeChat = async (req, res) => {
       // Some models need specific handling - these mappings may need to be updated
       // based on OpenRouter's current model IDs
       const modelMappings = {
-        'google/gemini-2.5-pro-exp-03-25': 'google/gemini-pro-1.5',
         'deepseek/deepseek-v3-base:free': 'deepseek/deepseek-chat-v3-0324:free',
         'deepseek/deepseek-r1:free': 'deepseek/deepseek-r1'
       };
@@ -253,6 +309,69 @@ export const streamChat = async (req, res) => {
       }
     }
     
+    // Check if this is an Anthropic model
+    if (isAnthropicModel(modelType)) {
+      console.log(`Detected Anthropic model for streaming: ${modelType}`);
+      
+      try {
+        await streamAnthropicChat(
+          modelType,
+          prompt,
+          imageData,
+          systemPrompt,
+          (chunk) => res.write(chunk)
+        );
+        return res.end();
+      } catch (error) {
+        console.error('Error in Anthropic streaming:', error);
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      }
+    }
+    
+    // Check if this is an OpenAI model
+    if (isOpenAIModel(modelType)) {
+      console.log(`Detected OpenAI model for streaming: ${modelType}`);
+      
+      try {
+        await streamOpenAIChat(
+          modelType,
+          prompt,
+          imageData,
+          systemPrompt,
+          (chunk) => res.write(chunk)
+        );
+        return res.end();
+      } catch (error) {
+        console.error('Error in OpenAI streaming:', error);
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      }
+    }
+    
+    // Check if this is a Gemini model
+    if (isGeminiModel(modelType)) {
+      console.log(`Detected Gemini model for streaming: ${modelType}`);
+      
+      try {
+        await streamGeminiChat(
+          modelType,
+          prompt,
+          imageData,
+          systemPrompt,
+          (chunk) => res.write(chunk)
+        );
+        return res.end();
+      } catch (error) {
+        console.error('Error in Gemini streaming:', error);
+        res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        return res.end();
+      }
+    }
+    
     // Adjusted model name for OpenRouter (they use standardized model names)
     let adjustedModelType = modelType;
     let providerConfig = null;
@@ -420,6 +539,57 @@ export const handleChat = async (req, res) => {
   });
   
   try {
+    // Check if this is an Anthropic model
+    if (isAnthropicModel(modelType)) {
+      console.log(`Detected Anthropic model in handleChat: ${modelType}`);
+      
+      try {
+        const anthropicResponse = await processAnthropicChat(modelType, prompt, imageData, systemPrompt);
+        return res.status(200).json(anthropicResponse);
+      } catch (error) {
+        console.error('Error processing Anthropic request:', error);
+        return res.status(500).json({
+          error: 'Anthropic API error',
+          details: error.message,
+          modelType: modelType
+        });
+      }
+    }
+    
+    // Check if this is an OpenAI model
+    if (isOpenAIModel(modelType)) {
+      console.log(`Detected OpenAI model in handleChat: ${modelType}`);
+      
+      try {
+        const openaiResponse = await processOpenAIChat(modelType, prompt, imageData, systemPrompt);
+        return res.status(200).json(openaiResponse);
+      } catch (error) {
+        console.error('Error processing OpenAI request:', error);
+        return res.status(500).json({
+          error: 'OpenAI API error',
+          details: error.message,
+          modelType: modelType
+        });
+      }
+    }
+    
+    // Check if this is a Gemini model
+    if (isGeminiModel(modelType)) {
+      console.log(`Detected Gemini model in handleChat: ${modelType}`);
+      
+      try {
+        const geminiResponse = await processGeminiChat(modelType, prompt, imageData, systemPrompt);
+        return res.status(200).json(geminiResponse);
+      } catch (error) {
+        console.error('Error processing Gemini request:', error);
+        return res.status(500).json({
+          error: 'Gemini API error',
+          details: error.message,
+          modelType: modelType
+        });
+      }
+    }
+    
     // Adjusted model name for OpenRouter (they use standardized model names)
     let adjustedModelType = modelType;
     let providerConfig = null;

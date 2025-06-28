@@ -17,8 +17,8 @@ console.log("Loaded API keys from environment:", {
 
 // Map updated model IDs to their respective API endpoints and formats
 const MODEL_CONFIGS = {
-  'gemini-2-flash': {
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
+  'gemini-2.5-flash': {
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-latest:generateContent',
     prepareRequest: (message, history, imageData, fileTextContent = null) => { 
       const formattedMessages = history.map(msg => {
         if (msg.image) {
@@ -72,7 +72,7 @@ const MODEL_CONFIGS = {
 
   'gemini-2.5-pro': {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-latest:generateContent',
-    prepareRequest: (message, history, imageData, fileTextContent = null) => { 
+    prepareRequest: (message, history, imageData, fileTextContent = null) => {
       const formattedMessages = history.map(msg => {
         if (msg.image) {
           const base64Data = msg.image.split(',')[1];
@@ -91,14 +91,12 @@ const MODEL_CONFIGS = {
           };
         }
       });
-      
-      // Prepend file text content if available
+
       let currentMessageText = message;
       if (fileTextContent) {
         currentMessageText = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
       }
       
-      // Construct parts using potentially modified text
       let currentMessageParts = [{ text: currentMessageText }]; 
       if (imageData) {
         currentMessageParts.push({
@@ -108,12 +106,12 @@ const MODEL_CONFIGS = {
           }
         });
       }
-      
+
       const currentMessage = {
         role: 'user',
         parts: currentMessageParts
       };
-      
+
       return {
         contents: [
           ...formattedMessages,
@@ -789,6 +787,7 @@ export const fetchModelsFromBackend = async () => {
       id: model.id,
       name: model.name || `${model.provider}: ${model.id.split('/').pop()}`,
       provider: model.provider,
+      source: model.source,
       capabilities: model.capabilities || [],
       isBackendModel: true  // Explicitly mark as backend model
     }));

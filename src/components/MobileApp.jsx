@@ -235,7 +235,8 @@ const MobileAppContent = () => {
   });
 
   const [availableModels, setAvailableModels] = useState([
-    { id: 'gemini-2-flash', name: 'Gemini 2 Flash' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
     { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
     { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
     { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
@@ -244,7 +245,7 @@ const MobileAppContent = () => {
   
   const [selectedModel, setSelectedModel] = useState(() => {
     const savedModel = localStorage.getItem('selectedModel');
-    return savedModel || 'gemini-2-flash';
+    return savedModel || 'gemini-2.5-pro';
   });
 
   const [settings, setSettings] = useState(() => {

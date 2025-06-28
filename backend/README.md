@@ -24,14 +24,18 @@ a
    OPENROUTER_API_KEY=your_openrouter_api_key
    BRAVE_API_KEY=your_brave_search_api_key
    GEMINI_API_KEY=your_gemini_api_key
+   ANTHROPIC_API_KEY=your_anthropic_api_key
+   OPENAI_API_KEY=your_openai_api_key
    UNSPLASH_ACCESS_KEY=your_unsplash_access_key (optional)
    ALLOWED_MODELS=openai/gpt-4o,anthropic/claude-3-haiku,anthropic/claude-3-opus,anthropic/claude-3-sonnet,meta-llama/llama-2-70b-chat,google/gemini-pro
    ```
 
    **API Keys:**
-   - `OPENROUTER_API_KEY`: Required for AI chat functionality
+   - `OPENROUTER_API_KEY`: Required for OpenRouter models (fallback for unsupported models)
    - `BRAVE_API_KEY`: Required for web search functionality
-   - `GEMINI_API_KEY`: Required for image generation
+   - `GEMINI_API_KEY`: Required for Gemini models and image generation
+   - `ANTHROPIC_API_KEY`: Required for Claude models (Claude 4 Sonnet, Claude 4 Opus, etc.)
+   - `OPENAI_API_KEY`: Required for OpenAI models (GPT-4o, ChatGPT o3)
    - `UNSPLASH_ACCESS_KEY`: Optional - for automatic image fetching in news feeds. Get a free key at https://unsplash.com/developers. Without this, the system uses curated stock photos.
 
 3. Start the server:
