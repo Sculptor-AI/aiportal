@@ -1,6 +1,6 @@
 # AI Portal Cloudflare Workers Deployment Status
 
-## ✅ Deployment Complete (Final Update)
+## ✅ Deployment Complete (Final Update - All Issues Resolved)
 
 Your AI Portal has been successfully deployed to Cloudflare Workers and is now fully operational!
 
@@ -27,7 +27,8 @@ Your AI Portal has been successfully deployed to Cloudflare Workers and is now f
    - Built React app for production
    - Deployed static assets to Workers Sites using KV asset handler
    - Fixed worker errors by implementing proper asset handling
-   - Current Version ID: fa58226d-1c92-4674-a275-9980ae71fac4
+   - Fixed backend URLs from localhost to Cloudflare backend
+   - Current Version ID: eeede8e8-6f46-4560-9aa7-41f9dc445c03
 
 3. **Secrets Configured**
    - ✅ OPENROUTER_API_KEY
@@ -43,21 +44,32 @@ Your AI Portal has been successfully deployed to Cloudflare Workers and is now f
 1. **Error 1101**: Fixed frontend worker exception by updating worker.js
 2. **Error 1042**: Fixed by enabling workers_dev in wrangler.toml
 3. **Asset Handling**: Implemented proper KV asset handler for static files
+4. **Localhost Issue**: Fixed frontend trying to connect to localhost:3000 instead of Cloudflare backend
+   - Updated `aiService.js`, `rssService.js`, and `imageService.js` to use `https://aiapi.kaileh.dev`
+   - Rebuilt and redeployed frontend with correct backend URLs
+
+### ✅ Verified Working
+- Backend API endpoints tested and responding correctly
+- RSS feeds loading successfully
+- Models endpoint returning available AI models
+- CORS properly configured for cross-origin requests
 
 ### 🔧 Next Steps
 
-1. **Verify Custom Domains**: 
+1. **Clear Browser Cache**: If you still see localhost errors, clear your browser cache or use incognito mode
+
+2. **Verify Custom Domains**: 
    - DNS typically takes 10-30 minutes to propagate globally
    - Use workers.dev URLs in the meantime
 
-2. **Set up GitHub Actions**: 
+3. **Set up GitHub Actions**: 
    - Go to https://github.com/Sculptor-AI/aiportal/settings/secrets/actions
    - Add these repository secrets:
      - `CLOUDFLARE_API_TOKEN` (Create at: https://dash.cloudflare.com/profile/api-tokens)
      - `CLOUDFLARE_ACCOUNT_ID` (Found at: https://dash.cloudflare.com/)
    - Once configured, merge cloudflare branch to main for automatic deployments
 
-3. **Monitor Performance**:
+4. **Monitor Performance**:
    ```bash
    # View real-time logs
    wrangler tail --env production
@@ -80,5 +92,6 @@ Your AI Portal is now live on Cloudflare's global edge network with:
 - 📈 Serverless auto-scaling
 - ✅ All features migrated and operational
 - 🚀 Zero cold starts with Workers
+- 🔗 Correct backend connections (no more localhost!)
 
 The application is fully functional and ready to use! 
