@@ -1,4 +1,9 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// RSS Service for fetching articles from backend
+
+// Import the backend URL from aiService to ensure consistency
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 
+  import.meta.env.VITE_BACKEND_API_URL || 
+  'https://aiapi.kaileh.dev';
 
 /**
  * Fetch articles by category
@@ -8,7 +13,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
  */
 export const fetchArticlesByCategory = async (category, limit = 20) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/rss/articles/${category}?limit=${limit}`, {
+    const response = await fetch(`${BACKEND_URL}/api/rss/articles/${category}?limit=${limit}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -34,7 +39,7 @@ export const fetchArticlesByCategory = async (category, limit = 20) => {
  */
 export const fetchAllArticles = async (limit = 50) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/rss/articles?limit=${limit}`, {
+    const response = await fetch(`${BACKEND_URL}/api/rss/articles?limit=${limit}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -60,7 +65,7 @@ export const fetchAllArticles = async (limit = 50) => {
  */
 export const fetchArticleContent = async (url) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/rss/article-content?url=${encodeURIComponent(url)}`, {
+    const response = await fetch(`${BACKEND_URL}/api/rss/article-content?url=${encodeURIComponent(url)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

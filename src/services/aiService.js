@@ -746,7 +746,7 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // Add backend API base URL - ensure this matches your backend server address
 const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_URL || 
   import.meta.env.VITE_BACKEND_API_URL || 
-  'http://localhost:3000';
+  'https://aiapi.kaileh.dev';  // Use Cloudflare backend as default
 
 // Debug the actual URL being used
 console.log('Backend API URL being used:', BACKEND_API_BASE);

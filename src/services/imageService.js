@@ -1,24 +1,17 @@
 import axios from 'axios';
 
-// Add backend API base URL - ensure this matches your backend server address
-const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ? 
-  (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
-    import.meta.env.VITE_BACKEND_API_URL : 
-    `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
-  'http://localhost:3000/api';
+// Use the backend URL from environment or default to Cloudflare backend
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 
+  import.meta.env.VITE_BACKEND_API_URL || 
+  'https://aiapi.kaileh.dev';
 
-// Remove duplicated /api in endpoint paths
-const buildApiUrl = (endpoint) => {
-  if (!endpoint) return BACKEND_API_BASE;
-  
-  // If the endpoint already starts with /api, remove it to prevent duplication
-  const cleanEndpoint = endpoint.startsWith('/api/') ? endpoint.substring(4) :
-                        endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-  
-  return `${BACKEND_API_BASE}/${cleanEndpoint}`;
+const buildUrl = (path) => {
+  const cleanPath = path.startsWith('/api/') ? path.substring(4) : 
+    path.startsWith('/') ? path.substring(1) : path;
+  return `${API_BASE_URL}/api/${cleanPath}`;
 };
 
-const API_URL = buildApiUrl('v1/images'); // Backend image generation endpoint
+const API_URL = buildUrl('v1/images'); // Backend image generation endpoint
 
 /**
  * Calls the backend API to generate an image based on the provided prompt.
