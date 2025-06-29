@@ -11,7 +11,7 @@ import { isOpenAIModel, processOpenAIChat, streamOpenAIChat } from '../services/
  */
 export const completeChat = async (req, res) => {
   try {
-    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null, mode, systemPrompt } = req.body;
+    const { modelType, prompt, search = false, deepResearch = false, imageGen = false, imageData = null, mode, systemPrompt, messages = [] } = req.body;
     
     // Log the request (without sensitive data)
     console.log(`Request received for model: ${modelType}, mode: ${mode}, search: ${search}, hasImage: ${!!imageData}`);
@@ -55,7 +55,7 @@ export const completeChat = async (req, res) => {
       console.log(`Detected Anthropic model: ${modelType}`);
       
       try {
-        const anthropicResponse = await processAnthropicChat(modelType, prompt, imageData, systemPrompt);
+        const anthropicResponse = await processAnthropicChat(modelType, prompt, imageData, systemPrompt, messages);
         return res.status(200).json(anthropicResponse);
       } catch (error) {
         console.error('Error processing Anthropic request:', error);
@@ -72,7 +72,7 @@ export const completeChat = async (req, res) => {
       console.log(`Detected OpenAI model: ${modelType}`);
       
       try {
-        const openaiResponse = await processOpenAIChat(modelType, prompt, imageData, systemPrompt);
+        const openaiResponse = await processOpenAIChat(modelType, prompt, imageData, systemPrompt, messages);
         return res.status(200).json(openaiResponse);
       } catch (error) {
         console.error('Error processing OpenAI request:', error);
@@ -89,7 +89,7 @@ export const completeChat = async (req, res) => {
       console.log(`Detected Gemini model: ${modelType}`);
       
       try {
-        const geminiResponse = await processGeminiChat(modelType, prompt, imageData, systemPrompt);
+        const geminiResponse = await processGeminiChat(modelType, prompt, imageData, systemPrompt, messages);
         return res.status(200).json(geminiResponse);
       } catch (error) {
         console.error('Error processing Gemini request:', error);
@@ -166,6 +166,14 @@ export const completeChat = async (req, res) => {
       openRouterPayload.provider = providerConfig;
     }
     
+    // Add conversation history
+    if (messages && messages.length > 0) {
+      // Insert history messages before the current user message
+      const userMessage = openRouterPayload.messages.pop(); // Remove the current user message
+      openRouterPayload.messages.push(...messages); // Add history
+      openRouterPayload.messages.push(userMessage); // Add back the current user message
+    }
+    
     console.log(`Sending request to OpenRouter with payload:`, openRouterPayload);
     
     // Call OpenRouter API
@@ -212,7 +220,7 @@ export const completeChat = async (req, res) => {
  * @param {Object} res - Express response object
  */
 export const streamChat = async (req, res) => {
-  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode, systemPrompt } = req.body;
+  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode, systemPrompt, messages = [] } = req.body;
   
   if (!modelType || !prompt) {
     return res.status(400).json({ error: 'Missing required fields: modelType and prompt' });
@@ -319,7 +327,8 @@ export const streamChat = async (req, res) => {
           prompt,
           imageData,
           systemPrompt,
-          (chunk) => res.write(chunk)
+          (chunk) => res.write(chunk),
+          messages
         );
         return res.end();
       } catch (error) {
@@ -340,7 +349,8 @@ export const streamChat = async (req, res) => {
           prompt,
           imageData,
           systemPrompt,
-          (chunk) => res.write(chunk)
+          (chunk) => res.write(chunk),
+          messages
         );
         return res.end();
       } catch (error) {
@@ -361,7 +371,8 @@ export const streamChat = async (req, res) => {
           prompt,
           imageData,
           systemPrompt,
-          (chunk) => res.write(chunk)
+          (chunk) => res.write(chunk),
+          messages
         );
         return res.end();
       } catch (error) {
@@ -463,6 +474,14 @@ export const streamChat = async (req, res) => {
       openRouterPayload.provider = providerConfig;
     }
     
+    // Add conversation history
+    if (messages && messages.length > 0) {
+      // Insert history messages before the current user message
+      const userMessage = openRouterPayload.messages.pop(); // Remove the current user message
+      openRouterPayload.messages.push(...messages); // Add history
+      openRouterPayload.messages.push(userMessage); // Add back the current user message
+    }
+    
     console.log(`Sending streaming request to OpenRouter with payload:`, openRouterPayload);
     
     // Make a streaming request to OpenRouter
@@ -523,7 +542,7 @@ export const streamChat = async (req, res) => {
  * @param {Object} res - Express response object
  */
 export const handleChat = async (req, res) => {
-  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode, systemPrompt } = req.body;
+  const { modelType, prompt, search, deepResearch, imageGen, imageData, fileTextContent, mode, systemPrompt, messages = [] } = req.body;
   
   if (!modelType || !prompt) {
     return res.status(400).json({ error: 'Missing required fields: modelType and prompt' });
@@ -544,7 +563,7 @@ export const handleChat = async (req, res) => {
       console.log(`Detected Anthropic model in handleChat: ${modelType}`);
       
       try {
-        const anthropicResponse = await processAnthropicChat(modelType, prompt, imageData, systemPrompt);
+        const anthropicResponse = await processAnthropicChat(modelType, prompt, imageData, systemPrompt, messages);
         return res.status(200).json(anthropicResponse);
       } catch (error) {
         console.error('Error processing Anthropic request:', error);
@@ -561,7 +580,7 @@ export const handleChat = async (req, res) => {
       console.log(`Detected OpenAI model in handleChat: ${modelType}`);
       
       try {
-        const openaiResponse = await processOpenAIChat(modelType, prompt, imageData, systemPrompt);
+        const openaiResponse = await processOpenAIChat(modelType, prompt, imageData, systemPrompt, messages);
         return res.status(200).json(openaiResponse);
       } catch (error) {
         console.error('Error processing OpenAI request:', error);
@@ -578,7 +597,7 @@ export const handleChat = async (req, res) => {
       console.log(`Detected Gemini model in handleChat: ${modelType}`);
       
       try {
-        const geminiResponse = await processGeminiChat(modelType, prompt, imageData, systemPrompt);
+        const geminiResponse = await processGeminiChat(modelType, prompt, imageData, systemPrompt, messages);
         return res.status(200).json(geminiResponse);
       } catch (error) {
         console.error('Error processing Gemini request:', error);
@@ -678,6 +697,14 @@ export const handleChat = async (req, res) => {
     
     if (providerConfig) {
       openRouterPayload.provider = providerConfig;
+    }
+    
+    // Add conversation history
+    if (messages && messages.length > 0) {
+      // Insert history messages before the current user message
+      const userMessage = openRouterPayload.messages.pop(); // Remove the current user message
+      openRouterPayload.messages.push(...messages); // Add history
+      openRouterPayload.messages.push(userMessage); // Add back the current user message
     }
 
     console.log(`Sending request to OpenRouter with payload:`, openRouterPayload);

@@ -10,7 +10,9 @@
       "Bash(node server.js)",
       "Bash(npm run lint:*)",
       "Bash(rg:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm start)",
+      "Bash(npm run build:*)"
     ],
     "deny": []
   }

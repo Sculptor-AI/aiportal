@@ -810,7 +810,7 @@ export const fetchModelsFromBackend = async () => {
  * @param {string} mode - Optional mode for the request
  * @returns {Promise<Object>} The response
  */
-export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null) => {
+export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null, conversationHistory = []) => {
   try {
     // Build the API endpoint URL based on the action requested
     let endpoint = '/chat';
@@ -858,6 +858,12 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
     if (fileTextContent) {
       body.fileTextContent = fileTextContent;
       console.log(`Added ${fileTextContent.length} characters of file text to request`);
+    }
+    
+    // Add conversation history if provided
+    if (conversationHistory && conversationHistory.length > 0) {
+      body.messages = conversationHistory;
+      console.log(`Added ${conversationHistory.length} messages from conversation history to request`);
     }
     
     // For image generation, use a different endpoint
@@ -917,7 +923,8 @@ export const streamMessageFromBackend = async (
   imageData = null,
   fileTextContent = null,
   systemPrompt = null,
-  mode = null
+  mode = null,
+  conversationHistory = []
 ) => {
   try {
     // Create the request packet
@@ -964,6 +971,12 @@ export const streamMessageFromBackend = async (
     if (fileTextContent) {
       requestPacket.fileTextContent = fileTextContent;
       console.log(`Added ${fileTextContent.length} characters of file text to streaming request`);
+    }
+    
+    // Add conversation history if provided
+    if (conversationHistory && conversationHistory.length > 0) {
+      requestPacket.messages = conversationHistory;
+      console.log(`Added ${conversationHistory.length} messages from conversation history to streaming request`);
     }
     
     console.log('Sending streaming request to backend:', requestPacket);

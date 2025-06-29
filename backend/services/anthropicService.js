@@ -39,7 +39,7 @@ export const isAnthropicModel = (modelId) => {
 /**
  * Process a non-streaming Anthropic chat request
  */
-export const processAnthropicChat = async (modelType, prompt, imageData = null, systemPrompt = null) => {
+export const processAnthropicChat = async (modelType, prompt, imageData = null, systemPrompt = null, conversationHistory = []) => {
   try {
     const anthropic = initializeAnthropicClient();
     const modelName = mapToAnthropicModel(modelType);
@@ -49,7 +49,12 @@ export const processAnthropicChat = async (modelType, prompt, imageData = null, 
     // Build messages array
     const messages = [];
     
-    // Prepare content for the message
+    // Add conversation history
+    if (conversationHistory && conversationHistory.length > 0) {
+      messages.push(...conversationHistory);
+    }
+    
+    // Prepare content for the current message
     const content = [];
     
     // Add text prompt
@@ -112,7 +117,7 @@ export const processAnthropicChat = async (modelType, prompt, imageData = null, 
 /**
  * Process a streaming Anthropic chat request
  */
-export const streamAnthropicChat = async (modelType, prompt, imageData = null, systemPrompt = null, onChunk) => {
+export const streamAnthropicChat = async (modelType, prompt, imageData = null, systemPrompt = null, onChunk, conversationHistory = []) => {
   try {
     const anthropic = initializeAnthropicClient();
     const modelName = mapToAnthropicModel(modelType);
@@ -122,7 +127,12 @@ export const streamAnthropicChat = async (modelType, prompt, imageData = null, s
     // Build messages array
     const messages = [];
     
-    // Prepare content for the message
+    // Add conversation history
+    if (conversationHistory && conversationHistory.length > 0) {
+      messages.push(...conversationHistory);
+    }
+    
+    // Prepare content for the current message
     const content = [];
     
     // Add text prompt

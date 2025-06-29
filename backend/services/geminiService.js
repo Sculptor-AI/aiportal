@@ -43,7 +43,7 @@ export const isGeminiModel = (modelId) => {
 /**
  * Process a non-streaming Gemini chat request
  */
-export const processGeminiChat = async (modelType, prompt, imageData = null, systemPrompt = null) => {
+export const processGeminiChat = async (modelType, prompt, imageData = null, systemPrompt = null, conversationHistory = []) => {
   try {
     const genAI = initializeGeminiClient();
     const modelName = mapToGeminiModel(modelType);
@@ -52,30 +52,88 @@ export const processGeminiChat = async (modelType, prompt, imageData = null, sys
     
     const model = genAI.getGenerativeModel({ model: modelName });
     
-    // Build the prompt with system prompt if provided
-    let fullPrompt = prompt;
-    if (systemPrompt) {
-      fullPrompt = `${systemPrompt}\n\nUser: ${prompt}`;
-    }
-    
-    // Prepare the content parts
-    const parts = [];
-    
-    // Add text prompt
-    parts.push({ text: fullPrompt });
-    
-    // Add image if provided
-    if (imageData && imageData.data && imageData.mediaType) {
-      parts.push({
-        inlineData: {
-          mimeType: imageData.mediaType,
-          data: imageData.data
+    // If we have conversation history, use chat session
+    if (conversationHistory && conversationHistory.length > 0) {
+      // Convert conversation history to Gemini format
+      const history = conversationHistory.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+      
+      const chat = model.startChat({ history });
+      
+      // Build the current prompt with system prompt if provided
+      let currentPrompt = prompt;
+      if (systemPrompt) {
+        currentPrompt = `${systemPrompt}\n\n${prompt}`;
+      }
+      
+      // Prepare the content parts for current message
+      const parts = [];
+      parts.push({ text: currentPrompt });
+      
+      // Add image if provided
+      if (imageData && imageData.data && imageData.mediaType) {
+        parts.push({
+          inlineData: {
+            mimeType: imageData.mediaType,
+            data: imageData.data
+          }
+        });
+      }
+      
+      // Send message with parts
+      const result = await chat.sendMessage(parts);
+      const response = await result.response;
+      const text = response.text();
+      
+      // Format response to match OpenRouter format for consistency
+      return {
+        id: `gemini-${Date.now()}`,
+        object: 'chat.completion',
+        created: Math.floor(Date.now() / 1000),
+        model: modelName,
+        choices: [{
+          index: 0,
+          message: {
+            role: 'assistant',
+            content: text
+          },
+          finish_reason: 'stop'
+        }],
+        usage: {
+          prompt_tokens: 0,
+          completion_tokens: 0,
+          total_tokens: 0
         }
-      });
+      };
+    } else {
+      // No history - use single generation
+      // Build the prompt with system prompt if provided
+      let fullPrompt = prompt;
+      if (systemPrompt) {
+        fullPrompt = `${systemPrompt}\n\nUser: ${prompt}`;
+      }
+      
+      // Prepare the content parts
+      const parts = [];
+      
+      // Add text prompt
+      parts.push({ text: fullPrompt });
+      
+      // Add image if provided
+      if (imageData && imageData.data && imageData.mediaType) {
+        parts.push({
+          inlineData: {
+            mimeType: imageData.mediaType,
+            data: imageData.data
+          }
+        });
+      }
+      
+      // Generate content
+      const result = await model.generateContent(parts);
     }
-    
-    // Generate content
-    const result = await model.generateContent(parts);
     const response = await result.response;
     const text = response.text();
     
@@ -108,7 +166,7 @@ export const processGeminiChat = async (modelType, prompt, imageData = null, sys
 /**
  * Process a streaming Gemini chat request
  */
-export const streamGeminiChat = async (modelType, prompt, imageData = null, systemPrompt = null, onChunk) => {
+export const streamGeminiChat = async (modelType, prompt, imageData = null, systemPrompt = null, onChunk, conversationHistory = []) => {
   try {
     const genAI = initializeGeminiClient();
     const modelName = mapToGeminiModel(modelType);
@@ -117,17 +175,61 @@ export const streamGeminiChat = async (modelType, prompt, imageData = null, syst
     
     const model = genAI.getGenerativeModel({ model: modelName });
     
-    // Build the prompt with system prompt if provided
-    let fullPrompt = prompt;
-    if (systemPrompt) {
-      fullPrompt = `${systemPrompt}\n\nUser: ${prompt}`;
-    }
-    
-    // Prepare the content parts
-    const parts = [];
-    
-    // Add text prompt
-    parts.push({ text: fullPrompt });
+    // If we have conversation history, use chat session
+    if (conversationHistory && conversationHistory.length > 0) {
+      // Convert conversation history to Gemini format
+      const history = conversationHistory.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+      
+      const chat = model.startChat({ history });
+      
+      // Build the current prompt with system prompt if provided
+      let currentPrompt = prompt;
+      if (systemPrompt) {
+        currentPrompt = `${systemPrompt}\n\n${prompt}`;
+      }
+      
+      // Prepare the content parts for current message
+      const parts = [];
+      parts.push({ text: currentPrompt });
+      
+      // Add image if provided
+      if (imageData && imageData.data && imageData.mediaType) {
+        parts.push({
+          inlineData: {
+            mimeType: imageData.mediaType,
+            data: imageData.data
+          }
+        });
+      }
+      
+      // Send streaming message
+      const result = await chat.sendMessageStream(parts);
+      
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        if (chunkText) {
+          onChunk(`data: ${JSON.stringify({ content: chunkText })}\n\n`);
+        }
+      }
+      
+      onChunk('data: [DONE]\n\n');
+      return;
+    } else {
+      // No history - use single generation
+      // Build the prompt with system prompt if provided
+      let fullPrompt = prompt;
+      if (systemPrompt) {
+        fullPrompt = `${systemPrompt}\n\nUser: ${prompt}`;
+      }
+      
+      // Prepare the content parts
+      const parts = [];
+      
+      // Add text prompt
+      parts.push({ text: fullPrompt });
     
     // Add image if provided
     if (imageData && imageData.data && imageData.mediaType) {
@@ -165,8 +267,9 @@ export const streamGeminiChat = async (modelType, prompt, imageData = null, syst
       }
     }
     
-    // Send the final done message
-    onChunk('data: [DONE]\n\n');
+      // Send the final done message
+      onChunk('data: [DONE]\n\n');
+    }
     
   } catch (error) {
     console.error('Error in Gemini streaming:', error);

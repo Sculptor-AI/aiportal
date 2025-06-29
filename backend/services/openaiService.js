@@ -39,7 +39,7 @@ export const isOpenAIModel = (modelId) => {
 /**
  * Process a non-streaming OpenAI chat request
  */
-export const processOpenAIChat = async (modelType, prompt, imageData = null, systemPrompt = null) => {
+export const processOpenAIChat = async (modelType, prompt, imageData = null, systemPrompt = null, conversationHistory = []) => {
   try {
     const openai = initializeOpenAIClient();
     const modelName = mapToOpenAIModel(modelType);
@@ -55,6 +55,11 @@ export const processOpenAIChat = async (modelType, prompt, imageData = null, sys
         role: 'system',
         content: systemPrompt
       });
+    }
+    
+    // Add conversation history
+    if (conversationHistory && conversationHistory.length > 0) {
+      messages.push(...conversationHistory);
     }
     
     // Prepare content for the user message
@@ -110,7 +115,7 @@ export const processOpenAIChat = async (modelType, prompt, imageData = null, sys
 /**
  * Process a streaming OpenAI chat request
  */
-export const streamOpenAIChat = async (modelType, prompt, imageData = null, systemPrompt = null, onChunk) => {
+export const streamOpenAIChat = async (modelType, prompt, imageData = null, systemPrompt = null, onChunk, conversationHistory = []) => {
   try {
     const openai = initializeOpenAIClient();
     const modelName = mapToOpenAIModel(modelType);
@@ -126,6 +131,11 @@ export const streamOpenAIChat = async (modelType, prompt, imageData = null, syst
         role: 'system',
         content: systemPrompt
       });
+    }
+    
+    // Add conversation history
+    if (conversationHistory && conversationHistory.length > 0) {
+      messages.push(...conversationHistory);
     }
     
     // Prepare content for the user message

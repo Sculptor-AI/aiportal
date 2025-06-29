@@ -197,6 +197,12 @@ const useMessageSender = ({
       ...(msg.image && { image: msg.image })
     }));
 
+    // Convert history to API format (exclude images for backend API calls)
+    const apiHistory = currentHistory.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
     const aiMessageId = generateId();
     const aiMessage = {
       id: aiMessageId,
@@ -248,7 +254,7 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
               updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
             },
             currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
-            imageDataToSend, fileTextToSend, systemPromptForApi, thinkingMode
+            imageDataToSend, fileTextToSend, systemPromptForApi, thinkingMode, apiHistory
           );
           const messageUpdates = { content: streamedContent, isLoading: false };
           if (window.__lastSearchSources && Array.isArray(window.__lastSearchSources) && (currentActionChip === 'search' || currentActionChip === 'deep-research')) {
@@ -261,7 +267,7 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
           const backendResponse = await sendMessageToBackend(
             currentModel, finalMessageToSend,
             currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
-            imageDataToSend, fileTextToSend, systemPromptForApi, thinkingMode
+            imageDataToSend, fileTextToSend, systemPromptForApi, thinkingMode, apiHistory
           );
           finalAssistantContent = backendResponse.response || 'No response from backend';
           updateMessage(currentChatId, aiMessageId, {
