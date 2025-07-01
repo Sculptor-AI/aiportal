@@ -6,7 +6,7 @@ const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ?
   (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
     import.meta.env.VITE_BACKEND_API_URL : 
     `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
-  'http://localhost:3000/api';
+  'http://73.118.140.130:3000/api';
 
 // Helper function to build API URLs
 const buildApiUrl = (endpoint) => {

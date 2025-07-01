@@ -917,7 +917,7 @@ const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ?
   (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
     import.meta.env.VITE_BACKEND_API_URL : 
     `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
-  'http://localhost:3000/api';
+  'http://73.118.140.130:3000/api';
 
 // Debug the actual URL being used
 console.log('Backend API URL being used:', BACKEND_API_BASE);
