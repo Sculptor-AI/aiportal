@@ -2,7 +2,7 @@
 // Backend authentication service for AI Portal
 
 // Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://73.118.140.130:3000';
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://73.118.140.130:3000';
 
 // Remove any trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
