@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
+import PopupMenu from './ToolMenuModal';
+import { ActionChipsContainer, ActionChip } from './ChatWindow.styled';
+import { generateImageApi } from '../services/imageService';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../services/aiService';
 import { useToast } from '../contexts/ToastContext';
 import MobileChatMessage from './MobileChatMessage';
@@ -180,6 +183,18 @@ const MobileChatWindow = ({
   const toast = useToast();
   const theme = useTheme();
 
+  // Chip related states
+  const [selectedActionChip, setSelectedActionChip] = useState(null); // 'search' | 'deep-research' | 'create-image' | 'create-video'
+  const [thinkingMode, setThinkingMode] = useState(null); // 'thinking' | 'instant' | null
+  const [createType, setCreateType] = useState(null); // 'image' | 'video' | null
+  const [showModeModal, setShowModeModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isImagePromptMode, setIsImagePromptMode] = useState(false);
+  const modeAnchorRef = useRef(null);
+  const createAnchorRef = useRef(null);
+  const [modeMenuRect, setModeMenuRect] = useState(null);
+  const [createMenuRect, setCreateMenuRect] = useState(null);
+
   // Auto-resize textarea
   useEffect(() => {
     if (inputRef.current) {
@@ -303,10 +318,81 @@ const MobileChatWindow = ({
 
   const handleSendMessage = async () => {
     console.log('[Mobile] Send button clicked');
-    
+
     const messageToSend = inputMessage.trim();
     const currentImageData = uploadedFile?.dataUrl;
     const currentFileText = uploadedFile?.text;
+
+    // Handle image generation flow first
+    if (isImagePromptMode) {
+      if (!messageToSend) return;
+
+      if (isLoading || !chat?.id) return;
+
+      setIsLoading(true);
+
+      const currentChatId = chat.id;
+
+      // Add user prompt message
+      const userPromptMsg = {
+        id: generateId(),
+        role: 'user',
+        content: `Generate image: "${messageToSend}"`,
+        timestamp: new Date().toISOString(),
+      };
+      addMessage(currentChatId, userPromptMsg);
+
+      // Placeholder assistant message
+      const imagePlaceholderId = generateId();
+      const placeholderMsg = {
+        id: imagePlaceholderId,
+        role: 'assistant',
+        type: 'generated-image',
+        prompt: messageToSend,
+        status: 'loading',
+        imageUrl: null,
+        content: '',
+        timestamp: new Date().toISOString(),
+        modelId: 'image-generator',
+      };
+      addMessage(currentChatId, placeholderMsg);
+
+      setInputMessage('');
+      setIsImagePromptMode(false);
+      setCreateType(null);
+      setSelectedActionChip(null);
+
+      setTimeout(scrollToBottom, 100);
+
+      try {
+        const imgResponse = await generateImageApi(messageToSend);
+        const imgUrl = imgResponse.imageData || imgResponse.imageUrl;
+
+        if (!imgUrl) throw new Error('No image URL returned');
+
+        updateMessage(currentChatId, imagePlaceholderId, {
+          status: 'completed',
+          imageUrl: imgUrl,
+          isLoading: false,
+        });
+
+        if (chat.messages.length === 0) {
+          updateChatTitle(currentChatId, `Image: ${messageToSend.substring(0, 30)}${messageToSend.length > 30 ? '...' : ''}`);
+        }
+      } catch (err) {
+        console.error('Image generation error:', err);
+        updateMessage(currentChatId, imagePlaceholderId, {
+          status: 'error',
+          isLoading: false,
+          content: err.message || 'Failed to generate image',
+          isError: true,
+        });
+        toast.showToast(`Image generation failed: ${err.message || 'Unknown error'}`, 'error');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     console.log('[Mobile] Message state:', {
       messageToSend,
@@ -408,6 +494,28 @@ const MobileChatWindow = ({
     let streamedContent = '';
 
     try {
+      const isSearch = selectedActionChip === 'search';
+      const isDeepResearch = selectedActionChip === 'deep-research';
+      const isImageGen = selectedActionChip === 'create-image';
+
+      const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
+`You are a Deep Analysis Chain of Thought model. You MUST provide both thinking and a final answer.
+
+CRITICAL: Your response must have TWO parts:
+
+1. FIRST: Put your thinking inside <think></think> tags with your reasoning process.
+
+2. SECOND: After the </think> tag, you MUST provide your actual answer to the user's question. Do not stop after the thinking block.
+
+Example format:
+<think>
+[Your reasoning here]
+</think>
+
+[Your actual answer here]
+
+IMPORTANT: Always provide content after the </think> tag. Never end your response with just the thinking block.` : null;
+
       if (isBackendModel) {
         const supportsStreaming = currentModelObj?.supportsStreaming !== false;
         
@@ -419,11 +527,14 @@ const MobileChatWindow = ({
               streamedContent += chunk;
               updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
             },
-            false, // search
-            false, // deep research
-            false, // create image
+            isSearch,
+            isDeepResearch,
+            isImageGen,
             currentImageData,
-            currentFileText
+            currentFileText,
+            thinkingModeSystemPrompt,
+            thinkingMode,
+            currentHistory.map(msg => ({ role: msg.role, content: msg.content }))
           );
 
           updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
@@ -431,11 +542,14 @@ const MobileChatWindow = ({
           const backendResponse = await sendMessageToBackend(
             currentModel,
             messageToSend,
-            false, // search
-            false, // deep research  
-            false, // create image
+            isSearch,
+            isDeepResearch,
+            isImageGen,
             currentImageData,
-            currentFileText
+            currentFileText,
+            thinkingModeSystemPrompt,
+            thinkingMode,
+            currentHistory.map(msg => ({ role: msg.role, content: msg.content }))
           );
 
           updateMessage(currentChatId, aiMessageId, {
@@ -458,9 +572,10 @@ const MobileChatWindow = ({
           formattedHistory,
           currentImageData,
           currentFileText,
-          false, // search
-          false, // deep research
-          false  // create image
+          isSearch,
+          isDeepResearch,
+          isImageGen,
+          thinkingModeSystemPrompt
         );
 
         for await (const chunk of messageGenerator) {
@@ -506,10 +621,11 @@ const MobileChatWindow = ({
   };
 
   const getPlaceholderText = () => {
-    if (isLoading) return "Generating response...";
-    if (isProcessingFile) return "Processing file...";
+    if (isImagePromptMode) return 'Enter prompt for image generation...';
+    if (isLoading) return 'Generating response...';
+    if (isProcessingFile) return 'Processing file...';
     if (uploadedFile) return `Attached: ${uploadedFile.name}`;
-    return "Message";
+    return 'Message';
   };
 
   const isSendButtonDisabled = isLoading || isProcessingFile || (!inputMessage.trim() && !uploadedFile);
@@ -602,6 +718,106 @@ const MobileChatWindow = ({
           onChange={handleFileChange}
           accept="image/*,.txt,.pdf"
           style={{ display: 'none' }}
+        />
+
+        {/* Action chips */}
+        <ActionChipsContainer>
+          <ActionChip
+            ref={modeAnchorRef}
+            selected={thinkingMode !== null}
+            onClick={() => {
+              if (modeAnchorRef.current) {
+                // Force reflow then capture rect
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                modeAnchorRef.current.offsetHeight;
+                const rect = modeAnchorRef.current.getBoundingClientRect();
+                setModeMenuRect(rect);
+              }
+              setShowModeModal(true);
+            }}
+          >
+            {thinkingMode === 'thinking' ? 'Thinking' : thinkingMode === 'instant' ? 'Instant' : 'Mode'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </ActionChip>
+
+          <ActionChip
+            selected={selectedActionChip === 'search'}
+            onClick={() => {
+              setSelectedActionChip(prev => (prev === 'search' ? null : 'search'));
+              setThinkingMode(null);
+            }}
+          >
+            Search
+          </ActionChip>
+
+          <ActionChip
+            selected={selectedActionChip === 'deep-research'}
+            onClick={() => {
+              setSelectedActionChip(prev => (prev === 'deep-research' ? null : 'deep-research'));
+              setThinkingMode(null);
+            }}
+          >
+            Deep Research
+          </ActionChip>
+
+          <ActionChip
+            ref={createAnchorRef}
+            selected={selectedActionChip === 'create-image' || selectedActionChip === 'create-video'}
+            onClick={() => {
+              if (createAnchorRef.current) {
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                createAnchorRef.current.offsetHeight;
+                const rect = createAnchorRef.current.getBoundingClientRect();
+                setCreateMenuRect(rect);
+              }
+              setShowCreateModal(true);
+            }}
+          >
+            {createType === 'image' ? 'Create image' : createType === 'video' ? 'Create video' : 'Create'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </ActionChip>
+        </ActionChipsContainer>
+
+        {/* Popup menus */}
+        <PopupMenu
+          isOpen={showModeModal}
+          onClose={() => setShowModeModal(false)}
+          menuType="mode"
+          currentValue={thinkingMode}
+          onSelect={(mode) => {
+            setThinkingMode(mode);
+            setSelectedActionChip(null);
+            setShowModeModal(false);
+          }}
+          theme={theme}
+          rect={modeMenuRect}
+        />
+
+        <PopupMenu
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          menuType="create"
+          currentValue={createType}
+          onSelect={(type) => {
+            setCreateType(type);
+            if (type === 'image') {
+              setSelectedActionChip('create-image');
+              setIsImagePromptMode(true);
+              setInputMessage('');
+            } else if (type === 'video') {
+              setSelectedActionChip('create-video');
+              // TODO: future video creation
+            } else {
+              setSelectedActionChip(null);
+            }
+            setShowCreateModal(false);
+          }}
+          theme={theme}
+          rect={createMenuRect}
         />
       </InputContainer>
     </MobileChatContainer>
