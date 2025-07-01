@@ -193,6 +193,77 @@ const ErrorMessage = styled.div`
   border: 1px solid rgba(255, 68, 68, 0.2);
 `;
 
+const GeneratedImageContainer = styled.div`
+  margin: 8px 0;
+`;
+
+const GeneratedImage = styled.img`
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.border};
+`;
+
+const ImagePrompt = styled.div`
+  font-size: 14px;
+  color: ${props => props.theme.text}88;
+  margin-bottom: 8px;
+  font-style: italic;
+`;
+
+const ImageLoadingPlaceholder = styled.div`
+  width: 100%;
+  height: 200px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: ${props => props.theme.text}88;
+`;
+
+const SourcesContainer = styled.div`
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid ${props => props.theme.border};
+`;
+
+const SourcesTitle = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${props => props.theme.text};
+  margin-bottom: 8px;
+`;
+
+const SourceItem = styled.a`
+  display: block;
+  padding: 8px;
+  margin: 4px 0;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 8px;
+  text-decoration: none;
+  color: ${props => props.theme.text};
+  font-size: 14px;
+  
+  &:hover {
+    background: ${props => props.theme.border};
+  }
+`;
+
+const SourceTitle = styled.div`
+  font-weight: 600;
+  margin-bottom: 4px;
+`;
+
+const SourceUrl = styled.div`
+  color: ${props => props.theme.text}88;
+  font-size: 12px;
+`;
+
 const parseMessageContent = (content) => {
   if (!content) return [];
   
@@ -272,9 +343,56 @@ const formatTimestamp = (timestamp) => {
 
 const MobileChatMessage = ({ message, settings }) => {
   const [imageError, setImageError] = useState(false);
+  const [generatedImageError, setGeneratedImageError] = useState(false);
   
   const isUser = message.role === 'user';
   const contentParts = parseMessageContent(message.content);
+  
+  // Handle generated images
+  if (message.type === 'generated-image') {
+    return (
+      <MessageContainer isUser={false}>
+        <MessageBubble isUser={false}>
+          <GeneratedImageContainer>
+            {message.prompt && (
+              <ImagePrompt>"{message.prompt}"</ImagePrompt>
+            )}
+            
+            {message.status === 'loading' ? (
+              <ImageLoadingPlaceholder>
+                <LoadingDots>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </LoadingDots>
+                Generating image...
+              </ImageLoadingPlaceholder>
+            ) : message.status === 'error' ? (
+              <ErrorMessage>
+                {message.content || 'Failed to generate image'}
+              </ErrorMessage>
+            ) : message.imageUrl && !generatedImageError ? (
+              <GeneratedImage
+                src={message.imageUrl}
+                alt={`Generated image: ${message.prompt}`}
+                onError={() => setGeneratedImageError(true)}
+              />
+            ) : generatedImageError ? (
+              <ErrorMessage>
+                Failed to load generated image
+              </ErrorMessage>
+            ) : null}
+          </GeneratedImageContainer>
+        </MessageBubble>
+        
+        {settings?.showTimestamps && message.timestamp && (
+          <MessageTimestamp isUser={false}>
+            {formatTimestamp(message.timestamp)}
+          </MessageTimestamp>
+        )}
+      </MessageContainer>
+    );
+  }
   
   return (
     <MessageContainer isUser={isUser}>
@@ -322,6 +440,24 @@ const MobileChatMessage = ({ message, settings }) => {
           <ErrorMessage>
             Failed to generate response. Please try again.
           </ErrorMessage>
+        )}
+        
+        {/* Show sources if available (for search/research) */}
+        {message.sources && message.sources.length > 0 && (
+          <SourcesContainer>
+            <SourcesTitle>Sources</SourcesTitle>
+            {message.sources.map((source, index) => (
+              <SourceItem
+                key={index}
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <SourceTitle>{source.title}</SourceTitle>
+                <SourceUrl>{source.url}</SourceUrl>
+              </SourceItem>
+            ))}
+          </SourcesContainer>
         )}
       </MessageBubble>
       
