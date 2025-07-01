@@ -1,7 +1,7 @@
 // Service Worker for AI Portal PWA
-const CACHE_NAME = 'ai-portal-v1';
-const STATIC_CACHE_NAME = 'ai-portal-static-v1';
-const DYNAMIC_CACHE_NAME = 'ai-portal-dynamic-v1';
+const CACHE_NAME = 'ai-portal-v2';
+const STATIC_CACHE_NAME = 'ai-portal-static-v2';
+const DYNAMIC_CACHE_NAME = 'ai-portal-dynamic-v2';
 
 // Static assets to cache
 const STATIC_ASSETS = [

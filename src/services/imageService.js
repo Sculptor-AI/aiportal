@@ -1,24 +1,36 @@
 import axios from 'axios';
 
-// Add backend API base URL - ensure this matches your backend server address
-const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ? 
-  (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
-    import.meta.env.VITE_BACKEND_API_URL : 
-    `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
-  'http://73.118.140.130:3000/api';
+// Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://73.118.140.130:3000';
+
+// Remove trailing slashes
+let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
+
+// Remove a trailing /api if present
+if (cleanedBase.endsWith('/api')) {
+  cleanedBase = cleanedBase.slice(0, -4);
+}
+
+const BACKEND_API_BASE = `${cleanedBase}/api`;
+
+console.log('[imageService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
 
 // Remove duplicated /api in endpoint paths
 const buildApiUrl = (endpoint) => {
   if (!endpoint) return BACKEND_API_BASE;
-  
-  // If the endpoint already starts with /api, remove it to prevent duplication
-  const cleanEndpoint = endpoint.startsWith('/api/') ? endpoint.substring(4) :
-                        endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
-  
-  return `${BACKEND_API_BASE}/${cleanEndpoint}`;
+
+  // Normalize endpoint to remove a leading slash if it exists
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+
+  // Prevent double "api" segment
+  if (normalizedEndpoint.startsWith('api/')) {
+    return `${BACKEND_API_BASE}/${normalizedEndpoint.substring(4)}`;
+  }
+
+  return `${BACKEND_API_BASE}/${normalizedEndpoint}`;
 };
 
-const API_URL = buildApiUrl('v1/images'); // Backend image generation endpoint
+const API_URL = buildApiUrl('/v1/images'); // Backend image generation endpoint
 
 /**
  * Calls the backend API to generate an image based on the provided prompt.

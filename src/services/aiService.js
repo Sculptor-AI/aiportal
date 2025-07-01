@@ -912,28 +912,34 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // 3. Remove `extractResponse` from all MODEL_CONFIGS.
 // 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.
 
-// Add backend API base URL - ensure this matches your backend server address
-const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ? 
-  (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
-    import.meta.env.VITE_BACKEND_API_URL : 
-    `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
-  'http://73.118.140.130:3000/api';
+// Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://73.118.140.130:3000';
 
-// Debug the actual URL being used
-console.log('Backend API URL being used:', BACKEND_API_BASE);
+// Remove trailing slashes
+let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
+
+// Remove a trailing /api if present
+if (cleanedBase.endsWith('/api')) {
+  cleanedBase = cleanedBase.slice(0, -4);
+}
+
+const BACKEND_API_BASE = `${cleanedBase}/api`;
+
+console.log('[aiService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
 
 // Remove duplicated /api in endpoint paths
 const buildApiUrl = (endpoint) => {
   if (!endpoint) return BACKEND_API_BASE;
-  
-  // If the endpoint already starts with /api, remove it to prevent duplication
-  const cleanEndpoint = endpoint.startsWith('/api/') ? endpoint.substring(4) : 
-                         (endpoint.startsWith('/api') ? endpoint.substring(4) : endpoint);
-  
-  // Ensure endpoint has a leading slash if it doesn't already
-  const formattedEndpoint = cleanEndpoint.startsWith('/') ? cleanEndpoint : `/${cleanEndpoint}`;
-  
-  return `${BACKEND_API_BASE}${formattedEndpoint}`;
+
+  // Normalize endpoint to remove a leading slash if it exists
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+
+  // Prevent double "api" segment
+  if (normalizedEndpoint.startsWith('api/')) {
+    return `${BACKEND_API_BASE}/${normalizedEndpoint.substring(4)}`;
+  }
+
+  return `${BACKEND_API_BASE}/${normalizedEndpoint}`;
 };
 
 /**

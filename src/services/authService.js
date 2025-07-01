@@ -1,19 +1,41 @@
 // authService.js
 // Backend authentication service for AI Portal
 
-// Backend API base URL
-const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ? 
-  (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
-    import.meta.env.VITE_BACKEND_API_URL : 
-    `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
-  'http://73.118.140.130:3000/api';
+// Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://73.118.140.130:3000';
+
+// Remove any trailing slashes
+let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
+
+// If the cleaned base already ends with /api, remove it
+if (cleanedBase.endsWith('/api')) {
+  cleanedBase = cleanedBase.slice(0, -4); // remove '/api'
+}
+
+const BACKEND_API_BASE = `${cleanedBase}/api`;
+
+console.log('[authService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
 
 // Helper function to build API URLs
 const buildApiUrl = (endpoint) => {
-  if (!endpoint) return BACKEND_API_BASE;
+  console.log('[authService] buildApiUrl called with endpoint:', endpoint);
+  console.log('[authService] BACKEND_API_BASE:', BACKEND_API_BASE);
   
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  return `${BACKEND_API_BASE}${cleanEndpoint}`;
+  if (!endpoint) return BACKEND_API_BASE;
+
+  // Normalize endpoint to remove a leading slash if it exists
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+
+  // Prevent double "api" segment
+  if (normalizedEndpoint.startsWith('api/')) {
+    const result = `${BACKEND_API_BASE}/${normalizedEndpoint.substring(4)}`;
+    console.log('[authService] Detected api/ prefix, returning:', result);
+    return result;
+  }
+
+  const result = `${BACKEND_API_BASE}/${normalizedEndpoint}`;
+  console.log('[authService] Normal endpoint, returning:', result);
+  return result;
 };
 
 // Google login (placeholder - can be implemented later if needed)
@@ -56,7 +78,10 @@ export const registerUser = async (username, password, email) => {
 // Login user
 export const loginUser = async (username, password) => {
   try {
-    const response = await fetch(buildApiUrl('/auth/login'), {
+    const loginUrl = buildApiUrl('/auth/login');
+    console.log('[authService] Login URL being used:', loginUrl);
+    
+    const response = await fetch(loginUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
