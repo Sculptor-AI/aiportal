@@ -1,163 +1,104 @@
 // authService.js
-// Simple server-side authentication simulation with localStorage
+// Backend authentication service for AI Portal
 
-// Hash function for password (in a real app, use bcrypt on the server)
-const hashPassword = (password) => {
-  // Simple hash for demonstration purposes only - not for production
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return hash.toString(16);
+// Backend API base URL
+const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ? 
+  (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
+    import.meta.env.VITE_BACKEND_API_URL : 
+    `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
+  'http://localhost:3000/api';
+
+// Helper function to build API URLs
+const buildApiUrl = (endpoint) => {
+  if (!endpoint) return BACKEND_API_BASE;
+  
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${BACKEND_API_BASE}${cleanEndpoint}`;
 };
 
-// Simulated server-side user database
-const getUserDatabase = () => {
-  const usersJSON = localStorage.getItem('ai_portal_users');
-  return usersJSON ? JSON.parse(usersJSON) : {};
-};
-
-const saveUserDatabase = (users) => {
-  localStorage.setItem('ai_portal_users', JSON.stringify(users));
-};
-
-// Google login simulation
+// Google login (placeholder - can be implemented later if needed)
 export const loginWithGoogle = () => {
-  return new Promise((resolve, reject) => {
-    // Simulate server processing time
-    setTimeout(() => {
-      // Generate a random Google ID
-      const googleId = 'google_' + Math.random().toString(36).substring(2, 15);
-      const username = 'user_' + Math.random().toString(36).substring(2, 10);
-      
-      const users = getUserDatabase();
-      
-      // Check if this Google user already exists
-      let user = Object.values(users).find(u => u.googleId === googleId);
-      
-      if (!user) {
-        // Create new user with Google credentials
-        user = {
-          username,
-          googleId,
-          createdAt: new Date().toISOString(),
-          settings: {
-            theme: 'light',
-            fontSize: 'medium',
-            sendWithEnter: true,
-            showTimestamps: true,
-            showModelIcons: true,
-            messageAlignment: 'left',
-            codeHighlighting: true,
-            openaiApiKey: '',
-            anthropicApiKey: '',
-            googleApiKey: ''
-          }
-        };
-        
-        users[username] = user;
-        saveUserDatabase(users);
-      }
-      
-      // Create a clean user object without sensitive data
-      const cleanUser = { ...user };
-      
-      // Store in session storage
-      sessionStorage.setItem('ai_portal_current_user', JSON.stringify(cleanUser));
-      
-      resolve(cleanUser);
-    }, 800); // Simulate network delay
-  });
+  return Promise.reject(new Error('Google login not implemented in backend yet'));
 };
 
 // Register a new user
-export const registerUser = (username, password) => {
-  return new Promise((resolve, reject) => {
-    // Simulate server processing time
-    setTimeout(() => {
-      const users = getUserDatabase();
-      
-      // Check if user already exists
-      if (users[username]) {
-        reject(new Error('Username already exists'));
-        return;
-      }
-      
-      // Create new user with hashed password
-      const hashedPassword = hashPassword(password);
-      users[username] = {
+export const registerUser = async (username, password, email) => {
+  try {
+    const response = await fetch(buildApiUrl('/auth/register'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         username,
-        password: hashedPassword,
-        createdAt: new Date().toISOString(),
-        settings: {
-          theme: 'light',
-          fontSize: 'medium',
-          sendWithEnter: true,
-          showTimestamps: true,
-          showModelIcons: true,
-          messageAlignment: 'left',
-          codeHighlighting: true,
-          openaiApiKey: '',
-          anthropicApiKey: '',
-          googleApiKey: ''
-        }
-      };
-      
-      saveUserDatabase(users);
-      
-      // Set session token (without password)
-      const user = { ...users[username] };
-      delete user.password;
-      
-      // Store in session storage (will be cleared when browser is closed)
-      sessionStorage.setItem('ai_portal_current_user', JSON.stringify(user));
-      
-      resolve(user);
-    }, 500); // Simulate network delay
-  });
+        password,
+        email
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Registration failed');
+    }
+
+    return {
+      success: true,
+      message: data.message,
+      userId: data.userId
+    };
+  } catch (error) {
+    console.error('Registration error:', error);
+    throw error;
+  }
 };
 
 // Login user
-export const loginUser = (username, password) => {
-  return new Promise((resolve, reject) => {
-    // Simulate server processing time
-    setTimeout(() => {
-      const users = getUserDatabase();
-      const user = users[username];
+export const loginUser = async (username, password) => {
+  try {
+    const response = await fetch(buildApiUrl('/auth/login'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username,
+        password
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Login failed');
+    }
+
+    if (data.success && data.data) {
+      // Store user data and tokens
+      const user = {
+        ...data.data.user,
+        accessToken: data.data.accessToken,
+        refreshToken: data.data.refreshToken
+      };
+
+      // Store in session storage
+      sessionStorage.setItem('ai_portal_current_user', JSON.stringify(user));
       
-      // Check if user exists
-      if (!user) {
-        reject(new Error('Invalid username or password'));
-        return;
-      }
-      
-      // Check password
-      if (user.password !== hashPassword(password)) {
-        reject(new Error('Invalid username or password'));
-        return;
-      }
-      
-      // Create a clean user object without password
-      const cleanUser = { ...user };
-      delete cleanUser.password;
-      
-      // Store in session storage (will be cleared when browser is closed)
-      sessionStorage.setItem('ai_portal_current_user', JSON.stringify(cleanUser));
-      
-      resolve(cleanUser);
-    }, 500); // Simulate network delay
-  });
+      return user;
+    } else {
+      throw new Error('Invalid response format');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
 };
 
 // Logout user
 export const logoutUser = () => {
   return new Promise((resolve) => {
-    setTimeout(() => {
-      sessionStorage.removeItem('ai_portal_current_user');
-      resolve(true);
-    }, 200);
+    sessionStorage.removeItem('ai_portal_current_user');
+    resolve(true);
   });
 };
 
@@ -167,30 +108,89 @@ export const getCurrentUser = () => {
   return userJSON ? JSON.parse(userJSON) : null;
 };
 
-// Update user settings
+// Get authentication headers for API requests
+export const getAuthHeaders = () => {
+  const user = getCurrentUser();
+  if (user && user.accessToken) {
+    return {
+      'Authorization': `Bearer ${user.accessToken}`
+    };
+  }
+  return {};
+};
+
+// Generate API Key
+export const generateApiKey = async (keyName) => {
+  try {
+    const user = getCurrentUser();
+    if (!user || !user.accessToken) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(buildApiUrl('/auth/api-keys'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.accessToken}`
+      },
+      body: JSON.stringify({
+        keyName
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to generate API key');
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error('API key generation error:', error);
+    throw error;
+  }
+};
+
+// List API Keys
+export const listApiKeys = async () => {
+  try {
+    const user = getCurrentUser();
+    if (!user || !user.accessToken) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(buildApiUrl('/auth/api-keys'), {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${user.accessToken}`
+      }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch API keys');
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error('API keys fetch error:', error);
+    throw error;
+  }
+};
+
+// Update user settings (for backward compatibility)
 export const updateUserSettings = (username, newSettings) => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const users = getUserDatabase();
-      const user = users[username];
-      
-      if (!user) {
-        reject(new Error('User not found'));
-        return;
-      }
-      
-      // Update settings
-      user.settings = { ...user.settings, ...newSettings };
-      saveUserDatabase(users);
-      
-      // Update session
-      const currentUser = getCurrentUser();
-      if (currentUser && currentUser.username === username) {
-        currentUser.settings = user.settings;
-        sessionStorage.setItem('ai_portal_current_user', JSON.stringify(currentUser));
-      }
-      
-      resolve(user.settings);
-    }, 300);
+  // For now, just update local session storage
+  // In future, this could sync with backend user preferences
+  return new Promise((resolve) => {
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.username === username) {
+      currentUser.settings = { ...currentUser.settings, ...newSettings };
+      sessionStorage.setItem('ai_portal_current_user', JSON.stringify(currentUser));
+      resolve(currentUser.settings);
+    } else {
+      resolve(newSettings);
+    }
   });
 };

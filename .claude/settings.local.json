@@ -12,7 +12,12 @@
       "Bash(rg:*)",
       "Bash(cat:*)",
       "Bash(npm start)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(npm run:*)",
+      "Bash(pkill:*)",
+      "Bash(true)"
     ],
     "deny": []
   }

@@ -51,11 +51,9 @@ const processText = (text) => {
       // Start of code block
       if (line.startsWith('```') && !inCodeBlock) {
         // Process any text before this code block
-        if (i > 0) {
-          const textBeforeCode = lines.slice(lastIndex, i).join('\n');
-          if (textBeforeCode.trim()) {
-            segments.push(processMarkdown(textBeforeCode));
-          }
+        const textBeforeCode = lines.slice(lastIndex, i).join('\n');
+        if (textBeforeCode.trim()) {
+          segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdown(textBeforeCode)}</span>);
         }
         
         inCodeBlock = true;
@@ -96,7 +94,7 @@ const processText = (text) => {
     if (lastIndex < lines.length) {
       const textAfterCode = lines.slice(lastIndex).join('\n');
       if (textAfterCode.trim()) {
-        segments.push(processMarkdown(textAfterCode));
+        segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdown(textAfterCode)}</span>);
       }
     }
     
@@ -181,7 +179,7 @@ const processInlineFormatting = (text) => {
   while ((match = boldPattern.exec(text)) !== null) {
     // Add text before the bold part
     if (match.index > lastIndex) {
-      parts.push(processItalic(text.substring(lastIndex, match.index)));
+      parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex, match.index))}</span>);
     }
     
     // Add the bold text (also process any italic within it)
@@ -192,7 +190,7 @@ const processInlineFormatting = (text) => {
   
   // Add any remaining text
   if (lastIndex < text.length) {
-    parts.push(processItalic(text.substring(lastIndex)));
+    parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex))}</span>);
   }
   
   return <>{parts}</>;
@@ -210,7 +208,7 @@ const processItalic = (text) => {
   while ((match = italicPattern.exec(text)) !== null) {
     // Add text before the italic part
     if (match.index > lastIndex) {
-      parts.push(text.substring(lastIndex, match.index));
+      parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex, match.index)}</span>);
     }
     
     // Add the italic text
@@ -221,7 +219,7 @@ const processItalic = (text) => {
   
   // Add any remaining text
   if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
+    parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex)}</span>);
   }
   
   return <>{parts.length > 0 ? parts : text}</>;

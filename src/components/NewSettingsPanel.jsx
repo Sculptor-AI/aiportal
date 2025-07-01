@@ -237,9 +237,9 @@ const NavItem = styled.div`
   padding: 12px 20px;
   cursor: pointer;
   transition: background-color 0.2s;
-  background-color: ${props => props.active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
-  color: ${props => props.active ? props.theme.primary : props.theme.text};
-  font-weight: ${props => props.active ? '500' : 'normal'};
+  background-color: ${props => props.$active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
+  color: ${props => props.$active ? props.theme.primary : props.theme.text};
+  font-weight: ${props => props.$active ? '500' : 'normal'};
   
   /* Specific styling for the retro theme */
   ${props => props.theme.name === 'retro' && `
@@ -772,7 +772,7 @@ const NotificationToggle = styled.div`
   width: 50px;
   height: 26px;
   border-radius: 13px;
-  background-color: ${props => props.isOn ? props.theme.primary : '#ccc'};
+  background-color: ${props => props.$isOn ? props.theme.primary : '#ccc'};
   cursor: pointer;
   transition: background-color 0.3s;
   
@@ -780,7 +780,7 @@ const NotificationToggle = styled.div`
     content: '';
     position: absolute;
     top: 3px;
-    left: ${props => props.isOn ? '27px' : '3px'};
+    left: ${props => props.$isOn ? '27px' : '3px'};
     width: 20px;
     height: 20px;
     border-radius: 50%;
@@ -1000,7 +1000,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           
           <NavItem 
             onClick={() => setActiveSection('general')} 
-            active={activeSection === 'general'}
+            $active={activeSection === 'general'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
@@ -1011,7 +1011,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           
           <NavItem 
             onClick={() => setActiveSection('appearance')} 
-            active={activeSection === 'appearance'}
+            $active={activeSection === 'appearance'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
@@ -1022,7 +1022,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           
           <NavItem 
             onClick={() => setActiveSection('interface')} 
-            active={activeSection === 'interface'}
+            $active={activeSection === 'interface'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"></rect>
@@ -1033,7 +1033,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           
           <NavItem 
             onClick={() => setActiveSection('chats')} 
-            active={activeSection === 'chats'}
+            $active={activeSection === 'chats'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -1043,7 +1043,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           
           <NavItem 
             onClick={() => setActiveSection('accessibility')} 
-            active={activeSection === 'accessibility'}
+            $active={activeSection === 'accessibility'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -1055,7 +1055,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           
           <NavItem 
             onClick={() => setActiveSection('about')} 
-            active={activeSection === 'about'}
+            $active={activeSection === 'about'}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"></circle>
@@ -1122,7 +1122,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
               <SettingsRow>
                 <SettingsLabel>Notifications</SettingsLabel>
                 <NotificationToggle 
-                  isOn={localSettings.notifications || false} 
+                  $isOn={localSettings.notifications || false} 
                   onClick={() => handleChange('notifications', !localSettings.notifications)}
                 />
               </SettingsRow>

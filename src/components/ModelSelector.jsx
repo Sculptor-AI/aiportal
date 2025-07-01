@@ -251,14 +251,13 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
     }
   }, []);
 
-  const baseModels = models || [
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-    { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
-    { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
-    { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
-    { id: 'ursa-minor', name: 'Ursa Minor' }
+  const fallbackModels = [
+    { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
+    { id: 'chatgpt-4o', name: 'ChatGPT 4o', provider: 'openai' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google' }
   ];
+
+  const baseModels = (models && models.length > 0) ? models : fallbackModels;
 
   useEffect(() => {
     console.log("Base models before filtering:", models);
@@ -288,13 +287,14 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   const currentModel =
     availableModels.find(model => model.id === selectedModel) ||
     availableModels[0] ||
-    baseModels.find(model => model.id === 'gemini-2.5-pro');
+    baseModels[0] ||
+    fallbackModels[0]; // Ensure we always have a model
 
   useEffect(() => {
-    if (selectedModel !== currentModel?.id && availableModels.length > 0) {
+    if (currentModel && selectedModel !== currentModel.id && availableModels.length > 0) {
       onChange(currentModel.id);
-    } else if (availableModels.length === 0 && selectedModel) {
-       if(selectedModel !== currentModel?.id) {
+    } else if (availableModels.length === 0 && selectedModel && currentModel) {
+       if(selectedModel !== currentModel.id) {
            onChange(currentModel.id)
        }
     }

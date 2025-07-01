@@ -391,7 +391,164 @@ const parseSSEChunk = (chunk) => {
   return {}; // Ignore non-data lines like comments or empty lines
 };
 
-// Refactored sendMessage as an async generator
+// Check if a model is a backend model
+const isBackendModel = (modelId, availableModels = []) => {
+  // First check if the model is explicitly marked as a backend model
+  const modelInfo = availableModels.find(m => m.id === modelId);
+  if (modelInfo && modelInfo.isBackendModel === true) {
+    return true;
+  }
+  
+  // Backend models are identified by their prefix (with slashes)
+  return modelId.startsWith('anthropic/') || 
+         modelId.startsWith('openai/') || 
+         modelId.startsWith('google/') || 
+         modelId.startsWith('custom/');
+};
+
+// New backend streaming function
+export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false, systemPrompt = null) {
+  console.log(`sendMessageToBackendStream called with model: ${modelId}, message: "${message.substring(0, 30)}..."`);
+
+  // Check if user is authenticated
+  const user = getCurrentUser();
+  if (!user || !user.accessToken) {
+    throw new Error('Authentication required for backend models. Please log in.');
+  }
+
+  try {
+    // Validate and filter history messages
+    const validHistory = (history || []).filter(msg => {
+      return msg && msg.role && msg.content && typeof msg.content === 'string';
+    }).map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
+    // Prepare request payload
+    const requestPayload = {
+      model: modelId,
+      messages: [
+        ...validHistory,
+        {
+          role: 'user',
+          content: message || ''
+        }
+      ],
+      stream: true
+    };
+
+    // Add system prompt if provided
+    if (systemPrompt) {
+      requestPayload.messages.unshift({
+        role: 'system',
+        content: systemPrompt
+      });
+    }
+
+    // Add image data if provided
+    if (imageData) {
+      const base64Data = imageData.split(',')[1];
+      const mediaType = imageData.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || 'image/jpeg';
+      
+      // Update the last user message to include image
+      const lastMessage = requestPayload.messages[requestPayload.messages.length - 1];
+      lastMessage.content = [
+        { type: 'text', text: message },
+        {
+          type: 'image_url',
+          image_url: {
+            url: imageData
+          }
+        }
+      ];
+    }
+
+    // Add file content if provided
+    if (fileTextContent) {
+      const lastMessage = requestPayload.messages[requestPayload.messages.length - 1];
+      const currentContent = typeof lastMessage.content === 'string' ? lastMessage.content : lastMessage.content[0]?.text || '';
+      const enhancedContent = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${currentContent}`;
+      
+      if (typeof lastMessage.content === 'string') {
+        lastMessage.content = enhancedContent;
+      } else if (Array.isArray(lastMessage.content)) {
+        lastMessage.content[0].text = enhancedContent;
+      }
+    }
+
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+
+    // Add authentication
+    const user = getCurrentUser();
+    if (user && user.accessToken) {
+      headers['Authorization'] = `Bearer ${user.accessToken}`;
+    }
+
+    const url = buildApiUrl('/v1/chat/completions');
+    console.log('Streaming request to backend:', url, requestPayload);
+
+    // Use fetch with streaming
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestPayload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Backend request failed');
+    }
+
+    // Read the stream
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.substring(6).trim();
+          
+          if (data === '[DONE]') {
+            return;
+          }
+          
+          try {
+            const parsed = JSON.parse(data);
+            const content = parsed.choices?.[0]?.delta?.content || '';
+            
+            if (content) {
+              yield content;
+            }
+            
+            if (parsed.choices?.[0]?.finish_reason) {
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing streaming data:', e, data);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Backend streaming error:', error);
+    yield `\n[Error: ${error.message}]\n`;
+  }
+}
+
+// Updated main sendMessage function that routes to appropriate implementation
 export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false, systemPrompt = null) { 
   console.log(`sendMessage (streaming) called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`, 
@@ -402,6 +559,20 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
     `imageGen: ${imageGen}`,
     systemPrompt ? `systemPrompt: Present` : ''
   );
+
+  // Route to backend if it's a backend model AND user is authenticated
+  const user = getCurrentUser();
+  if (isBackendModel(modelId) && user && user.accessToken) {
+    console.log(`Routing to backend for model: ${modelId}`);
+    yield* sendMessageToBackendStream(message, modelId, history, imageData, fileTextContent, search, deepResearch, imageGen, systemPrompt);
+    return;
+  } else if (isBackendModel(modelId) && (!user || !user.accessToken)) {
+    console.log(`Backend model ${modelId} requires authentication but user is not logged in`);
+    throw new Error('This model requires authentication. Please log in to continue.');
+  }
+
+  // For non-backend models, use the original implementation
+  console.log(`Using legacy implementation for model: ${modelId}`);
 
   // Validate inputs
   if (!message && !imageData && !fileTextContent) { // Allow empty text message if file/image provided
@@ -746,7 +917,7 @@ const BACKEND_API_BASE = import.meta.env.VITE_BACKEND_API_URL ?
   (import.meta.env.VITE_BACKEND_API_URL.endsWith('/api') ? 
     import.meta.env.VITE_BACKEND_API_URL : 
     `${import.meta.env.VITE_BACKEND_API_URL}/api`) : 
-  'https://aiportal-backend.vercel.app/api';
+  'http://localhost:3000/api';
 
 // Debug the actual URL being used
 console.log('Backend API URL being used:', BACKEND_API_BASE);
@@ -771,30 +942,70 @@ const buildApiUrl = (endpoint) => {
  */
 export const fetchModelsFromBackend = async () => {
   try {
-    const endpointUrl = buildApiUrl('/models');
+    // Use the new backend models endpoint
+    const endpointUrl = buildApiUrl('/v1/chat/models');
     console.log('Fetching models from:', endpointUrl);
-    const response = await fetch(endpointUrl);
+    
+    // Try without authentication first, then with authentication if available
+    let response;
+    const user = getCurrentUser();
+    
+    try {
+      // This endpoint requires authentication, so only try if user is logged in
+      if (user && user.accessToken) {
+        const headers = {
+          'Authorization': `Bearer ${user.accessToken}`
+        };
+        response = await fetch(endpointUrl, { headers });
+      } else {
+        // If no user is logged in, skip backend and use fallback models
+        console.log('No user authentication available, using fallback models');
+        return [];
+      }
+    } catch (fetchError) {
+      console.error('Network error fetching models:', fetchError);
+      throw new Error('Network error fetching models');
+    }
     
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
       console.error('Error response from models endpoint:', errorData);
+      
+      // If we get authentication error and no user is logged in, this is expected
+      if (response.status === 401 && (!user || !user.accessToken)) {
+        console.log('Models endpoint requires authentication and user is not logged in');
+        return []; // Return empty array, will use fallback models
+      }
+      
       throw new Error(errorData.error || 'Failed to fetch models from backend');
     }
     
     const data = await response.json();
     console.log('Successfully fetched models from backend:', data);
-    return data.models.map(model => ({
-      id: model.id,
-      name: model.name || `${model.provider}: ${model.id.split('/').pop()}`,
-      provider: model.provider,
-      source: model.source,
-      capabilities: model.capabilities || [],
-      isBackendModel: true  // Explicitly mark as backend model
-    }));
+    
+    // Handle the OpenAI-compatible response format
+    if (data.object === 'list' && Array.isArray(data.data)) {
+      return data.data.map(model => ({
+        id: model.id,
+        name: model.name || model.id.split('/').pop(),
+        provider: model.owned_by,
+        description: model.description,
+        capabilities: model.capabilities || [],
+        isBackendModel: true
+      }));
+    }
+    
+    return [];
   } catch (error) {
     console.error('Error fetching models from backend:', error);
     return []; // Return empty array on error
   }
+};
+
+// Helper function to get current user (import from authService)
+const getCurrentUser = () => {
+  const userJSON = sessionStorage.getItem('ai_portal_current_user');
+  return userJSON ? JSON.parse(userJSON) : null;
 };
 
 /**
@@ -875,9 +1086,18 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
       };
     }
     
+    // Get authentication headers
+    const user = getCurrentUser();
+    const headers = {};
+    if (user && user.accessToken) {
+      headers['Authorization'] = `Bearer ${user.accessToken}`;
+    } else {
+      throw new Error('Authentication required. Please log in.');
+    }
+    
     const apiUrl = buildApiUrl(endpoint);
     console.log(`Sending request to ${apiUrl}`, body);
-    const response = await axios.post(apiUrl, body);
+    const response = await axios.post(apiUrl, body, { headers });
     
     // For image generation, handle the image URL response
     if (imageGen && response.data.imageUrl) {
@@ -981,13 +1201,22 @@ export const streamMessageFromBackend = async (
     
     console.log('Sending streaming request to backend:', requestPacket);
     
+    // Get authentication headers
+    const user = getCurrentUser();
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (user && user.accessToken) {
+      headers['Authorization'] = `Bearer ${user.accessToken}`;
+    } else {
+      throw new Error('Authentication required. Please log in.');
+    }
+    
     // Use fetch with streaming enabled
     const streamUrl = buildApiUrl('/chat/stream');
     const response = await fetch(streamUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify(requestPacket)
     });
     
@@ -1105,6 +1334,13 @@ export const streamMessageFromBackend = async (
  * @returns {Promise<string|null>} The generated title or null on failure
  */
 export const generateChatTitle = async (userPrompt, assistantResponse) => {
+  // Check if user is authenticated
+  const user = getCurrentUser();
+  if (!user || !user.accessToken) {
+    console.log('Skipping chat title generation - user not authenticated');
+    return null;
+  }
+  
   const titlePrompt = `Summarize the following conversation in 3-4 words for a chat title.\n` +
     `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\nTitle:`;
   try {

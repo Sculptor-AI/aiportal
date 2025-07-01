@@ -21,6 +21,7 @@ import NewSettingsPanel from './components/NewSettingsPanel';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import MediaPage from './pages/MediaPage';
 import NewsPage from './pages/NewsPage';
+import ForcedLoginScreen from './components/ForcedLoginScreen';
 
 const AppContainer = styled.div`
   display: flex;
@@ -175,11 +176,12 @@ const useIsMobile = () => {
 
 // Main app component
 const AppContent = () => {
-  const { user, updateSettings: updateUserSettings } = useAuth();
+  const { user, updateSettings: updateUserSettings, loading } = useAuth();
   const toast = useToast();
   const isMobile = useIsMobile();
   const location = useLocation();
-  
+
+  // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
   // Greeting messages
   const greetingMessages = [
     "Look who decided to show up",
@@ -258,19 +260,12 @@ const AppContent = () => {
     return savedActiveChat ? JSON.parse(savedActiveChat) : chats[0]?.id;
   });
 
-  // Models
-  const [availableModels, setAvailableModels] = useState([
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-    { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
-    { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
-    { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
-    { id: 'ursa-minor', name: 'Ursa Minor' }
-  ]);
+  // Models - start with empty array and load from backend
+  const [availableModels, setAvailableModels] = useState([]);
   
   const [selectedModel, setSelectedModel] = useState(() => {
     const savedModel = localStorage.getItem('selectedModel');
-    return savedModel || 'gemini-2.5-pro';
+    return savedModel || null; // Will be set when models are loaded
   });
 
   // Fetch models from backend
@@ -279,42 +274,50 @@ const AppContent = () => {
       try {
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
-          console.log('Fetched backend models:', backendModels); // Add debug log
+          console.log('Fetched backend models:', backendModels);
+          setAvailableModels(backendModels);
           
-          // Merge backend models with local models to ensure backwards compatibility
-          // This approach allows both direct API models and backend-proxied models
-          const mergedModels = [...availableModels];
+          // Set default model if none selected
+          if (!selectedModel) {
+            const defaultModel = backendModels[0].id;
+            setSelectedModel(defaultModel);
+            localStorage.setItem('selectedModel', defaultModel);
+          }
+        } else {
+          console.log('No backend models found, using fallback models');
+          // Fallback to hardcoded models if backend fails
+          const fallbackModels = [
+            { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
+            { id: 'chatgpt-4o', name: 'ChatGPT 4o', provider: 'openai' },
+            { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google' }
+          ];
+          setAvailableModels(fallbackModels);
           
-          backendModels.forEach(backendModel => {
-            // Check if the model already exists in the list
-            const existingIndex = mergedModels.findIndex(m => m.id === backendModel.id);
-            
-            if (existingIndex >= 0) {
-              // Update existing model with backend info
-              mergedModels[existingIndex] = {
-                ...mergedModels[existingIndex],
-                ...backendModel,
-                isBackendModel: true
-              };
-            } else {
-              // Add new backend model
-              mergedModels.push({
-                ...backendModel,
-                isBackendModel: true
-              });
-            }
-          });
-          
-          setAvailableModels(mergedModels);
-          console.log('Models updated with backend models:', mergedModels);
+          if (!selectedModel) {
+            setSelectedModel(fallbackModels[0].id);
+            localStorage.setItem('selectedModel', fallbackModels[0].id);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
+        
+        // Fallback to hardcoded models if backend fails
+        const fallbackModels = [
+          { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
+          { id: 'chatgpt-4o', name: 'ChatGPT 4o', provider: 'openai' },
+          { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google' }
+        ];
+        setAvailableModels(fallbackModels);
+        
+        if (!selectedModel) {
+          setSelectedModel(fallbackModels[0].id);
+          localStorage.setItem('selectedModel', fallbackModels[0].id);
+        }
       }
     };
     
     getBackendModels();
-  }, []);
+  }, []); // Keep empty dependency array to run only once on mount
   
   // Settings - from user account or localStorage
   const [settings, setSettings] = useState(() => {
@@ -347,7 +350,6 @@ const AppContent = () => {
   
   // Modal states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
@@ -475,16 +477,8 @@ const AppContent = () => {
     setIsSettingsOpen(!isSettingsOpen);
   };
   
-  const toggleLogin = () => {
-    setIsLoginOpen(!isLoginOpen);
-  };
-  
   const toggleProfile = () => {
-    if (user) {
-      setIsProfileOpen(!isProfileOpen);
-    } else {
-      setIsLoginOpen(true);
-    }
+    setIsProfileOpen(!isProfileOpen);
   };
   
   // Update settings
@@ -554,6 +548,34 @@ const AppContent = () => {
   // Render logic
   const currentChat = getCurrentChat();
   const currentTheme = getTheme(settings.theme);
+
+  // AUTHENTICATION CHECKS - After all hooks are declared
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        background: '#f8f9fa'
+      }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '4px solid #e3e3e3',
+          borderTop: '4px solid #007bff',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+      </div>
+    );
+  }
+
+  // Force login if user is not authenticated
+  if (!user) {
+    return <ForcedLoginScreen />;
+  }
 
   // Check if we should render the shared view
   if (window.location.pathname === '/share-view') {
@@ -699,10 +721,6 @@ const AppContent = () => {
               updateSettings={updateSettings}
               closeModal={() => setIsSettingsOpen(false)}
             />
-          )}
-          
-          {isLoginOpen && (
-            <LoginModal closeModal={() => setIsLoginOpen(false)} />
           )}
           
           {isProfileOpen && (

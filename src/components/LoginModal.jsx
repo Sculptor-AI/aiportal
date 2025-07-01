@@ -190,6 +190,7 @@ const SwitchLink = styled.a`
 const LoginModal = ({ closeModal }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -205,21 +206,31 @@ const LoginModal = ({ closeModal }) => {
       return;
     }
     
+    if (!isLogin && !email.trim()) {
+      setError('Please enter an email address');
+      return;
+    }
+    
     setIsLoading(true);
     try {
       if (isLogin) {
         await login(username, password);
+        closeModal();
       } else {
         // Registration validation
         if (username.length < 3) {
           throw new Error('Username must be at least 3 characters');
         }
-        if (password.length < 6) {
-          throw new Error('Password must be at least 6 characters');
+        if (password.length < 8) {
+          throw new Error('Password must be at least 8 characters');
         }
-        await register(username, password);
+        const result = await register(username, password, email);
+        setError('');
+        // Show success message and switch to login
+        setError(`Registration successful! Please log in with your credentials.`);
+        setIsLogin(true);
+        setPassword(''); // Clear password for security
       }
-      closeModal();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -283,6 +294,20 @@ const LoginModal = ({ closeModal }) => {
                 required
               />
             </FormGroup>
+            {!isLogin && (
+              <FormGroup>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  autoComplete="email"
+                  required
+                />
+              </FormGroup>
+            )}
             <FormGroup>
               <Label htmlFor="password">Password</Label>
               <Input
@@ -290,7 +315,7 @@ const LoginModal = ({ closeModal }) => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder={isLogin ? "Enter your password" : "Password (min 8 characters)"}
                 autoComplete={isLogin ? "current-password" : "new-password"}
                 required
               />

@@ -90,6 +90,12 @@ const GlobalStyle = createGlobalStyle`
     }
   `}
   
+  /* Loading spinner animation */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
   /* Override animation effects for reduced motion */
   ${props => props.reducedMotion && `
     * {

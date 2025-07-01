@@ -65,13 +65,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Register function
-  const register = async (username, password) => {
+  const register = async (username, password, email) => {
     setLoading(true);
     setError(null);
     try {
-      const newUser = await registerUser(username, password);
-      setUser(newUser);
-      return newUser;
+      const result = await registerUser(username, password, email);
+      // Registration with backend doesn't automatically log in, return success
+      return result;
     } catch (err) {
       setError(err.message);
       throw err;
