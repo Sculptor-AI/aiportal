@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://73.118.140.130:3000';
+const API_BASE_URL = 'https://73.118.140.130:3000'; // Hardcoded to use the specified backend
 
 /**
  * Fetch articles by category

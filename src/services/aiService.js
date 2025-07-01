@@ -959,7 +959,7 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.
 
 // Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://73.118.140.130:3000';
+const rawBaseUrl = 'https://73.118.140.130:3000'; // Hardcoded to use the specified backend
 
 // Remove trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
