@@ -1,4 +1,7 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://73.118.140.130:3000';
+// Prefer environment variable, otherwise default to same-origin
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+// Remove trailing slashes (if any) and set as API base (empty string means same-origin)
+const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '');
 
 /**
  * Fetch articles by category
