@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { withTheme } from 'styled-components';
 import { fetchArticlesByCategory, fetchArticleContent } from '../services/rssService';
+import { sendMessageToBackend } from '../services/aiService';
 
 const NewsContainer = styled.div`
   flex: 1;
@@ -695,19 +696,40 @@ const ArticleDetailView = ({ article, onClose }) => {
   const [articleContent, setArticleContent] = useState(null);
   const [loadingContent, setLoadingContent] = useState(true);
   const [contentError, setContentError] = useState(null);
+  const [summary, setSummary] = useState('');
+  const [summarizing, setSummarizing] = useState(false);
 
   useEffect(() => {
     const loadArticleContent = async () => {
       setLoadingContent(true);
       setContentError(null);
+      setSummary('');
       
       try {
         const content = await fetchArticleContent(article.url);
         setArticleContent(content);
+        
+        if (content && content.content) {
+          setSummarizing(true);
+          try {
+            const summaryPrompt = `Please provide a concise summary of the following news article:\n\n---\n\n${content.content}`;
+            const result = await sendMessageToBackend('gemini-2.5-flash', summaryPrompt);
+            if (result && result.response) {
+              setSummary(result.response);
+            } else {
+              setSummary('Could not generate summary.');
+            }
+          } catch (summaryError) {
+            console.error('Error generating summary:', summaryError);
+            setSummary('Failed to generate summary.');
+          } finally {
+            setSummarizing(false);
+          }
+        }
+
       } catch (error) {
         console.error('Error loading article content:', error);
         setContentError('Failed to load full article content');
-        // Fall back to RSS description
         setArticleContent({
           content: article.description || 'No content available',
           title: article.title,
@@ -720,7 +742,7 @@ const ArticleDetailView = ({ article, onClose }) => {
     };
 
     loadArticleContent();
-  }, [article.url, article.description, article.title, article.image]);
+  }, [article]);
 
   const displayContent = articleContent || {
     content: article.description || 'Loading...',
@@ -741,8 +763,6 @@ const ArticleDetailView = ({ article, onClose }) => {
       <ArticleDetailContainer onClick={(e) => e.stopPropagation()}>
         <ArticleDetailContent>
             <DetailTitle>{displayContent.title || article.title}</DetailTitle>
-            
-            {contentParagraphs.length > 0 && <DetailIntro>{contentParagraphs[0]}</DetailIntro>}
             
             <ArticleMetadata>
               <AuthorSection>
@@ -777,22 +797,51 @@ const ArticleDetailView = ({ article, onClose }) => {
             </SourceTags>
             
             {(displayContent.image || article.image) && 
-              <DetailImage src={displayContent.image || article.image} alt={displayContent.title || article.title} />
+              <DetailImage
+                src={displayContent.image || article.image}
+                alt={displayContent.title || article.title}
+                $size={article.size}
+                onError={(e) => {
+                  console.log('Image failed to load:', e.target.src);
+                  e.target.onerror = null; // Prevent infinite loop
+                  
+                  // Try multiple fallbacks
+                  if (e.target.src.includes('pollinations.ai')) {
+                    console.log('Trying LoremFlickr fallback...');
+                    const words = article.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(' ').filter(Boolean).slice(0, 3);
+                    e.target.src = `https://loremflickr.com/800/600/${words.join(',')}`;
+                  } else if (e.target.src.includes('loremflickr.com')) {
+                    console.log('Trying Picsum fallback...');
+                    e.target.src = `https://picsum.photos/seed/${encodeURIComponent(article.id || article.title)}/800/600`;
+                  } else {
+                    console.log('All fallbacks failed, hiding image');
+                    e.target.style.display = 'none';
+                  }
+                }}
+                onLoad={(e) => {
+                  console.log('Image loaded successfully:', e.target.src);
+                }}
+              />
             }
             
             <DetailBody>
               {loadingContent ? (
                 <LoadingContainer>
                   <LoadingSpinner />
-                  <LoadingText>Loading full article...</LoadingText>
+                  <LoadingText>Loading article...</LoadingText>
                 </LoadingContainer>
               ) : contentError ? (
                 <>
                   <ErrorMessage style={{ textAlign: 'center', marginBottom: '20px' }}>{contentError}</ErrorMessage>
                   <p>{article.description}</p>
                 </>
+              ) : summarizing ? (
+                <LoadingContainer>
+                  <LoadingSpinner />
+                  <LoadingText>Generating summary...</LoadingText>
+                </LoadingContainer>
               ) : (
-                contentParagraphs.map((paragraph, index) => (
+                summary.split('\n\n').map((paragraph, index) => (
                   <p key={index} style={{ marginBottom: '18px' }}>{paragraph}</p>
                 ))
               )}
@@ -957,7 +1006,33 @@ const NewsPage = () => {
             const isSaved = savedArticles.includes(article.id);
             return (
               <ArticleCard key={article.id} $size={article.size} onClick={() => handleArticleClick(article)}>
-                <ArticleImage src={article.image} alt={article.title} $size={article.size} />
+                {article.image && (
+                  <ArticleImage
+                    src={article.image}
+                    alt={article.title}
+                    $size={article.size}
+                    onError={(e) => {
+                      console.log('Image failed to load:', e.target.src);
+                      e.target.onerror = null; // Prevent infinite loop
+                      
+                      // Try multiple fallbacks
+                      if (e.target.src.includes('pollinations.ai')) {
+                        console.log('Trying LoremFlickr fallback...');
+                        const words = article.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(' ').filter(Boolean).slice(0, 3);
+                        e.target.src = `https://loremflickr.com/800/600/${words.join(',')}`;
+                      } else if (e.target.src.includes('loremflickr.com')) {
+                        console.log('Trying Picsum fallback...');
+                        e.target.src = `https://picsum.photos/seed/${encodeURIComponent(article.id || article.title)}/800/600`;
+                      } else {
+                        console.log('All fallbacks failed, hiding image');
+                        e.target.style.display = 'none';
+                      }
+                    }}
+                    onLoad={(e) => {
+                      console.log('Image loaded successfully:', e.target.src);
+                    }}
+                  />
+                )}
                 <ArticleContent $size={article.size}>
                   <ArticleTitle $size={article.size}>{article.title}</ArticleTitle>
                   {filter && (
