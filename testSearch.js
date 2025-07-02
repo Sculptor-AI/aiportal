@@ -5,7 +5,7 @@ async function testSearch() {
   try {
     console.log('Testing search endpoint...');
     try {
-      const searchResponse = await axios.post('https://aiportal-backend.vercel.app/api/search', {
+      const searchResponse = await axios.post('https://73.118.140.130:3000/api/search', {
         query: 'Who is the president of the United States',
         max_results: 3
       });
@@ -21,7 +21,7 @@ async function testSearch() {
     
     console.log('\nTesting scrape endpoint...');
     try {
-      const scrapeResponse = await axios.post('https://aiportal-backend.vercel.app/api/scrape', {
+      const scrapeResponse = await axios.post('https://73.118.140.130:3000/api/scrape', {
         url: 'https://www.whitehouse.gov/'
       });
       
@@ -35,7 +35,7 @@ async function testSearch() {
     
     console.log('\nTesting search and process endpoint (end-to-end)...');
     try {
-      const searchProcessResponse = await axios.post('https://aiportal-backend.vercel.app/api/search-process', {
+      const searchProcessResponse = await axios.post('https://73.118.140.130:3000/api/search-process', {
         query: 'Who is the president of the United States',
         max_results: 3,
         model_prompt: 'Please provide a factual answer about who is the current president of the United States.'

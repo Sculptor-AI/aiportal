@@ -79,7 +79,7 @@ yarn dev
 The application is deployed on the following URLs:
 
 - Frontend: https://ai.explodingcb.com
-- Backend: https://aiportal-backend.vercel.app
+- Backend: https://73.118.140.130:3000
 
 Environment variables are configured in the deployment dashboard for both the frontend and backend projects. The frontend is set to use the backend URL via the `VITE_BACKEND_API_URL` environment variable.
 
