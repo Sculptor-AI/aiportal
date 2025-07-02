@@ -260,7 +260,7 @@ const AppContent = () => {
     return savedActiveChat ? JSON.parse(savedActiveChat) : chats[0]?.id;
   });
 
-  // Models - start with empty array and load from backend
+  // Models will be loaded exclusively from the backend.
   const [availableModels, setAvailableModels] = useState([]);
   
   const [selectedModel, setSelectedModel] = useState(() => {
@@ -268,56 +268,47 @@ const AppContent = () => {
     return savedModel || null; // Will be set when models are loaded
   });
 
-  // Fetch models from backend
+  // Fetch models from backend (now the ONLY source)
   useEffect(() => {
     const getBackendModels = async () => {
       try {
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
-          console.log('Fetched backend models:', backendModels);
-          setAvailableModels(backendModels);
+          // Define substrings of model IDs to exclude
+          const excludedSubstrings = [
+            'haiku',
+            '4o-mini',
+            'gpt-3.5-turbo'
+          ];
           
-          // Set default model if none selected
-          if (!selectedModel) {
-            const defaultModel = backendModels[0].id;
+          // Filter out the excluded models by checking if their ID includes any of the substrings
+          const filteredModels = backendModels.filter(
+            model => !excludedSubstrings.some(substring => model.id.includes(substring))
+          );
+
+          setAvailableModels(filteredModels);
+          
+          // Set default model if none is selected or the selected one is no longer available
+          const currentSelectedModelIsValid = filteredModels.some(m => m.id === selectedModel);
+          if (!currentSelectedModelIsValid && filteredModels.length > 0) {
+            const defaultModel = filteredModels[0].id;
             setSelectedModel(defaultModel);
             localStorage.setItem('selectedModel', defaultModel);
           }
         } else {
-          console.log('No backend models found, using fallback models');
-          // Fallback to hardcoded models if backend fails
-          const fallbackModels = [
-            { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
-            { id: 'chatgpt-4o', name: 'ChatGPT 4o', provider: 'openai' },
-            { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google' }
-          ];
-          setAvailableModels(fallbackModels);
-          
-          if (!selectedModel) {
-            setSelectedModel(fallbackModels[0].id);
-            localStorage.setItem('selectedModel', fallbackModels[0].id);
-          }
+          // If backend returns no models, the list will be empty.
+          setAvailableModels([]);
+          setSelectedModel(null);
         }
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
-        
-        // Fallback to hardcoded models if backend fails
-        const fallbackModels = [
-          { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
-          { id: 'chatgpt-4o', name: 'ChatGPT 4o', provider: 'openai' },
-          { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google' }
-        ];
-        setAvailableModels(fallbackModels);
-        
-        if (!selectedModel) {
-          setSelectedModel(fallbackModels[0].id);
-          localStorage.setItem('selectedModel', fallbackModels[0].id);
-        }
+        setAvailableModels([]); // Ensure list is empty on error
+        setSelectedModel(null);
       }
     };
     
     getBackendModels();
-  }, []); // Keep empty dependency array to run only once on mount
+  }, []);
   
   // Settings - from user account or localStorage
   const [settings, setSettings] = useState(() => {

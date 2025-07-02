@@ -416,9 +416,15 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     const userJSON = sessionStorage.getItem('ai_portal_current_user');
     if (userJSON) {
       const user = JSON.parse(userJSON);
+      console.log('[sendMessageToBackendStream] User from session:', user);
       // User's assigned backend API key should be stored as their accessToken
       if (user.accessToken && user.accessToken.startsWith('ak_')) {
         apiKey = user.accessToken;
+        console.log('[sendMessageToBackendStream] Using user API key from session');
+      } else if (user.accessToken) {
+        // Use JWT token if available
+        apiKey = user.accessToken;
+        console.log('[sendMessageToBackendStream] Using JWT token from session');
       }
     }
   } catch (e) {
@@ -428,6 +434,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
   // Fallback API key for development/testing
   if (!apiKey) {
     apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+    console.log('[sendMessageToBackendStream] Using fallback API key');
   }
 
   if (!apiKey) {
@@ -445,12 +452,6 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
 
     // Prepare messages array
     let messages = [...validHistory];
-
-    // Add web search parameter if enabled
-    if (search) {
-      requestPayload.web_search = true;
-      console.log('Web search enabled for this request');
-    }
 
     // Add system prompt if provided
     if (systemPrompt) {
@@ -517,15 +518,23 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       requestPayload.web_search = true;
     }
 
-    // Prepare headers with X-API-Key
+    // Prepare headers based on token type
     const headers = {
       'Content-Type': 'application/json',
-      'X-API-Key': apiKey,
       'Accept': 'text/event-stream'
     };
+    
+    // Use appropriate auth header based on token type
+    if (apiKey.startsWith('ak_')) {
+      headers['X-API-Key'] = apiKey;
+    } else {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
 
     const url = buildApiUrl('/v1/chat/completions');
     console.log('Streaming request to backend:', url);
+    console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
+    console.log('Request headers:', headers);
 
     // Use fetch with streaming
     const response = await fetch(url, {
@@ -549,11 +558,15 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     const decoder = new TextDecoder();
     let buffer = '';
     let sourcesReceived = false;
+    let hasReceivedContent = false;
 
     // Process the stream
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        console.log('[sendMessageToBackendStream] Stream reading completed');
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -589,6 +602,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
             
             // Handle content chunks
             if (parsed.choices?.[0]?.delta?.content) {
+              hasReceivedContent = true;
               yield parsed.choices[0].delta.content;
             }
           } catch (e) {
@@ -616,6 +630,11 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
           }
         }
       }
+    }
+    
+    // If no content was received, log a warning
+    if (!hasReceivedContent) {
+      console.warn('[sendMessageToBackendStream] No content received from backend');
     }
 
   } catch (error) {
@@ -1056,6 +1075,7 @@ export const fetchModelsFromBackend = async () => {
     
     try {
       // This endpoint requires authentication, so only try if user is logged in
+      let response;
       if (user && user.accessToken) {
         const headers = {};
         

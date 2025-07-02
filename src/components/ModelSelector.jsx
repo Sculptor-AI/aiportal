@@ -88,7 +88,8 @@ const DropdownMenu = styled.div`
   background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.inputBackground};
   min-width: 200px;
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
-  overflow: hidden;
+  overflow-y: auto;
+  max-height: 300px;
   box-shadow: ${props => props.theme.name === 'retro' ? 
     `1px 1px 0 0 ${props.theme.buttonHighlightLight}, -1px -1px 0 0 ${props.theme.buttonShadowDark}, 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
     '0 5px 20px rgba(0,0,0,0.15)'};
@@ -98,6 +99,23 @@ const DropdownMenu = styled.div`
   z-index: 1000;
   backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
+  
+  scrollbar-width: thin;
+  scrollbar-color: ${props => props.theme.buttonShadowSoft} ${props => props.theme.buttonFace};
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${props => props.theme.inputBackground || props.theme.buttonFace};
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: ${props => props.theme.buttonShadowSoft};
+    border-radius: 4px;
+    border: 2px solid ${props => props.theme.inputBackground || props.theme.buttonFace};
+  }
   
   ${props => props.theme.name === 'bisexual' && `
     position: relative;
@@ -212,93 +230,29 @@ const ProviderLogo = styled.img`
 const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
-  const [apiKeys, setApiKeys] = useState({
-    google: '',
-    claude: '',
-    openai: '',
-    nvidia: '',
-    ursa: ''
-  });
 
   useEffect(() => {
-    let userSettings = {};
-    try {
-      const userJSON = sessionStorage.getItem('ai_portal_current_user');
-      if (userJSON) {
-        const user = JSON.parse(userJSON);
-        userSettings = user?.settings || {};
-        console.log("Loaded settings from sessionStorage:", userSettings);
-      } else {
-        const settingsJSON = localStorage.getItem('settings');
-        if (settingsJSON) {
-          userSettings = JSON.parse(settingsJSON);
-           console.log("Loaded settings from localStorage:", userSettings);
-        } else {
-           console.log("No settings found in storage.");
-        }
-      }
-
-      setApiKeys({
-        google: userSettings.googleApiKey || '',
-        claude: userSettings.anthropicApiKey || '',
-        openai: userSettings.openaiApiKey || '',
-        nvidia: userSettings.nvidiaApiKey || '',
-        ursa: userSettings.customGgufApiKey || ''
-      });
-    } catch (e) {
-      console.error('Error reading user settings for API keys:', e);
-      setApiKeys({ google: '', claude: '', openai: '', nvidia: '', ursa: '' });
-    }
+    // This effect can be simplified or removed if settings are handled by a context provider
+    // For now, it reads API keys but they are no longer used for filtering.
+    // This could be refactored later.
   }, []);
 
-  const fallbackModels = [
-    { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
-    { id: 'chatgpt-4o', name: 'ChatGPT 4o', provider: 'openai' },
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google' }
-  ];
-
-  const baseModels = (models && models.length > 0) ? models : fallbackModels;
+  const availableModels = models || [];
 
   useEffect(() => {
-    console.log("Base models before filtering:", models);
-    console.log("Backend models:", models?.filter(m => m.isBackendModel === true));
-  }, [models]);
-
-  const availableModels = baseModels.filter(model => {
-    if (model.isBackendModel === true) {
-      console.log('Including backend model:', model);
-      return true;
-    }
-    
-    const checkKey = (key) => key && key.trim() !== '';
-
-    if (model.id.includes('gemini')) return checkKey(apiKeys.google);
-    if (model.id.includes('claude')) return checkKey(apiKeys.claude);
-    if (model.id.includes('chatgpt') || model.id.includes('gpt')) return checkKey(apiKeys.openai);
-    if (model.id.includes('nemotron')) return checkKey(apiKeys.nvidia);
-    if (model.id.includes('ursa')) return checkKey(apiKeys.ursa);
-    return false;
-  });
-
-   useEffect(() => {
-     console.log("Available models after filtering:", availableModels);
+     console.log("Models received by selector:", availableModels);
    }, [availableModels]);
 
   const currentModel =
     availableModels.find(model => model.id === selectedModel) ||
-    availableModels[0] ||
-    baseModels[0] ||
-    fallbackModels[0]; // Ensure we always have a model
+    availableModels[0];
 
   useEffect(() => {
-    if (currentModel && selectedModel !== currentModel.id && availableModels.length > 0) {
-      onChange(currentModel.id);
-    } else if (availableModels.length === 0 && selectedModel && currentModel) {
-       if(selectedModel !== currentModel.id) {
-           onChange(currentModel.id)
-       }
+    // If there's no selected model but there are available models, select the first one.
+    if (!selectedModel && availableModels.length > 0) {
+      onChange(availableModels[0].id);
     }
-  }, [selectedModel, currentModel, availableModels, onChange]);
+  }, [selectedModel, availableModels, onChange]);
 
   const getProviderSource = (model) => {
     // For backend models, use the source field

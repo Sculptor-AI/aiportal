@@ -241,42 +241,8 @@ Example format:
 
 IMPORTANT: Always provide content after the </think> tag. Never end your response with just the thinking block.` : null;
 
-        if (isBackendModel) {
-          const supportsStreaming = currentModelObj?.supportsStreaming !== false;
-          const finalMessageToSend = messageToSend;
-          const systemPromptForApi = thinkingModeSystemPrompt || null;
-
-        if (supportsStreaming) {
-          await streamMessageFromBackend(
-            currentModel, finalMessageToSend,
-            (chunk) => {
-              streamedContent += chunk;
-              updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
-            },
-            currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
-            imageDataToSend, fileTextToSend, systemPromptForApi, thinkingMode, apiHistory
-          );
-          const messageUpdates = { content: streamedContent, isLoading: false };
-          if (window.__lastSearchSources && Array.isArray(window.__lastSearchSources) && (currentActionChip === 'search' || currentActionChip === 'deep-research')) {
-            messageUpdates.sources = window.__lastSearchSources;
-            window.__lastSearchSources = null;
-          }
-          updateMessage(currentChatId, aiMessageId, messageUpdates);
-          finalAssistantContent = streamedContent;
-        } else {
-          const backendResponse = await sendMessageToBackend(
-            currentModel, finalMessageToSend,
-            currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
-            imageDataToSend, fileTextToSend, systemPromptForApi, thinkingMode, apiHistory
-          );
-          finalAssistantContent = backendResponse.response || 'No response from backend';
-          updateMessage(currentChatId, aiMessageId, {
-            content: finalAssistantContent,
-            isLoading: false,
-            sources: backendResponse.sources || null
-          });
-        }
-      } else {
+        // UNIFIED LOGIC: All models are sent through the sendMessage generator,
+        // which handles routing to the backend. The isBackendModel check is removed.
         const messageGenerator = sendMessage(
           messageToSend, currentModel, formattedHistory, imageDataToSend, fileTextToSend,
           currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
@@ -287,8 +253,14 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
           updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
         }
         finalAssistantContent = streamedContent;
-        updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: false });
-      }
+        
+        const messageUpdates = { content: streamedContent, isLoading: false };
+        if (window.__lastSearchSources && Array.isArray(window.__lastSearchSources) && (currentActionChip === 'search' || currentActionChip === 'deep-research')) {
+            messageUpdates.sources = window.__lastSearchSources;
+            window.__lastSearchSources = null;
+        }
+        updateMessage(currentChatId, aiMessageId, messageUpdates);
+
     } catch (error) {
       console.error('[useMessageSender] Error generating response:', error);
       updateMessage(currentChatId, aiMessageId, {

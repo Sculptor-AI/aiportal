@@ -6,8 +6,15 @@ export default defineConfig({
   server: {
     port: 3009,
     headers: {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.googleusercontent.com https://images.unsplash.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://73.118.140.130:3000 https://fonts.googleapis.com ws://localhost:* wss://localhost:* https://*.google.com https://accounts.google.com; object-src 'none'; frame-src 'self' https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
-    }
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://*.googleusercontent.com https://images.unsplash.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://73.118.140.130 https://73.118.140.130:3000 https://fonts.googleapis.com ws://localhost:* wss://localhost:* https://*.google.com https://accounts.google.com; object-src 'none'; frame-src 'self' https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    },
+    proxy: {
+      '/api': {
+        target: 'https://73.118.140.130:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   build: {
     outDir: 'dist',

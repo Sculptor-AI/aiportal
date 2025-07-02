@@ -10,8 +10,8 @@ const SidebarOverlay = styled.div`
   bottom: 0;
   background: rgba(0, 0, 0, 1);
   z-index: 1000;
-  opacity: ${props => props.isOpen ? 1 : 0};
-  visibility: ${props => props.isOpen ? 'visible' : 'hidden'};
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   touch-action: none;
 `;
@@ -25,7 +25,7 @@ const SidebarContainer = styled.div`
   background: ${props => props.theme.sidebar || props.theme.background};
   border-right: 1px solid ${props => props.theme.border};
   z-index: 1001;
-  transform: translateX(${props => props.isOpen ? '0' : '-100%'});
+  transform: translateX(${props => props.$isOpen ? '0' : '-100%'});
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
@@ -43,7 +43,7 @@ const SidebarContainer = styled.div`
     }
   }
   
-  ${props => props.isOpen && `
+  ${props => props.$isOpen && `
     animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   `}
 `;
@@ -141,7 +141,7 @@ const ChatItem = styled.div`
   border-radius: 12px;
   cursor: pointer;
   touch-action: manipulation;
-  background: ${props => props.active ? (props.theme.primary + '20') : 'transparent'};
+  background: ${props => props.$active ? (props.theme.primary + '20') : 'transparent'};
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -164,7 +164,7 @@ const ChatItem = styled.div`
   
   &:active {
     transform: scale(0.98);
-    background: ${props => props.active ? (props.theme.primary + '30') : props.theme.border};
+    background: ${props => props.$active ? (props.theme.primary + '30') : props.theme.border};
   }
 `;
 
@@ -176,7 +176,7 @@ const ChatItemContent = styled.div`
 const ChatTitle = styled.div`
   font-size: 16px;
   font-weight: 500;
-  color: ${props => props.active ? props.theme.primary : props.theme.text};
+  color: ${props => props.$active ? props.theme.primary : props.theme.text};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -404,8 +404,8 @@ const MobileSidebar = ({
 
   return (
     <>
-      <SidebarOverlay isOpen={isOpen} onClick={onClose} />
-      <SidebarContainer isOpen={isOpen}>
+      <SidebarOverlay $isOpen={isOpen} onClick={onClose} />
+      <SidebarContainer $isOpen={isOpen}>
         <SidebarHeader>
           <SidebarTitleContainer>
             <SidebarLogo src="/images/sculptor.svg" alt="Sculptor Logo" />
@@ -425,11 +425,11 @@ const MobileSidebar = ({
             {chats.map(chat => (
               <ChatItem 
                 key={chat.id} 
-                active={chat.id === activeChat} 
+                $active={chat.id === activeChat} 
                 onClick={() => handleChatSelect(chat.id)}
               >
                 <ChatItemContent>
-                  <ChatTitle active={chat.id === activeChat}>{chat.title}</ChatTitle>
+                  <ChatTitle $active={chat.id === activeChat}>{chat.title}</ChatTitle>
                   <ChatPreview>{getLastMessage(chat)}</ChatPreview>
                 </ChatItemContent>
                 <ChatActions>

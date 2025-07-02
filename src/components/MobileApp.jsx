@@ -155,7 +155,7 @@ const ModelMenuOverlay = styled.div`
   bottom: 0;
   background: rgba(0, 0, 0, 0.3);
   z-index: 1002; 
-  display: ${props => props.isOpen ? 'block' : 'none'};
+  display: ${props => props.$isOpen ? 'block' : 'none'};
 `;
 
 const ModelMenuContainer = styled.div`
@@ -172,7 +172,7 @@ const ModelMenuContainer = styled.div`
   box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
   max-height: 50vh;
   overflow-y: auto;
-  transform: translateY(${props => props.isOpen ? '0%' : '100%'});
+  transform: translateY(${props => props.$isOpen ? '0%' : '100%'});
   transition: transform 0.3s ease-out;
 `;
 
@@ -234,18 +234,11 @@ const MobileAppContent = () => {
     return savedActiveChat ? JSON.parse(savedActiveChat) : chats[0]?.id;
   });
 
-  const [availableModels, setAvailableModels] = useState([
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-    { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet' },
-    { id: 'chatgpt-4o', name: 'ChatGPT 4o' },
-    { id: 'nemotron-super-49b', name: 'Nemotron 49B' },
-    { id: 'ursa-minor', name: 'Ursa Minor' }
-  ]);
+  const [availableModels, setAvailableModels] = useState([]);
   
   const [selectedModel, setSelectedModel] = useState(() => {
     const savedModel = localStorage.getItem('selectedModel');
-    return savedModel || 'gemini-2.5-pro';
+    return savedModel || null;
   });
 
   const [settings, setSettings] = useState(() => {
@@ -286,29 +279,32 @@ const MobileAppContent = () => {
       try {
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
-          const mergedModels = [...availableModels];
+          // Define substrings of model IDs to exclude
+          const excludedSubstrings = [
+            'haiku',
+            '4o-mini',
+            'gpt-3.5-turbo'
+          ];
           
-          backendModels.forEach(backendModel => {
-            const existingIndex = mergedModels.findIndex(m => m.id === backendModel.id);
-            
-            if (existingIndex >= 0) {
-              mergedModels[existingIndex] = {
-                ...mergedModels[existingIndex],
-                ...backendModel,
-                isBackendModel: true
-              };
-            } else {
-              mergedModels.push({
-                ...backendModel,
-                isBackendModel: true
-              });
-            }
-          });
+          // Filter out the excluded models by checking if their ID includes any of the substrings
+          const filteredModels = backendModels.filter(
+            model => !excludedSubstrings.some(substring => model.id.includes(substring))
+          );
           
-          setAvailableModels(mergedModels);
+          setAvailableModels(filteredModels);
+
+          const currentSelectedModelIsValid = filteredModels.some(m => m.id === selectedModel);
+          if (!currentSelectedModelIsValid && filteredModels.length > 0) {
+            setSelectedModel(filteredModels[0].id);
+          }
+        } else {
+          setAvailableModels([]);
+          setSelectedModel(null);
         }
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
+        setAvailableModels([]);
+        setSelectedModel(null);
       }
     };
     
@@ -578,8 +574,8 @@ const MobileAppContent = () => {
         )}
 
         {/* Model Selection Menu */}
-        <ModelMenuOverlay isOpen={isModelMenuOpen} onClick={() => setIsModelMenuOpen(false)} />
-        <ModelMenuContainer isOpen={isModelMenuOpen}>
+        <ModelMenuOverlay $isOpen={isModelMenuOpen} onClick={() => setIsModelMenuOpen(false)} />
+        <ModelMenuContainer $isOpen={isModelMenuOpen}>
           <SectionHeaderStyled>Select AI Model</SectionHeaderStyled>
           {availableModels && availableModels.map(model => (
             <ModelMenuItem 
