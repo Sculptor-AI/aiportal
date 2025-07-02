@@ -13,7 +13,7 @@ const SettingsOverlay = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 102;
 `;
 
 const SettingsContainer = styled.div`
