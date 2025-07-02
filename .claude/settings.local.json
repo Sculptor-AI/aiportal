@@ -18,7 +18,9 @@
       "Bash(npm run:*)",
       "Bash(pkill:*)",
       "Bash(true)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(cp:*)",
+      "Bash(awk:*)"
     ],
     "deny": []
   }
