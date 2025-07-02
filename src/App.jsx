@@ -21,6 +21,7 @@ import NewSettingsPanel from './components/NewSettingsPanel';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import MediaPage from './pages/MediaPage';
 import NewsPage from './pages/NewsPage';
+import AdminPage from './pages/AdminPage';
 import ForcedLoginScreen from './components/ForcedLoginScreen';
 
 const AppContainer = styled.div`
@@ -667,6 +668,7 @@ const AppContent = () => {
               } />
               <Route path="/media" element={<MediaPage />} />
               <Route path="/news" element={<NewsPage />} />
+              <Route path="/admin" element={<AdminPage />} />
             </Routes>
           </MainContentArea>
           
