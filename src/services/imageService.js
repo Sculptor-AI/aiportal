@@ -1,7 +1,11 @@
 import axios from 'axios';
 
 // Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
+<<<<<<< Updated upstream
 const rawBaseUrl = 'https://73.118.140.130:3000'; // Hardcoded to use the specified backend
+=======
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://73.118.140.130:3000';
+>>>>>>> Stashed changes
 
 // Remove trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');

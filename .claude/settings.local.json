@@ -17,7 +17,8 @@
       "Bash(curl:*)",
       "Bash(npm run:*)",
       "Bash(pkill:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
