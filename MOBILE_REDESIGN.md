@@ -1,6 +1,6 @@
 # Mobile-First Redesign
 
-## Overview
+## Overview 
 
 This document describes the comprehensive mobile-first redesign of AI Portal, creating a native-like mobile experience similar to ChatGPT iOS while maintaining desktop functionality.
 
