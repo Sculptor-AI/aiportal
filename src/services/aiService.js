@@ -988,8 +988,8 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // 3. Remove `extractResponse` from all MODEL_CONFIGS.
 // 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.
 
-// Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://73.118.140.130:3000';
+// Prefer environment variable, otherwise default to same-origin
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
 
 // Remove trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');

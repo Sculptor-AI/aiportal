@@ -1,8 +1,8 @@
 // authService.js
 // Backend authentication service for AI Portal
 
-// Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://73.118.140.130:3000';
+// Prefer environment variable, otherwise default to same-origin (empty string)
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
 
 // Remove any trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
