@@ -1091,17 +1091,6 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             Chats
           </NavItem>
           
-          <NavItem 
-            onClick={() => setActiveSection('apikeys')} 
-            $active={activeSection === 'apikeys'}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <circle cx="12" cy="16" r="1"></circle>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            API Keys
-          </NavItem>
           
           <NavItem 
             onClick={() => setActiveSection('accessibility')} 
@@ -1528,79 +1517,6 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             </div>
           )}
           
-          {activeSection === 'apikeys' && (
-            <div>
-              <SectionTitle>API Keys</SectionTitle>
-              
-              <SettingGroup>
-                <SettingLabel>Backend API Key</SettingLabel>
-                <InputField
-                  type="password"
-                  value={localSettings.backendApiKey || ''}
-                  onChange={(e) => handleChange('backendApiKey', e.target.value)}
-                  placeholder="Enter your backend API key (ak_...)"
-                  style={{ 
-                    backgroundColor: isDarkMode() ? '#333' : '#f5f5f7',
-                    color: isDarkMode() ? '#fff' : '#000'
-                  }}
-                />
-                <SettingDescription>
-                  Required for accessing AI models through your backend server. This key is used for authentication with the backend API.
-                </SettingDescription>
-              </SettingGroup>
-              
-              <SettingGroup>
-                <SettingLabel>OpenAI API Key</SettingLabel>
-                <InputField
-                  type="password"
-                  value={localSettings.openaiApiKey || ''}
-                  onChange={(e) => handleChange('openaiApiKey', e.target.value)}
-                  placeholder="Enter your OpenAI API key (sk-...)"
-                  style={{ 
-                    backgroundColor: isDarkMode() ? '#333' : '#f5f5f7',
-                    color: isDarkMode() ? '#fff' : '#000'
-                  }}
-                />
-                <SettingDescription>
-                  Used for ChatGPT and GPT-4 models. Get your key from platform.openai.com.
-                </SettingDescription>
-              </SettingGroup>
-              
-              <SettingGroup>
-                <SettingLabel>Google API Key</SettingLabel>
-                <InputField
-                  type="password"
-                  value={localSettings.googleApiKey || ''}
-                  onChange={(e) => handleChange('googleApiKey', e.target.value)}
-                  placeholder="Enter your Google API key"
-                  style={{ 
-                    backgroundColor: isDarkMode() ? '#333' : '#f5f5f7',
-                    color: isDarkMode() ? '#fff' : '#000'
-                  }}
-                />
-                <SettingDescription>
-                  Used for Gemini models. Get your key from Google AI Studio.
-                </SettingDescription>
-              </SettingGroup>
-              
-              <SettingGroup>
-                <SettingLabel>Anthropic API Key</SettingLabel>
-                <InputField
-                  type="password"
-                  value={localSettings.anthropicApiKey || ''}
-                  onChange={(e) => handleChange('anthropicApiKey', e.target.value)}
-                  placeholder="Enter your Anthropic API key (sk-ant-...)"
-                  style={{ 
-                    backgroundColor: isDarkMode() ? '#333' : '#f5f5f7',
-                    color: isDarkMode() ? '#fff' : '#000'
-                  }}
-                />
-                <SettingDescription>
-                  Used for Claude models. Get your key from console.anthropic.com.
-                </SettingDescription>
-              </SettingGroup>
-            </div>
-          )}
           
           {activeSection === 'about' && (
             <AboutContainer>

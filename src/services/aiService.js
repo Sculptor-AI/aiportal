@@ -410,25 +410,25 @@ const isBackendModel = (modelId, availableModels = []) => {
 export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false, systemPrompt = null) {
   console.log(`sendMessageToBackendStream called with model: ${modelId}, message: "${message.substring(0, 30)}...", search: ${search}`);
 
-  // Get user settings for API key
-  let userSettings = {};
+  // Get user's assigned backend API key from session
+  let apiKey = null;
   try {
     const userJSON = sessionStorage.getItem('ai_portal_current_user');
     if (userJSON) {
       const user = JSON.parse(userJSON);
-      userSettings = user.settings || {};
-    } else {
-      const settingsJSON = localStorage.getItem('settings');
-      if (settingsJSON) {
-        userSettings = JSON.parse(settingsJSON);
+      // User's assigned backend API key should be stored as their accessToken
+      if (user.accessToken && user.accessToken.startsWith('ak_')) {
+        apiKey = user.accessToken;
       }
     }
   } catch (e) {
-    console.error('Error getting user settings:', e);
+    console.error('Error getting user session:', e);
   }
 
-  // Get API key from settings
-  const apiKey = userSettings.backendApiKey || 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+  // Fallback API key for development/testing
+  if (!apiKey) {
+    apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+  }
 
   if (!apiKey) {
     throw new Error('Backend API key is required. Please add it in Settings.');
@@ -1024,26 +1024,26 @@ const buildApiUrl = (endpoint) => {
  */
 export const fetchModelsFromBackend = async () => {
   try {
-    // Get user settings for API key
-    let userSettings = {};
+    // Get user's assigned backend API key from session
+    let apiKey = null;
     let user = null;
     try {
       const userJSON = sessionStorage.getItem('ai_portal_current_user');
       if (userJSON) {
         user = JSON.parse(userJSON);
-        userSettings = user.settings || {};
-      } else {
-        const settingsJSON = localStorage.getItem('settings');
-        if (settingsJSON) {
-          userSettings = JSON.parse(settingsJSON);
+        // User's assigned backend API key should be stored as their accessToken
+        if (user.accessToken && user.accessToken.startsWith('ak_')) {
+          apiKey = user.accessToken;
         }
       }
     } catch (e) {
-      console.error('Error getting user settings:', e);
+      console.error('Error getting user session:', e);
     }
 
-    // Get API key from settings
-    const apiKey = userSettings.backendApiKey || 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+    // Fallback API key for development/testing
+    if (!apiKey) {
+      apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+    }
 
     if (!apiKey) {
       console.log('No backend API key available, skipping backend models');
@@ -1155,25 +1155,25 @@ export const sendMessageToBackend = async (modelId, message, search = false, dee
 
 // Generate chat title function
 export const generateChatTitle = async (userPrompt, assistantResponse) => {
-  // Get user settings for API key
-  let userSettings = {};
+  // Get user's assigned backend API key from session
+  let apiKey = null;
   try {
     const userJSON = sessionStorage.getItem('ai_portal_current_user');
     if (userJSON) {
       const user = JSON.parse(userJSON);
-      userSettings = user.settings || {};
-    } else {
-      const settingsJSON = localStorage.getItem('settings');
-      if (settingsJSON) {
-        userSettings = JSON.parse(settingsJSON);
+      // User's assigned backend API key should be stored as their accessToken
+      if (user.accessToken && user.accessToken.startsWith('ak_')) {
+        apiKey = user.accessToken;
       }
     }
   } catch (e) {
-    console.error('Error getting user settings:', e);
+    console.error('Error getting user session:', e);
   }
 
-  // Get API key from settings
-  const apiKey = userSettings.backendApiKey || 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+  // Fallback API key for development/testing
+  if (!apiKey) {
+    apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+  }
 
   if (!apiKey) {
     console.log('Skipping chat title generation - no backend API key');
