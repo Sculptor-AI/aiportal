@@ -988,8 +988,8 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // 3. Remove `extractResponse` from all MODEL_CONFIGS.
 // 4. Verify/update `prepareRequest` for all models to ensure they don't add `stream: true`.
 
-// Prefer environment variable, otherwise default to same-origin
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+// Build backend base URL robustly (exactly one /api suffix, no duplicate slashes)
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://73.118.140.130:3000';
 
 // Remove trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
@@ -1026,11 +1026,10 @@ export const fetchModelsFromBackend = async () => {
   try {
     // Get user settings for API key
     let userSettings = {};
-    let user = null;
     try {
       const userJSON = sessionStorage.getItem('ai_portal_current_user');
       if (userJSON) {
-        user = JSON.parse(userJSON);
+        const user = JSON.parse(userJSON);
         userSettings = user.settings || {};
       } else {
         const settingsJSON = localStorage.getItem('settings');
@@ -1142,18 +1141,552 @@ const getCurrentUser = () => {
  * @returns {Promise<Object>} The response
  */
 export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null, conversationHistory = []) => {
-  const chunks = [];
   try {
-    for await (const chunk of sendMessageToBackendStream(message, modelId, conversationHistory, imageData, fileTextContent, search, deepResearch, imageGen, systemPrompt)) {
-      chunks.push(chunk);
+    // Get user settings for API key
+    let userSettings = {};
+    try {
+      const userJSON = sessionStorage.getItem('ai_portal_current_user');
+      if (userJSON) {
+        const user = JSON.parse(userJSON);
+        userSettings = user.settings || {};
+      } else {
+        const settingsJSON = localStorage.getItem('settings');
+        if (settingsJSON) {
+          userSettings = JSON.parse(settingsJSON);
+        }
+      }
+    } catch (e) {
+      console.error('Error getting user settings:', e);
     }
-    return { response: chunks.join('') };
+
+    // Get API key from settings
+    const apiKey = userSettings.backendApiKey || 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+
+    if (!apiKey) {
+      throw new Error('Backend API key is required. Please add it in Settings.');
+    }
+    
+    console.log("sendMessageToBackend called with:", { 
+      modelId, 
+      search,
+      messageLength: message?.length,
+      hasImage: !!imageData,
+      hasFileText: !!fileTextContent,
+      hasSystemPrompt: !!systemPrompt
+    });
+    
+    // Check if user is authenticated
+    const user = getCurrentUser();
+    if (!user || !user.accessToken) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    
+    // Prepare messages array
+    const messages = [];
+    
+    // Add system prompt if provided
+    if (systemPrompt) {
+      messages.push({
+        role: 'system',
+        content: systemPrompt
+      });
+    }
+    
+    // Add conversation history
+    if (conversationHistory && conversationHistory.length > 0) {
+      messages.push(...conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })));
+    }
+    
+    // Build the user message
+    let userContent = message;
+    
+    // Add file content if provided
+    if (fileTextContent) {
+      userContent = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${message}`;
+    }
+    
+    // Add the current message
+    if (imageData) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: userContent },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageData
+            }
+          }
+        ]
+      });
+    } else {
+      messages.push({
+        role: 'user',
+        content: userContent
+      });
+    }
+    
+    // Build request payload in OpenAI-compatible format
+    const requestPayload = {
+      model: modelId,
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 2000
+    };
+    
+    console.log("Prepared request payload for backend:", JSON.stringify(requestPayload, null, 2));
+            type: 'image_url',
+            image_url: {
+              url: imageData
+            }
+          }
+        ]
+      });
+      console.log("Added image data to request");
+    } else {
+      messages.push({
+        role: 'user',
+        content: userContent
+      });
+    }
+    
+    // Prepare request payload
+    const requestPayload = {
+      model: modelId,
+      messages: messages,
+      stream: false
+    };
+
+    // Add web search if requested
+    if (search || deepResearch) {
+      requestPayload.web_search = true;
+    }
+    
+    // Prepare headers with X-API-Key
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-API-Key': apiKey
+    };
+    
+    const apiUrl = buildApiUrl('/v1/chat/completions');
+    console.log(`Sending request to ${apiUrl}`, requestPayload);
+    const response = await axios.post(apiUrl, requestPayload, { headers });
+    
+    // For regular responses, return the text content
+    // For search responses, also include the sources if available
+    return {
+      response: response.data.choices?.[0]?.message?.content || response.data.content || response.data,
+      sources: response.data.sources || null  // Include sources if they exist
+    };
+    
+    // Add web search if enabled
+    if (search) {
+      requestPayload.web_search = true;
+      console.log('Web search enabled for this request');
+    }
+    
+    // Set headers with proper authentication
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Check if the access token is an API key (starts with ak_) or a JWT token
+    if (user.accessToken.startsWith('ak_')) {
+      // Use API key authentication
+      headers['X-API-Key'] = user.accessToken;
+    } else {
+      // Use JWT Bearer authentication
+      headers['Authorization'] = `Bearer ${user.accessToken}`;
+    }
+
+    const apiUrl = buildApiUrl('/v1/chat/completions');
+    console.log(`Sending request to ${apiUrl}`);
+    
+    const response = await axios.post(apiUrl, requestPayload, { headers });
+    
+    // Handle the response
+    const responseData = response.data;
+    
+    // Extract the response content
+    const content = responseData.choices?.[0]?.message?.content || 
+                   responseData.content || 
+                   '';
+    
+    // Return response with sources if available (from web search)
+    return {
+      response: content,
+      sources: responseData.sources || null
+    };
+    
   } catch (error) {
+    console.error('Error sending message to backend:', error);
+    
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    } else if (error.response?.status === 429) {
+      throw new Error('Rate limit exceeded. Please try again later.');
+    } else if (error.response?.data?.error) {
+      throw new Error(error.response.data.error.message || error.response.data.error);
+    } else {
+      throw new Error(error.message || 'Failed to send message to backend');
+    }
+  }
+};
+
+/**
+ * Stream a message from the backend
+ * @param {string} modelType - The model to use
+ * @param {string} prompt - The user's message
+ * @param {Function} onChunk - Callback for receiving chunks of the response
+ * @param {boolean} search - Whether to use search
+ * @param {boolean} deepResearch - Whether to use deep research
+ * @param {boolean} imageGen - Whether to generate images
+ * @param {string} imageData - Optional base64 image data
+ * @param {string} fileTextContent - Optional text content from PDF or text file
+ * @param {string} systemPrompt - Optional system prompt for thinking mode
+ * @param {string} mode - Optional mode for the request
+ * @returns {Promise<void>} A promise that resolves when streaming is complete
+ */
+export const streamMessageFromBackend = async (
+  modelType,
+  prompt,
+  onChunk,
+  search = false,
+  deepResearch = false, 
+  imageGen = false, 
+  imageData = null,
+  fileTextContent = null,
+  systemPrompt = null,
+  mode = null,
+  conversationHistory = []
+) => {
+  try {
+    // Get user settings for API key
+    let userSettings = {};
+    try {
+      const userJSON = sessionStorage.getItem('ai_portal_current_user');
+      if (userJSON) {
+        const user = JSON.parse(userJSON);
+        userSettings = user.settings || {};
+      } else {
+        const settingsJSON = localStorage.getItem('settings');
+        if (settingsJSON) {
+          userSettings = JSON.parse(settingsJSON);
+        }
+      }
+    } catch (e) {
+      console.error('Error getting user settings:', e);
+    }
+
+    // Get API key from settings
+    const apiKey = userSettings.backendApiKey || 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+
+    if (!apiKey) {
+      throw new Error('Backend API key is required. Please add it in Settings.');
+    }
+    
+    console.log("streamMessageFromBackend called with:", { 
+      modelType, 
+      search,
+      promptLength: prompt?.length,
+      hasImage: !!imageData,
+      hasFileText: !!fileTextContent,
+      hasSystemPrompt: !!systemPrompt
+    });
+    
+    // Check if user is authenticated
+    const user = getCurrentUser();
+    if (!user || !user.accessToken) {
+      throw new Error('Authentication required. Please log in.');
+    }
+    
+    // Prepare messages array
+    const messages = [];
+    
+    // Add system prompt if provided
+    if (systemPrompt) {
+      messages.push({
+        role: 'system',
+        content: systemPrompt
+      });
+    }
+    
+    // Add conversation history
+    if (conversationHistory && conversationHistory.length > 0) {
+      messages.push(...conversationHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      })));
+    }
+    
+    // Build the user message
+    let userContent = prompt;
+    
+    // Add file content if provided
+    if (fileTextContent) {
+      userContent = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${prompt}`;
+    }
+    
+    // Add the current message
+    if (imageData) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: userContent },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageData
+            }
+          }
+        ]
+      });
+    } else {
+      messages.push({
+        role: 'user',
+        content: userContent
+      });
+    }
+    
+    // Build request payload in OpenAI-compatible format
+    const requestPayload = {
+      model: modelType,
+      messages: messages,
+      stream: true,
+      temperature: 0.7,
+      max_tokens: 2000
+    };
+    
+    // Add web search if enabled
+    if (search) {
+      requestPayload.web_search = true;
+      console.log('Web search enabled for streaming request');
+    }
+    
+    // Set headers with proper authentication
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Check if the access token is an API key (starts with ak_) or a JWT token
+    if (user.accessToken.startsWith('ak_')) {
+      // Use API key authentication
+      headers['X-API-Key'] = user.accessToken;
+    } else {
+      // Use JWT Bearer authentication
+      headers['Authorization'] = `Bearer ${user.accessToken}`;
+    }
+
+    const streamUrl = buildApiUrl('/v1/chat/completions');
+    console.log('Sending streaming request to:', streamUrl);
+    
+    // Prepare messages array
+    let messages = [...(conversationHistory || [])];
+
+    // Add system prompt if provided
+    if (systemPrompt) {
+      messages.unshift({
+        role: 'system',
+        content: systemPrompt
+      });
+      console.log("Added system prompt to streaming request");
+      console.log(`System prompt first 50 chars: ${systemPrompt.substring(0, 50)}...`);
+    }
+
+    // Prepare user message content
+    let userContent = prompt || '';
+    
+    // Add file content if provided
+    if (fileTextContent) {
+      userContent = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${userContent}`;
+      console.log(`Added ${fileTextContent.length} characters of file text to streaming request`);
+    }
+
+    // Handle image data
+    if (imageData) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: userContent },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageData
+            }
+          }
+        ]
+      });
+      console.log("Added image data to streaming request");
+    } else {
+      messages.push({
+        role: 'user',
+        content: userContent
+      });
+    }
+    
+    // Create the request packet using OpenAI format
+    const requestPacket = {
+      model: modelType,
+      messages: messages,
+      stream: true
+    };
+
+    // Add web search if requested
+    if (search || deepResearch) {
+      requestPacket.web_search = true;
+    }
+    
+    console.log('Sending streaming request to backend:', requestPacket);
+    
+    // Prepare headers with X-API-Key
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-API-Key': apiKey,
+      'Accept': 'text/event-stream'
+    };
+    
+    // Use fetch with streaming enabled
+    const streamUrl = buildApiUrl('/v1/chat/completions');
+    const response = await fetch(streamUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestPayload)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      
+      if (response.status === 401) {
+        throw new Error('Authentication failed. Please log in again.');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      
+      throw new Error(errorData.error?.message || errorData.error || 'Failed to process streaming message');
+    }
+    
+    // Get the reader from the response body stream
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    let buffer = '';
+    let sourcesProcessed = false;
+
+    // Process the stream chunks
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      // Decode the chunk and accumulate it
+      buffer += decoder.decode(value, { stream: true });
+
+      // Handle SSE format: each message starts with "data: "
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.trim() === '') continue;
+        
+        if (line.startsWith('data: ')) {
+          const data = line.substring(6).trim();
+          
+          // SSE can send a special [DONE] message to indicate completion
+          if (data === '[DONE]') {
+            return;
+          }
+          
+          try {
+            const parsed = JSON.parse(data);
+            
+            // Handle sources special event type for web search
+            if (parsed.type === 'sources' && Array.isArray(parsed.sources)) {
+              console.log('Received web search sources:', parsed.sources);
+              sourcesProcessed = true;
+              
+              // Format and send sources as part of the content
+              const sourcesText = '\n\n**Sources:**\n' + 
+                parsed.sources.map((source, idx) => 
+                  `${idx + 1}. [${source.title}](${source.url})\n   ${source.snippet || ''}`
+                ).join('\n\n');
+              
+              onChunk(sourcesText);
+              
+              // Also store sources globally for the UI to access
+              window.__lastSearchSources = parsed.sources;
+              continue;
+            }
+            
+            // Handle content chunks
+            const content = parsed.choices?.[0]?.delta?.content || '';
+            
+            if (content) {
+              onChunk(content);
+            }
+            
+            // Check for finish reason
+            if (parsed.choices?.[0]?.finish_reason) {
+              console.log('Stream finished with reason:', parsed.choices[0].finish_reason);
+            }
+          } catch (e) {
+            console.error('Failed to parse SSE data:', e, 'Raw data:', data);
+          }
+        }
+      }
+    }
+
+    // Process any remaining buffered data
+    if (buffer.trim()) {
+      const remainingLines = buffer.split('\n');
+      for (const line of remainingLines) {
+        if (line.startsWith('data: ')) {
+          const data = line.substring(6).trim();
+          if (data !== '' && data !== '[DONE]') {
+            try {
+              const parsed = JSON.parse(data);
+              
+              if (parsed.type === 'sources' && Array.isArray(parsed.sources)) {
+                console.log('Received web search sources (final):', parsed.sources);
+                
+                const sourcesText = '\n\n**Sources:**\n' + 
+                  parsed.sources.map((source, idx) => 
+                    `${idx + 1}. [${source.title}](${source.url})\n   ${source.snippet || ''}`
+                  ).join('\n\n');
+                
+                onChunk(sourcesText);
+                window.__lastSearchSources = parsed.sources;
+              } else {
+                const content = parsed.choices?.[0]?.delta?.content || '';
+                if (content) {
+                  onChunk(content);
+                }
+              }
+            } catch (e) {
+              console.error('Failed to parse final SSE data:', e);
+            }
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error in streaming from backend:', error);
     throw error;
   }
 };
 
-// Generate chat title function
+/**
+ * Generate a short chat title summarizing the user and assistant messages
+ * using a fast model on the backend.
+ * @param {string} userPrompt - The user's prompt
+ * @param {string} assistantResponse - The assistant's full response
+ * @returns {Promise<string|null>} The generated title or null on failure
+ */
 export const generateChatTitle = async (userPrompt, assistantResponse) => {
   // Get user settings for API key
   let userSettings = {};
@@ -1195,6 +1728,3 @@ export const generateChatTitle = async (userPrompt, assistantResponse) => {
   }
   return null;
 };
-
-// Alias for backward compatibility
-export const streamMessageFromBackend = sendMessageToBackendStream;
