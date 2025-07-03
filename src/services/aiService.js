@@ -172,7 +172,16 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       } catch (e) {
         errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } };
       }
-      throw new Error(errorData.error?.message || 'Backend request failed');
+      
+      // Provide specific error messages for common issues
+      let errorMessage = errorData.error?.message || 'Backend request failed';
+      if (response.status === 401 && modelId.includes('gemini')) {
+        errorMessage = 'Google API authentication failed on the backend. The Gemini models are currently unavailable.';
+      } else if (response.status === 401) {
+        errorMessage = 'API authentication failed. This model may not be properly configured on the backend.';
+      }
+      
+      throw new Error(errorMessage);
     }
 
     // Get the reader from the response body stream

@@ -275,13 +275,15 @@ const AppContent = () => {
     return savedModel || null; // Will be set when models are loaded
   });
 
-  // Fetch models from backend (now the ONLY source)
+  // Fetch models from backend (now the ONLY source) and refresh periodically
   useEffect(() => {
     const getBackendModels = async () => {
       try {
+        console.log('Fetching models from backend...');
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
           setAvailableModels(backendModels);
+          console.log(`Loaded ${backendModels.length} models from backend:`, backendModels.map(m => m.id));
           
           // Set default model if none is selected or the selected one is no longer available
           const currentSelectedModelIsValid = backendModels.some(m => m.id === selectedModel);
@@ -289,9 +291,11 @@ const AppContent = () => {
             const defaultModel = backendModels[0].id;
             setSelectedModel(defaultModel);
             localStorage.setItem('selectedModel', defaultModel);
+            console.log(`Set default model to: ${defaultModel}`);
           }
         } else {
           // If backend returns no models, the list will be empty.
+          console.warn('Backend returned no models');
           setAvailableModels([]);
           setSelectedModel(null);
         }
@@ -302,7 +306,13 @@ const AppContent = () => {
       }
     };
     
+    // Initial load
     getBackendModels();
+    
+    // Refresh models every 5 minutes to catch newly added models
+    const refreshInterval = setInterval(getBackendModels, 5 * 60 * 1000);
+    
+    return () => clearInterval(refreshInterval);
   }, []);
   
   // Settings - from user account or localStorage
