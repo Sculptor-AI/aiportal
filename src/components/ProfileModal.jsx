@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
+import AdminLoginModal from './AdminLoginModal';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -124,6 +125,31 @@ const InfoValue = styled.span`
   color: ${props => props.theme.text}80;
 `;
 
+const AdminLoginButton = styled.button`
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 15px;
+  width: 100%;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    background-color: #1976d2;
+  }
+  
+  svg {
+    margin-right: 8px;
+  }
+`;
+
 const LogoutButton = styled.button`
   background-color: #f44336;
   color: white;
@@ -155,16 +181,29 @@ const formatDate = (dateString) => {
 };
 
 const ProfileModal = ({ closeModal }) => {
-  const { user, logout } = useAuth();
+  const { user, adminUser, logout, adminLogout } = useAuth();
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
   
   if (!user) return null;
   
   const handleLogout = async () => {
     try {
       await logout();
+      // Also logout admin if logged in as admin
+      if (adminUser) {
+        await adminLogout();
+      }
       closeModal();
     } catch (err) {
       console.error('Logout error:', err);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      await adminLogout();
+    } catch (err) {
+      console.error('Admin logout error:', err);
     }
   };
   
@@ -209,7 +248,27 @@ const ProfileModal = ({ closeModal }) => {
               <InfoLabel>Theme</InfoLabel>
               <InfoValue>{user.settings?.theme || 'Light'}</InfoValue>
             </InfoItem>
+            <InfoItem>
+              <InfoLabel>Admin Status</InfoLabel>
+              <InfoValue>{adminUser ? `Admin (${adminUser.username})` : 'Not logged in as admin'}</InfoValue>
+            </InfoItem>
           </ProfileSection>
+          
+          {!adminUser ? (
+            <AdminLoginButton onClick={() => setShowAdminLogin(true)}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              Login as Admin
+            </AdminLoginButton>
+          ) : (
+            <AdminLoginButton onClick={handleAdminLogout} style={{ backgroundColor: '#ff9800' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              Logout Admin
+            </AdminLoginButton>
+          )}
           
           <LogoutButton onClick={handleLogout}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -221,6 +280,12 @@ const ProfileModal = ({ closeModal }) => {
           </LogoutButton>
         </ModalBody>
       </ModalContent>
+      
+      {/* Admin Login Modal */}
+      <AdminLoginModal 
+        isOpen={showAdminLogin} 
+        onClose={() => setShowAdminLogin(false)} 
+      />
     </ModalOverlay>
   );
 };
