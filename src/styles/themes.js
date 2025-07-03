@@ -409,6 +409,12 @@ export const modelThemes = {
     primary: '#76B900',     // NVIDIA green
     secondary: '#1A1A1A',   // Dark gray/black
     gradient: 'linear-gradient(135deg, #76B900, #1A1A1A)'
+  },
+  // Add Mercury/Inception AI theme
+  'mercury': {
+    primary: '#2E0854',     // Deep purple
+    secondary: '#6A1B9A',   // Lighter purple
+    gradient: 'linear-gradient(135deg, #2E0854, #6A1B9A)'
   }
 };
 

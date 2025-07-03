@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
+import TextDiffusionAnimation from './TextDiffusionAnimation';
 
 // Format markdown text including bold, italic, bullet points and code blocks
 const formatContent = (content) => {
@@ -672,7 +673,7 @@ const ThinkingDropdown = ({ thinkingContent }) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, id } = message;
   
   const getAvatar = () => {
     if (role === 'user') {
@@ -869,13 +870,24 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
               {/* Process content and show main content + thinking dropdown if applicable */}
               {(() => {
                 const processedContent = formatContent(content);
+                const isMercury = modelId?.toLowerCase().includes('mercury');
                 
                 if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
                   // If content has thinking tags, show thinking dropdown first, then main content
                   return (
                     <>
                       <ThinkingDropdown thinkingContent={processedContent.thinking} />
-                      {processedContent.main}
+                      {isMercury ? (
+                        <TextDiffusionAnimation 
+                          finalText={typeof processedContent.main === 'string' ? processedContent.main : content}
+                          isActive={!isLoading}
+                          messageId={id}
+                          speed={60}
+                          diffusionDuration={750}
+                        />
+                      ) : (
+                        processedContent.main
+                      )}
                     </>
                   );
                 } else {
@@ -883,7 +895,22 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
                   return content.split('\n\n-').map((part, index) => {
                     if (index === 0) {
                       // This is the main content part - process markdown formatting
-                      return <React.Fragment key={`content-part-${index}`}>{formatContent(part)}</React.Fragment>;
+                      const formattedPart = formatContent(part);
+                      return (
+                        <React.Fragment key={`content-part-${index}`}>
+                          {isMercury ? (
+                            <TextDiffusionAnimation 
+                              finalText={typeof formattedPart === 'string' ? formattedPart : part}
+                              isActive={!isLoading}
+                              messageId={id}
+                              speed={60}
+                              diffusionDuration={750}
+                            />
+                          ) : (
+                            formattedPart
+                          )}
+                        </React.Fragment>
+                      );
                     }
                     // This is the model signature part
                     return <em key={`signature-part-${index}`}>- {part}</em>;

@@ -743,11 +743,9 @@ const AppContent = () => {
             onClose={() => setIsSandbox3DOpen(false)}
             onSend={(object) => {
               if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
-                chatWindowRef.current.appendToInput(`
-```json
+                chatWindowRef.current.appendToInput(`\`\`\`json
 ${JSON.stringify(object, null, 2)}
-```
-`);
+\`\`\``);
               }
             }}
             theme={currentTheme}

@@ -110,7 +110,9 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
   // If we don't have an exact match, try to find a partial match
   if (!imageUrl) {
     // Check if the modelId contains any of our known provider names
-    if (modelId?.includes('openai') || modelId?.includes('gpt')) {
+    if (modelId?.includes('mercury')) {
+      imageUrl = '/images/inception-logo.png';
+    } else if (modelId?.includes('openai') || modelId?.includes('gpt')) {
       imageUrl = '/images/openai-logo.png';
     } else if (modelId?.includes('gemini')) {
       imageUrl = '/images/gemini-logo.png';
