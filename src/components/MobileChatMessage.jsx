@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
 
 const MessageContainer = styled.div`
   margin: 16px 0;
@@ -270,7 +271,7 @@ const formatTimestamp = (timestamp) => {
   }
 };
 
-const MobileChatMessage = ({ message, settings }) => {
+const MobileChatMessage = ({ message, settings, theme = {} }) => {
   const [imageError, setImageError] = useState(false);
   
   const isUser = message.role === 'user';
@@ -288,26 +289,34 @@ const MobileChatMessage = ({ message, settings }) => {
         )}
         
         <MessageContent isUser={isUser}>
-          {contentParts.map((part, index) => {
-            if (part.type === 'code') {
-              return (
-                <SimpleCodeBlock
-                  key={index}
-                  language={part.language}
-                  content={part.content}
-                />
-              );
-            } else {
-              return (
-                <div key={index}>
-                  {formatTextContent(part.content)}
-                </div>
-              );
-            }
-          })}
+          {message.isLoading && !isUser ? (
+            <StreamingMarkdownRenderer 
+              text={message.content || ''}
+              isStreaming={true}
+              theme={theme}
+            />
+          ) : (
+            contentParts.map((part, index) => {
+              if (part.type === 'code') {
+                return (
+                  <SimpleCodeBlock
+                    key={index}
+                    language={part.language}
+                    content={part.content}
+                  />
+                );
+              } else {
+                return (
+                  <div key={index}>
+                    {formatTextContent(part.content)}
+                  </div>
+                );
+              }
+            })
+          )}
         </MessageContent>
         
-        {message.isLoading && (
+        {message.isLoading && !message.content && (
           <LoadingIndicator>
             <LoadingDots>
               <span></span>

@@ -335,6 +335,7 @@ const ChatWindow = forwardRef(({
                 message={message} 
                 showModelIcons={settings.showModelIcons}
                 settings={settings}
+                theme={theme}
               />
             ))}
             <div ref={messagesEndRef} />

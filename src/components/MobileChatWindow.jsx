@@ -553,6 +553,7 @@ const MobileChatWindow = ({
                 key={message.id}
                 message={message}
                 settings={settings}
+                theme={theme}
               />
             ))}
           </>

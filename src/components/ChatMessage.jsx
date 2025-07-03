@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
+import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
 
 // Format markdown text including bold, italic, bullet points and code blocks
 const formatContent = (content) => {
@@ -672,7 +673,7 @@ const ThinkingDropdown = ({ thinkingContent }) => {
   );
 };
 
-const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
+const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, id } = message;
   
   const getAvatar = () => {
@@ -860,65 +861,80 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {} }) => {
               <FileName>{file.name || 'document.txt'}</FileName>
             </FileAttachmentContainer>
           )}
-          {isLoading ? (
-            <ThinkingContainer>
-              <SpinnerIcon />
-              Thinking
-            </ThinkingContainer>
-          ) : (
-            <>
-              {/* Process content and show main content + thinking dropdown if applicable */}
-              {(() => {
-                const processedContent = formatContent(content);
-                const isMercury = modelId?.toLowerCase().includes('mercury');
-                
-                if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
-                  // If content has thinking tags, show thinking dropdown first, then main content
+          {(() => {
+            // If loading and no content yet, show thinking indicator
+            if (isLoading && !content) {
+              return (
+                <ThinkingContainer>
+                  <SpinnerIcon />
+                  Thinking
+                </ThinkingContainer>
+              );
+            }
+            
+            // Process content and show main content + thinking dropdown if applicable
+            const processedContent = formatContent(content);
+            const isMercury = modelId?.toLowerCase().includes('mercury');
+            
+            if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
+              // If content has thinking tags, show thinking dropdown first, then main content
+              return (
+                <>
+                  <ThinkingDropdown thinkingContent={processedContent.thinking} />
+                  {isLoading ? (
+                    <StreamingMarkdownRenderer 
+                      text={typeof processedContent.main === 'string' ? processedContent.main : content}
+                      isStreaming={true}
+                      theme={theme}
+                    />
+                  ) : isMercury ? (
+                    <TextDiffusionAnimation 
+                      finalText={typeof processedContent.main === 'string' ? processedContent.main : content}
+                      isActive={!isLoading}
+                      messageId={id}
+                      speed={60}
+                      diffusionDuration={750}
+                    />
+                  ) : (
+                    processedContent.main
+                  )}
+                </>
+              );
+            } else {
+              // If content has no thinking tags, display it normally (as before)
+              return content.split('\n\n-').map((part, index) => {
+                if (index === 0) {
+                  // This is the main content part - process markdown formatting
+                  const formattedPart = formatContent(part);
+                  const mainText = typeof formattedPart === 'string' ? formattedPart : part;
+                  
                   return (
-                    <>
-                      <ThinkingDropdown thinkingContent={processedContent.thinking} />
-                      {isMercury ? (
+                    <React.Fragment key={`content-part-${index}`}>
+                      {isLoading ? (
+                        <StreamingMarkdownRenderer 
+                          text={mainText}
+                          isStreaming={true}
+                          theme={theme}
+                        />
+                      ) : isMercury ? (
                         <TextDiffusionAnimation 
-                          finalText={typeof processedContent.main === 'string' ? processedContent.main : content}
+                          finalText={mainText}
                           isActive={!isLoading}
                           messageId={id}
                           speed={60}
                           diffusionDuration={750}
                         />
                       ) : (
-                        processedContent.main
+                        formattedPart
                       )}
-                    </>
+                    </React.Fragment>
                   );
-                } else {
-                  // If content has no thinking tags, display it normally (as before)
-                  return content.split('\n\n-').map((part, index) => {
-                    if (index === 0) {
-                      // This is the main content part - process markdown formatting
-                      const formattedPart = formatContent(part);
-                      return (
-                        <React.Fragment key={`content-part-${index}`}>
-                          {isMercury ? (
-                            <TextDiffusionAnimation 
-                              finalText={typeof formattedPart === 'string' ? formattedPart : part}
-                              isActive={!isLoading}
-                              messageId={id}
-                              speed={60}
-                              diffusionDuration={750}
-                            />
-                          ) : (
-                            formattedPart
-                          )}
-                        </React.Fragment>
-                      );
-                    }
-                    // This is the model signature part
-                    return <em key={`signature-part-${index}`}>- {part}</em>;
-                  });
                 }
-              })()}
-            </>
-          )}
+                // This is the model signature part
+                return <em key={`signature-part-${index}`}>- {part}</em>;
+              });
+            }
+          })()}
           
           {/* Message action buttons - only show for completed messages (not loading) */}
           {!isLoading && content && (
