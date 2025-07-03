@@ -39,6 +39,12 @@ const ChatWindow = forwardRef(({
   isGraphingOpen,
   onToggleGraphing,
   onCloseGraphing,
+  isFlowchartOpen,
+  onToggleFlowchart,
+  onCloseFlowchart,
+  isSandbox3DOpen,
+  onToggleSandbox3D,
+  onCloseSandbox3D,
   onToolbarToggle,
 }, ref) => {
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
@@ -359,6 +365,12 @@ const ChatWindow = forwardRef(({
         isGraphingOpen={isGraphingOpen}
         onToggleGraphing={onToggleGraphing}
         onCloseGraphing={onCloseGraphing}
+        isFlowchartOpen={isFlowchartOpen}
+        onToggleFlowchart={onToggleFlowchart}
+        onCloseFlowchart={onCloseFlowchart}
+        isSandbox3DOpen={isSandbox3DOpen}
+        onToggleSandbox3D={onToggleSandbox3D}
+        onCloseSandbox3D={onCloseSandbox3D}
         onToolbarToggle={onToolbarToggle}
         // Pass inputFocusChange if ChatInputArea needs to inform ChatWindow about focus for header opacity effect
         // onInputFocusChange={inputFocusChange}

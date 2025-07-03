@@ -9,6 +9,8 @@ import MobileApp from './components/MobileApp';
 import WhiteboardModal from './components/WhiteboardModal';
 import EquationEditorModal from './components/EquationEditorModal';
 import GraphingModal from './components/GraphingModal';
+import FlowchartModal from './components/FlowchartModal';
+import Sandbox3DModal from './components/Sandbox3DModal';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -44,6 +46,8 @@ const MainContentArea = styled.div`
     if (props.$whiteboardOpen) totalMargin += 450;
     if (props.$equationEditorOpen) totalMargin += 450;
     if (props.$graphingOpen) totalMargin += 600; // Graphing panel is wider
+    if (props.$flowchartOpen) totalMargin += 450;
+    if (props.$sandbox3DOpen) totalMargin += 450;
     return `${totalMargin}px`;
   }};
   transition: margin-right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
@@ -86,6 +90,8 @@ const MainGreeting = styled.div`
     if (props.$whiteboardOpen) rightPanelOffset -= 225;
     if (props.$equationEditorOpen) rightPanelOffset -= 225;
     if (props.$graphingOpen) rightPanelOffset -= 300; // Half of 600px
+    if (props.$flowchartOpen) rightPanelOffset -= 225;
+    if (props.$sandbox3DOpen) rightPanelOffset -= 225;
     return `calc(50% + ${sidebarOffset}px + ${rightPanelOffset}px)`;
   }};
   transform: translateX(-50%);
@@ -347,6 +353,8 @@ const AppContent = () => {
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [isEquationEditorOpen, setIsEquationEditorOpen] = useState(false);
   const [isGraphingOpen, setIsGraphingOpen] = useState(false);
+  const [isFlowchartOpen, setIsFlowchartOpen] = useState(false);
+  const [isSandbox3DOpen, setIsSandbox3DOpen] = useState(false);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const chatWindowRef = useRef(null);
 
@@ -597,6 +605,8 @@ const AppContent = () => {
             $whiteboardOpen={isWhiteboardOpen} 
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}
+            $flowchartOpen={isFlowchartOpen}
+            $sandbox3DOpen={isSandbox3DOpen}
           >
             {collapsed && (
               <FloatingMenuButton onClick={() => setCollapsed(false)}>
@@ -615,6 +625,8 @@ const AppContent = () => {
                 $whiteboardOpen={isWhiteboardOpen}
                 $equationEditorOpen={isEquationEditorOpen}
                 $graphingOpen={isGraphingOpen}
+                $flowchartOpen={isFlowchartOpen}
+                $sandbox3DOpen={isSandbox3DOpen}
                 $sidebarCollapsed={collapsed}
               >
                 <h1>{greeting}</h1>
@@ -663,6 +675,12 @@ const AppContent = () => {
                   isGraphingOpen={isGraphingOpen}
                   onToggleGraphing={() => setIsGraphingOpen(prev => !prev)}
                   onCloseGraphing={() => setIsGraphingOpen(false)}
+                  isFlowchartOpen={isFlowchartOpen}
+                  onToggleFlowchart={() => setIsFlowchartOpen(prev => !prev)}
+                  onCloseFlowchart={() => setIsFlowchartOpen(false)}
+                  isSandbox3DOpen={isSandbox3DOpen}
+                  onToggleSandbox3D={() => setIsSandbox3DOpen(prev => !prev)}
+                  onCloseSandbox3D={() => setIsSandbox3DOpen(false)}
                   onToolbarToggle={setIsToolbarOpen}
                 />
               } />
@@ -684,7 +702,7 @@ const AppContent = () => {
               setIsWhiteboardOpen(false);
             }}
             theme={currentTheme}
-            otherPanelsOpen={(isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+            otherPanelsOpen={(isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
           />
           
           <EquationEditorModal
@@ -698,14 +716,28 @@ const AppContent = () => {
               setIsEquationEditorOpen(false);
             }}
             theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0)}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
           />
           
           <GraphingModal
             isOpen={isGraphingOpen}
             onClose={() => setIsGraphingOpen(false)}
             theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0)}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+          />
+
+          <FlowchartModal
+            isOpen={isFlowchartOpen}
+            onClose={() => setIsFlowchartOpen(false)}
+            theme={currentTheme}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+          />
+
+          <Sandbox3DModal
+            isOpen={isSandbox3DOpen}
+            onClose={() => setIsSandbox3DOpen(false)}
+            theme={currentTheme}
+            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0)}
           />
         
           {isSettingsOpen && (

@@ -157,12 +157,12 @@ export const InputContainer = styled.div`
   max-width: ${props => props.theme.name === 'retro' ? '750px' : '700px'} !important;
   padding: 0 !important;
   z-index: 100 !important;
-  pointer-events: ${props => props.$isWhiteboardOpen || props.$isEquationEditorOpen || props.$isGraphingOpen ? 'auto' : 'none'};
+  pointer-events: ${props => props.$isWhiteboardOpen || props.$isEquationEditorOpen || props.$isGraphingOpen || props.$isFlowchartOpen || props.$isSandbox3DOpen ? 'auto' : 'none'};
   flex-direction: column;
   /* margin-left will be handled by the left property based on $sidebarCollapsed */
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
 
-  ${({ $isEmpty, $animateDown, theme, $sidebarCollapsed, $isWhiteboardOpen, $isEquationEditorOpen, $isGraphingOpen }) => {
+  ${({ $isEmpty, $animateDown, theme, $sidebarCollapsed, $isWhiteboardOpen, $isEquationEditorOpen, $isGraphingOpen, $isFlowchartOpen, $isSandbox3DOpen }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
     
@@ -170,6 +170,8 @@ export const InputContainer = styled.div`
     if ($isWhiteboardOpen) rightPanelOffset -= 225; // Half of 450px
     if ($isEquationEditorOpen) rightPanelOffset -= 225; // Half of 450px
     if ($isGraphingOpen) rightPanelOffset -= 300; // Half of 600px
+    if ($isFlowchartOpen) rightPanelOffset -= 225; // Half of 450px
+    if ($isSandbox3DOpen) rightPanelOffset -= 225; // Half of 450px
 
     const centerPosition = $sidebarCollapsed 
       ? `calc(50% + ${rightPanelOffset}px)` 

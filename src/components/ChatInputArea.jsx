@@ -38,6 +38,12 @@ const ChatInputArea = forwardRef(({
   isGraphingOpen, // New prop for graphing tool
   onToggleGraphing, // New prop for toggling graphing
   onCloseGraphing, // New prop for closing graphing
+  isFlowchartOpen, // New prop for flowchart tool
+  onToggleFlowchart, // New prop for toggling flowchart
+  onCloseFlowchart, // New prop for closing flowchart
+  isSandbox3DOpen, // New prop for 3D sandbox tool
+  onToggleSandbox3D, // New prop for toggling 3D sandbox
+  onCloseSandbox3D, // New prop for closing 3D sandbox
   onToolbarToggle,
 }, ref) => {
   const theme = useTheme();
@@ -179,7 +185,7 @@ const ChatInputArea = forwardRef(({
     // The PopupMenu (ToolMenuModal) calls onClose itself after onSelect, so no need to setShowCreateModal(false) here.
   };
 
-  const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen;
+  const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen || isFlowchartOpen || isSandbox3DOpen;
 
   // Expose methods through ref
   useImperativeHandle(ref, () => ({
@@ -199,6 +205,8 @@ const ChatInputArea = forwardRef(({
       $isWhiteboardOpen={isWhiteboardOpen}
       $isEquationEditorOpen={isEquationEditorOpen}
       $isGraphingOpen={isGraphingOpen}
+      $isFlowchartOpen={isFlowchartOpen}
+      $isSandbox3DOpen={isSandbox3DOpen}
     >
       <MessageInputWrapper $isEmpty={chatIsEmpty}>
         <InputRow>
@@ -362,6 +370,27 @@ const ChatInputArea = forwardRef(({
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
               <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+          </ToolbarItem>
+          <ToolbarItem title="Flowchart" onClick={onToggleFlowchart}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="8" height="4" rx="1" ry="1"></rect>
+              <rect x="13" y="3" width="8" height="4" rx="1" ry="1"></rect>
+              <rect x="8" y="11" width="8" height="4" rx="1" ry="1"></rect>
+              <rect x="3" y="19" width="8" height="4" rx="1" ry="1"></rect>
+              <rect x="13" y="19" width="8" height="4" rx="1" ry="1"></rect>
+              <line x1="7" y1="7" x2="7" y2="11"></line>
+              <line x1="17" y1="7" x2="17" y2="11"></line>
+              <line x1="12" y1="15" x2="7" y2="19"></line>
+              <line x1="12" y1="15" x2="17" y2="19"></line>
+            </svg>
+          </ToolbarItem>
+          <ToolbarItem title="3D Sandbox" onClick={onToggleSandbox3D}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+              <path d="M12 2v10"></path>
+              <path d="M12 12l-6.18 5.25"></path>
+              <path d="M12 12l6.18 5.25"></path>
             </svg>
           </ToolbarItem>
         </ToolbarContainer>
