@@ -667,8 +667,8 @@ const AppContent = () => {
                 />
               } />
               <Route path="/media" element={<MediaPage />} />
-              <Route path="/news" element={<NewsPage />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
+              <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
             </Routes>
           </MainContentArea>
           

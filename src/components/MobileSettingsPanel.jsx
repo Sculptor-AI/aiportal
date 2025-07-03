@@ -208,7 +208,14 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
   const handleSettingChange = (key, value) => {
     const newSettings = { ...localSettings, [key]: value };
     setLocalSettings(newSettings);
-    updateSettings(newSettings);
+    // Remove immediate parent update to prevent re-renders
+    // updateSettings(newSettings);
+  };
+
+  const handleClose = () => {
+    // Save settings when closing to maintain current UX behavior
+    updateSettings(localSettings);
+    closeModal();
   };
 
   const themeOptions = [
@@ -235,11 +242,11 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
   ];
 
   return (
-    <SettingsOverlay onClick={closeModal}>
+    <SettingsOverlay onClick={handleClose}>
       <SettingsContainer onClick={(e) => e.stopPropagation()}>
         <SettingsHeader>
           <SettingsTitle>Settings</SettingsTitle>
-          <CloseButton onClick={closeModal}>
+          <CloseButton onClick={handleClose}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>

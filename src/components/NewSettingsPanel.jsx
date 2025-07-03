@@ -1032,10 +1032,17 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
   const handleChange = (key, value) => {
     const newSettings = { ...localSettings, [key]: value };
     setLocalSettings(newSettings);
-    updateSettings(newSettings);
+    // Remove immediate parent update to prevent re-renders
+    // updateSettings(newSettings);
   };
 
   const handleSave = () => {
+    updateSettings(localSettings);
+    closeModal();
+  };
+
+  const handleClose = () => {
+    // Save settings when closing to maintain current UX behavior
     updateSettings(localSettings);
     closeModal();
   };
@@ -1118,7 +1125,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
         </SettingsSidebar>
         
         <MainContent>
-          <CloseButton onClick={closeModal}>×</CloseButton>
+          <CloseButton onClick={handleClose}>×</CloseButton>
           
           {activeSection === 'general' && (
             <div>
@@ -1149,6 +1156,8 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                   <option value="cyberpunk">Cyberpunk</option>
                   <option value="bubblegum">Bubblegum</option>
                   <option value="desert">Desert</option>
+                  <option value="matrix">Matrix</option>
+                  <option value="comic-book">Comic Book</option>
                 </SelectBox>
               </SettingsRow>
               

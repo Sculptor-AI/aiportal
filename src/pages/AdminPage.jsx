@@ -7,6 +7,9 @@ const AdminContainer = styled.div`
   background-color: ${props => props.theme.background};
   color: ${props => props.theme.text};
   overflow-y: auto;
+  width: ${props => (props.collapsed ? '100%' : 'calc(100% - 280px)')};
+  margin-left: ${props => (props.collapsed ? '0' : '280px')};
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
 const Header = styled.div`
@@ -525,7 +528,7 @@ const mockUsers = [
   }
 ];
 
-const AdminPage = () => {
+const AdminPage = ({ collapsed }) => {
   const [users, setUsers] = useState(mockUsers);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredUsers, setFilteredUsers] = useState(mockUsers);
@@ -586,7 +589,7 @@ const AdminPage = () => {
   };
 
   return (
-    <AdminContainer>
+    <AdminContainer collapsed={collapsed}>
       <Header>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <Title>

@@ -1090,9 +1090,10 @@ export const fetchModelsFromBackend = async () => {
         
         response = await fetch(endpointUrl, { headers });
       } else {
-        // If no user is logged in, skip backend and use fallback models
-        console.log('No user authentication available, using fallback models');
-        return [];
+        // If no user is logged in, use the fallback API key
+        console.log('No user authentication available, using fallback API key');
+        const headers = { 'X-API-Key': apiKey };
+        response = await fetch(endpointUrl, { headers });
       }
       
       if (!response.ok) {
