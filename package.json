@@ -20,11 +20,13 @@
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
+    "html-to-image": "^1.11.13",
     "katex": "^0.16.22",
     "pdfjs-dist": "^4.8.69",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^6.29.0",
+    "reactflow": "^11.11.4",
     "rss-parser": "^3.13.0",
     "styled-components": "^6.1.15",
     "uuid": "^11.1.0"

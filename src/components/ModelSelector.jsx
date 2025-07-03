@@ -147,6 +147,52 @@ const DropdownMenu = styled.div`
   }
 `;
 
+const SearchContainer = styled.div`
+  padding: ${props => props.theme.name === 'retro' ? '6px 8px' : '8px 12px'};
+  border-bottom: ${props => props.theme.name === 'retro' ? 
+    `1px solid ${props.theme.buttonShadowDark}` : 
+    '1px solid rgba(0,0,0,0.1)'};
+  background: ${props => props.theme.name === 'retro' ? 
+    props.theme.buttonFace : 
+    props.theme.inputBackground};
+`;
+
+const SearchBar = styled.input`
+  width: 100%;
+  padding: ${props => props.theme.name === 'retro' ? '4px 8px' : '8px 12px'};
+  border: ${props => props.theme.name === 'retro' ? 
+    `1px solid ${props.theme.buttonShadowDark}` : 
+    `1px solid ${props.theme.inputBorder || 'rgba(0,0,0,0.1)'}`};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'};
+  background: ${props => props.theme.name === 'retro' ? 
+    props.theme.inputBackground : 
+    props.theme.inputBackground || 'white'};
+  color: ${props => props.theme.name === 'retro' ? 
+    props.theme.buttonText : 
+    props.theme.text};
+  font-family: ${props => props.theme.name === 'retro' ? 
+    'MSW98UI, MS Sans Serif, Tahoma, sans-serif' : 
+    'inherit'};
+  font-size: ${props => props.theme.name === 'retro' ? '11px' : '14px'};
+  outline: none;
+  
+  &:focus {
+    border-color: ${props => props.theme.name === 'retro' ? 
+      props.theme.buttonShadowDark : 
+      props.theme.primary};
+    box-shadow: ${props => props.theme.name === 'retro' ? 
+      'none' : 
+      `0 0 0 2px ${props.theme.primary}33`};
+  }
+  
+  &::placeholder {
+    color: ${props => props.theme.name === 'retro' ? 
+      props.theme.buttonText : 
+      'rgba(0,0,0,0.5)'};
+    opacity: 0.7;
+  }
+`;
+
 const ModelOption = styled.div`
   display: flex;
   align-items: center;
@@ -229,6 +275,7 @@ const ProviderLogo = styled.img`
 
 const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -238,6 +285,34 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   }, []);
 
   const availableModels = models || [];
+  
+  const getProviderName = (model) => {
+    const modelId = model.id;
+    
+    if (model.isBackendModel) {
+      if (model.source === 'gemini') {
+        return 'Google Gemini API';
+      } else if (model.source === 'openrouter') {
+        return `${model.provider} (via OpenRouter)`;
+      }
+      return `${model.provider} (via Backend)`;
+    }
+    
+    if (modelId.includes('gemini-2.5-pro')) return 'Google AI (2.5 Pro)';
+    if (modelId.includes('gemini')) return 'Google AI';
+    if (modelId.includes('claude')) return 'Anthropic';
+    if (modelId.includes('gpt') || modelId.includes('chatgpt')) return 'OpenAI';
+    if (modelId.includes('nemotron')) return 'NVIDIA';
+    if (modelId.includes('ursa')) return 'Custom GGUF';
+    return 'AI Provider';
+  };
+  
+  const filteredModels = availableModels.filter(model => {
+    const searchLower = searchTerm.toLowerCase();
+    return model.name.toLowerCase().includes(searchLower) || 
+           model.id.toLowerCase().includes(searchLower) ||
+           getProviderName(model).toLowerCase().includes(searchLower);
+  });
 
   useEffect(() => {
      console.log("Models received by selector:", availableModels);
@@ -296,27 +371,6 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
     return null;
   };
 
-  const getProviderName = (model) => {
-    const modelId = model.id;
-    
-    if (model.isBackendModel) {
-      if (model.source === 'gemini') {
-        return 'Google Gemini API';
-      } else if (model.source === 'openrouter') {
-        return `${model.provider} (via OpenRouter)`;
-      }
-      return `${model.provider} (via Backend)`;
-    }
-    
-    if (modelId.includes('gemini-2.5-pro')) return 'Google AI (2.5 Pro)';
-    if (modelId.includes('gemini')) return 'Google AI';
-    if (modelId.includes('claude')) return 'Anthropic';
-    if (modelId.includes('gpt') || modelId.includes('chatgpt')) return 'OpenAI';
-    if (modelId.includes('nemotron')) return 'NVIDIA';
-    if (modelId.includes('ursa')) return 'Custom GGUF';
-    return 'AI Provider';
-  };
-
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -334,6 +388,9 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
     if (availableModels.length > 0) {
       console.log('Toggling dropdown with available models:', availableModels);
       setIsOpen(!isOpen);
+      if (!isOpen) {
+        setSearchTerm('');
+      }
     } else {
       console.log('Not toggling dropdown - no available models found');
     }
@@ -342,6 +399,7 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   const handleSelectModel = (modelId) => {
     onChange(modelId);
     setIsOpen(false);
+    setSearchTerm('');
   };
 
   return (
@@ -395,7 +453,17 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
 
       {isOpen && (
         <DropdownMenu theme={theme}>
-          {availableModels.map(model => (
+          <SearchContainer theme={theme}>
+            <SearchBar
+              type="text"
+              placeholder="Search models..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              theme={theme}
+              autoFocus
+            />
+          </SearchContainer>
+          {filteredModels.map(model => (
             <ModelOption
               key={model.id}
               $isSelected={model.id === selectedModel}

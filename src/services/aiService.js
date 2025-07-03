@@ -1069,8 +1069,8 @@ export const fetchModelsFromBackend = async () => {
       return [];
     }
 
-    // Use the new backend models endpoint
-    const endpointUrl = buildApiUrl('/v1/chat/models');
+    // Use the main models endpoint that returns all available models
+    const endpointUrl = buildApiUrl('/models');
     console.log('Fetching models from:', endpointUrl);
     
     try {
@@ -1105,7 +1105,22 @@ export const fetchModelsFromBackend = async () => {
       const data = await response.json();
       console.log('Successfully fetched models from backend:', data);
       
-      // Handle the OpenAI-compatible response format
+      // Handle the main models endpoint response format
+      if (Array.isArray(data.models)) {
+        return data.models.map(model => ({
+          id: model.id,
+          name: model.name || model.id.split('/').pop(),
+          provider: model.provider,
+          description: model.description,
+          capabilities: model.capabilities || [],
+          isBackendModel: true,
+          source: model.source,
+          context_length: model.context_length,
+          pricing: model.pricing
+        }));
+      }
+      
+      // Fallback for OpenAI-compatible response format (if needed)
       if (data.object === 'list' && Array.isArray(data.data)) {
         return data.data.map(model => ({
           id: model.id,

@@ -281,24 +281,12 @@ const AppContent = () => {
       try {
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
-          // Define substrings of model IDs to exclude
-          const excludedSubstrings = [
-            'haiku',
-            '4o-mini',
-            'gpt-3.5-turbo'
-          ];
-          
-          // Filter out the excluded models by checking if their ID includes any of the substrings
-          const filteredModels = backendModels.filter(
-            model => !excludedSubstrings.some(substring => model.id.includes(substring))
-          );
-
-          setAvailableModels(filteredModels);
+          setAvailableModels(backendModels);
           
           // Set default model if none is selected or the selected one is no longer available
-          const currentSelectedModelIsValid = filteredModels.some(m => m.id === selectedModel);
-          if (!currentSelectedModelIsValid && filteredModels.length > 0) {
-            const defaultModel = filteredModels[0].id;
+          const currentSelectedModelIsValid = backendModels.some(m => m.id === selectedModel);
+          if (!currentSelectedModelIsValid && backendModels.length > 0) {
+            const defaultModel = backendModels[0].id;
             setSelectedModel(defaultModel);
             localStorage.setItem('selectedModel', defaultModel);
           }
@@ -729,6 +717,13 @@ const AppContent = () => {
           <FlowchartModal
             isOpen={isFlowchartOpen}
             onClose={() => setIsFlowchartOpen(false)}
+            onSubmit={(file) => {
+              // Handle flowchart submission through ChatWindow's file handler
+              if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                chatWindowRef.current.handleFileSelected(file);
+              }
+              setIsFlowchartOpen(false);
+            }}
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
           />

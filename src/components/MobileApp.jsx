@@ -279,23 +279,11 @@ const MobileAppContent = () => {
       try {
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
-          // Define substrings of model IDs to exclude
-          const excludedSubstrings = [
-            'haiku',
-            '4o-mini',
-            'gpt-3.5-turbo'
-          ];
-          
-          // Filter out the excluded models by checking if their ID includes any of the substrings
-          const filteredModels = backendModels.filter(
-            model => !excludedSubstrings.some(substring => model.id.includes(substring))
-          );
-          
-          setAvailableModels(filteredModels);
+          setAvailableModels(backendModels);
 
-          const currentSelectedModelIsValid = filteredModels.some(m => m.id === selectedModel);
-          if (!currentSelectedModelIsValid && filteredModels.length > 0) {
-            setSelectedModel(filteredModels[0].id);
+          const currentSelectedModelIsValid = backendModels.some(m => m.id === selectedModel);
+          if (!currentSelectedModelIsValid && backendModels.length > 0) {
+            setSelectedModel(backendModels[0].id);
           }
         } else {
           setAvailableModels([]);
