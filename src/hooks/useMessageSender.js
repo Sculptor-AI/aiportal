@@ -134,33 +134,7 @@ const useMessageSender = ({
     const currentModelObj = availableModels.find(model => model.id === currentModel);
     const isBackendModel = currentModelObj?.isBackendModel === true;
 
-    let apiKeyMissing = false;
-    let apiKeyMessage = "";
-    const activeSettings = settings || {};
-
-    if (currentModel.startsWith('gemini') && !activeSettings.googleApiKey && !import.meta.env.VITE_GOOGLE_API_KEY) {
-      apiKeyMissing = true;
-      apiKeyMessage = "Google API key is missing. Please add it in Settings.";
-    }
-    if (currentModel.startsWith('gpt-') && !activeSettings.openaiApiKey && !import.meta.env.VITE_OPENAI_API_KEY) {
-      apiKeyMissing = true;
-      apiKeyMessage = "OpenAI API key is missing. Please add it in Settings.";
-    }
-    if (currentModel.startsWith('claude-') && !activeSettings.anthropicApiKey && !import.meta.env.VITE_ANTHROPIC_API_KEY) {
-      apiKeyMissing = true;
-      apiKeyMessage = "Anthropic API key is missing. Please add it in Settings.";
-    }
-
-    if (apiKeyMissing) {
-      addAlert({
-        message: apiKeyMessage,
-        type: 'error',
-        autoHide: true,
-        actionText: 'Settings',
-        // onAction: () => { /* Logic to open settings modal needs to be handled by consumer */ }
-      });
-      return;
-    }
+    // All models now go through backend API - no local API key validation needed
 
     setIsLoading(true);
 
