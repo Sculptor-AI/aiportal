@@ -183,7 +183,7 @@ const useIsMobile = () => {
 
 // Main app component
 const AppContent = () => {
-  const { user, updateSettings: updateUserSettings, loading } = useAuth();
+  const { user, adminUser, updateSettings: updateUserSettings, loading } = useAuth();
   const toast = useToast();
   const isMobile = useIsMobile();
   const location = useLocation();
@@ -644,6 +644,7 @@ const AppContent = () => {
               toggleProfile={toggleProfile}
               isLoggedIn={!!user}
               username={user?.username}
+              isAdmin={!!adminUser}
               onModelChange={handleModelChange}
               collapsed={collapsed} 
               setCollapsed={setCollapsed} 

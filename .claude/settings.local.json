@@ -22,7 +22,8 @@
       "Bash(cp:*)",
       "Bash(awk:*)",
       "Bash(node:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(gemini:*)"
     ],
     "deny": []
   }

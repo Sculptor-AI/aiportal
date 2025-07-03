@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useAuth } from '../contexts/AuthContext';
+import { getAllUsers, updateUserStatus, updateUserDetails, getDashboardStats } from '../services/authService';
+import AdminLoginModal from '../components/AdminLoginModal';
 
 const AdminContainer = styled.div`
   flex: 1;
@@ -189,13 +192,24 @@ const RoleBadge = styled.span`
   text-transform: uppercase;
   letter-spacing: 0.5px;
   
-  ${props => props.role === 'ADMIN' ? `
-    background-color: #3b82f6;
-    color: white;
-  ` : `
-    background-color: #10b981;
-    color: white;
-  `}
+  ${props => {
+    if (props.role === 'ADMIN') {
+      return `
+        background-color: #3b82f6;
+        color: white;
+      `;
+    } else if (props.status === 'pending') {
+      return `
+        background-color: #f59e0b;
+        color: white;
+      `;
+    } else {
+      return `
+        background-color: #10b981;
+        color: white;
+      `;
+    }
+  }}
 `;
 
 const TimeText = styled.span`
@@ -384,154 +398,51 @@ const ClickableText = styled.span`
   }
 `;
 
-// Mock user data similar to the image
-const mockUsers = [
-  {
-    id: 1,
-    name: 'admin',
-    email: `admin${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: '2 hours ago',
-    createdAt: 'August 20, 2024',
-    avatar: 'A',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 2,
-    name: 'Nick',
-    email: `nick${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: '12 minutes ago',
-    createdAt: 'August 23, 2024',
-    avatar: 'N',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 3,
-    name: 'Kellen Heraty',
-    email: `kellen${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: '7 days ago',
-    createdAt: 'August 26, 2024',
-    avatar: 'KH',
-    avatarColor: '#8b5cf6'
-  },
-  {
-    id: 4,
-    name: 'Chase Culbertson',
-    email: `chase${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: 'a few seconds ago',
-    createdAt: 'August 26, 2024',
-    avatar: 'CC',
-    avatarColor: '#10b981'
-  },
-  {
-    id: 5,
-    name: 'Michael Wang',
-    email: `michael${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: '5 days ago',
-    createdAt: 'August 29, 2024',
-    avatar: 'MW',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 6,
-    name: 'Johan Novak',
-    email: `johan${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'USER',
-    lastActive: 'a month ago',
-    createdAt: 'September 11, 2024',
-    avatar: 'JN',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 7,
-    name: 'Raphael Denuit',
-    email: `raphael${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'USER',
-    lastActive: '5 months ago',
-    createdAt: 'September 13, 2024',
-    avatar: 'RD',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 8,
-    name: 'Dave Miller',
-    email: `dave${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: '8 days ago',
-    createdAt: 'September 17, 2024',
-    avatar: 'DM',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 9,
-    name: 'Heather Butler',
-    email: `heather${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: '16 days ago',
-    createdAt: 'September 17, 2024',
-    avatar: 'HB',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 10,
-    name: 'Camila Calkins',
-    email: `camila${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: '5 months ago',
-    createdAt: 'September 18, 2024',
-    avatar: 'CC',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 11,
-    name: 'Julia Hu',
-    email: `julia${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'ADMIN',
-    lastActive: '12 days ago',
-    createdAt: 'September 19, 2024',
-    avatar: 'JH',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 12,
-    name: 'Smriti Siva',
-    email: `smriti${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'USER',
-    lastActive: '6 months ago',
-    createdAt: 'September 20, 2024',
-    avatar: 'SS',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 13,
-    name: 'Natalie Gan',
-    email: `natalie${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'USER',
-    lastActive: '9 months ago',
-    createdAt: 'September 20, 2024',
-    avatar: 'NG',
-    avatarColor: '#f59e0b'
-  },
-  {
-    id: 14,
-    name: 'Matthew K.',
-    email: `matthew${Math.random().toString(36).substring(2, 8)}@example.com`,
-    role: 'USER',
-    lastActive: '5 months ago',
-    createdAt: 'September 20, 2024',
-    avatar: 'MK',
-    avatarColor: '#f59e0b'
-  }
-];
+// Helper function to generate user avatar initials
+const getAvatarInitials = (name) => {
+  return name.split(' ').map(word => word.charAt(0).toUpperCase()).join('').slice(0, 2);
+};
+
+// Helper function to generate avatar color
+const getAvatarColor = (name) => {
+  const colors = ['#f59e0b', '#8b5cf6', '#10b981', '#3b82f6', '#ef4444', '#f97316'];
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return colors[hash % colors.length];
+};
+
+// Helper function to format date
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+};
+
+// Helper function to get time ago
+const getTimeAgo = (dateString) => {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diff = now - date;
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const months = Math.floor(days / 30);
+
+  if (months > 0) return `${months} month${months > 1 ? 's' : ''} ago`;
+  if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  return 'a few seconds ago';
+};
 
 const AdminPage = ({ collapsed }) => {
-  const [users, setUsers] = useState(mockUsers);
+  const { adminUser } = useAuth();
+  const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState(mockUsers);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({
     role: '',
@@ -539,7 +450,56 @@ const AdminPage = ({ collapsed }) => {
     name: '',
     newPassword: ''
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalUsers: 0,
+    pendingUsers: 0,
+    activeUsers: 0,
+    adminUsers: 0
+  });
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
 
+  // Load users and dashboard stats on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (!adminUser) return;
+
+      try {
+        setLoading(true);
+        const [usersData, statsData] = await Promise.all([
+          getAllUsers(),
+          getDashboardStats()
+        ]);
+
+        // Transform user data to match the expected format
+        const transformedUsers = usersData.map(user => ({
+          id: user.id,
+          name: user.username,
+          email: user.email,
+          role: user.status === 'admin' ? 'ADMIN' : 'USER',
+          status: user.status,
+          lastActive: getTimeAgo(user.last_login || user.updated_at),
+          createdAt: formatDate(user.created_at),
+          avatar: getAvatarInitials(user.username),
+          avatarColor: getAvatarColor(user.username),
+          is_active: user.is_active
+        }));
+
+        setUsers(transformedUsers);
+        setDashboardStats(statsData);
+      } catch (err) {
+        setError(err.message);
+        console.error('Failed to load admin data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [adminUser]);
+
+  // Filter users based on search term
   useEffect(() => {
     const filtered = users.filter(user => 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -551,8 +511,19 @@ const AdminPage = ({ collapsed }) => {
 
   const handleEditUser = (user) => {
     setEditingUser(user);
+    
+    // Set the role based on status
+    let formRole;
+    if (user.status === 'admin') {
+      formRole = 'ADMIN';
+    } else if (user.status === 'pending') {
+      formRole = 'PENDING';
+    } else {
+      formRole = 'USER';
+    }
+    
     setEditForm({
-      role: user.role,
+      role: formRole,
       email: user.email,
       name: user.name,
       newPassword: ''
@@ -569,15 +540,62 @@ const AdminPage = ({ collapsed }) => {
     });
   };
 
-  const handleSaveUser = () => {
-    if (editingUser) {
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      setLoading(true);
+      
+      // Prepare updates object
+      const updates = {};
+      if (editForm.email !== editingUser.email) {
+        updates.email = editForm.email;
+      }
+      if (editForm.name !== editingUser.name) {
+        updates.username = editForm.name;
+      }
+      if (editForm.newPassword.trim()) {
+        updates.password = editForm.newPassword;
+      }
+
+      // Update user details if there are changes
+      if (Object.keys(updates).length > 0) {
+        await updateUserDetails(editingUser.id, updates);
+      }
+
+      // Update user status/role if changed
+      let newStatus;
+      if (editForm.role === 'ADMIN') {
+        newStatus = 'admin';
+      } else if (editForm.role === 'PENDING') {
+        newStatus = 'pending';
+      } else {
+        newStatus = 'active';
+      }
+      
+      if (newStatus !== editingUser.status) {
+        await updateUserStatus(editingUser.id, newStatus);
+      }
+
+      // Update local state
       const updatedUsers = users.map(user => 
         user.id === editingUser.id 
-          ? { ...user, role: editForm.role, email: editForm.email, name: editForm.name }
+          ? { 
+              ...user, 
+              role: editForm.role, 
+              email: editForm.email, 
+              name: editForm.name,
+              status: newStatus
+            }
           : user
       );
       setUsers(updatedUsers);
       handleCloseModal();
+    } catch (err) {
+      setError(err.message);
+      console.error('Failed to update user:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -588,8 +606,62 @@ const AdminPage = ({ collapsed }) => {
     }));
   };
 
+  // Show admin login modal if admin is not authenticated
+  if (!adminUser) {
+    return (
+      <AdminContainer collapsed={collapsed}>
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <h2>Admin Access Required</h2>
+          <p>Please log in as an administrator to access this page.</p>
+          <button
+            onClick={() => setShowAdminLogin(true)}
+            style={{
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              fontSize: '1rem',
+              cursor: 'pointer',
+              marginTop: '20px'
+            }}
+          >
+            Admin Login
+          </button>
+        </div>
+        <AdminLoginModal 
+          isOpen={showAdminLogin} 
+          onClose={() => setShowAdminLogin(false)} 
+        />
+      </AdminContainer>
+    );
+  }
+
+  // Show loading state
+  if (loading && users.length === 0) {
+    return (
+      <AdminContainer collapsed={collapsed}>
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <h2>Loading...</h2>
+          <p>Fetching user data...</p>
+        </div>
+      </AdminContainer>
+    );
+  }
+
   return (
     <AdminContainer collapsed={collapsed}>
+      {error && (
+        <div style={{ 
+          backgroundColor: '#fee2e2', 
+          color: '#dc2626', 
+          padding: '12px', 
+          borderRadius: '8px', 
+          marginBottom: '20px' 
+        }}>
+          Error: {error}
+        </div>
+      )}
       <Header>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <Title>
@@ -639,7 +711,9 @@ const AdminPage = ({ collapsed }) => {
             <TableRow key={user.id}>
               <TableCell>
                 <ClickableText onClick={() => handleEditUser(user)}>
-                  <RoleBadge role={user.role}>{user.role}</RoleBadge>
+                  <RoleBadge role={user.role} status={user.status}>
+                    {user.status === 'pending' ? 'PENDING' : user.role}
+                  </RoleBadge>
                 </ClickableText>
               </TableCell>
               <TableCell>
@@ -697,7 +771,8 @@ const AdminPage = ({ collapsed }) => {
                 onChange={(e) => handleFormChange('role', e.target.value)}
               >
                 <option value="ADMIN">Admin</option>
-                <option value="USER">User</option>
+                <option value="USER">Active User</option>
+                <option value="PENDING">Pending User</option>
               </FormSelect>
             </FormGroup>
 

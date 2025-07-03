@@ -226,8 +226,8 @@ const LoginModal = ({ closeModal }) => {
         }
         const result = await register(username, password, email);
         setError('');
-        // Show success message and switch to login
-        setError(`Registration successful! Please log in with your credentials.`);
+        // Show success message for pending approval
+        setError(`Registration successful! Your account is now pending approval. An administrator will review your account before you can log in.`);
         setIsLogin(true);
         setPassword(''); // Clear password for security
       }

@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getCurrentUser, loginUser, logoutUser, registerUser, updateUserSettings, loginWithGoogle } from '../services/authService';
+import { getCurrentUser, loginUser, logoutUser, registerUser, updateUserSettings, loginWithGoogle, adminLogin, adminLogout, getCurrentAdminUser } from '../services/authService';
 
 // Create the Auth Context
 const AuthContext = createContext();
@@ -12,6 +12,7 @@ export const useAuth = () => {
 // Provider component to wrap the app
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [adminUser, setAdminUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -20,7 +21,9 @@ export const AuthProvider = ({ children }) => {
     const checkUser = async () => {
       try {
         const currentUser = getCurrentUser();
+        const currentAdminUser = getCurrentAdminUser();
         setUser(currentUser);
+        setAdminUser(currentAdminUser);
       } catch (err) {
         console.error('Authentication error:', err);
         setError(err.message);
@@ -114,16 +117,49 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Admin login function
+  const adminLoginAuth = async (username, password) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const loggedInAdmin = await adminLogin(username, password);
+      setAdminUser(loggedInAdmin);
+      return loggedInAdmin;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Admin logout function
+  const adminLogoutAuth = async () => {
+    setLoading(true);
+    try {
+      await adminLogout();
+      setAdminUser(null);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Value to be provided to consumers
   const value = {
     user,
+    adminUser,
     loading,
     error,
     login,
     register,
     logout,
     updateSettings,
-    loginWithGoogle: loginWithGoogleAuth
+    loginWithGoogle: loginWithGoogleAuth,
+    adminLogin: adminLoginAuth,
+    adminLogout: adminLogoutAuth
   };
 
   return (
