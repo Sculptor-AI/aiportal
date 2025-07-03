@@ -17,6 +17,8 @@
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
     "@pkasila/react-katex": "^1.2.2",
+    "@react-three/drei": "^10.4.2",
+    "@react-three/fiber": "^9.2.0",
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
@@ -29,6 +31,7 @@
     "reactflow": "^11.11.4",
     "rss-parser": "^3.13.0",
     "styled-components": "^6.1.15",
+    "three": "^0.178.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

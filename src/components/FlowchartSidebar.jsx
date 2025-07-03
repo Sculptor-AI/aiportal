@@ -12,6 +12,20 @@ const SidebarContainer = styled.div`
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 1001;
   overflow: hidden;
+  transform: ${props => props.$isVisible ? 'translateX(0)' : 'translateX(-100%)'};
+  transition: transform 0.3s ease;
+  
+  @media (max-width: 768px) {
+    width: 150px;
+    top: 60px;
+    left: 10px;
+  }
+  
+  @media (max-width: 480px) {
+    width: 120px;
+    top: 50px;
+    left: 5px;
+  }
 `;
 
 const SidebarHeader = styled.div`
@@ -86,9 +100,9 @@ const nodeTypes = [
   { type: 'default', label: 'Decision', icon: '◇', data: { label: 'Decision' } },
 ];
 
-const FlowchartSidebar = ({ onAddNode, theme }) => {
+const FlowchartSidebar = ({ onAddNode, theme, isVisible = true }) => {
   return (
-    <SidebarContainer theme={theme}>
+    <SidebarContainer theme={theme} $isVisible={isVisible}>
       <SidebarHeader>
         <SidebarTitle>Add Nodes</SidebarTitle>
       </SidebarHeader>

@@ -179,6 +179,9 @@ const ChatInputArea = forwardRef(({
     } else if (type === 'video') {
       setSelectedActionChip('create-video');
       // Potentially call onOpenVideoGenerator here if that feature exists
+    } else if (type === 'flowchart') {
+      setSelectedActionChip(null);
+      onToggleFlowchart();
     } else {
       setSelectedActionChip(null);
     }
@@ -187,7 +190,6 @@ const ChatInputArea = forwardRef(({
 
   const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen || isFlowchartOpen || isSandbox3DOpen;
 
-  // Expose methods through ref
   useImperativeHandle(ref, () => ({
     appendToInput: (text) => {
       setInputMessage(prev => prev + text);
@@ -374,23 +376,18 @@ const ChatInputArea = forwardRef(({
           </ToolbarItem>
           <ToolbarItem title="Flowchart" onClick={onToggleFlowchart}>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="8" height="4" rx="1" ry="1"></rect>
-              <rect x="13" y="3" width="8" height="4" rx="1" ry="1"></rect>
-              <rect x="8" y="11" width="8" height="4" rx="1" ry="1"></rect>
-              <rect x="3" y="19" width="8" height="4" rx="1" ry="1"></rect>
-              <rect x="13" y="19" width="8" height="4" rx="1" ry="1"></rect>
-              <line x1="7" y1="7" x2="7" y2="11"></line>
-              <line x1="17" y1="7" x2="17" y2="11"></line>
-              <line x1="12" y1="15" x2="7" y2="19"></line>
-              <line x1="12" y1="15" x2="17" y2="19"></line>
+              <circle cx="12" cy="18" r="3"></circle>
+              <circle cx="6" cy="6" r="3"></circle>
+              <circle cx="18" cy="6" r="3"></circle>
+              <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
+              <path d="M12 12v3"></path>
             </svg>
           </ToolbarItem>
           <ToolbarItem title="3D Sandbox" onClick={onToggleSandbox3D}>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-              <path d="M12 2v10"></path>
-              <path d="M12 12l-6.18 5.25"></path>
-              <path d="M12 12l6.18 5.25"></path>
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+              <line x1="12" y1="22.08" x2="12" y2="12"></line>
             </svg>
           </ToolbarItem>
         </ToolbarContainer>

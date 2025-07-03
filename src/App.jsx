@@ -741,6 +741,15 @@ const AppContent = () => {
           <Sandbox3DModal
             isOpen={isSandbox3DOpen}
             onClose={() => setIsSandbox3DOpen(false)}
+            onSend={(object) => {
+              if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
+                chatWindowRef.current.appendToInput(`
+```json
+${JSON.stringify(object, null, 2)}
+```
+`);
+              }
+            }}
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0)}
           />

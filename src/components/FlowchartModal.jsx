@@ -7,7 +7,6 @@ import ReactFlow, {
   useEdgesState,
   Controls,
   Background,
-  MiniMap,
   Handle,
   Position,
 } from 'reactflow';
@@ -30,6 +29,12 @@ const ModalContainer = styled.div`
   transform: ${props => props.$isOpen ? 'translateX(0%)' : 'translateX(100%)'};
   visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
   transition: transform 0.3s ease-in-out, visibility 0.3s ease-in-out;
+  
+  @media (max-width: 768px) {
+    width: 100vw;
+    right: 0;
+    left: 0;
+  }
 `;
 
 const Header = styled.div`
@@ -90,11 +95,22 @@ const ButtonContainer = styled.div`
   gap: 12px;
   padding: 16px 20px;
   border-top: 1px solid ${props => props.theme.border};
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    padding: 12px 16px;
+    gap: 8px;
+  }
 `;
 
 const ActionButtons = styled.div`
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    gap: 8px;
+  }
 `;
 
 const Button = styled.button`
@@ -104,6 +120,17 @@ const Button = styled.button`
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
+  
+  @media (max-width: 768px) {
+    padding: 6px 16px;
+    font-size: 13px;
+  }
+  
+  @media (max-width: 480px) {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
   
   ${props => props.theme.name === 'retro' ? `
     background: ${props.theme.buttonFace};
@@ -284,6 +311,7 @@ const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodes, setSelectedNodes] = useState([]);
+  const [showSidebar, setShowSidebar] = useState(false);
   const flowchartRef = useRef(null);
   const exportRef = useRef(null);
 
@@ -501,7 +529,7 @@ const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0 
       </Header>
       
       <HelpText>
-        Click "Add Node" to create nodes. Double-click nodes to rename them. Select nodes and press Delete to remove them. 
+        Click "Add Nodes" to show/hide the node toolbar. Double-click nodes to rename them. Select nodes and press Delete to remove them. 
         Drag from handles to create connections.
       </HelpText>
       
@@ -523,22 +551,18 @@ const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0 
               >
                 <Controls />
                 <Background variant="dots" gap={12} size={1} />
-                <MiniMap 
-                  nodeColor={(node) => {
-                    if (node.type === 'input') return '#0041d0';
-                    if (node.type === 'output') return '#ff0072';
-                    return '#1a192b';
-                  }}
-                />
               </ReactFlow>
             </StyledReactFlow>
           </FlowchartWrapper>
-          <FlowchartSidebar onAddNode={onAddNode} theme={theme} />
+          <FlowchartSidebar onAddNode={onAddNode} theme={theme} isVisible={showSidebar} />
         </ReactFlowProvider>
       </Content>
       
       <ButtonContainer>
         <ActionButtons>
+          <Button onClick={() => setShowSidebar(!showSidebar)}>
+            {showSidebar ? 'Hide' : 'Add Nodes'}
+          </Button>
           <Button onClick={clearFlowchart}>Clear All</Button>
           {selectedNodes.length > 0 && (
             <Button onClick={deleteSelectedNodes}>

@@ -1,6 +1,9 @@
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import styled from 'styled-components';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import ObjectControls from './ObjectControls';
 
 const ModalContainer = styled.div`
   position: fixed;
@@ -43,6 +46,7 @@ const CloseButton = styled.button`
 
 const Content = styled.div`
   flex: 1;
+  position: relative; /* Add relative positioning */
   padding: 20px;
   display: flex;
   justify-content: center;
@@ -50,7 +54,34 @@ const Content = styled.div`
   color: ${props => props.theme.text};
 `;
 
-const Sandbox3DModal = ({ isOpen, onClose, theme, otherPanelsOpen = 0 }) => {
+const Box = ({ object }) => {
+  const meshRef = useRef();
+
+  return (
+    <mesh
+      ref={meshRef}
+      position={[object.position.x, object.position.y, object.position.z]}
+      rotation={[object.rotation.x, object.rotation.y, object.rotation.z]}
+      scale={[object.scale.x, object.scale.y, object.scale.z]}
+    >
+      <boxGeometry args={[1, 1, 1]} />
+      <meshStandardMaterial color={'orange'} />
+    </mesh>
+  );
+};
+
+const Sandbox3DModal = ({ isOpen, onClose, theme, otherPanelsOpen = 0, onSend }) => {
+  const [object, setObject] = useState({
+    position: { x: 0, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+  });
+
+  const handleSendToAI = () => {
+    onSend(object);
+    onClose();
+  };
+
   return (
     <ModalContainer $isOpen={isOpen} $otherPanelsOpen={otherPanelsOpen}>
       <Header>
@@ -58,7 +89,18 @@ const Sandbox3DModal = ({ isOpen, onClose, theme, otherPanelsOpen = 0 }) => {
         <CloseButton onClick={onClose}>×</CloseButton>
       </Header>
       <Content>
-        <p>3D sandbox functionality will be implemented here.</p>
+        <Canvas>
+          <ambientLight />
+          <pointLight position={[10, 10, 10]} />
+          <Box object={object} />
+          <OrbitControls />
+        </Canvas>
+        <ObjectControls
+          object={object}
+          setObject={setObject}
+          sendToAI={handleSendToAI}
+          theme={theme}
+        />
       </Content>
     </ModalContainer>
   );

@@ -289,7 +289,6 @@ const ChatWindow = forwardRef(({
     }
   };
 
-  // Expose handleFileSelected through ref
   useImperativeHandle(ref, () => ({
     handleFileSelected,
     appendToInput: (text) => {
