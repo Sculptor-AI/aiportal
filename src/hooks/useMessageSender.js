@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend, generateChatTitle } from '../services/aiService';
 import { generateImageApi } from '../services/imageService';
+import { getFlowchartSystemPrompt } from '../utils/flowchartTools';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 
 // Helper function (can be outside or passed in if it uses external context like toast)
@@ -103,6 +104,105 @@ const useMessageSender = ({
         });
         addAlert({
           message: `Image generation failed: ${error.message || 'Unknown error'}`,
+          type: 'error',
+          autoHide: true
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      
+      return;
+    }
+
+    // Check if this is a flowchart creation request
+    if (messagePayload.type === 'create-flowchart') {
+      const prompt = messagePayload.text;
+      
+      if (!prompt || !chat?.id) return;
+      
+      setIsLoading(true);
+      
+      // Add user message indicating the flowchart request
+      const userPromptMessage = {
+        id: generateId(),
+        role: 'user',
+        content: `Create flowchart: "${prompt}"`,
+        timestamp: new Date().toISOString(),
+      };
+      addMessage(chat.id, userPromptMessage);
+      
+      // Add placeholder message for the generated flowchart
+      const flowchartPlaceholderId = generateId();
+      const flowchartPlaceholderMessage = {
+        id: flowchartPlaceholderId,
+        role: 'assistant',
+        type: 'generated-flowchart',
+        prompt: prompt,
+        status: 'loading',
+        flowchartData: null,
+        content: '',
+        timestamp: new Date().toISOString(),
+        modelId: selectedModel,
+      };
+      addMessage(chat.id, flowchartPlaceholderMessage);
+      
+      if (scrollToBottom) setTimeout(scrollToBottom, 100);
+      
+      try {
+        // Get flowchart system prompt
+        const flowchartSystemPrompt = getFlowchartSystemPrompt();
+        
+        // Send message to AI with flowchart instructions
+        const formattedHistory = chat.messages.map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+        
+        let streamedContent = '';
+        const messageGenerator = sendMessage(
+          prompt, 
+          selectedModel, 
+          formattedHistory, 
+          null, // no image
+          null, // no file text
+          false, // not search
+          false, // not deep research
+          false, // not create image
+          flowchartSystemPrompt // flowchart system prompt
+        );
+        
+        for await (const chunk of messageGenerator) {
+          streamedContent += chunk;
+          updateMessage(chat.id, flowchartPlaceholderId, { 
+            content: streamedContent, 
+            status: 'loading',
+            flowchartData: streamedContent 
+          });
+        }
+        
+        updateMessage(chat.id, flowchartPlaceholderId, { 
+          status: 'completed', 
+          flowchartData: streamedContent,
+          content: streamedContent,
+          isLoading: false 
+        });
+        
+        // Generate title for new chat if this is the first message
+        if (chat.messages.length === 0) {
+          const title = `Flowchart: ${prompt.substring(0, 30)}${prompt.length > 30 ? '...' : ''}`;
+          if (updateChatTitle) updateChatTitle(chat.id, title);
+        }
+        
+      } catch (error) {
+        console.error('[useMessageSender] Error generating flowchart:', error);
+        updateMessage(chat.id, flowchartPlaceholderId, { 
+          status: 'error', 
+          content: error.message || 'Failed to generate flowchart', 
+          isLoading: false, 
+          isError: true 
+        });
+        addAlert({
+          message: `Flowchart generation failed: ${error.message || 'Unknown error'}`,
           type: 'error',
           autoHide: true
         });

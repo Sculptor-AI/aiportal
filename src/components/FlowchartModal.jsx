@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import ReactFlow, {
   ReactFlowProvider,
@@ -13,6 +13,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { toPng } from 'html-to-image';
 import FlowchartSidebar from './FlowchartSidebar';
+import { parseFlowchartInstructions, parseAIFlowchartResponse, validateFlowchartInstructions } from '../utils/flowchartTools';
 
 const ModalContainer = styled.div`
   position: fixed;
@@ -307,7 +308,7 @@ const initialNodes = [
 let id = 2;
 const getId = () => `${id++}`;
 
-const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0 }) => {
+const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0, aiFlowchartData = null }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodes, setSelectedNodes] = useState([]);
@@ -518,6 +519,49 @@ const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0 
       }))
     );
   }, [setNodes, onNodeLabelChange]);
+
+  // Process AI flowchart data when provided
+  useEffect(() => {
+    if (aiFlowchartData && isOpen) {
+      try {
+        console.log('Processing AI flowchart data:', aiFlowchartData);
+        
+        // Parse AI response for flowchart instructions
+        const instructions = parseAIFlowchartResponse(aiFlowchartData);
+        console.log('Parsed instructions:', instructions);
+        
+        if (instructions.length === 0) {
+          console.log('No valid instructions found in AI response');
+          return;
+        }
+        
+        // Validate instructions
+        const validation = validateFlowchartInstructions(instructions);
+        if (!validation.valid) {
+          console.error('Invalid flowchart instructions:', validation.errors);
+          return;
+        }
+        
+        // Convert instructions to nodes and edges
+        const { nodes: aiNodes, edges: aiEdges } = parseFlowchartInstructions(
+          instructions,
+          onNodeLabelChange
+        );
+        
+        console.log('Generated nodes:', aiNodes);
+        console.log('Generated edges:', aiEdges);
+        
+        // Update the flowchart with AI-generated content
+        if (aiNodes.length > 0) {
+          setNodes(aiNodes);
+          setEdges(aiEdges);
+        }
+        
+      } catch (error) {
+        console.error('Error processing AI flowchart data:', error);
+      }
+    }
+  }, [aiFlowchartData, isOpen, onNodeLabelChange, setNodes, setEdges]);
 
   return (
     <ModalContainer $isOpen={isOpen} $otherPanelsOpen={otherPanelsOpen}>

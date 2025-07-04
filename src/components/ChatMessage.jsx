@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
+import { extractSourcesFromResponse } from '../utils/sourceExtractor';
 
 // Format markdown text including bold, italic, bullet points and code blocks
 const formatContent = (content) => {
@@ -540,6 +541,48 @@ const MessageImage = styled.img`
   background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
 `;
 
+// Flowchart components
+const FlowchartContainer = styled.div`
+  margin: 12px 0;
+  padding: 16px;
+  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  border-radius: 12px;
+  border: 1px solid ${props => props.theme.border};
+`;
+
+const FlowchartButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: ${props => props.theme.primary};
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+  
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+  
+  svg {
+    flex-shrink: 0;
+  }
+`;
+
+const FlowchartPreview = styled.div`
+  margin-top: 8px;
+  padding: 8px;
+  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(45, 45, 45, 0.5)'};
+  border-radius: 6px;
+  border: 1px dashed ${props => props.theme.border};
+`;
+
 // New component for PDF file attachment indicator
 const FileAttachmentContainer = styled.div`
   display: flex;
@@ -674,7 +717,21 @@ const ThinkingDropdown = ({ thinkingContent }) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, id } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id } = message;
+  
+  // Get the prompt for both image and flowchart messages
+  const prompt = message.prompt;
+  
+  // Extract sources from content if this is an assistant message and not loading
+  const { cleanedContent, sources: extractedSources } = useMemo(() => {
+    if (role === 'assistant' && content && !isLoading) {
+      return extractSourcesFromResponse(content);
+    }
+    return { cleanedContent: content, sources: [] };
+  }, [content, role, isLoading]);
+  
+  // Use cleaned content if available, otherwise use original content
+  const contentToProcess = cleanedContent || content;
   
   const getAvatar = () => {
     if (role === 'user') {
@@ -712,7 +769,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Function to handle copying message content
   const handleCopyText = () => {
-    navigator.clipboard.writeText(content)
+    const textToCopy = cleanedContent || content;
+    navigator.clipboard.writeText(textToCopy)
       .then(() => {
         // Could add toast notification here if desired
         console.log('Text copied to clipboard');
@@ -728,7 +786,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       
-      const utterance = new SpeechSynthesisUtterance(content);
+      const textToRead = cleanedContent || content;
+      const utterance = new SpeechSynthesisUtterance(textToRead);
       window.speechSynthesis.speak(utterance);
     } else {
       console.error('Text-to-speech not supported in this browser');
@@ -737,7 +796,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   };
 
   // Determine if the message has sources to display
-  const hasSources = role === 'assistant' && Array.isArray(sources) && sources.length > 0;
+  const displaySources = extractedSources.length > 0 ? extractedSources : (Array.isArray(sources) ? sources : []);
+  const hasSources = role === 'assistant' && displaySources.length > 0;
 
   // Extract domain from URL for displaying source name and favicon
   const extractDomain = (url) => {
@@ -759,6 +819,83 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       return 'https://www.google.com/s2/favicons?domain=' + url;
     }
   };
+
+  // Handle generated flowchart message type
+  if (type === 'generated-flowchart') {
+    let generatedFlowchartContent;
+    if (status === 'loading') {
+      generatedFlowchartContent = (
+        <ThinkingContainer>
+          <SpinnerIcon />
+          Creating flowchart for: "{prompt || 'your request'}"...
+        </ThinkingContainer>
+      );
+    } else if (status === 'completed' && flowchartData) {
+      generatedFlowchartContent = (
+        <>
+          {prompt && (
+            <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
+              Request: "{prompt}"
+            </p>
+          )}
+          <FlowchartContainer>
+            <FlowchartButton onClick={() => window.dispatchEvent(new CustomEvent('openFlowchartModal', { detail: { flowchartData } }))}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="18" r="3"></circle>
+                <circle cx="6" cy="6" r="3"></circle>
+                <circle cx="18" cy="6" r="3"></circle>
+                <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
+                <path d="M12 12v3"></path>
+              </svg>
+              Open Flowchart Builder
+            </FlowchartButton>
+            <FlowchartPreview>
+              <p style={{ fontSize: '0.9em', opacity: 0.7 }}>
+                Flowchart instructions generated. Click "Open Flowchart Builder" to visualize and edit.
+              </p>
+            </FlowchartPreview>
+          </FlowchartContainer>
+        </>
+      );
+    } else if (status === 'error') {
+      generatedFlowchartContent = (
+        <div>
+          <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
+            Flowchart Generation Failed
+          </p>
+          {prompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Request: "{prompt}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
+        </div>
+      );
+    }
+
+    return (
+      <Message alignment={messageAlignment}>
+        {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        <Content role={role} $bubbleStyle={bubbleStyle}>
+          {generatedFlowchartContent}
+          {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
+            <MessageActions>
+              <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
+              {status === 'completed' && flowchartData && (
+                <>
+                  <div style={{ flexGrow: 1 }}></div>
+                  <ActionButton onClick={() => navigator.clipboard.writeText(flowchartData).then(() => console.log('Flowchart data copied'))}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy Instructions
+                  </ActionButton>
+                </>
+              )}
+            </MessageActions>
+          )}
+        </Content>
+        {messageAlignment === 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+      </Message>
+    );
+  }
 
   // Handle generated image message type
   if (type === 'generated-image') {
@@ -873,7 +1010,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             }
             
             // Process content and show main content + thinking dropdown if applicable
-            const processedContent = formatContent(content);
+            const processedContent = formatContent(contentToProcess);
             const isMercury = modelId?.toLowerCase().includes('mercury');
             
             if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
@@ -883,13 +1020,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   <ThinkingDropdown thinkingContent={processedContent.thinking} />
                   {isLoading ? (
                     <StreamingMarkdownRenderer 
-                      text={typeof processedContent.main === 'string' ? processedContent.main : content}
+                      text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
                       isStreaming={true}
                       theme={theme}
                     />
                   ) : isMercury ? (
                     <TextDiffusionAnimation 
-                      finalText={typeof processedContent.main === 'string' ? processedContent.main : content}
+                      finalText={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
                       isActive={!isLoading}
                       messageId={id}
                       speed={60}
@@ -902,7 +1039,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               );
             } else {
               // If content has no thinking tags, display it normally (as before)
-              return content.split('\n\n-').map((part, index) => {
+              return contentToProcess.split('\n\n-').map((part, index) => {
                 if (index === 0) {
                   // This is the main content part - process markdown formatting
                   const formattedPart = formatContent(part);
@@ -937,7 +1074,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           })()}
           
           {/* Message action buttons - only show for completed messages (not loading) */}
-          {!isLoading && content && (
+          {!isLoading && contentToProcess && (
             <MessageActions>
               {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
               <div style={{ flexGrow: 1 }}></div>
@@ -962,10 +1099,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           {/* Sources section */}
           {hasSources && !isLoading && (
             <SourcesContainer>
-              {sources.map((source, index) => (
+              {displaySources.map((source, index) => (
                 <SourceButton key={`source-${index}`} onClick={() => window.open(source.url, '_blank')}>
                   <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src='https://www.google.com/s2/favicons?domain=' + source.url} />
-                  {extractDomain(source.url)}
+                  {source.domain || extractDomain(source.url)}
                 </SourceButton>
               ))}
             </SourcesContainer>

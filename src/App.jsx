@@ -354,6 +354,7 @@ const AppContent = () => {
   const [isFlowchartOpen, setIsFlowchartOpen] = useState(false);
   const [isSandbox3DOpen, setIsSandbox3DOpen] = useState(false);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
+  const [flowchartData, setFlowchartData] = useState(null);
   const chatWindowRef = useRef(null);
 
   // Update settings when user changes
@@ -362,6 +363,21 @@ const AppContent = () => {
       setSettings(user.settings);
     }
   }, [user]);
+
+  // Handle custom event to open flowchart modal with AI-generated data
+  useEffect(() => {
+    const handleOpenFlowchartModal = (event) => {
+      const { flowchartData } = event.detail;
+      setFlowchartData(flowchartData);
+      setIsFlowchartOpen(true);
+    };
+
+    window.addEventListener('openFlowchartModal', handleOpenFlowchartModal);
+    
+    return () => {
+      window.removeEventListener('openFlowchartModal', handleOpenFlowchartModal);
+    };
+  }, []);
 
   // Save chats to localStorage whenever they change
   useEffect(() => {
@@ -727,16 +743,21 @@ const AppContent = () => {
 
           <FlowchartModal
             isOpen={isFlowchartOpen}
-            onClose={() => setIsFlowchartOpen(false)}
+            onClose={() => {
+              setIsFlowchartOpen(false);
+              setFlowchartData(null); // Clear flowchart data when closing
+            }}
             onSubmit={(file) => {
               // Handle flowchart submission through ChatWindow's file handler
               if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
                 chatWindowRef.current.handleFileSelected(file);
               }
               setIsFlowchartOpen(false);
+              setFlowchartData(null); // Clear flowchart data after submission
             }}
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+            aiFlowchartData={flowchartData}
           />
 
           <Sandbox3DModal
