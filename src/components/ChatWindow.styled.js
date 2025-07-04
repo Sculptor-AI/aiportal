@@ -320,6 +320,56 @@ export const MessageInput = styled.textarea`
   }
 `;
 
+export const WaveformButton = styled.button`
+  background: ${props => {
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    return props.disabled ? '#ccc' : props.theme.buttonGradient;
+  }};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'white'};
+  border: ${props => props.theme.name === 'retro' ? 
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+    'none'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
+  width: 38px;
+  height: 38px;
+  position: absolute;
+  right: 54px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+    '0 2px 8px rgba(0,0,0,0.1)'};
+  
+  &:hover:not(:disabled) {
+    background: ${props => props.theme.name === 'retro' ? 
+      props.theme.buttonFace : 
+      props.theme.buttonHoverGradient};
+    transform: translateY(-50%) ${props => props.theme.name === 'retro' ? '' : 'scale(1.05)'};
+    box-shadow: ${props => props.theme.name === 'retro' ? 
+      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+      '0 4px 12px rgba(0,0,0,0.15)'};
+  }
+  
+  &:active:not(:disabled) {
+    ${props => props.theme.name === 'retro' && `
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 1px 0 0 1px;
+    `}
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+`;
+
 export const SendButton = styled.button`
   background: ${props => {
     if (props.theme.name === 'retro') {

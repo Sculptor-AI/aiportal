@@ -8,6 +8,7 @@ import {
   InputRow,
   MessageInput,
   SendButton,
+  WaveformButton,
   ActionChipsContainer,
   ActionChip,
   RetroIconWrapper,
@@ -45,6 +46,7 @@ const ChatInputArea = forwardRef(({
   onToggleSandbox3D, // New prop for toggling 3D sandbox
   onCloseSandbox3D, // New prop for closing 3D sandbox
   onToolbarToggle,
+  onLiveModeToggle, // New prop for live mode toggle
 }, ref) => {
   const theme = useTheme();
   const [inputMessage, setInputMessage] = useState('');
@@ -58,6 +60,7 @@ const ChatInputArea = forwardRef(({
   const [createMenuRect, setCreateMenuRect] = useState(null);
   const [isImagePromptMode, setIsImagePromptMode] = useState(false);
   const [isFlowchartPromptMode, setIsFlowchartPromptMode] = useState(false);
+  const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
 
   const inputRef = useRef(null);
   const toolbarRef = useRef(null);
@@ -210,6 +213,13 @@ const ChatInputArea = forwardRef(({
     // The PopupMenu (ToolMenuModal) calls onClose itself after onSelect, so no need to setShowCreateModal(false) here.
   };
 
+  const handleWaveformClick = () => {
+    setIsLiveModeOpen(true);
+    if (onLiveModeToggle) {
+      onLiveModeToggle(true);
+    }
+  };
+
   const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen || isFlowchartOpen || isSandbox3DOpen;
 
   useImperativeHandle(ref, () => ({
@@ -251,6 +261,21 @@ const ChatInputArea = forwardRef(({
             rows={1}
             style={{ maxHeight: '150px', overflowY: 'auto' }}
           />
+          <WaveformButton
+            onClick={handleWaveformClick}
+            disabled={isLoading || isProcessingFile}
+            title="Live Mode"
+          >
+            <img
+              src="/images/waveform.svg"
+              alt="Live Mode"
+              style={{
+                width: '25px',
+                height: '25px',
+                filter: 'invert(1) brightness(2)'
+              }}
+            />
+          </WaveformButton>
           <SendButton
             onClick={handleInternalSubmit}
             disabled={isLoading || isProcessingFile || (!inputMessage.trim() && !uploadedFile)}

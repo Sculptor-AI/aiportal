@@ -6,6 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 import ChatInputArea from './ChatInputArea';
+import LiveModeUI from './LiveModeUI';
 import useMessageSender from '../hooks/useMessageSender';
 import {
   ChatWindowContainer,
@@ -49,6 +50,7 @@ const ChatWindow = forwardRef(({
 }, ref) => {
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
   const [isProcessingFile, setIsProcessingFile] = useState(false); 
+  const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
   
   const messagesEndRef = useRef(null);
   const chatInputAreaRef = useRef(null);
@@ -231,6 +233,14 @@ const ChatWindow = forwardRef(({
     }
   };
 
+  const handleLiveModeToggle = (isOpen) => {
+    setIsLiveModeOpen(isOpen);
+  };
+
+  const handleCloseLiveMode = () => {
+    setIsLiveModeOpen(false);
+  };
+
   const showEmptyStateStatic = showGreeting && chatIsEmpty && !effectiveAnimateDownSignal;
   const animateEmptyStateOut = (!chatIsEmpty || shouldStartAnimationThisRender || !showGreeting) && effectiveAnimateDownSignal;
 
@@ -321,13 +331,13 @@ const ChatWindow = forwardRef(({
         </ChatTitleSection>
       </ChatHeader>
       
-      {(showGreeting && (showEmptyStateStatic || animateEmptyStateOut)) && (
+      {(showGreeting && (showEmptyStateStatic || animateEmptyStateOut)) && !isLiveModeOpen && (
         <EmptyState $isExiting={animateEmptyStateOut}>
           {/* Content for empty state, e.g., a greeting message */}
         </EmptyState>
       )}
       
-      {!chatIsEmpty && (
+      {!chatIsEmpty && !isLiveModeOpen && (
           <MessageList>
             {Array.isArray(chat.messages) && chat.messages.map(message => (
               <ChatMessage 
@@ -342,39 +352,51 @@ const ChatWindow = forwardRef(({
           </MessageList>
       )}
       
-      <ChatInputArea 
-        ref={chatInputAreaRef}
-        chatIsEmpty={chatIsEmpty} 
-        animateDown={effectiveAnimateDownSignal} 
-        $sidebarCollapsed={$sidebarCollapsed}
-        settings={settings}
-        onSubmitMessage={sendChatMessage} // Use the function from the hook
-        onFileSelected={handleFileSelected} 
-        isLoading={isLoading} // Use isLoading from the hook
-        isProcessingFile={isProcessingFile} // Pass isProcessingFile state
-        uploadedFile={uploadedFileData}
-        onClearAttachment={clearUploadedFile}
-        resetFileUploadTrigger={resetFileUpload}
-        availableModels={availableModels}
-        isWhiteboardOpen={isWhiteboardOpen}
-        onToggleWhiteboard={onToggleWhiteboard}
-        onCloseWhiteboard={onCloseWhiteboard}
-        isEquationEditorOpen={isEquationEditorOpen}
-        onToggleEquationEditor={onToggleEquationEditor}
-        onCloseEquationEditor={onCloseEquationEditor}
-        isGraphingOpen={isGraphingOpen}
-        onToggleGraphing={onToggleGraphing}
-        onCloseGraphing={onCloseGraphing}
-        isFlowchartOpen={isFlowchartOpen}
-        onToggleFlowchart={onToggleFlowchart}
-        onCloseFlowchart={onCloseFlowchart}
-        isSandbox3DOpen={isSandbox3DOpen}
-        onToggleSandbox3D={onToggleSandbox3D}
-        onCloseSandbox3D={onCloseSandbox3D}
-        onToolbarToggle={onToolbarToggle}
-        // Pass inputFocusChange if ChatInputArea needs to inform ChatWindow about focus for header opacity effect
-        // onInputFocusChange={inputFocusChange}
-      />
+      {isLiveModeOpen && (
+        <MessageList>
+          <LiveModeUI 
+            selectedModel={selectedModel}
+            onClose={handleCloseLiveMode}
+          />
+        </MessageList>
+      )}
+      
+      {!isLiveModeOpen && (
+        <ChatInputArea 
+          ref={chatInputAreaRef}
+          chatIsEmpty={chatIsEmpty} 
+          animateDown={effectiveAnimateDownSignal} 
+          $sidebarCollapsed={$sidebarCollapsed}
+          settings={settings}
+          onSubmitMessage={sendChatMessage} // Use the function from the hook
+          onFileSelected={handleFileSelected} 
+          isLoading={isLoading} // Use isLoading from the hook
+          isProcessingFile={isProcessingFile} // Pass isProcessingFile state
+          uploadedFile={uploadedFileData}
+          onClearAttachment={clearUploadedFile}
+          resetFileUploadTrigger={resetFileUpload}
+          availableModels={availableModels}
+          isWhiteboardOpen={isWhiteboardOpen}
+          onToggleWhiteboard={onToggleWhiteboard}
+          onCloseWhiteboard={onCloseWhiteboard}
+          isEquationEditorOpen={isEquationEditorOpen}
+          onToggleEquationEditor={onToggleEquationEditor}
+          onCloseEquationEditor={onCloseEquationEditor}
+          isGraphingOpen={isGraphingOpen}
+          onToggleGraphing={onToggleGraphing}
+          onCloseGraphing={onCloseGraphing}
+          isFlowchartOpen={isFlowchartOpen}
+          onToggleFlowchart={onToggleFlowchart}
+          onCloseFlowchart={onCloseFlowchart}
+          isSandbox3DOpen={isSandbox3DOpen}
+          onToggleSandbox3D={onToggleSandbox3D}
+          onCloseSandbox3D={onCloseSandbox3D}
+          onToolbarToggle={onToolbarToggle}
+          onLiveModeToggle={handleLiveModeToggle}
+          // Pass inputFocusChange if ChatInputArea needs to inform ChatWindow about focus for header opacity effect
+          // onInputFocusChange={inputFocusChange}
+        />
+      )}
     </ChatWindowContainer>
   );
 });
