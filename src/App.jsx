@@ -398,10 +398,7 @@ const AppContent = () => {
   }, []);
 
   // Save chats to localStorage whenever they change
-  useEffect(() => {
-    console.log("Saving chats to localStorage:", chats);
-    localStorage.setItem('chats', JSON.stringify(chats));
-  }, [chats]);
+  // Note: Individual functions handle localStorage saving to avoid cyclic references
 
   useEffect(() => {
     localStorage.setItem('activeChat', JSON.stringify(activeChat));
@@ -433,7 +430,15 @@ const AppContent = () => {
       messages: [],
       projectId: projectId,
     };
-    setChats(prevChats => [...prevChats, newChat]);
+    setChats(prevChats => {
+      const updatedChats = [...prevChats, newChat];
+      try {
+        localStorage.setItem('chats', JSON.stringify(updatedChats));
+      } catch (error) {
+        console.error("Error saving chats to localStorage:", error);
+      }
+      return updatedChats;
+    });
     setActiveChat(newChat.id);
     return newChat;
   };
@@ -470,8 +475,18 @@ const AppContent = () => {
       };
       setChats([newChat]);
       setActiveChat(newChat.id);
+      try {
+        localStorage.setItem('chats', JSON.stringify([newChat]));
+      } catch (error) {
+        console.error("Error saving chats to localStorage:", error);
+      }
     } else {
       setChats(updatedChats);
+      try {
+        localStorage.setItem('chats', JSON.stringify(updatedChats));
+      } catch (error) {
+        console.error("Error saving chats to localStorage:", error);
+      }
       
       // If the deleted chat was the active one, set a new active chat
       if (chatId === activeChat) {
@@ -487,12 +502,18 @@ const AppContent = () => {
   
   const updateChatTitle = (chatId, newTitle) => {
     setChats(prevChats => {
-      return prevChats.map(chat => {
+      const updatedChats = prevChats.map(chat => {
         if (chat.id === chatId) {
           return { ...chat, title: newTitle };
         }
         return chat;
       });
+      try {
+        localStorage.setItem('chats', JSON.stringify(updatedChats));
+      } catch (error) {
+        console.error("Error saving chats to localStorage:", error);
+      }
+      return updatedChats;
     });
   };
   
@@ -686,7 +707,7 @@ const AppContent = () => {
             )}
             
             {/* Main greeting that appears at the top of the page */}
-            {getCurrentChat()?.messages.length === 0 && settings.showGreeting && !isMobile && (
+            {getCurrentChat()?.messages.length === 0 && settings.showGreeting && !isMobile && location.pathname === '/' && (
               <MainGreeting
                 $toolbarOpen={isToolbarOpen}
                 $whiteboardOpen={isWhiteboardOpen}
