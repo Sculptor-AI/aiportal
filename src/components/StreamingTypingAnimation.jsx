@@ -9,7 +9,7 @@ const TypingContainer = styled.div`
 `;
 
 const Cursor = styled.span`
-  opacity: ${props => props.show ? 1 : 0};
+  opacity: ${props => props.$show ? 1 : 0};
   transition: opacity 0.1s ease-in-out;
   color: ${props => props.theme.text || '#000'};
   animation: blink 1s infinite;
@@ -107,7 +107,7 @@ const StreamingTypingAnimation = ({
     <TypingContainer>
       {displayedText}
       {showCursor && (isStreaming || showTypingCursor) && (
-        <Cursor show={showTypingCursor} theme={theme}>|</Cursor>
+        <Cursor $show={showTypingCursor} theme={theme}>|</Cursor>
       )}
     </TypingContainer>
   );

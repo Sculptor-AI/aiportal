@@ -6,7 +6,7 @@ const MessageContainer = styled.div`
   margin: 16px 0;
   display: flex;
   flex-direction: column;
-  align-items: ${props => props.isUser ? 'flex-end' : 'flex-start'};
+  align-items: ${props => props.$isUser ? 'flex-end' : 'flex-start'};
 `;
 
 const MessageBubble = styled.div`
@@ -16,7 +16,7 @@ const MessageBubble = styled.div`
   word-wrap: break-word;
   position: relative;
   
-  ${props => props.isUser ? `
+  ${props => props.$isUser ? `
     background: ${props.theme.primary};
     color: white;
     border-bottom-right-radius: 8px;
@@ -181,7 +181,7 @@ const MessageTimestamp = styled.div`
   font-size: 12px;
   color: ${props => props.theme.text}66;
   margin-top: 4px;
-  text-align: ${props => props.isUser ? 'right' : 'left'};
+  text-align: ${props => props.$isUser ? 'right' : 'left'};
 `;
 
 const ErrorMessage = styled.div`
@@ -278,8 +278,8 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
   const contentParts = parseMessageContent(message.content);
   
   return (
-    <MessageContainer isUser={isUser}>
-      <MessageBubble isUser={isUser}>
+    <MessageContainer $isUser={isUser}>
+      <MessageBubble $isUser={isUser}>
         {message.image && !imageError && (
           <MessageImage
             src={message.image}
@@ -288,14 +288,8 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
           />
         )}
         
-        <MessageContent isUser={isUser}>
-          {message.isLoading && !isUser ? (
-            <StreamingMarkdownRenderer 
-              text={message.content || ''}
-              isStreaming={true}
-              theme={theme}
-            />
-          ) : (
+        <MessageContent $isUser={isUser}>
+          {isUser ? (
             contentParts.map((part, index) => {
               if (part.type === 'code') {
                 return (
@@ -313,6 +307,13 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
                 );
               }
             })
+          ) : (
+            <StreamingMarkdownRenderer 
+              text={message.content || ''}
+              isStreaming={message.isLoading}
+              showCursor={message.isLoading}
+              theme={theme}
+            />
           )}
         </MessageContent>
         
@@ -329,13 +330,13 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
         
         {message.isError && (
           <ErrorMessage>
-            Failed to generate response. Please try again.
+            {message.content || 'Failed to generate response. Please try again.'}
           </ErrorMessage>
         )}
       </MessageBubble>
       
       {settings?.showTimestamps && message.timestamp && (
-        <MessageTimestamp isUser={isUser}>
+        <MessageTimestamp $isUser={isUser}>
           {formatTimestamp(message.timestamp)}
         </MessageTimestamp>
       )}

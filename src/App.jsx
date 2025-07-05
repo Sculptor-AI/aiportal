@@ -20,7 +20,7 @@ import { keyframes } from 'styled-components';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { fetchModelsFromBackend } from './services/aiService';
 import NewSettingsPanel from './components/NewSettingsPanel';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import MediaPage from './pages/MediaPage';
 import NewsPage from './pages/NewsPage';
 import AdminPage from './pages/AdminPage';
@@ -189,6 +189,7 @@ const AppContent = () => {
   const toast = useToast();
   const isMobile = useIsMobile();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
   // Greeting messages
@@ -440,6 +441,12 @@ const AppContent = () => {
       return updatedChats;
     });
     setActiveChat(newChat.id);
+    
+    // Navigate to chat tab if not already there
+    if (location.pathname !== '/') {
+      navigate('/');
+    }
+    
     return newChat;
   };
 

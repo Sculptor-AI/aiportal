@@ -183,7 +183,6 @@ const ChatWindow = forwardRef(({
             reader.readAsDataURL(file);
           });
           processedFiles.push({ 
-            file: file, 
             type: 'image', 
             content: dataUrl, 
             dataUrl: dataUrl, 
@@ -193,7 +192,6 @@ const ChatWindow = forwardRef(({
           if (file.isPastedText) {
             // Handle pasted text
             processedFiles.push({ 
-              file: file, 
               type: 'text', 
               content: file.pastedContent, 
               text: file.pastedContent, 
@@ -209,7 +207,6 @@ const ChatWindow = forwardRef(({
               reader.readAsText(file);
             });
             processedFiles.push({ 
-              file: file, 
               type: 'text', 
               content: text, 
               text: text, 
@@ -230,7 +227,6 @@ const ChatWindow = forwardRef(({
           }
           const trimmedText = fullText.trim();
           processedFiles.push({ 
-            file: file, 
             type: 'pdf', 
             content: trimmedText, 
             text: trimmedText, 

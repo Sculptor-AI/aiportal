@@ -109,7 +109,7 @@ const InlineCode = styled.code`
 `;
 
 const Cursor = styled.span`
-  opacity: ${props => props.show ? 1 : 0};
+  opacity: ${props => props.$show ? 1 : 0};
   transition: opacity 0.1s ease-in-out;
   color: ${props => props.theme.text || '#000'};
   animation: blink 1s infinite;
@@ -219,7 +219,7 @@ const StreamingMarkdownRenderer = ({
   theme = {}
 }) => {
   if (!text) {
-    return isStreaming && showCursor ? <Cursor show={true} theme={theme}>|</Cursor> : null;
+    return isStreaming && showCursor ? <Cursor $show={true} theme={theme}>|</Cursor> : null;
   }
 
   // Process the text and handle code blocks
@@ -369,7 +369,7 @@ const StreamingMarkdownRenderer = ({
     <div style={{ fontFamily: 'inherit', lineHeight: 1.6, wordWrap: 'break-word', whiteSpace: 'pre-wrap' }}>
       {processContent(text)}
       {isStreaming && showCursor && (
-        <Cursor show={true} theme={theme}>|</Cursor>
+        <Cursor $show={true} theme={theme}>|</Cursor>
       )}
     </div>
   );
