@@ -14,7 +14,12 @@ import {
   RetroIconWrapper,
   HammerButton,
   ToolbarContainer,
-  ToolbarItem
+  ToolbarItem,
+  FilesPreviewContainer,
+  FilePreviewChip,
+  FilePreviewIcon,
+  FilePreviewName,
+  FilePreviewRemove
 } from './ChatWindow.styled';
 
 const ChatInputArea = forwardRef(({
@@ -28,6 +33,7 @@ const ChatInputArea = forwardRef(({
   isProcessingFile,
   uploadedFile,      // Renamed from uploadedFileData for clarity as prop
   onClearAttachment, // Prop for clearUploadedFile
+  onRemoveFile,      // Prop for removing individual files
   resetFileUploadTrigger, // Renamed from resetFileUpload
   availableModels, // Needed for model-specific logic if any remains or for sub-components
   isWhiteboardOpen, // New prop
@@ -160,6 +166,8 @@ const ChatInputArea = forwardRef(({
   const handlePaste = (event) => {
     const items = event.clipboardData?.items;
     if (!items) return;
+    
+    // Check for file first (existing behavior)
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind === 'file' && item.type.startsWith('image/')) {
@@ -168,7 +176,25 @@ const ChatInputArea = forwardRef(({
         if (file) {
           onFileSelected(file);
         }
-        break;
+        return;
+      }
+    }
+    
+    // Check for text content - need to prevent default before async operation
+    const textItem = Array.from(items).find(item => item.kind === 'string' && item.type === 'text/plain');
+    if (textItem) {
+      // Get the text synchronously from clipboard data
+      const text = event.clipboardData.getData('text/plain');
+      if (text && text.length > 1000) {
+        event.preventDefault();
+        
+        // Create a virtual file object for the pasted text
+        const blob = new Blob([text], { type: 'text/plain' });
+        const file = new File([blob], 'pasted-text.txt', { type: 'text/plain' });
+        file.isPastedText = true;
+        file.pastedContent = text;
+        
+        onFileSelected(file);
       }
     }
   };
@@ -178,7 +204,13 @@ const ChatInputArea = forwardRef(({
     if (isFlowchartPromptMode) return "Describe the flowchart you want to create...";
     if (isLoading) return "Waiting for response...";
     if (isProcessingFile) return "Processing file...";
-    if (uploadedFile) return `Attached: ${uploadedFile.name}. Add text or send.`;
+    if (uploadedFile) {
+      if (Array.isArray(uploadedFile)) {
+        return `Attached: ${uploadedFile.length} file${uploadedFile.length > 1 ? 's' : ''}. Add text or send.`;
+      } else {
+        return `Attached: ${uploadedFile.name}. Add text or send.`;
+      }
+    }
     return "Type message, paste image, or attach file...";
   };
 
@@ -243,12 +275,40 @@ const ChatInputArea = forwardRef(({
       $isSandbox3DOpen={isSandbox3DOpen}
     >
       <MessageInputWrapper $isEmpty={chatIsEmpty}>
+        <FilesPreviewContainer $show={uploadedFile && (Array.isArray(uploadedFile) ? uploadedFile.length > 0 : true)} theme={theme}>
+          {uploadedFile && (Array.isArray(uploadedFile) ? uploadedFile : [uploadedFile]).map((file, index) => (
+            <FilePreviewChip key={index} theme={theme}>
+              <FilePreviewIcon theme={theme}>
+                {file.type?.startsWith('image/') ? (
+                  <img src={file.dataUrl || URL.createObjectURL(file)} alt="Preview" />
+                ) : file.isPastedText ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                )}
+              </FilePreviewIcon>
+              <FilePreviewName>{file.name}</FilePreviewName>
+              <FilePreviewRemove onClick={() => onRemoveFile && onRemoveFile(index)}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </FilePreviewRemove>
+            </FilePreviewChip>
+          ))}
+        </FilesPreviewContainer>
         <InputRow>
           <FileUploadButton
             onFileSelected={onFileSelected}
             disabled={isLoading || isProcessingFile}
             resetFile={resetFileUploadTrigger}
-            externalFile={uploadedFile?.file} // FileUploadButton expects 'file' prop
+            externalFile={uploadedFile} // Pass the uploadedFile data directly
           />
           <MessageInput
             ref={inputRef}

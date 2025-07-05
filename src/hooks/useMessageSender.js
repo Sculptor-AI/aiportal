@@ -221,8 +221,26 @@ const useMessageSender = ({
     const createType = messagePayload.createType;
     
     const messageToSend = messageText ? messageText.trim() : '';
-    const currentImageData = attachedFile?.type === 'image' ? attachedFile.dataUrl : null;
-    const currentFileText = (attachedFile?.type === 'text' || attachedFile?.type === 'pdf') ? attachedFile.text : null;
+    
+    // Handle multiple files
+    let currentImageData = null;
+    let currentFileText = null;
+    let allFiles = [];
+    
+    if (attachedFile) {
+      if (Array.isArray(attachedFile)) {
+        allFiles = attachedFile;
+        // For backward compatibility, use the first image and first text file
+        const firstImage = attachedFile.find(f => f.type === 'image');
+        const firstText = attachedFile.find(f => f.type === 'text' || f.type === 'pdf');
+        currentImageData = firstImage?.dataUrl || null;
+        currentFileText = firstText?.text || null;
+      } else {
+        allFiles = [attachedFile];
+        currentImageData = attachedFile?.type === 'image' ? attachedFile.dataUrl : null;
+        currentFileText = (attachedFile?.type === 'text' || attachedFile?.type === 'pdf') ? attachedFile.text : null;
+      }
+    }
 
     if (!messageToSend && !currentImageData && !currentFileText) return;
     if (isLoading || !chat?.id) return; // Removed isProcessingFile as it's managed by parent ChatWindow for UI disabling
@@ -248,11 +266,18 @@ const useMessageSender = ({
     if (currentImageData) {
       userMessage.image = currentImageData;
     }
-    if (attachedFile) {
-      userMessage.file = {
-        type: attachedFile.type,
-        name: attachedFile.name
-      };
+    if (allFiles.length > 0) {
+      userMessage.files = allFiles.map(file => ({
+        type: file.type,
+        name: file.name
+      }));
+      // For backward compatibility, keep the old file property for single files
+      if (allFiles.length === 1) {
+        userMessage.file = {
+          type: allFiles[0].type,
+          name: allFiles[0].name
+        };
+      }
     }
 
     addMessage(currentChatId, userMessage);

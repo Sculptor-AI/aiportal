@@ -1,30 +1,36 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import styled, { useTheme } from 'styled-components';
+
+const FileUploadContainer = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+`;
 
 const UploadButton = styled.button`
   background: transparent;
   border: none;
   color: ${props => props.theme.text};
   cursor: pointer;
-  width: ${props => props.theme.name === 'retro' ? '24px' : '36px'};
-  height: ${props => props.theme.name === 'retro' ? '24px' : '36px'};
+  width: 36px;
+  height: 36px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  position: absolute;
-  left: ${props => props.theme.name === 'retro' ? '-16px' : '15px'};
-  top: 50%;
-  transform: translateY(-50%);
+  margin-left: 20px;
+  margin-right: -8px;
   z-index: 10;
-  box-shadow: none;
-
+  
   &:hover {
-    background: ${props => props.theme.name === 'retro' ? 'transparent' : 'rgba(0, 0, 0, 0.05)'};
+    background: ${props => props.theme.name === 'retro' ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
   }
 
   &:active:not(:disabled) {
-    padding: ${props => props.theme.name === 'retro' ? '1px 0 0 1px' : '0'};
+    transform: scale(0.95);
   }
 
   &:disabled {
@@ -39,19 +45,34 @@ const HiddenInput = styled.input`
 
 const PreviewContainer = styled.div`
   position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  bottom: calc(100% + 15px);
+  left: 0;
   background: ${props => props.theme.inputBackground};
-  padding: 8px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 24px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
   border: 1px solid ${props => props.theme.border};
-  z-index: 10;
-  max-width: calc(100% - 16px);
+  z-index: 20;
   display: ${props => props.$show ? 'flex' : 'none'};
   align-items: center;
+  gap: 10px;
+  min-width: 200px;
+  max-width: 600px;
+  white-space: nowrap;
+  flex-wrap: wrap;
+`;
+
+const FilePreviewItem = styled.div`
+  display: flex;
+  align-items: center;
   gap: 8px;
+  padding: 4px 8px;
+  background: ${props => props.theme.background};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 16px;
+  position: relative;
+  min-width: 120px;
+  max-width: 180px;
 `;
 
 const PreviewImage = styled.img`
@@ -66,7 +87,8 @@ const FileInfo = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 13px;
+  flex: 1;
 `;
 
 const FileName = styled.div`
@@ -74,11 +96,111 @@ const FileName = styled.div`
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 `;
 
 const FileType = styled.div`
   opacity: 0.7;
+  font-size: 11px;
+`;
+
+const PastedTextPreview = styled.div`
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
+const Modal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  box-sizing: border-box;
+`;
+
+const ModalContent = styled.div`
+  background: ${props => props.theme.background};
+  color: ${props => props.theme.text};
+  padding: 20px;
+  border-radius: 12px;
+  width: 90vw;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow: hidden;
+  border: 1px solid ${props => props.theme.border};
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid ${props => props.theme.border};
+  flex-shrink: 0;
+`;
+
+const ModalTitle = styled.h3`
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+`;
+
+const ModalCloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: ${props => props.theme.text};
+  padding: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  
+  &:hover {
+    background: ${props => props.theme.border};
+    opacity: 0.7;
+  }
+`;
+
+const ModalTextContainer = styled.div`
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalText = styled.pre`
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  padding: 15px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 8px;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 200px;
 `;
 
 const CloseButton = styled.button`
@@ -126,54 +248,61 @@ const UploadIcon = styled.div`
 
 // Generic File Icon (SVG)
 const FileIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '10px', color: 'grey' }}>
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'grey', flexShrink: 0 }}>
     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
     <polyline points="14 2 14 8 20 8"></polyline>
+  </svg>
+);
+
+// Pasted Text Icon (SVG)
+const PastedTextIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#4F46E5', flexShrink: 0 }}>
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+    <path d="M12 11h4"></path>
+    <path d="M12 16h4"></path>
+    <path d="M8 11h.01"></path>
+    <path d="M8 16h.01"></path>
   </svg>
 );
 
 
 const FileUploadButton = ({ onFileSelected, disabled, resetFile, externalFile }) => {
   const fileInputRef = useRef(null);
-  const [previewData, setPreviewData] = useState(null); // { src?: string, name: string, type: string }
+  const [previewData, setPreviewData] = useState([]); // Array of files: [{ src?: string, name: string, type: string, isPastedText?: boolean, pastedContent?: string }]
+  const [showPastedTextModal, setShowPastedTextModal] = useState(false);
+  const [selectedPastedTextIndex, setSelectedPastedTextIndex] = useState(null);
   const theme = useTheme();
   
   // Effect to handle external file for preview (e.g., from paste)
+  // Note: We don't need to show processed files here since ChatInputArea handles that
   useEffect(() => {
-    if (externalFile) {
-      // Generate preview for the external file
-      if (externalFile.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreviewData({
-            src: reader.result,
-            name: externalFile.name,
-            type: externalFile.type
-          });
+    if (externalFile && !Array.isArray(externalFile)) {
+      // Only handle single external files (like pasted content)
+      if (externalFile.isPastedText) {
+        const newFile = {
+          id: Date.now(),
+          name: 'Pasted Text',
+          type: 'text/plain',
+          isPastedText: true,
+          pastedContent: externalFile.pastedContent
         };
-        reader.readAsDataURL(externalFile);
-      } else {
-        // For non-image files from external source, show file info
-        setPreviewData({
-          name: externalFile.name,
-          type: externalFile.type
-        });
+        setPreviewData([newFile]);
       }
-       // Reset the file input value in case it holds an old selection
+      // Reset the file input value in case it holds an old selection
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     } else {
-       // If externalFile is null (e.g., cleared by parent), clear preview
-       // This handles clearing after sending or manual clear
-       setPreviewData(null);
+       // If externalFile is null or array (processed files), clear preview
+       setPreviewData([]);
     }
   }, [externalFile]); // Rerun when externalFile changes
   
   // Effect to handle the reset prop
   useEffect(() => {
     if (resetFile) {
-      setPreviewData(null);
+      setPreviewData([]);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -185,61 +314,67 @@ const FileUploadButton = ({ onFileSelected, disabled, resetFile, externalFile })
   };
   
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    // The limit check is handled by the parent component
     
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain'];
-    if (!allowedTypes.includes(file.type)) {
-      alert('Unsupported file type. Please select an image (JPEG, PNG, GIF, WEBP), PDF, or TXT file.');
-      // Clear the input if the file type is wrong
+    const validFiles = [];
+    
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        alert(`Unsupported file type for ${file.name}. Please select an image (JPEG, PNG, GIF, WEBP), PDF, or TXT file.`);
+        continue;
+      }
+      
+      // Check file size (limit to 10MB for now)
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`File size for ${file.name} should be less than 10MB.`);
+        continue;
+      }
+      
+      validFiles.push(file);
+    }
+    
+    if (validFiles.length === 0) {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
       return;
     }
     
-    // Check file size (limit to 10MB for now)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size should be less than 10MB.');
-       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      return;
-    }
-    
-    // Create preview data
-    if (file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewData({
-          src: reader.result,
-          name: file.name,
-          type: file.type
-        });
-      };
-      reader.readAsDataURL(file);
-    } else {
-      // For PDF/TXT, just show file info
-      setPreviewData({
-        name: file.name,
-        type: file.type
-      });
-    }
-    
-    // Send the File object to parent
-    onFileSelected(file);
+    // Send all files to parent for processing
+    onFileSelected(validFiles);
   };
   
-  const clearFile = () => {
-    setPreviewData(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const clearFile = (fileId) => {
+    if (fileId) {
+      // Clear specific file from preview
+      setPreviewData(prev => prev.filter(file => file.id !== fileId));
+      // If this was a pasted text file, notify parent
+      const fileToRemove = previewData.find(file => file.id === fileId);
+      if (fileToRemove && fileToRemove.isPastedText) {
+        onFileSelected(null);
+      }
+    } else {
+      // Clear all files
+      setPreviewData([]);
+      setShowPastedTextModal(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      onFileSelected(null); // Notify parent
     }
-    onFileSelected(null); // Notify parent
+  };
+
+  const handlePastedTextClick = (index) => {
+    setSelectedPastedTextIndex(index);
+    setShowPastedTextModal(true);
   };
   
   return (
-    <>
+    <FileUploadContainer>
       <UploadButton onClick={handleButtonClick} disabled={disabled} title="Upload file (Image, PDF, TXT)">
         <UploadIcon disabled={disabled}>
           {theme.name === 'retro' ? (
@@ -271,24 +406,44 @@ const FileUploadButton = ({ onFileSelected, disabled, resetFile, externalFile })
         ref={fileInputRef}
         accept="image/jpeg, image/png, image/gif, image/webp, application/pdf, text/plain"
         onChange={handleFileChange}
+        multiple
       />
-      <PreviewContainer $show={previewData !== null} theme={theme}>
-        {previewData && (
-          <>
-            <CloseButton onClick={clearFile}>×</CloseButton>
-            {previewData.src ? (
-              <PreviewImage src={previewData.src} alt="Preview" />
-            ) : (
-              <FileIcon />
-            )}
-            <FileInfo>
-              <FileName>{previewData.name}</FileName>
-              <FileType>{previewData.type}</FileType>
-            </FileInfo>
-          </>
-        )}
+      <PreviewContainer $show={previewData.length > 0} theme={theme}>
+        {previewData.map((file, index) => (
+          <FilePreviewItem key={file.id} theme={theme}>
+            <CloseButton onClick={() => clearFile(file.id)}>×</CloseButton>
+            <PastedTextPreview onClick={file.isPastedText ? () => handlePastedTextClick(index) : undefined}>
+              {file.src ? (
+                <PreviewImage src={file.src} alt="Preview" />
+              ) : file.isPastedText ? (
+                <PastedTextIcon />
+              ) : (
+                <FileIcon />
+              )}
+              <FileInfo>
+                <FileName>{file.name}</FileName>
+                {!file.isPastedText && <FileType>{file.type}</FileType>}
+              </FileInfo>
+            </PastedTextPreview>
+          </FilePreviewItem>
+        ))}
       </PreviewContainer>
-    </>
+      
+      {showPastedTextModal && selectedPastedTextIndex !== null && previewData[selectedPastedTextIndex]?.isPastedText && createPortal(
+        <Modal onClick={() => setShowPastedTextModal(false)}>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>Pasted Text Content</ModalTitle>
+              <ModalCloseButton onClick={() => setShowPastedTextModal(false)}>×</ModalCloseButton>
+            </ModalHeader>
+            <ModalTextContainer>
+              <ModalText>{previewData[selectedPastedTextIndex].pastedContent}</ModalText>
+            </ModalTextContainer>
+          </ModalContent>
+        </Modal>,
+        document.body
+      )}
+    </FileUploadContainer>
   );
 };
 

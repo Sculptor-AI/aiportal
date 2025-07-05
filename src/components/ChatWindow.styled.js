@@ -239,6 +239,88 @@ export const MessageInputWrapper = styled.div`
   padding-bottom: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
 `;
 
+export const FilesPreviewContainer = styled.div`
+  display: ${props => props.$show ? 'flex' : 'none'};
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 8px 16px;
+  width: 100%;
+  box-sizing: border-box;
+  border-bottom: ${props => props.$show ? `1px solid ${props.theme.border}` : 'none'};
+  background: ${props => props.theme.background};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px 24px 0 0'};
+`;
+
+export const FilePreviewChip = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '16px'};
+  font-size: 12px;
+  color: ${props => props.theme.text};
+  position: relative;
+  max-width: 200px;
+`;
+
+export const FilePreviewIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  
+  img {
+    width: 16px;
+    height: 16px;
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '4px'};
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+    color: ${props => props.theme.text};
+    opacity: 0.7;
+  }
+`;
+
+export const FilePreviewName = styled.div`
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+`;
+
+export const FilePreviewRemove = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.text};
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
+  flex-shrink: 0;
+  
+  &:hover {
+    opacity: 1;
+    background: ${props => props.theme.border};
+  }
+  
+  svg {
+    width: 10px;
+    height: 10px;
+  }
+`;
+
 export const InputRow = styled.div`
   display: flex;
   width: 100%;
@@ -265,7 +347,7 @@ export const InputRow = styled.div`
 
 export const MessageInput = styled.textarea`
   width: 100%;
-  padding: 15px 50px 15px ${props => props.theme.name === 'retro' ? '50px' : '60px'};
+  padding: 15px 102px 15px ${props => props.theme.name === 'retro' ? '16px' : '16px'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px'};
   border: none;
   background: transparent;
@@ -315,7 +397,7 @@ export const MessageInput = styled.textarea`
   }
   
   @media (max-width: 768px) {
-    padding: 13px 45px 13px ${props => props.theme.name === 'retro' ? '48px' : '55px'};
+    padding: 13px 102px 13px ${props => props.theme.name === 'retro' ? '16px' : '16px'};
     min-height: 45px;
   }
 `;

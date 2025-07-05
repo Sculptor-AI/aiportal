@@ -50,8 +50,8 @@ const LogoContainer = styled.div`
 `;
 
 const LogoText = styled.span`
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: 600;
+  font-family: 'SegoeUI-Bold', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: bold;
   font-size: 20px;
   letter-spacing: 0.5px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
@@ -893,6 +893,17 @@ const Sidebar = ({
                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                 </svg>
                 <span>News</span>
+              </NavLink>
+            )}
+            {location.pathname !== '/projects' && (
+              <NavLink to="/projects">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                  <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                  <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                  <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                </svg>
+                <span>Projects</span>
               </NavLink>
             )}
             {isAdmin && location.pathname !== '/admin' && (

@@ -1548,7 +1548,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
               
               <AboutText>From the Andromeda Team, with ❤️</AboutText>
               
-              <VersionText>Version 0.1.6</VersionText>
+              <VersionText>Sculptor Alpha 0.0.6</VersionText>
             </AboutContainer>
           )}
           

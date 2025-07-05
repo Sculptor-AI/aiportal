@@ -23,7 +23,10 @@
       "Bash(awk:*)",
       "Bash(node:*)",
       "Bash(timeout:*)",
-      "Bash(gemini:*)"
+      "Bash(gemini:*)",
+      "Bash(mv:*)",
+      "Bash(export VITE_BACKEND_API_URL=http://localhost:3000)",
+      "Bash(ss:*)"
     ],
     "deny": []
   }

@@ -127,83 +127,135 @@ const ChatWindow = forwardRef(({
     }
   }, [chat?.id, initialSelectedModel, $sidebarCollapsed]);
 
-  const handleFileSelected = async (file) => {
-    if (!file) {
+  const handleFileSelected = async (files) => {
+    if (!files) {
       setUploadedFileData(null);
       if (onAttachmentChange) onAttachmentChange(false);
       return;
     }
-    const isImage = file.type.startsWith('image/');
-    const isText = file.type === 'text/plain';
-    const isPdf = file.type === 'application/pdf';
 
-    if (isImage || isText || isPdf) {
-      if (file.size > 10 * 1024 * 1024) { 
-        alert('File too large. Max size is 10MB.');
-        return; 
-      }
-      setIsProcessingFile(true);
-      setUploadedFileData({ file: file, type: file.type.split('/')[0], content: 'Processing...', name: file.name });
-      if (onAttachmentChange) onAttachmentChange(true);
+    // Handle single file (backward compatibility)
+    if (!Array.isArray(files)) {
+      files = [files];
+    }
 
-      try {
+    if (files.length === 0) {
+      setUploadedFileData(null);
+      if (onAttachmentChange) onAttachmentChange(false);
+      return;
+    }
+
+    // Get existing files to add to (but don't exceed 4 total)
+    const existingFiles = uploadedFileData ? (Array.isArray(uploadedFileData) ? uploadedFileData : [uploadedFileData]) : [];
+    const totalFiles = existingFiles.length + files.length;
+    
+    if (totalFiles > 4) {
+      alert(`You can only upload up to 4 files total. You currently have ${existingFiles.length} files and are trying to add ${files.length} more.`);
+      return;
+    }
+
+    setIsProcessingFile(true);
+    if (onAttachmentChange) onAttachmentChange(true);
+
+    try {
+      const processedFiles = [...existingFiles]; // Start with existing files
+      
+      for (const file of files) {
+        const isImage = file.type.startsWith('image/');
+        const isText = file.type === 'text/plain' || file.isPastedText;
+        const isPdf = file.type === 'application/pdf';
+
+        if (!isImage && !isText && !isPdf) {
+          alert(`Unsupported file type: ${file.name}`);
+          continue;
+        }
+
+        if (file.size > 10 * 1024 * 1024) { 
+          alert(`File too large: ${file.name}. Max size is 10MB.`);
+          continue;
+        }
+
         if (isImage) {
           const reader = new FileReader();
-          reader.onloadend = () => {
-            setUploadedFileData({ file: file, type: 'image', content: reader.result, dataUrl: reader.result, name: file.name });
-            setIsProcessingFile(false);
-          };
-          reader.onerror = () => { 
-            setIsProcessingFile(false); alert('Error reading image file.'); 
-            if (onAttachmentChange) onAttachmentChange(false);
-          };
-          reader.readAsDataURL(file);
+          const dataUrl = await new Promise((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          processedFiles.push({ 
+            file: file, 
+            type: 'image', 
+            content: dataUrl, 
+            dataUrl: dataUrl, 
+            name: file.name 
+          });
         } else if (isText) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setUploadedFileData({ file: file, type: 'text', content: reader.result, text: reader.result, name: file.name });
-            setIsProcessingFile(false);
-          };
-          reader.onerror = () => { 
-            setIsProcessingFile(false); alert('Error reading text file.');
-            if (onAttachmentChange) onAttachmentChange(false);
-          };
-          reader.readAsText(file);
-        } else if (isPdf) {
-          try {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            let fullText = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const textContent = await page.getTextContent();
-              fullText += textContent.items.map(item => item.str).join(' ') + '\n';
-            }
-            if (!fullText.trim()) {
-              fullText = "This appears to be a scanned PDF without extractable text.";
-            }
-            const trimmedText = fullText.trim();
-            const fileData = { file: file, type: 'pdf', content: trimmedText, text: trimmedText, name: file.name };
-            setUploadedFileData(fileData);
-            setIsProcessingFile(false);
-          } catch (error) {
-            console.error('Error extracting PDF text:', error);
-            setIsProcessingFile(false); alert('Error extracting text from PDF: ' + error.message);
-            if (onAttachmentChange) onAttachmentChange(false);
+          if (file.isPastedText) {
+            // Handle pasted text
+            processedFiles.push({ 
+              file: file, 
+              type: 'text', 
+              content: file.pastedContent, 
+              text: file.pastedContent, 
+              name: file.name,
+              isPastedText: true
+            });
+          } else {
+            // Handle regular text file
+            const reader = new FileReader();
+            const text = await new Promise((resolve, reject) => {
+              reader.onloadend = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsText(file);
+            });
+            processedFiles.push({ 
+              file: file, 
+              type: 'text', 
+              content: text, 
+              text: text, 
+              name: file.name 
+            });
           }
+        } else if (isPdf) {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          let fullText = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            fullText += textContent.items.map(item => item.str).join(' ') + '\n';
+          }
+          if (!fullText.trim()) {
+            fullText = "This appears to be a scanned PDF without extractable text.";
+          }
+          const trimmedText = fullText.trim();
+          processedFiles.push({ 
+            file: file, 
+            type: 'pdf', 
+            content: trimmedText, 
+            text: trimmedText, 
+            name: file.name 
+          });
         }
-        setResetFileUpload(false);
-      } catch (error) {
-         console.error('Error processing file:', error);
-         alert(`Error processing ${file.type} file: ${error.message}`);
-         setUploadedFileData(null); setIsProcessingFile(false); setResetFileUpload(true);
-         setTimeout(() => setResetFileUpload(false), 0);
-         if (onAttachmentChange) onAttachmentChange(false);
       }
-    } else {
-       alert('Unsupported file type selected.');
-       setUploadedFileData(null);
-       if (onAttachmentChange) onAttachmentChange(false);
+
+      if (processedFiles.length > 0) {
+        setUploadedFileData(processedFiles);
+      } else {
+        setUploadedFileData(null);
+        if (onAttachmentChange) onAttachmentChange(false);
+      }
+      
+      setIsProcessingFile(false);
+      setResetFileUpload(false);
+    } catch (error) {
+      console.error('Error processing files:', error);
+      alert(`Error processing files: ${error.message}`);
+      setUploadedFileData(null); 
+      setIsProcessingFile(false); 
+      setResetFileUpload(true);
+      setTimeout(() => setResetFileUpload(false), 0);
+      if (onAttachmentChange) onAttachmentChange(false);
     }
   };
 
@@ -299,6 +351,19 @@ const ChatWindow = forwardRef(({
     }
   };
 
+  const removeFileByIndex = (index) => {
+    if (!uploadedFileData) return;
+    
+    const filesArray = Array.isArray(uploadedFileData) ? uploadedFileData : [uploadedFileData];
+    const newFiles = filesArray.filter((_, i) => i !== index);
+    
+    if (newFiles.length === 0) {
+      clearUploadedFile();
+    } else {
+      setUploadedFileData(newFiles);
+    }
+  };
+
   useImperativeHandle(ref, () => ({
     handleFileSelected,
     appendToInput: (text) => {
@@ -374,6 +439,7 @@ const ChatWindow = forwardRef(({
           isProcessingFile={isProcessingFile} // Pass isProcessingFile state
           uploadedFile={uploadedFileData}
           onClearAttachment={clearUploadedFile}
+          onRemoveFile={removeFileByIndex}
           resetFileUploadTrigger={resetFileUpload}
           availableModels={availableModels}
           isWhiteboardOpen={isWhiteboardOpen}

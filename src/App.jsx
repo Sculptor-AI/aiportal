@@ -24,6 +24,8 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import MediaPage from './pages/MediaPage';
 import NewsPage from './pages/NewsPage';
 import AdminPage from './pages/AdminPage';
+import ProjectsPage from './pages/ProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 import ForcedLoginScreen from './components/ForcedLoginScreen';
 
 const AppContainer = styled.div`
@@ -267,6 +269,22 @@ const AppContent = () => {
     return savedActiveChat ? JSON.parse(savedActiveChat) : chats[0]?.id;
   });
 
+  // Project state
+  const [projects, setProjects] = useState(() => {
+    try {
+      const savedProjects = localStorage.getItem('projects');
+      return savedProjects ? JSON.parse(savedProjects) : [];
+    } catch (err) {
+      console.error("Error loading projects from localStorage:", err);
+      return [];
+    }
+  });
+
+  const [activeProject, setActiveProject] = useState(() => {
+    const savedActiveProject = localStorage.getItem('activeProject');
+    return savedActiveProject ? JSON.parse(savedActiveProject) : null;
+  });
+
   // Models will be loaded exclusively from the backend.
   const [availableModels, setAvailableModels] = useState([]);
   
@@ -390,6 +408,14 @@ const AppContent = () => {
   }, [activeChat]);
 
   useEffect(() => {
+    localStorage.setItem('projects', JSON.stringify(projects));
+  }, [projects]);
+
+  useEffect(() => {
+    localStorage.setItem('activeProject', JSON.stringify(activeProject));
+  }, [activeProject]);
+
+  useEffect(() => {
     localStorage.setItem('selectedModel', selectedModel);
   }, [selectedModel]);
   
@@ -400,14 +426,36 @@ const AppContent = () => {
     }
   }, [settings, user]);
 
-  const createNewChat = () => {
+  const createNewChat = (projectId = null) => {
     const newChat = {
       id: uuidv4(),
       title: 'New Chat',
-      messages: []
+      messages: [],
+      projectId: projectId,
     };
-    setChats([...chats, newChat]);
+    setChats(prevChats => [...prevChats, newChat]);
     setActiveChat(newChat.id);
+    return newChat;
+  };
+
+  const createNewProject = (projectData) => {
+    const newProject = {
+      id: uuidv4(),
+      ...projectData,
+      createdAt: new Date().toISOString(),
+    };
+    setProjects(prevProjects => [...prevProjects, newProject]);
+    setActiveProject(newProject.id);
+  };
+
+  const addKnowledgeToProject = (projectId, file) => {
+    setProjects(prevProjects => prevProjects.map(p => {
+      if (p.id === projectId) {
+        const newKnowledge = { id: uuidv4(), ...file };
+        return { ...p, knowledge: [...(p.knowledge || []), newKnowledge] };
+      }
+      return p;
+    }));
   };
 
   const deleteChat = (chatId) => {
@@ -430,6 +478,11 @@ const AppContent = () => {
         setActiveChat(updatedChats.length > 0 ? updatedChats[0].id : null);
       }
     }
+  };
+
+  const deleteProject = (projectId) => {
+    const updatedProjects = projects.filter(project => project.id !== projectId);
+    setProjects(updatedProjects);
   };
   
   const updateChatTitle = (chatId, newTitle) => {
@@ -702,6 +755,33 @@ const AppContent = () => {
               <Route path="/media" element={<MediaPage />} />
               <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
               <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
+              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} collapsed={collapsed} />} />
+              <Route path="/projects/:projectId" element={
+                <ProjectDetailPage 
+                  projects={projects} 
+                  chats={chats}
+                  addMessage={addMessage}
+                  updateMessage={updateMessage}
+                  createNewChat={createNewChat}
+                  setActiveChat={setActiveChat}
+                  activeChat={activeChat}
+                  addKnowledgeToProject={addKnowledgeToProject}
+                  // Pass down all the props ChatInputArea needs
+                  settings={settings}
+                  availableModels={availableModels}
+                  isWhiteboardOpen={isWhiteboardOpen}
+                  onToggleWhiteboard={() => setIsWhiteboardOpen(p => !p)}
+                  isEquationEditorOpen={isEquationEditorOpen}
+                  onToggleEquationEditor={() => setIsEquationEditorOpen(p => !p)}
+                  isGraphingOpen={isGraphingOpen}
+                  onToggleGraphing={() => setIsGraphingOpen(p => !p)}
+                  isFlowchartOpen={isFlowchartOpen}
+                  onToggleFlowchart={() => setIsFlowchartOpen(p => !p)}
+                  isSandbox3DOpen={isSandbox3DOpen}
+                  onToggleSandbox3D={() => setIsSandbox3DOpen(p => !p)}
+                  onToolbarToggle={setIsToolbarOpen}
+                />
+              } />
             </Routes>
           </MainContentArea>
           

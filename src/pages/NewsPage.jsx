@@ -709,7 +709,7 @@ const ArticleDetailView = ({ article, onClose }) => {
       setSummary('');
       
       try {
-        const content = await fetchArticleContent(article.url);
+        const content = await fetchArticleContent(article.url, article.description);
         setArticleContent(content);
         
         if (content && content.content) {
@@ -733,12 +733,32 @@ const ArticleDetailView = ({ article, onClose }) => {
       } catch (error) {
         console.error('Error loading article content:', error);
         setContentError('Failed to load full article content');
-        setArticleContent({
+        const fallbackContent = {
           content: article.description || 'No content available',
           title: article.title,
           image: article.image,
           extracted: false
-        });
+        };
+        setArticleContent(fallbackContent);
+        
+        // Still try to generate a summary from the description
+        if (article.description && article.description.length > 20) {
+          setSummarizing(true);
+          try {
+            const summaryPrompt = `Please provide a concise summary and analysis of the following news article:\n\n${article.title}\n\n${article.description}`;
+            const result = await sendMessageToBackend('gemini-2.5-flash', summaryPrompt);
+            if (result && result.response) {
+              setSummary(result.response);
+            } else {
+              setSummary('Could not generate summary.');
+            }
+          } catch (summaryError) {
+            console.error('Error generating summary:', summaryError);
+            setSummary('Failed to generate summary.');
+          } finally {
+            setSummarizing(false);
+          }
+        }
       } finally {
         setLoadingContent(false);
       }
