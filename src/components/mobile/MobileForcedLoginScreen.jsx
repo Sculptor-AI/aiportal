@@ -564,7 +564,7 @@ const MobileForcedLoginScreen = () => {
               {isSubmitting ? (
                 <LoadingSpinner />
               ) : (
-                isLoginMode ? 'Trust me lol' : 'Create Account'
+                isLoginMode ? 'Sign in' : 'Create Account'
               )}
             </SubmitButton>
           </FormContainer>
