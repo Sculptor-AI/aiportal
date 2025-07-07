@@ -434,7 +434,7 @@ const AppContent = () => {
     setChats(prevChats => {
       const updatedChats = [...prevChats, newChat];
       try {
-        localStorage.setItem('chats', JSON.stringify(updatedChats));
+        localStorage.setItem('chats', safeStringify(updatedChats));
       } catch (error) {
         console.error("Error saving chats to localStorage:", error);
       }
@@ -483,14 +483,14 @@ const AppContent = () => {
       setChats([newChat]);
       setActiveChat(newChat.id);
       try {
-        localStorage.setItem('chats', JSON.stringify([newChat]));
+        localStorage.setItem('chats', safeStringify([newChat]));
       } catch (error) {
         console.error("Error saving chats to localStorage:", error);
       }
     } else {
       setChats(updatedChats);
       try {
-        localStorage.setItem('chats', JSON.stringify(updatedChats));
+        localStorage.setItem('chats', safeStringify(updatedChats));
       } catch (error) {
         console.error("Error saving chats to localStorage:", error);
       }
@@ -516,7 +516,7 @@ const AppContent = () => {
         return chat;
       });
       try {
-        localStorage.setItem('chats', JSON.stringify(updatedChats));
+        localStorage.setItem('chats', safeStringify(updatedChats));
       } catch (error) {
         console.error("Error saving chats to localStorage:", error);
       }
@@ -540,7 +540,7 @@ const AppContent = () => {
         }
         return chat;
       });
-      localStorage.setItem('chats', JSON.stringify(updatedChats));
+      localStorage.setItem('chats', safeStringify(updatedChats));
       return updatedChats;
     });
   };
@@ -639,6 +639,36 @@ const AppContent = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Helper function to safely serialize objects for localStorage
+  const safeStringify = (obj) => {
+    const seen = new WeakSet();
+    return JSON.stringify(obj, (key, value) => {
+      // Handle circular references
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return undefined; // Remove circular reference
+        }
+        seen.add(value);
+      }
+      
+      // Remove non-serializable values
+      if (typeof value === 'function') {
+        return undefined;
+      }
+      if (value instanceof Window) {
+        return undefined;
+      }
+      if (value instanceof Document) {
+        return undefined;
+      }
+      if (value instanceof HTMLElement) {
+        return undefined;
+      }
+      
+      return value;
+    });
+  };
 
   // Render logic
   const currentChat = getCurrentChat();

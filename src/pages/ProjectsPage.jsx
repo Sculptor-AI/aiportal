@@ -9,8 +9,8 @@ const ProjectsPageContainer = styled.div`
   background-color: ${props => props.theme.background};
   color: ${props => props.theme.text};
   overflow-y: auto;
-  width: ${props => (props.collapsed ? '100%' : 'calc(100% - 280px)')};
-  margin-left: ${props => (props.collapsed ? '0' : '280px')};
+  width: ${props => (props.$collapsed ? '100%' : 'calc(100% - 280px)')};
+  margin-left: ${props => (props.$collapsed ? '0' : '280px')};
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
@@ -151,7 +151,7 @@ const ProjectsPage = ({ projects, createNewProject, collapsed, deleteProject }) 
     const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <ProjectsPageContainer collapsed={collapsed}>
+    <ProjectsPageContainer $collapsed={collapsed}>
       <Header>
         <Title>
           <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '15px' }}>

@@ -310,7 +310,7 @@ const Message = styled.div`
   align-items: flex-start;
   max-width: 100%;
   width: 100%;
-  justify-content: ${props => props.alignment === 'right' ? 'flex-end' : 'flex-start'};
+  justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
 `;
 
 const Avatar = styled.div`
@@ -870,7 +870,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     }
 
     return (
-      <Message alignment={messageAlignment}>
+      <Message $alignment={messageAlignment}>
         {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
         <Content role={role} $bubbleStyle={bubbleStyle}>
           {generatedFlowchartContent}
@@ -931,7 +931,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     }
 
     return (
-      <Message alignment={messageAlignment}>
+      <Message $alignment={messageAlignment}>
         {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
         <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
           {generatedImageContent}
@@ -959,7 +959,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   }
 
   return (
-    <Message alignment={messageAlignment}>
+    <Message $alignment={messageAlignment}>
       {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
       {isError ? (
         <ErrorMessage role={role} $bubbleStyle={bubbleStyle}>

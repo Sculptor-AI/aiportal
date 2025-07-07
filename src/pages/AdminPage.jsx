@@ -10,8 +10,8 @@ const AdminContainer = styled.div`
   background-color: ${props => props.theme.background};
   color: ${props => props.theme.text};
   overflow-y: auto;
-  width: ${props => (props.collapsed ? '100%' : 'calc(100% - 280px)')};
-  margin-left: ${props => (props.collapsed ? '0' : '280px')};
+  width: ${props => (props.$collapsed ? '100%' : 'calc(100% - 280px)')};
+  margin-left: ${props => (props.$collapsed ? '0' : '280px')};
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
@@ -193,12 +193,12 @@ const RoleBadge = styled.span`
   letter-spacing: 0.5px;
   
   ${props => {
-    if (props.role === 'ADMIN') {
+    if (props.$role === 'ADMIN') {
       return `
         background-color: #3b82f6;
         color: white;
       `;
-    } else if (props.status === 'pending') {
+    } else if (props.$status === 'pending') {
       return `
         background-color: #f59e0b;
         color: white;
@@ -609,7 +609,7 @@ const AdminPage = ({ collapsed }) => {
   // Show admin login modal if admin is not authenticated
   if (!adminUser) {
     return (
-      <AdminContainer collapsed={collapsed}>
+      <AdminContainer $collapsed={collapsed}>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <h2>Admin Access Required</h2>
           <p>Please log in as an administrator to access this page.</p>
@@ -640,7 +640,7 @@ const AdminPage = ({ collapsed }) => {
   // Show loading state
   if (loading && users.length === 0) {
     return (
-      <AdminContainer collapsed={collapsed}>
+      <AdminContainer $collapsed={collapsed}>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <h2>Loading...</h2>
           <p>Fetching user data...</p>
@@ -650,7 +650,7 @@ const AdminPage = ({ collapsed }) => {
   }
 
   return (
-    <AdminContainer collapsed={collapsed}>
+    <AdminContainer $collapsed={collapsed}>
       {error && (
         <div style={{ 
           backgroundColor: '#fee2e2', 
@@ -711,7 +711,7 @@ const AdminPage = ({ collapsed }) => {
             <TableRow key={user.id}>
               <TableCell>
                 <ClickableText onClick={() => handleEditUser(user)}>
-                  <RoleBadge role={user.role} status={user.status}>
+                  <RoleBadge $role={user.role} $status={user.status}>
                     {user.status === 'pending' ? 'PENDING' : user.role}
                   </RoleBadge>
                 </ClickableText>
