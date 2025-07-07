@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../services/aiService';
-import { useToast } from '../contexts/ToastContext';
+import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../../services/aiService';
+import { useToast } from '../../contexts/ToastContext';
 import MobileChatMessage from './MobileChatMessage';
 import MobileFileUpload from './MobileFileUpload';
 import * as pdfjsLib from 'pdfjs-dist';

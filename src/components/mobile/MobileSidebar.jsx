@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import ModelIcon from './ModelIcon';
+import ModelIcon from '../ModelIcon';
 
 const SidebarOverlay = styled.div`
   position: fixed;
