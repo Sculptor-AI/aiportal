@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
+import StreamingMarkdownRenderer from '../StreamingMarkdownRenderer';
 
 const MessageContainer = styled.div`
   margin: 16px 0;

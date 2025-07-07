@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { v4 as uuidv4 } from 'uuid';
-import { getTheme } from '../styles/themes';
-import { AuthProvider, useAuth } from '../contexts/AuthContext';
-import { ToastProvider } from '../contexts/ToastContext';
-import { fetchModelsFromBackend } from '../services/aiService';
+import { getTheme } from '../../styles/themes';
+import { AuthProvider, useAuth } from '../../contexts/AuthContext';
+import { ToastProvider } from '../../contexts/ToastContext';
+import { fetchModelsFromBackend } from '../../services/aiService';
 import MobileChatWindow from './MobileChatWindow';
 import MobileSidebar from './MobileSidebar';
 import MobileSettingsPanel from './MobileSettingsPanel';
-import LoginModal from './LoginModal';
-import ProfileModal from './ProfileModal';
-import ModelIcon from './ModelIcon';
+import LoginModal from '../LoginModal';
+import ProfileModal from '../ProfileModal';
+import ModelIcon from '../ModelIcon';
 
 const MobileAppContainer = styled.div`
   display: flex;

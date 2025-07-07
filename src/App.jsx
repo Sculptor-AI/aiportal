@@ -5,7 +5,7 @@ import ChatWindow from './components/ChatWindow';
 import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import ProfileModal from './components/ProfileModal';
-import MobileApp from './components/MobileApp';
+import MobileApp from './components/mobile/MobileApp';
 import WhiteboardModal from './components/WhiteboardModal';
 import EquationEditorModal from './components/EquationEditorModal';
 import GraphingModal from './components/GraphingModal';
@@ -27,6 +27,7 @@ import AdminPage from './pages/AdminPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ForcedLoginScreen from './components/ForcedLoginScreen';
+import MobileForcedLoginScreen from './components/mobile/MobileForcedLoginScreen';
 
 const AppContainer = styled.div`
   display: flex;
@@ -699,7 +700,7 @@ const AppContent = () => {
 
   // Force login if user is not authenticated
   if (!user) {
-    return <ForcedLoginScreen />;
+    return isMobile ? <MobileForcedLoginScreen /> : <ForcedLoginScreen />;
   }
 
   // Check if we should render the shared view
