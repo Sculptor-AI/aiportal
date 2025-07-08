@@ -3,6 +3,23 @@ export const extractSourcesFromResponse = (content) => {
   if (!content || typeof content !== 'string') {
     return { cleanedContent: content, sources: [] };
   }
+  
+  // First check for new <links> format
+  const linkMatch = content.match(/<links>\s*(.*?)\s*<\/links>/);
+  if (linkMatch) {
+    const linksString = linkMatch[1];
+    const links = linksString.split(' ; ').map(url => url.trim()).filter(url => url);
+    const cleanContent = content.replace(/<links>.*?<\/links>/, '').trim();
+    
+    // Convert URLs to source objects for consistency with existing UI
+    const sources = links.map((url, index) => ({
+      title: `Source ${index + 1}`,
+      url: url,
+      domain: extractDomain(url)
+    }));
+    
+    return { cleanedContent: cleanContent, sources: sources };
+  }
 
   // Check if content starts with **Sources:**
   if (!content.startsWith('**Sources:**')) {

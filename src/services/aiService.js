@@ -30,23 +30,18 @@ const isBackendModel = (modelId, availableModels = []) => {
 
 // New backend streaming function
 export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false, systemPrompt = null) {
-  console.log(`sendMessageToBackendStream called with model: ${modelId}, message: "${message.substring(0, 30)}...", search: ${search}`);
-
   // Get user's assigned backend API key from session
   let apiKey = null;
   try {
     const userJSON = sessionStorage.getItem('ai_portal_current_user');
     if (userJSON) {
       const user = JSON.parse(userJSON);
-      console.log('[sendMessageToBackendStream] User from session:', user);
       // User's assigned backend API key should be stored as their accessToken
       if (user.accessToken && user.accessToken.startsWith('ak_')) {
         apiKey = user.accessToken;
-        console.log('[sendMessageToBackendStream] Using user API key from session');
       } else if (user.accessToken) {
         // Use JWT token if available
         apiKey = user.accessToken;
-        console.log('[sendMessageToBackendStream] Using JWT token from session');
       }
     }
   } catch (e) {
@@ -56,7 +51,6 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
   // Fallback API key for development/testing
   if (!apiKey) {
     apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
-    console.log('[sendMessageToBackendStream] Using fallback API key');
   }
 
   if (!apiKey) {
@@ -74,14 +68,6 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
 
     // Prepare messages array
     let messages = [...validHistory];
-
-    // Add system prompt if provided
-    if (systemPrompt) {
-      messages.unshift({
-        role: 'system',
-        content: systemPrompt
-      });
-    }
 
     // Prepare user message content
     let userContent = message || '';
@@ -135,9 +121,19 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       stream: true
     };
 
+    // Add system prompt as top-level parameter if provided
+    if (systemPrompt) {
+      requestPayload.system = systemPrompt;
+    }
+
     // Add web search if requested
     if (search || deepResearch) {
       requestPayload.web_search = true;
+    }
+
+    // Log the model and system prompt for debugging custom models
+    if (systemPrompt) {
+      console.log('[sendMessageToBackendStream] Using custom model with system prompt');
     }
 
     // Prepare headers based on token type
@@ -154,9 +150,6 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     }
 
     const url = buildApiUrl('/v1/chat/completions');
-    console.log('Streaming request to backend:', url);
-    console.log('Request payload:', JSON.stringify(requestPayload, null, 2));
-    console.log('Request headers:', headers);
 
     // Use fetch with streaming
     const response = await fetch(url, {
@@ -191,12 +184,17 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     let sourcesReceived = false;
     let hasReceivedContent = false;
     let fullContent = ''; // Track full content for link parsing
+    let collectedSources = []; // Collect sources to send at the end
 
     // Process the stream
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
-        console.log('[sendMessageToBackendStream] Stream reading completed');
+        // If we collected sources, yield them at the end
+        if (collectedSources.length > 0 && !sourcesReceived) {
+          yield { type: 'sources', sources: collectedSources };
+        }
+        
         break;
       }
 
@@ -207,32 +205,27 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       for (const line of lines) {
         if (line.trim() === '') continue;
         
-        console.log('[Stream Debug] Processing line:', line);
-        
         if (line.startsWith('data: ')) {
           const data = line.substring(6).trim();
           
           if (data === '[DONE]') {
-            console.log('[Stream Debug] Received [DONE] signal');
+            // If we collected sources, yield them before ending
+            if (collectedSources.length > 0 && !sourcesReceived) {
+              yield { type: 'sources', sources: collectedSources };
+            }
+            
             return;
           }
           
           try {
             const parsed = JSON.parse(data);
-            console.log('[Stream Debug] Parsed SSE data:', parsed);
             
             // Handle sources for web search (old format)
             if (parsed.type === 'sources' && parsed.sources) {
-              console.log('Received web search sources:', parsed.sources);
               sourcesReceived = true;
               
-              // Format sources as a special message
-              const sourcesText = '\n\n**Sources:**\n' + 
-                parsed.sources.map((source, idx) => 
-                  `${idx + 1}. [${source.title}](${source.url})\n   ${source.snippet || ''}`
-                ).join('\n\n');
-              
-              yield sourcesText;
+              // Yield sources as a special object
+              yield { type: 'sources', sources: parsed.sources };
               continue;
             }
             
@@ -240,34 +233,32 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
             if (parsed.choices?.[0]?.delta?.content) {
               hasReceivedContent = true;
               const chunk = parsed.choices[0].delta.content;
-              console.log('[Stream Debug] Received chunk:', chunk);
               
               // Check if this entire chunk is just the links section
               // According to docs, links come as a single chunk at the end
               if (chunk.trim().startsWith('<links>') && chunk.trim().endsWith('</links>')) {
-                console.log('[Stream Debug] Detected links chunk:', chunk);
-                
                 // Parse and format the links
                 const { parseLinksFromResponse } = await import('../utils/sourceExtractor.js');
                 const { sources } = parseLinksFromResponse(chunk);
                 
                 if (sources.length > 0) {
                   sourcesReceived = true;
-                  const sourcesText = '\n\n**Sources:**\n' + 
-                    sources.map((source, idx) => 
-                      `${idx + 1}. [${source.title}](${source.url})`
-                    ).join('\n\n');
-                  
-                  yield sourcesText;
+                  collectedSources = sources;
+                  // Don't yield the links as content - they'll be sent as sources at the end
                 }
               } else {
                 // Normal content chunk - yield it
                 fullContent += chunk;
-                yield chunk;
+                yield chunk; // Yield just the content chunk
               }
-            } else if (parsed.choices || parsed.delta || parsed.message) {
-              // Log any other response format we might not be handling
-              console.log('[Stream Debug] Unhandled response format:', parsed);
+            } else if (parsed.error) {
+              // Handle error in the stream
+              console.error('[sendMessageToBackendStream] Error in stream:', parsed.error);
+              throw new Error(parsed.error.message || parsed.error);
+            } else if (parsed.choices?.[0]?.finish_reason === 'error') {
+              // Handle finish reason error
+              console.error('[sendMessageToBackendStream] Finish reason error');
+              throw new Error('Model returned an error finish reason');
             }
           } catch (e) {
             console.error('Failed to parse SSE chunk:', e, 'Raw data:', data);

@@ -108,10 +108,10 @@ const ControlButton = styled.button`
   ${props => {
     if (props.variant === 'microphone') {
       return `
-        background: ${props.active ? '#ff4444' : '#4CAF50'};
+        background: ${props.$active ? '#ff4444' : '#4CAF50'};
         color: white;
         &:hover {
-          background: ${props.active ? '#ff6666' : '#66BB6A'};
+          background: ${props.$active ? '#ff6666' : '#66BB6A'};
           transform: scale(1.1);
           box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
         }
@@ -119,10 +119,10 @@ const ControlButton = styled.button`
     }
     if (props.variant === 'camera') {
       return `
-        background: ${props.active ? '#2196F3' : '#757575'};
+        background: ${props.$active ? '#2196F3' : '#757575'};
         color: white;
         &:hover {
-          background: ${props.active ? '#42A5F5' : '#9E9E9E'};
+          background: ${props.$active ? '#42A5F5' : '#9E9E9E'};
           transform: scale(1.1);
           box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
         }
@@ -130,10 +130,10 @@ const ControlButton = styled.button`
     }
     if (props.variant === 'screen') {
       return `
-        background: ${props.active ? '#FF9800' : '#757575'};
+        background: ${props.$active ? '#FF9800' : '#757575'};
         color: white;
         &:hover {
-          background: ${props.active ? '#FFB74D' : '#9E9E9E'};
+          background: ${props.$active ? '#FFB74D' : '#9E9E9E'};
           transform: scale(1.1);
           box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
         }
@@ -408,7 +408,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
       <ControlsContainer>
         <ControlButton
           variant="microphone"
-          active={microphoneActive}
+          $active={microphoneActive}
           onClick={handleMicrophoneToggle}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -426,7 +426,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         
         <ControlButton
           variant="camera"
-          active={cameraActive}
+          $active={cameraActive}
           onClick={handleCameraToggle}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -441,7 +441,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         
         <ControlButton
           variant="screen"
-          active={screenShareActive}
+          $active={screenShareActive}
           onClick={handleScreenShareToggle}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">

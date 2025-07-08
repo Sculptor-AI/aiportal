@@ -302,28 +302,85 @@ const AppContent = () => {
       try {
         console.log('Fetching models from backend...');
         const backendModels = await fetchModelsFromBackend();
-        if (backendModels && backendModels.length > 0) {
-          setAvailableModels(backendModels);
-          console.log(`Loaded ${backendModels.length} models from backend:`, backendModels.map(m => m.id));
+        
+        // Get enabled custom models from localStorage
+        const customModelsJson = localStorage.getItem('customModels');
+        let enabledCustomModels = [];
+        if (customModelsJson) {
+          try {
+            const customModels = JSON.parse(customModelsJson);
+            // Filter only enabled custom models and format them
+            enabledCustomModels = customModels
+              .filter(model => model.enabled)
+              .map(model => ({
+                id: `custom-${model.id}`, // Prefix with 'custom-' to avoid ID conflicts
+                name: model.name,
+                description: model.description,
+                isCustomModel: true,
+                systemPrompt: model.systemPrompt,
+                avatar: model.avatar,
+                provider: 'Custom Model',
+                isBackendModel: false, // Custom models are frontend models
+                baseModel: model.baseModel || 'gpt-3.5-turbo' // More common fallback
+              }));
+          } catch (err) {
+            console.error('Error parsing custom models:', err);
+          }
+        }
+        
+        // Combine backend models with enabled custom models
+        const allModels = [...(backendModels || []), ...enabledCustomModels];
+        
+        if (allModels.length > 0) {
+          setAvailableModels(allModels);
+          console.log(`Loaded ${allModels.length} models (${backendModels?.length || 0} backend, ${enabledCustomModels.length} custom):`, allModels.map(m => m.id));
           
           // Set default model if none is selected or the selected one is no longer available
-          const currentSelectedModelIsValid = backendModels.some(m => m.id === selectedModel);
-          if (!currentSelectedModelIsValid && backendModels.length > 0) {
-            const defaultModel = backendModels[0].id;
+          const currentSelectedModelIsValid = allModels.some(m => m.id === selectedModel);
+          if (!currentSelectedModelIsValid && allModels.length > 0) {
+            const defaultModel = allModels[0].id;
             setSelectedModel(defaultModel);
             localStorage.setItem('selectedModel', defaultModel);
             console.log(`Set default model to: ${defaultModel}`);
           }
         } else {
-          // If backend returns no models, the list will be empty.
-          console.warn('Backend returned no models');
+          // If no models available
+          console.warn('No models available');
           setAvailableModels([]);
           setSelectedModel(null);
         }
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
-        setAvailableModels([]); // Ensure list is empty on error
-        setSelectedModel(null);
+        
+        // Even if backend fails, still try to load custom models
+        const customModelsJson = localStorage.getItem('customModels');
+        let enabledCustomModels = [];
+        if (customModelsJson) {
+          try {
+            const customModels = JSON.parse(customModelsJson);
+            enabledCustomModels = customModels
+              .filter(model => model.enabled)
+              .map(model => ({
+                id: `custom-${model.id}`,
+                name: model.name,
+                description: model.description,
+                isCustomModel: true,
+                systemPrompt: model.systemPrompt,
+                avatar: model.avatar,
+                provider: 'Custom Model',
+                isBackendModel: false,
+                baseModel: model.baseModel || 'gpt-3.5-turbo' // More common fallback
+              }));
+          } catch (err) {
+            console.error('Error parsing custom models:', err);
+          }
+        }
+        
+        setAvailableModels(enabledCustomModels);
+        if (enabledCustomModels.length > 0 && !enabledCustomModels.some(m => m.id === selectedModel)) {
+          setSelectedModel(enabledCustomModels[0].id);
+          localStorage.setItem('selectedModel', enabledCustomModels[0].id);
+        }
       }
     };
     
@@ -333,7 +390,18 @@ const AppContent = () => {
     // Refresh models every 5 minutes to catch newly added models
     const refreshInterval = setInterval(getBackendModels, 5 * 60 * 1000);
     
-    return () => clearInterval(refreshInterval);
+    // Also refresh when custom models change (listen for storage events)
+    const handleStorageChange = (e) => {
+      if (e.key === 'customModels') {
+        getBackendModels();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
   
   // Settings - from user account or localStorage

@@ -104,51 +104,81 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
   
   const model = modelThemes[modelId] || {};
   
-  // Try to get image from the MODEL_LOGOS mapping
-  let imageUrl = MODEL_LOGOS[modelId];
+  // Check if this is a custom model first
+  const isCustomModel = modelId?.startsWith('custom-');
   
-  // If we don't have an exact match, try to find a partial match
-  if (!imageUrl) {
-    // Check if the modelId contains any of our known provider names
-    if (modelId?.includes('mercury')) {
-      imageUrl = '/images/inception-logo.png';
-    } else if (modelId?.includes('openai') || modelId?.includes('gpt')) {
-      imageUrl = '/images/openai-logo.png';
-    } else if (modelId?.includes('gemini')) {
-      imageUrl = '/images/gemini-logo.png';
-    } else if (modelId?.includes('claude') || modelId?.includes('anthropic')) {
-      imageUrl = '/images/claude-logo.png';
-    } else if (modelId?.includes('llama') || modelId?.includes('meta')) {
-      imageUrl = '/images/meta-logo.png';
-    } else if (modelId?.includes('deepseek')) {
-      imageUrl = '/images/deepseek-logo.png';
+  // Try to get image from the MODEL_LOGOS mapping (unless it's a custom model)
+  let imageUrl = !isCustomModel ? MODEL_LOGOS[modelId] : null;
+  
+  // For custom models, we'll use the emoji instead of an image
+  if (isCustomModel) {
+    // Get the available models from the parent context to find the emoji
+    // Since we don't have access to availableModels here, we'll need to parse the model ID
+    // The modelId format is 'custom-{id}', we need to get the emoji from localStorage
+    try {
+      const customModelsJson = localStorage.getItem('customModels');
+      if (customModelsJson) {
+        const customModels = JSON.parse(customModelsJson);
+        const modelNumericId = modelId.replace('custom-', '');
+        const customModel = customModels.find(m => m.id.toString() === modelNumericId);
+        if (customModel && customModel.avatar) {
+          iconComponent = <span style={{ fontSize: '1.2em' }}>{customModel.avatar}</span>;
+          iconBackground = 'transparent';
+        } else {
+          // Fallback to first letter
+          iconComponent = 'C';
+          iconBackground = '#888';
+        }
+      }
+    } catch (err) {
+      console.error('Error getting custom model emoji:', err);
+      iconComponent = 'C';
+      iconBackground = '#888';
     }
-  }
-  
-  // If no image available, set icon based on model
-  if (!imageUrl) {
-    switch (true) {
-      case modelId?.includes('gemini'):
-        iconComponent = <GeminiIcon />;
-        iconBackground = model.gradient || modelThemes['gemini-2-flash']?.gradient;
-        break;
-      case modelId?.includes('claude') || modelId?.includes('anthropic'):
-        iconComponent = <ClaudeIcon />;
-        iconBackground = model.gradient;
-        break;
-      case modelId?.includes('gpt') || modelId?.includes('openai'):
-        iconComponent = <ChatGPTIcon />;
-        iconBackground = model.gradient;
-        break;
-      case modelId?.includes('custom-gguf'):
-        iconComponent = <CustomModelIcon />;
-        iconBackground = model.gradient;
-        break;
-      default:
-        // Default icon (first letter of model name)
-        const firstLetter = modelId?.charAt(0)?.toUpperCase() || '?';
-        iconComponent = firstLetter;
-        iconBackground = '#888';
+  } else {
+    // If we don't have an exact match, try to find a partial match
+    if (!imageUrl) {
+      // Check if the modelId contains any of our known provider names
+      if (modelId?.includes('mercury')) {
+        imageUrl = '/images/inception-logo.png';
+      } else if (modelId?.includes('openai') || modelId?.includes('gpt')) {
+        imageUrl = '/images/openai-logo.png';
+      } else if (modelId?.includes('gemini')) {
+        imageUrl = '/images/gemini-logo.png';
+      } else if (modelId?.includes('claude') || modelId?.includes('anthropic')) {
+        imageUrl = '/images/claude-logo.png';
+      } else if (modelId?.includes('llama') || modelId?.includes('meta')) {
+        imageUrl = '/images/meta-logo.png';
+      } else if (modelId?.includes('deepseek')) {
+        imageUrl = '/images/deepseek-logo.png';
+      }
+    }
+    
+    // If no image available, set icon based on model
+    if (!imageUrl) {
+      switch (true) {
+        case modelId?.includes('gemini'):
+          iconComponent = <GeminiIcon />;
+          iconBackground = model.gradient || modelThemes['gemini-2-flash']?.gradient;
+          break;
+        case modelId?.includes('claude') || modelId?.includes('anthropic'):
+          iconComponent = <ClaudeIcon />;
+          iconBackground = model.gradient;
+          break;
+        case modelId?.includes('gpt') || modelId?.includes('openai'):
+          iconComponent = <ChatGPTIcon />;
+          iconBackground = model.gradient;
+          break;
+        case modelId?.includes('custom-gguf'):
+          iconComponent = <CustomModelIcon />;
+          iconBackground = model.gradient;
+          break;
+        default:
+          // Default icon (first letter of model name)
+          const firstLetter = modelId?.charAt(0)?.toUpperCase() || '?';
+          iconComponent = firstLetter;
+          iconBackground = '#888';
+      }
     }
   }
   
@@ -162,6 +192,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
       $inMessage={$inMessage} 
       $useImage={$useImage} 
       $noMargin={$noMargin}
+      style={{ background: !$useImage && iconBackground ? iconBackground : undefined }}
       title={`${model?.name || modelId} (${model?.provider || 'Local'})`}
     >
       {imageUrl ? (

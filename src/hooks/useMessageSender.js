@@ -172,6 +172,12 @@ const useMessageSender = ({
         );
         
         for await (const chunk of messageGenerator) {
+          // Skip source objects for flowchart generation
+          if (typeof chunk === 'object' && chunk.type === 'sources') {
+            continue;
+          }
+          
+          // Otherwise it's a content chunk
           streamedContent += chunk;
           updateMessage(chat.id, flowchartPlaceholderId, { 
             content: streamedContent, 
@@ -251,6 +257,11 @@ const useMessageSender = ({
     const currentHistory = chat.messages;
     const currentModelObj = availableModels.find(model => model.id === currentModel);
     const isBackendModel = currentModelObj?.isBackendModel === true;
+
+    // For custom models, use the base model ID for the API call
+    const modelIdForApi = currentModelObj?.isCustomModel && currentModelObj?.baseModel 
+      ? currentModelObj.baseModel 
+      : currentModel;
 
     // All models now go through backend API - no local API key validation needed
 
@@ -340,34 +351,67 @@ Example format:
 
 IMPORTANT: Always provide content after the </think> tag. Never end your response with just the thinking block.` : null;
 
+        // Check if the current model is a custom model and get its system prompt
+        let systemPromptToUse = thinkingModeSystemPrompt;
+        if (currentModelObj?.isCustomModel && currentModelObj?.systemPrompt) {
+          // If there's already a thinking mode prompt, combine them
+          if (thinkingModeSystemPrompt) {
+            systemPromptToUse = `${currentModelObj.systemPrompt}\n\n${thinkingModeSystemPrompt}`;
+          } else {
+            systemPromptToUse = currentModelObj.systemPrompt;
+          }
+        }
+
         // UNIFIED LOGIC: All models are sent through the sendMessage generator,
         // which handles routing to the backend. The isBackendModel check is removed.
         const messageGenerator = sendMessage(
-          messageToSend, currentModel, formattedHistory, imageDataToSend, fileTextToSend,
+          messageToSend, modelIdForApi, formattedHistory, imageDataToSend, fileTextToSend,
           currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
-          thinkingModeSystemPrompt
+          systemPromptToUse
         );
+        
+        let messageSources = [];
+        
         for await (const chunk of messageGenerator) {
+          // Check if chunk is an object with type 'sources'
+          if (typeof chunk === 'object' && chunk.type === 'sources') {
+            messageSources = chunk.sources;
+            // Don't add sources to content - they'll be handled separately
+            continue;
+          }
+          
+          // Otherwise it's a content chunk
           streamedContent += chunk;
           updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
         }
         finalAssistantContent = streamedContent;
         
         const messageUpdates = { content: streamedContent, isLoading: false };
-        if (window.__lastSearchSources && Array.isArray(window.__lastSearchSources) && (currentActionChip === 'search' || currentActionChip === 'deep-research')) {
-            messageUpdates.sources = window.__lastSearchSources;
-            window.__lastSearchSources = null;
+        
+        // Add sources if we received them
+        if (messageSources.length > 0) {
+          messageUpdates.sources = messageSources;
+        } else if (window.__lastSearchSources && Array.isArray(window.__lastSearchSources) && (currentActionChip === 'search' || currentActionChip === 'deep-research')) {
+          // Fallback to old method if needed
+          messageUpdates.sources = window.__lastSearchSources;
+          window.__lastSearchSources = null;
         }
+        
         updateMessage(currentChatId, aiMessageId, messageUpdates);
 
     } catch (error) {
       console.error('[useMessageSender] Error generating response:', error);
+      
+      const errorMessage = currentModelObj?.isCustomModel 
+        ? `Error with custom model "${currentModelObj.name}": ${error.message || 'Failed to generate response'}. Make sure the base model (${currentModelObj.baseModel}) is properly configured.`
+        : `Error with ${currentModel}: ${error.message || 'Failed to generate response'}`;
+      
       updateMessage(currentChatId, aiMessageId, {
-        content: `Error: ${error.message || 'Failed to generate response'}`,
+        content: errorMessage,
         isLoading: false, isError: true
       });
       addAlert({
-        message: `Error with ${currentModel}: ${error.message || 'Failed to generate response'}`,
+        message: errorMessage,
         type: 'error', autoHide: true
       });
     } finally {

@@ -719,13 +719,20 @@ const ThinkingDropdown = ({ thinkingContent }) => {
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id } = message;
   
+  // Debug logging
+  if (role === 'assistant' && sources) {
+    console.log('[ChatMessage] Message has sources:', sources);
+  }
+  
   // Get the prompt for both image and flowchart messages
   const prompt = message.prompt;
   
   // Extract sources from content if this is an assistant message and not loading
   const { cleanedContent, sources: extractedSources } = useMemo(() => {
     if (role === 'assistant' && content && !isLoading) {
-      return extractSourcesFromResponse(content);
+      const result = extractSourcesFromResponse(content);
+      console.log('[ChatMessage] Extracted sources from content:', result);
+      return result;
     }
     return { cleanedContent: content, sources: [] };
   }, [content, role, isLoading]);
@@ -798,6 +805,15 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Determine if the message has sources to display
   const displaySources = extractedSources.length > 0 ? extractedSources : (Array.isArray(sources) ? sources : []);
   const hasSources = role === 'assistant' && displaySources.length > 0;
+  
+  console.log('[ChatMessage] Display sources:', {
+    extractedSources,
+    propsSources: sources,
+    displaySources,
+    hasSources,
+    isLoading,
+    role
+  });
 
   // Extract domain from URL for displaying source name and favicon
   const extractDomain = (url) => {
