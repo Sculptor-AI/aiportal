@@ -158,7 +158,7 @@ const NewChatButton = styled.button`
   }};
   padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '11px 16px'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '10px'};
-  font-weight: 600;
+  font-weight: 400;
   font-size: 14px;
   letter-spacing: -0.01em;
   display: flex;
@@ -307,7 +307,6 @@ const ChatList = styled.div`
   display: flex;
   flex-direction: column;
   align-items: ${props => props.$collapsed ? 'center' : 'stretch'};
-  margin-top: 8px;
   margin-bottom: 10px;
   gap: 4px;
 
@@ -410,7 +409,7 @@ const ChatTitle = styled.div`
   transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
 
   @media (max-width: 768px) {
       opacity: 1; /* Always visible on mobile */
@@ -613,7 +612,7 @@ const ModelDropdownText = styled.span`
   transition: opacity 0.2s ease, visibility 0.2s;
   transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-weight: 500;
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -690,7 +689,7 @@ const ModelInfo = styled.div`
 `;
 
 const ModelName = styled.span`
-  font-weight: ${props => props.$isSelected ? 'bold' : '500'};
+  font-weight: ${props => props.$isSelected ? '600' : '400'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-size: 0.9rem;
   white-space: nowrap;
@@ -716,7 +715,7 @@ const SidebarButton = styled.button`
   border-radius: 10px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
   justify-content: flex-start;
@@ -788,7 +787,7 @@ const NavLink = styled(Link)`
   border-radius: 10px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
   justify-content: flex-start;
@@ -1202,6 +1201,10 @@ const Sidebar = ({
 
               {/* Models Section removed as requested */}
 
+              {/* Section header for chats */}
+              <SectionHeader $collapsed={$collapsed}>
+                Chats
+              </SectionHeader>
 
               {/* --- Chats Section --- */}
               <ChatList $collapsed={$collapsed}>
