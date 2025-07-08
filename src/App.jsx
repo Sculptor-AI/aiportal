@@ -26,6 +26,7 @@ import NewsPage from './pages/NewsPage';
 import AdminPage from './pages/AdminPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
+import WorkspacePage from './pages/WorkspacePage';
 import ForcedLoginScreen from './components/ForcedLoginScreen';
 import MobileForcedLoginScreen from './components/mobile/MobileForcedLoginScreen';
 
@@ -815,6 +816,7 @@ const AppContent = () => {
               <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
               <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
               <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} collapsed={collapsed} />} />
+              <Route path="/workspace" element={<WorkspacePage collapsed={collapsed} />} />
               <Route path="/projects/:projectId" element={
                 <ProjectDetailPage 
                   projects={projects} 

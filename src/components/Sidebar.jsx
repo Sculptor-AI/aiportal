@@ -139,46 +139,81 @@ const MobileLogoText = styled.span`
 const NewChatButton = styled.button`
   background: ${props => {
     if (props.theme.name === 'retro') return props.theme.buttonFace;
-    return props.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)';
+    if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.12)';
+    if (props.theme.name === 'dark') return 'rgba(255,255,255,0.05)';
+    return '#ffffff';
   }};
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => {
+    if (props.theme.name === 'lakeside') return 'rgb(198, 146, 20)';
+    if (props.theme.name === 'dark') return '#ffffff';
+    return '#2d2d2d';
+  }};
   border: ${props => {
     if (props.theme.name === 'retro') {
       return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
     }
-    return `1px solid ${props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border}`;
+    if (props.theme.name === 'lakeside') return '1px solid rgba(198, 146, 20, 0.2)';
+    if (props.theme.name === 'dark') return '1px solid rgba(255,255,255,0.1)';
+    return '1px solid rgba(0,0,0,0.08)';
   }};
-  padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '12px 15px'};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
-  font-weight: 500;
+  padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '11px 16px'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '10px'};
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.01em;
   display: flex;
   align-items: center;
-  justify-content: ${props => props.theme.name === 'retro' ? 'flex-start' : 'center'};
-  gap: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
-  transition: all 0.2s ease;
+  justify-content: ${props => props.theme.name === 'retro' ? 'flex-start' : 'flex-start'};
+  gap: ${props => props.theme.name === 'retro' ? '12px' : '10px'};
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: ${props => {
     if (props.theme.name === 'retro') {
       return `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset`;
     }
-    return props.theme.name === 'dark' ? 'none' : '0 1px 2px rgba(0,0,0,0.05)';
+    if (props.theme.name === 'dark') return '0 1px 3px rgba(0,0,0,0.3)';
+    return '0 1px 2px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.02)';
   }};
-  margin: 8px 16px 16px;
+  margin: 12px 16px 20px;
   width: calc(100% - 32px);
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+
+  /* Add subtle gradient overlay for depth */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: ${props => {
+      if (props.theme.name === 'retro') return 'none';
+      if (props.theme.name === 'dark') return 'linear-gradient(to bottom, rgba(255,255,255,0.03), transparent)';
+      return 'linear-gradient(to bottom, rgba(255,255,255,0.8), transparent)';
+    }};
+    pointer-events: none;
+  }
 
   &:hover {
     background: ${props => {
       if (props.theme.name === 'retro') return props.theme.buttonFace;
-      return props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 
-        (props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)');
+      if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.18)';
+      if (props.theme.name === 'dark') return 'rgba(255,255,255,0.08)';
+      return '#f8f8f8';
     }};
-    transform: ${props => props.theme.name === 'retro' ? 'none' : 'translateY(-1px)'};
+    transform: ${props => props.theme.name === 'retro' ? 'none' : 'translateY(-0.5px)'};
     box-shadow: ${props => {
       if (props.theme.name === 'retro') {
         return `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset`;
       }
-      return props.theme.name === 'dark' ? '0 2px 5px rgba(0,0,0,0.2)' : '0 2px 5px rgba(0,0,0,0.08)';
+      if (props.theme.name === 'dark') return '0 2px 6px rgba(0,0,0,0.4)';
+      return '0 2px 5px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)';
     }};
+    
+    svg {
+      transform: scale(1.05);
+    }
   }
 
   &:active {
@@ -188,19 +223,32 @@ const NewChatButton = styled.button`
       padding-top: 9px;
       padding-left: 16px;
     `}
+    ${props => props.theme.name !== 'retro' && `
+      transform: translateY(0);
+      box-shadow: ${props.theme.name === 'dark' ? '0 1px 2px rgba(0,0,0,0.4)' : '0 1px 2px rgba(0,0,0,0.1)'};
+    `}
   }
 
   svg {
-    transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    margin-right: ${props => props.$collapsed ? '0' : (props.theme.name === 'retro' ? '0' : '8px')};
-    color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
-    width: ${props => props.theme.name === 'retro' ? '14px' : '16px'};
-    height: ${props => props.theme.name === 'retro' ? '14px' : '16px'};
+    position: relative;
+    z-index: 1;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-right: ${props => props.$collapsed ? '0' : (props.theme.name === 'retro' ? '0' : '2px')};
+    color: ${props => {
+      if (props.theme.name === 'lakeside') return 'rgb(198, 146, 20)';
+      if (props.theme.name === 'dark') return '#ffffff';
+      return '#2d2d2d';
+    }};
+    width: ${props => props.theme.name === 'retro' ? '14px' : '18px'};
+    height: ${props => props.theme.name === 'retro' ? '14px' : '18px'};
+    stroke-width: 2.5;
   }
 
   span {
+    position: relative;
+    z-index: 1;
     opacity: ${props => props.$collapsed ? '0' : '1'};
-    transform: translateX(0); /* Removed transform for better alignment */
+    transform: translateX(0);
     visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
     white-space: nowrap;
     transition: opacity 0.2s ease, visibility 0.2s;
@@ -214,8 +262,9 @@ const NewChatButton = styled.button`
   @media (max-width: 768px) {
     width: auto;
     margin: 0 10px 10px auto;
-    padding: ${props => props.theme.name === 'retro' ? '8px 14px' : '10px 14px'};
+    padding: ${props => props.theme.name === 'retro' ? '8px 14px' : '10px 16px'};
     border-radius: ${props => props.theme.name === 'retro' ? '0' : '10px'};
+    font-size: 14px;
     
     span {
         opacity: 1;
@@ -224,7 +273,7 @@ const NewChatButton = styled.button`
         display: inline-block;
     }
     svg {
-        margin-right: ${props => props.theme.name === 'retro' ? '10px' : '8px'};
+        margin-right: ${props => props.theme.name === 'retro' ? '10px' : '6px'};
     }
   }
 `;
@@ -236,10 +285,18 @@ const ScrollableContent = styled.div`
   overflow: hidden;
   margin-top: 5px;
 
+  .mobile-only {
+    display: none !important;
+  }
+
   @media (max-width: 768px) {
     display: ${props => props.$isExpanded ? 'flex' : 'none'};
     overflow-y: auto;
     max-height: calc(40vh - 60px);
+    
+    .mobile-only {
+      display: block !important;
+    }
   }
 `;
 
@@ -250,6 +307,7 @@ const ChatList = styled.div`
   display: flex;
   flex-direction: column;
   align-items: ${props => props.$collapsed ? 'center' : 'stretch'};
+  margin-top: 8px;
   margin-bottom: 10px;
   gap: 4px;
 
@@ -273,8 +331,7 @@ const ChatList = styled.div`
 `;
 
 const ChatItem = styled.div`
-  padding: 10px 12px;
-  margin: 2px 0;
+  padding: 8px 12px;
   border-radius: 10px;
   cursor: pointer;
   display: flex;
@@ -334,7 +391,6 @@ const ChatItem = styled.div`
   
   /* Common active item styling */
   ${props => props.$active && `
-    font-weight: 500;
   `}
 
   @media (max-width: 768px) {
@@ -353,6 +409,8 @@ const ChatTitle = styled.div`
   transition: opacity 0.2s ease, visibility 0.2s;
   transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
+  font-size: 14px;
+  font-weight: 500;
 
   @media (max-width: 768px) {
       opacity: 1; /* Always visible on mobile */
@@ -477,7 +535,7 @@ const BottomSection = styled.div`
 
 const SectionHeader = styled.div`
   padding: 0 16px;
-  margin-top: 16px;
+  margin-top: 8px;
   margin-bottom: 8px;
   font-size: 12px;
   text-transform: uppercase;
@@ -490,7 +548,7 @@ const SectionHeader = styled.div`
   @media (max-width: 768px) {
       opacity: ${props => props.theme.name === 'lakeside' ? '1' : '0.7'};
       visibility: visible;
-      margin-top: 12px;
+      margin-top: 4px; /* Reduced since mobile has its own new chat/search section */
   }
 `;
 
@@ -714,10 +772,10 @@ const SidebarSection = styled.div`
   border-top: 1px solid ${props => 
     props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : 
     (props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')};
-  padding: 16px;
+  padding: 8px 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 `;
 
 const NavLink = styled(Link)`
@@ -749,6 +807,97 @@ const NavLink = styled(Link)`
   }
 `;
 
+const SearchInputContainer = styled.div`
+  padding: 8px 16px;
+  margin-bottom: 8px;
+  display: ${props => props.$isSearching ? 'block' : 'none'};
+  animation: slideDown 0.2s ease;
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const SearchInputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: ${props => 
+    props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : 
+    props.theme.inputBackground};
+  border: 1px solid ${props => 
+    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : 
+    props.theme.border};
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+
+  &:focus-within {
+    border-color: ${props => 
+      props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 
+      props.theme.text};
+  }
+`;
+
+const SearchInput = styled.input`
+  flex: 1;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: ${props => 
+    props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 
+    props.theme.text};
+  font-size: 14px;
+
+  &::placeholder {
+    color: ${props => 
+      props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.5)' : 
+      `${props.theme.text}66`};
+  }
+`;
+
+const SearchCloseButton = styled.button`
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: ${props => 
+    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : 
+    `${props.theme.text}66`};
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    color: ${props => 
+      props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 
+      props.theme.text};
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const NoResultsMessage = styled.div`
+  text-align: center;
+  padding: 20px;
+  color: ${props => 
+    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : 
+    `${props.theme.text}66`};
+  font-size: 14px;
+`;
+
 // --- React Component ---
 
 const Sidebar = ({
@@ -773,6 +922,8 @@ const Sidebar = ({
   const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const location = useLocation();
 
   // Ensure sidebar is always expanded in retro theme
@@ -827,6 +978,28 @@ const Sidebar = ({
     }
   };
 
+  // Handle search functionality
+  const handleSearchClick = () => {
+    setIsSearching(true);
+    setSearchTerm('');
+  };
+
+  const handleSearchClose = () => {
+    setIsSearching(false);
+    setSearchTerm('');
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Filter chats based on search term
+  const filteredChats = chats.filter(chat => {
+    if (!searchTerm) return true;
+    const chatTitle = chat.title || `Chat ${chat.id.substring(0, 4)}`;
+    return chatTitle.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
   return (
     <>
       {/* Main Sidebar container */}
@@ -855,22 +1028,51 @@ const Sidebar = ({
            )}
         </TopBarContainer>
         
-        {/* New Chat Button as a standalone component below the logo */}
+        {/* New Chat and Search Buttons Section */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
-          <NewChatButton 
-            onClick={createNewChat} 
-            $collapsed={$collapsed}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>New Chat</span>
-          </NewChatButton>
+          <SidebarSection style={{ paddingTop: '8px', paddingBottom: '8px', borderTop: 'none' }}>
+            <SidebarButton onClick={createNewChat}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"></path>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+              </svg>
+              <span>New chat</span>
+            </SidebarButton>
+            
+            <SidebarButton onClick={handleSearchClick}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <span>Search chats</span>
+            </SidebarButton>
+          </SidebarSection>
+        )}
+
+        {/* Search Input Section */}
+        {(!$collapsed || (theme && theme.name === 'retro')) && (
+          <SearchInputContainer $isSearching={isSearching}>
+            <SearchInputWrapper>
+              <SearchInput
+                type="text"
+                placeholder="Search your chats..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                autoFocus
+              />
+              <SearchCloseButton onClick={handleSearchClose}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </SearchCloseButton>
+            </SearchInputWrapper>
+          </SearchInputContainer>
         )}
 
         {/* --- Navigation Section --- */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
-          <SidebarSection style={{ paddingTop: '0', paddingBottom: '0' }}>
+          <SidebarSection style={{ paddingTop: '8px', paddingBottom: '16px', borderTop: 'none' }}>
             {location.pathname !== '/' && (
               <NavLink to="/">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -906,6 +1108,14 @@ const Sidebar = ({
                 <span>Projects</span>
               </NavLink>
             )}
+            {location.pathname !== '/workspace' && (
+              <NavLink to="/workspace">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+                <span>Workspace</span>
+              </NavLink>
+            )}
             {isAdmin && location.pathname !== '/admin' && (
               <NavLink to="/admin">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -917,7 +1127,7 @@ const Sidebar = ({
           </SidebarSection>
         )}
 
-        {/* Top Bar for Mobile (Logo + Expander + New Chat) */}
+        {/* Top Bar for Mobile (Logo + Expander) */}
         <TopBarContainer className="mobile-top-bar" style={{ display: 'none' }}> {/* Managed by CSS */}
           <MobileLogoContainer>
             <img 
@@ -926,27 +1136,20 @@ const Sidebar = ({
             />
             <MobileLogoText>{'Sculptor'}</MobileLogoText>
           </MobileLogoContainer>
-          {/* Group New Chat and Toggle Button */}
-          <div style={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
-             <NewChatButton onClick={createNewChat} $collapsed={$collapsed}>
-                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
-                 </svg>
-                 <span>New Chat</span>
-             </NewChatButton>
-             <MobileToggleButton
-                 onClick={toggleMobileExpanded}
-                 $isExpanded={isMobileExpanded}
-                 title={isMobileExpanded ? "Collapse Menu" : "Expand Menu"}
-             >
-                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    {isMobileExpanded
-                      ? <polyline points="18 15 12 9 6 15"></polyline> // Up arrow
-                      : <polyline points="6 9 12 15 18 9"></polyline> // Down arrow
-                    }
-                 </svg>
-             </MobileToggleButton>
-           </div>
+          {/* Toggle Button */}
+          <MobileToggleButton
+              onClick={toggleMobileExpanded}
+              $isExpanded={isMobileExpanded}
+              title={isMobileExpanded ? "Collapse Menu" : "Expand Menu"}
+              style={{ marginLeft: 'auto' }}
+          >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                 {isMobileExpanded
+                   ? <polyline points="18 15 12 9 6 15"></polyline> // Up arrow
+                   : <polyline points="6 9 12 15 18 9"></polyline> // Down arrow
+                 }
+              </svg>
+          </MobileToggleButton>
         </TopBarContainer>
 
 
@@ -956,14 +1159,58 @@ const Sidebar = ({
           <>
             {/* Scrollable Area (Models, Chats) */}
             <ScrollableContent $isExpanded={isMobileExpanded || (theme && theme.name === 'retro')}>
+              
+              {/* New Chat and Search Buttons for Mobile */}
+              <div className="mobile-only" style={{ display: 'none' }}>
+                <SidebarSection style={{ paddingTop: '8px', paddingBottom: '8px', borderTop: 'none' }}>
+                  <SidebarButton onClick={createNewChat}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9"></path>
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                    <span>New chat</span>
+                  </SidebarButton>
+                  
+                  <SidebarButton onClick={handleSearchClick}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <span>Search chats</span>
+                  </SidebarButton>
+                </SidebarSection>
+
+                {/* Search Input for Mobile */}
+                <SearchInputContainer $isSearching={isSearching}>
+                  <SearchInputWrapper>
+                    <SearchInput
+                      type="text"
+                      placeholder="Search your chats..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      autoFocus
+                    />
+                    <SearchCloseButton onClick={handleSearchClose}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </SearchCloseButton>
+                  </SearchInputWrapper>
+                </SearchInputContainer>
+              </div>
 
               {/* Models Section removed as requested */}
 
 
               {/* --- Chats Section --- */}
-              <SectionHeader $collapsed={$collapsed}>Chats</SectionHeader>
               <ChatList $collapsed={$collapsed}>
-                {(chats || []).map(chat => (
+                {filteredChats.length === 0 && searchTerm && (
+                  <NoResultsMessage>
+                    No chats found for "{searchTerm}"
+                  </NoResultsMessage>
+                )}
+                {filteredChats.map(chat => (
                   <ChatItem
                     key={chat.id}
                     $active={activeChat === chat.id}
