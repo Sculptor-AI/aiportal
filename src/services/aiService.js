@@ -190,6 +190,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     let buffer = '';
     let sourcesReceived = false;
     let hasReceivedContent = false;
+    let fullContent = ''; // Track full content for link parsing
 
     // Process the stream
     while (true) {
@@ -206,17 +207,21 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       for (const line of lines) {
         if (line.trim() === '') continue;
         
+        console.log('[Stream Debug] Processing line:', line);
+        
         if (line.startsWith('data: ')) {
           const data = line.substring(6).trim();
           
           if (data === '[DONE]') {
+            console.log('[Stream Debug] Received [DONE] signal');
             return;
           }
           
           try {
             const parsed = JSON.parse(data);
+            console.log('[Stream Debug] Parsed SSE data:', parsed);
             
-            // Handle sources for web search
+            // Handle sources for web search (old format)
             if (parsed.type === 'sources' && parsed.sources) {
               console.log('Received web search sources:', parsed.sources);
               sourcesReceived = true;
@@ -234,7 +239,35 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
             // Handle content chunks
             if (parsed.choices?.[0]?.delta?.content) {
               hasReceivedContent = true;
-              yield parsed.choices[0].delta.content;
+              const chunk = parsed.choices[0].delta.content;
+              console.log('[Stream Debug] Received chunk:', chunk);
+              
+              // Check if this entire chunk is just the links section
+              // According to docs, links come as a single chunk at the end
+              if (chunk.trim().startsWith('<links>') && chunk.trim().endsWith('</links>')) {
+                console.log('[Stream Debug] Detected links chunk:', chunk);
+                
+                // Parse and format the links
+                const { parseLinksFromResponse } = await import('../utils/sourceExtractor.js');
+                const { sources } = parseLinksFromResponse(chunk);
+                
+                if (sources.length > 0) {
+                  sourcesReceived = true;
+                  const sourcesText = '\n\n**Sources:**\n' + 
+                    sources.map((source, idx) => 
+                      `${idx + 1}. [${source.title}](${source.url})`
+                    ).join('\n\n');
+                  
+                  yield sourcesText;
+                }
+              } else {
+                // Normal content chunk - yield it
+                fullContent += chunk;
+                yield chunk;
+              }
+            } else if (parsed.choices || parsed.delta || parsed.message) {
+              // Log any other response format we might not be handling
+              console.log('[Stream Debug] Unhandled response format:', parsed);
             }
           } catch (e) {
             console.error('Failed to parse SSE chunk:', e, 'Raw data:', data);

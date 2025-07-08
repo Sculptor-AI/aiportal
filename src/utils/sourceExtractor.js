@@ -95,3 +95,28 @@ export const getFaviconUrl = (url) => {
     return 'https://www.google.com/s2/favicons?domain=' + url;
   }
 };
+
+// Function to parse links from the new <links> format
+export const parseLinksFromResponse = (content) => {
+  if (!content || typeof content !== 'string') {
+    return { content: content, sources: [] };
+  }
+  
+  const linkMatch = content.match(/<links>\s*(.*?)\s*<\/links>/);
+  if (linkMatch) {
+    const linksString = linkMatch[1];
+    const links = linksString.split(' ; ').map(url => url.trim()).filter(url => url);
+    const cleanContent = content.replace(/<links>.*?<\/links>/, '').trim();
+    
+    // Convert URLs to source objects for consistency with existing UI
+    const sources = links.map((url, index) => ({
+      title: `Source ${index + 1}`,
+      url: url,
+      domain: extractDomain(url)
+    }));
+    
+    return { content: cleanContent, sources: sources };
+  }
+  
+  return { content: content, sources: [] };
+};
