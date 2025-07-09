@@ -324,8 +324,8 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 
 // Legacy code removed - all models now go through backend API
 
-// Prefer environment variable, otherwise default to same-origin
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+// Prefer environment variable, otherwise default to production backend API
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://api.sculptorai.org';
 
 // Remove trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
