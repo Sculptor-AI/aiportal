@@ -301,17 +301,21 @@ const useMessageSender = ({
     if (setResetFileUpload) setTimeout(() => setResetFileUpload(false), 0);
     if (onAttachmentChange) onAttachmentChange(false);
 
-    const formattedHistory = currentHistory.map(msg => ({
-      role: msg.role,
-      content: msg.content,
-      ...(msg.image && { image: msg.image })
-    }));
+    const formattedHistory = currentHistory
+      .filter(msg => msg.role !== 'system') // Filter out system messages
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        ...(msg.image && { image: msg.image })
+      }));
 
     // Convert history to API format (exclude images for backend API calls)
-    const apiHistory = currentHistory.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
+    const apiHistory = currentHistory
+      .filter(msg => msg.role !== 'system') // Filter out system messages
+      .map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
 
     const aiMessageId = generateId();
     const aiMessage = {

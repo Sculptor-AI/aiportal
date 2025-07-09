@@ -60,7 +60,8 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
   try {
     // Validate and filter history messages
     const validHistory = (history || []).filter(msg => {
-      return msg && msg.role && msg.content && typeof msg.content === 'string';
+      // Filter out system messages as Claude API expects them as top-level parameter
+      return msg && msg.role && msg.role !== 'system' && msg.content && typeof msg.content === 'string';
     }).map(msg => ({
       role: msg.role,
       content: msg.content
