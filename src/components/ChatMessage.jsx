@@ -913,6 +913,150 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     );
   }
 
+  // Handle deep research message type
+  if (type === 'deep-research') {
+    let deepResearchContent;
+    if (status === 'loading') {
+      deepResearchContent = (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <SpinnerIcon />
+            <span>Performing deep research...</span>
+          </div>
+          <div style={{ fontSize: '0.9em', opacity: 0.7 }}>
+            Query: "{content || 'your query'}"
+          </div>
+          {message.progress !== undefined && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.85em', opacity: 0.8 }}>
+                  {message.statusMessage || 'Initializing...'}
+                </span>
+                <span style={{ fontSize: '0.8em', opacity: 0.6 }}>
+                  {message.progress}%
+                </span>
+              </div>
+              <div style={{ 
+                width: '100%', 
+                height: '4px', 
+                backgroundColor: theme.border || '#e0e0e0',
+                borderRadius: '2px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  width: `${message.progress || 0}%`,
+                  height: '100%',
+                  backgroundColor: theme.primary || '#007bff',
+                  transition: 'width 0.3s ease',
+                  borderRadius: '2px'
+                }} />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    } else if (status === 'completed' && content) {
+      deepResearchContent = (
+        <>
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
+              </svg>
+              Deep Research Results
+            </div>
+            {message.subQuestions && message.subQuestions.length > 0 && (
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ fontSize: '0.9em', fontWeight: '500', marginBottom: '6px', opacity: 0.8 }}>
+                  Research Questions ({message.subQuestions.length}):
+                </div>
+                <ul style={{ 
+                  margin: '0', 
+                  paddingLeft: '20px', 
+                  fontSize: '0.85em', 
+                  opacity: 0.7,
+                  lineHeight: '1.4'
+                }}>
+                  {message.subQuestions.map((question, index) => (
+                    <li key={index} style={{ marginBottom: '4px' }}>{question}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {message.agentResults && message.agentResults.length > 0 && (
+              <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '12px' }}>
+                Analyzed by {message.agentResults.length} research agents
+              </div>
+            )}
+          </div>
+          <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+            {formatContent(content)}
+          </div>
+        </>
+      );
+    } else if (status === 'error') {
+      deepResearchContent = (
+        <div>
+          <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
+            Deep Research Failed
+          </p>
+          <p style={{ margin: '4px 0', opacity: 0.85 }}>Query: "{content || 'your query'}"</p>
+          {message.content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {message.content}</p>}
+        </div>
+      );
+    }
+
+    return (
+      <Message $alignment={messageAlignment}>
+        {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        <Content role={role} $bubbleStyle={bubbleStyle}>
+          {deepResearchContent}
+          {/* Show sources if available */}
+          {hasSources && status === 'completed' && (
+            <SourcesContainer>
+              {displaySources.map((source, index) => (
+                <SourceButton
+                  key={index}
+                  onClick={() => window.open(source.url, '_blank')}
+                  title={source.title}
+                >
+                  <SourceFavicon 
+                    src={getFaviconUrl(source.url)}
+                    alt=""
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                  <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {source.title || extractDomain(source.url)}
+                  </span>
+                </SourceButton>
+              ))}
+            </SourcesContainer>
+          )}
+          {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
+            <MessageActions>
+              <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
+              {status === 'completed' && content && (
+                <>
+                  <div style={{ flexGrow: 1 }}></div>
+                  <ActionButton onClick={() => navigator.clipboard.writeText(content).then(() => console.log('Research results copied'))}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copy Results
+                  </ActionButton>
+                </>
+              )}
+            </MessageActions>
+          )}
+        </Content>
+        {messageAlignment === 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+      </Message>
+    );
+  }
+
   // Handle generated image message type
   if (type === 'generated-image') {
     let generatedImageContent;

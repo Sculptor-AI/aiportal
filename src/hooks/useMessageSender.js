@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend, generateChatTitle } from '../services/aiService';
 import { generateImageApi } from '../services/imageService';
 import { getFlowchartSystemPrompt } from '../utils/flowchartTools';
+import { performDeepResearch } from '../services/deepResearchService';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 
 // Helper function (can be outside or passed in if it uses external context like toast)
@@ -209,6 +210,107 @@ const useMessageSender = ({
         });
         addAlert({
           message: `Flowchart generation failed: ${error.message || 'Unknown error'}`,
+          type: 'error',
+          autoHide: true
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      
+      return;
+    }
+
+    // Check if this is a deep research request
+    if (messagePayload.actionChip === 'deep-research' && messagePayload.text) {
+      const query = messagePayload.text.trim();
+      
+      if (!query || !chat?.id) return;
+      
+      setIsLoading(true);
+      
+      // Add user message for deep research request
+      const userMessage = {
+        id: generateId(),
+        role: 'user',
+        content: query,
+        timestamp: new Date().toISOString(),
+      };
+      addMessage(chat.id, userMessage);
+      
+      // Add placeholder message for deep research results
+      const researchPlaceholderId = generateId();
+      const researchPlaceholderMessage = {
+        id: researchPlaceholderId,
+        role: 'assistant',
+        type: 'deep-research',
+        content: '',
+        status: 'loading',
+        progress: 0,
+        statusMessage: 'Initializing deep research...',
+        timestamp: new Date().toISOString(),
+        modelId: selectedModel,
+      };
+      addMessage(chat.id, researchPlaceholderMessage);
+      
+      if (scrollToBottom) setTimeout(scrollToBottom, 100);
+      
+      try {
+        await performDeepResearch(
+          query,
+          selectedModel,
+          8, // maxAgents
+          // onProgress
+          (progress, message) => {
+            updateMessage(chat.id, researchPlaceholderId, {
+              progress,
+              statusMessage: message,
+              status: 'loading'
+            });
+          },
+          // onComplete
+          (result) => {
+            updateMessage(chat.id, researchPlaceholderId, {
+              content: result.response,
+              status: 'completed',
+              progress: 100,
+              statusMessage: 'Research completed successfully!',
+              sources: result.sources || [],
+              subQuestions: result.subQuestions || [],
+              agentResults: result.agentResults || [],
+              isLoading: false
+            });
+            
+            // Generate title for new chat if this is the first message
+            if (chat.messages.length === 0) {
+              const title = `Research: ${query.substring(0, 30)}${query.length > 30 ? '...' : ''}`;
+              if (updateChatTitle) updateChatTitle(chat.id, title);
+            }
+          },
+          // onError
+          (errorMessage) => {
+            updateMessage(chat.id, researchPlaceholderId, {
+              status: 'error',
+              content: errorMessage,
+              isLoading: false,
+              isError: true
+            });
+            addAlert({
+              message: `Deep research failed: ${errorMessage}`,
+              type: 'error',
+              autoHide: true
+            });
+          }
+        );
+      } catch (error) {
+        console.error('[useMessageSender] Error during deep research:', error);
+        updateMessage(chat.id, researchPlaceholderId, {
+          status: 'error',
+          content: error.message || 'Failed to perform deep research',
+          isLoading: false,
+          isError: true
+        });
+        addAlert({
+          message: `Deep research failed: ${error.message || 'Unknown error'}`,
           type: 'error',
           autoHide: true
         });
