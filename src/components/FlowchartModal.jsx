@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import ReactFlow, {
   ReactFlowProvider,
@@ -290,12 +290,6 @@ const CustomNode = ({ data, isConnectable }) => {
   );
 };
 
-const nodeTypes = {
-  default: CustomNode,
-  input: CustomNode,
-  output: CustomNode,
-};
-
 const initialNodes = [
   {
     id: '1',
@@ -309,6 +303,12 @@ let id = 2;
 const getId = () => `${id++}`;
 
 const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0, aiFlowchartData = null }) => {
+  const nodeTypes = useMemo(() => ({
+    default: CustomNode,
+    input: CustomNode,
+    output: CustomNode,
+  }), []);
+
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNodes, setSelectedNodes] = useState([]);

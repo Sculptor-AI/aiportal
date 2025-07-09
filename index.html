@@ -23,22 +23,9 @@
     <link rel="manifest" href="/manifest.json" />
     
     <!-- Preload critical resources -->
-    <link rel="preload" href="/fonts/MSW98UI-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <meta http-equiv="Content-Security-Policy" content="
-      default-src 'self' https://73.118.140.130:3000;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval';
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      img-src 'self' data: blob: https://*.googleusercontent.com https://images.unsplash.com https://image.pollinations.ai https://loremflickr.com https://picsum.photos;
-      font-src 'self' data: https://fonts.gstatic.com;
-      connect-src 'self' ws://localhost:* wss://localhost:* wss://73.118.140.130:3000 https://73.118.140.130 https://generativelanguage.googleapis.com https://api.anthropic.com https://api.openai.com https://integrate.api.nvidia.com https://api.sculptorai.org/ https://fonts.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://purgpt.xyz https://*.google.com https://accounts.google.com https://73.118.140.130:3000 https://api.rss2json.com https://api.allorigins.win;
-      object-src 'none';
-      frame-src 'self' https://accounts.google.com;
-      frame-ancestors 'none';
-      base-uri 'self';
-      form-action 'self';
-    ">
+    
     <style>
       /* Global reset and mobile optimizations */
       * {

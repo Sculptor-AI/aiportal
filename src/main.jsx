@@ -1,14 +1,29 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import AppWithAuth from './App';
 import './index.css';
 import './_globalStyles.css';
-import { BrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+
+// Define the router configuration using the modern createBrowserRouter
+const router = createBrowserRouter(
+  [
+    {
+      path: "/*",
+      element: <AppWithAuth />,
+    },
+  ],
+  {
+    future: {
+      // Opt-in to React Router v7 data APIs
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    },
+  }
+);
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </React.StrictMode>
+    <RouterProvider router={router} />
+  </React.StrictMode>,
 );
