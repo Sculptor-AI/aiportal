@@ -230,13 +230,9 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
               continue;
             }
             
-            // Handle enhanced tool call events
-            if (parsed.type && parsed.type.startsWith('tool_call')) {
-              yield { 
-                type: 'tool_event', 
-                event_type: parsed.type,
-                tool_data: parsed 
-              };
+            // Handle tool calls summary
+            if (parsed.type === 'tool_calls_summary') {
+              yield { type: 'tool_calls_summary', summary: parsed };
               continue;
             }
             
