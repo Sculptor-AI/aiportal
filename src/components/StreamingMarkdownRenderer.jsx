@@ -1,5 +1,7 @@
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
+import ExecutableCodeBlock from './ExecutableCodeBlock';
+import { isLanguageSupported } from '../services/codeExecutionService';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
 
@@ -262,17 +264,29 @@ const StreamingMarkdownRenderer = ({
         if (line.startsWith('```') && inCodeBlock) {
           const codeContent = lines.slice(lastIndex, i).join('\n');
           
-          segments.push(
-            <CodeBlock key={`code-${codeBlockCount++}`} theme={theme}>
-              <CodeHeader theme={theme}>
-                <CodeLanguage theme={theme}>{currentLang}</CodeLanguage>
-                <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(codeContent)}>
-                  Copy
-                </CopyButton>
-              </CodeHeader>
-              <Pre theme={theme}>{codeContent}</Pre>
-            </CodeBlock>
-          );
+          // Use ExecutableCodeBlock for supported languages, regular CodeBlock for others
+          if (isLanguageSupported(currentLang)) {
+            segments.push(
+              <ExecutableCodeBlock 
+                key={`code-${codeBlockCount++}`}
+                language={currentLang}
+                value={codeContent}
+                theme={theme}
+              />
+            );
+          } else {
+            segments.push(
+              <CodeBlock key={`code-${codeBlockCount++}`} theme={theme}>
+                <CodeHeader theme={theme}>
+                  <CodeLanguage theme={theme}>{currentLang}</CodeLanguage>
+                  <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(codeContent)}>
+                    Copy
+                  </CopyButton>
+                </CodeHeader>
+                <Pre theme={theme}>{codeContent}</Pre>
+              </CodeBlock>
+            );
+          }
           
           inCodeBlock = false;
           lastIndex = i + 1; // Start collecting text from next line
@@ -291,17 +305,28 @@ const StreamingMarkdownRenderer = ({
       // If we're in the middle of a code block (streaming), show it as a partial code block
       if (inCodeBlock && lastIndex <= lines.length) {
         const partialCode = lines.slice(lastIndex).join('\n');
-        segments.push(
-          <CodeBlock key={`partial-code-${codeBlockCount}`} theme={theme}>
-            <CodeHeader theme={theme}>
-              <CodeLanguage theme={theme}>{currentLang}</CodeLanguage>
-              <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(partialCode)}>
-                Copy
-              </CopyButton>
-            </CodeHeader>
-            <Pre theme={theme}>{partialCode}</Pre>
-          </CodeBlock>
-        );
+        if (isLanguageSupported(currentLang)) {
+          segments.push(
+            <ExecutableCodeBlock 
+              key={`partial-code-${codeBlockCount}`}
+              language={currentLang}
+              value={partialCode}
+              theme={theme}
+            />
+          );
+        } else {
+          segments.push(
+            <CodeBlock key={`partial-code-${codeBlockCount}`} theme={theme}>
+              <CodeHeader theme={theme}>
+                <CodeLanguage theme={theme}>{currentLang}</CodeLanguage>
+                <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(partialCode)}>
+                  Copy
+                </CopyButton>
+              </CodeHeader>
+              <Pre theme={theme}>{partialCode}</Pre>
+            </CodeBlock>
+          );
+        }
       }
       
       return <>{segments}</>;

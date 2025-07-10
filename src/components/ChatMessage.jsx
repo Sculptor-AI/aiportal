@@ -3,7 +3,9 @@ import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
+import ExecutableCodeBlock from './ExecutableCodeBlock';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
+import { isLanguageSupported } from '../services/codeExecutionService';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
 
@@ -79,17 +81,30 @@ const processText = (text) => {
       if (line.startsWith('```') && inCodeBlock) {
         const codeContent = lines.slice(lastIndex, i).join('\n');
         
-        segments.push(
-          <CodeBlock key={`code-${codeBlockCount++}`} className={currentLang}>
-            <CodeHeader>
-              <CodeLanguage>{currentLang}</CodeLanguage>
-              <CopyButton onClick={() => navigator.clipboard.writeText(codeContent)}>
-                Copy
-              </CopyButton>
-            </CodeHeader>
-            <Pre>{codeContent}</Pre>
-          </CodeBlock>
-        );
+        // Use ExecutableCodeBlock for supported languages, regular CodeBlock for others
+        if (isLanguageSupported(currentLang)) {
+          segments.push(
+            <ExecutableCodeBlock 
+              key={`code-${codeBlockCount++}`}
+              language={currentLang}
+              value={codeContent}
+              settings={settings}
+              theme={theme}
+            />
+          );
+        } else {
+          segments.push(
+            <CodeBlock key={`code-${codeBlockCount++}`} className={currentLang}>
+              <CodeHeader>
+                <CodeLanguage>{currentLang}</CodeLanguage>
+                <CopyButton onClick={() => navigator.clipboard.writeText(codeContent)}>
+                  Copy
+                </CopyButton>
+              </CodeHeader>
+              <Pre>{codeContent}</Pre>
+            </CodeBlock>
+          );
+        }
         
         inCodeBlock = false;
         lastIndex = i + 1; // Start collecting text from next line
