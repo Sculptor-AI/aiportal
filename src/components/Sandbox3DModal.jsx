@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -54,7 +54,7 @@ const Content = styled.div`
   color: ${props => props.theme.text};
 `;
 
-const Box = ({ object }) => {
+const MeshObj = ({ object }) => {
   const meshRef = useRef();
 
   return (
@@ -64,23 +64,42 @@ const Box = ({ object }) => {
       rotation={[object.rotation.x, object.rotation.y, object.rotation.z]}
       scale={[object.scale.x, object.scale.y, object.scale.z]}
     >
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color={'orange'} />
+      {object.type === 'box' && <boxGeometry args={[1, 1, 1]} />}
+      {object.type === 'sphere' && <sphereGeometry args={[1, 32, 32]} />}
+      <meshStandardMaterial color={object.color || 'orange'} />
     </mesh>
   );
 };
 
-const Sandbox3DModal = ({ isOpen, onClose, theme, otherPanelsOpen = 0, onSend }) => {
-  const [object, setObject] = useState({
+const Sandbox3DModal = ({ isOpen, onClose, theme, otherPanelsOpen = 0, onSend, initialScene }) => {
+  const [objects, setObjects] = useState([{
+    id: '1',
+    type: 'box',
     position: { x: 0, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
     scale: { x: 1, y: 1, z: 1 },
-  });
+    color: 'orange'
+  }]);
+
+  const [selectedId, setSelectedId] = useState('1');
+
+  const selectedObject = objects.find(o => o.id === selectedId);
+
+  const updateSelectedObject = (updated) => {
+    setObjects(objs => objs.map(o => o.id === selectedId ? updated : o));
+  };
 
   const handleSendToAI = () => {
-    onSend(object);
+    onSend(objects);
     onClose();
   };
+
+  useEffect(() => {
+    if (initialScene && initialScene.length > 0) {
+      setObjects(initialScene);
+      setSelectedId(initialScene[0].id);
+    }
+  }, [initialScene]);
 
   return (
     <ModalContainer $isOpen={isOpen} $otherPanelsOpen={otherPanelsOpen}>
@@ -92,14 +111,20 @@ const Sandbox3DModal = ({ isOpen, onClose, theme, otherPanelsOpen = 0, onSend })
         <Canvas>
           <ambientLight />
           <pointLight position={[10, 10, 10]} />
-          <Box object={object} />
+          {objects.map(obj => <MeshObj key={obj.id} object={obj} />)}
           <OrbitControls />
         </Canvas>
+        <select value={selectedId} onChange={e => setSelectedId(e.target.value)} style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 1001 }}>
+          {objects.map(obj => <option key={obj.id} value={obj.id}>Object {obj.id}</option>)}
+        </select>
         <ObjectControls
-          object={object}
-          setObject={setObject}
+          object={selectedObject}
+          setObject={updateSelectedObject}
           sendToAI={handleSendToAI}
           theme={theme}
+          objects={objects}
+          setObjects={setObjects}
+          setSelectedId={setSelectedId}
         />
       </Content>
     </ModalContainer>

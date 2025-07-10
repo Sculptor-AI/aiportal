@@ -125,6 +125,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     // Add system prompt as top-level parameter if provided
     if (systemPrompt) {
       requestPayload.system = systemPrompt;
+      console.log('[aiService] Sending system prompt to backend:', systemPrompt.substring(0, 100) + '...');
     }
 
     // Add web search if requested

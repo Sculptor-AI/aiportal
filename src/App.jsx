@@ -45,9 +45,8 @@ const MainContentArea = styled.div`
   display: flex;
   height: 100%;
   margin-right: ${props => {
-    // Handle multiple panels being open
+    // Handle multiple panels being open (whiteboard is now a full-screen modal)
     let totalMargin = 0;
-    if (props.$whiteboardOpen) totalMargin += 450;
     if (props.$equationEditorOpen) totalMargin += 450;
     if (props.$graphingOpen) totalMargin += 600; // Graphing panel is wider
     if (props.$flowchartOpen) totalMargin += 450;
@@ -417,6 +416,7 @@ const AppContent = () => {
   const [isGraphingOpen, setIsGraphingOpen] = useState(false);
   const [isFlowchartOpen, setIsFlowchartOpen] = useState(false);
   const [isSandbox3DOpen, setIsSandbox3DOpen] = useState(false);
+  const [pendingScene, setPendingScene] = useState(null);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [flowchartData, setFlowchartData] = useState(null);
   const chatWindowRef = useRef(null);
@@ -440,6 +440,19 @@ const AppContent = () => {
     
     return () => {
       window.removeEventListener('openFlowchartModal', handleOpenFlowchartModal);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleLoad3DScene = (event) => {
+      setPendingScene(event.detail.objects);
+      setIsSandbox3DOpen(true);
+    };
+
+    window.addEventListener('load3DScene', handleLoad3DScene);
+
+    return () => {
+      window.removeEventListener('load3DScene', handleLoad3DScene);
     };
   }, []);
 
@@ -477,7 +490,7 @@ const AppContent = () => {
       projectId: projectId,
     };
     setChats(prevChats => {
-      const updatedChats = [...prevChats, newChat];
+      const updatedChats = [newChat, ...prevChats];
       try {
         localStorage.setItem('chats', safeStringify(updatedChats));
       } catch (error) {
@@ -772,7 +785,6 @@ const AppContent = () => {
         <GlobalStyles />
         <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
           <MainContentArea 
-            $whiteboardOpen={isWhiteboardOpen} 
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}
             $flowchartOpen={isFlowchartOpen}
@@ -792,7 +804,6 @@ const AppContent = () => {
             {getCurrentChat()?.messages.length === 0 && settings.showGreeting && !isMobile && location.pathname === '/' && (
               <MainGreeting
                 $toolbarOpen={isToolbarOpen}
-                $whiteboardOpen={isWhiteboardOpen}
                 $equationEditorOpen={isEquationEditorOpen}
                 $graphingOpen={isGraphingOpen}
                 $flowchartOpen={isFlowchartOpen}
@@ -902,7 +913,6 @@ const AppContent = () => {
               setIsWhiteboardOpen(false);
             }}
             theme={currentTheme}
-            otherPanelsOpen={(isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
           />
           
           <EquationEditorModal
@@ -948,15 +958,16 @@ const AppContent = () => {
           <Sandbox3DModal
             isOpen={isSandbox3DOpen}
             onClose={() => setIsSandbox3DOpen(false)}
-            onSend={(object) => {
+            onSend={(objects) => {
               if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
                 chatWindowRef.current.appendToInput(`\`\`\`json
-${JSON.stringify(object, null, 2)}
+${JSON.stringify(objects, null, 2)}
 \`\`\``);
               }
             }}
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0)}
+            initialScene={pendingScene}
           />
         
           {isSettingsOpen && (

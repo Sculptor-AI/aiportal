@@ -1,5 +1,7 @@
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
+import ReactKatex from '@pkasila/react-katex';
+import 'katex/dist/katex.min.css';
 
 // Styled components for markdown formatting (reused from ChatMessage)
 const Bold = styled.span`
@@ -221,6 +223,13 @@ const StreamingMarkdownRenderer = ({
   if (!text) {
     return isStreaming && showCursor ? <Cursor $show={true} theme={theme}>|</Cursor> : null;
   }
+
+  // Helper to render LaTeX
+  const renderLatex = (latex, displayMode) => (
+    <ReactKatex key={`latex-${Math.random()}`} displayMode={displayMode}>
+      {latex}
+    </ReactKatex>
+  );
 
   // Process the text and handle code blocks
   const processContent = (content) => {

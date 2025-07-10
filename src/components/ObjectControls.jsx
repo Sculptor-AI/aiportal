@@ -47,12 +47,26 @@ const Button = styled.button`
   }
 `;
 
-const ObjectControls = ({ object, setObject, sendToAI, theme }) => {
+const ObjectControls = ({ object, setObject, sendToAI, theme, objects, setObjects, setSelectedId }) => {
   const handleInputChange = (axis, value, property) => {
     setObject({
       ...object,
       [property]: { ...object[property], [axis]: parseFloat(value) },
     });
+  };
+
+  const handleAddObject = (type) => {
+    const newId = (objects.length + 1).toString();
+    const newObj = {
+      id: newId,
+      type,
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+      color: type === 'box' ? 'orange' : 'blue'
+    };
+    setObjects([...objects, newObj]);
+    setSelectedId(newId);
   };
 
   return (
@@ -112,6 +126,8 @@ const ObjectControls = ({ object, setObject, sendToAI, theme }) => {
         />
       </ControlRow>
       <Button onClick={sendToAI}>Send to AI</Button>
+      <Button onClick={() => handleAddObject('box')}>Add Box</Button>
+      <Button onClick={() => handleAddObject('sphere')}>Add Sphere</Button>
     </ControlsContainer>
   );
 };

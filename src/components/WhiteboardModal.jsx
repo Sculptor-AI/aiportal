@@ -1,21 +1,46 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 
-const WhiteboardContainer = styled.div`
+const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
-  right: ${props => props.$otherPanelsOpen * 450}px; /* Shift right based on other panels */
-  width: 450px; /* Adjust width as needed */
-  height: 100vh;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+`;
+
+const WhiteboardContainer = styled.div`
   background: ${props => props.theme.background};
-  z-index: 1000; /* Ensure it's above other content, adjust if necessary */
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
+  width: 95vw;
+  height: 90vh;
+  max-width: 1400px;
+  max-height: 900px;
   display: flex;
   flex-direction: column;
-  box-shadow: -3px 0 10px rgba(0, 0, 0, 0.15);
-  border-left: 1px solid ${props => props.theme.border};
-  transform: ${props => props.$isOpen ? 'translateX(0%)' : 'translateX(100%)'};
-  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
-  transition: transform 0.3s ease-in-out, visibility 0.3s ease-in-out;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  border: ${props => props.theme.name === 'retro' ? 
+    `2px solid ${props.theme.buttonShadowDark}` : 
+    `1px solid ${props.theme.border}`};
+  overflow: hidden;
+  transform: ${props => props.$isOpen ? 'scale(1)' : 'scale(0.95)'};
+  transition: transform 0.3s ease-in-out;
+  
+  @media (max-width: 768px) {
+    width: 98vw;
+    height: 95vh;
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'};
+  }
 `;
 
 const Header = styled.div`
@@ -24,7 +49,8 @@ const Header = styled.div`
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'transparent'};
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.background};
+  flex-shrink: 0;
 `;
 
 const Title = styled.h2`
@@ -50,171 +76,196 @@ const CloseButton = styled.button`
   }
   
   &:active {
-    ${props => props.theme.name === 'retro' && `
-      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
-      padding: 5px 11px 3px 13px;
-    `}
+    transform: ${props => props.theme.name === 'retro' ? 'none' : 'scale(0.95)'};
   }
 `;
 
 const ToolsContainer = styled.div`
   display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 12px 20px;
-  border-bottom: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.inputBackground};
   flex-wrap: wrap;
+  gap: 20px;
+  padding: 16px 20px;
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.inputBackground};
+  border-top: 1px solid ${props => props.theme.border};
+  align-items: center;
+  flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 16px;
+  }
 `;
 
 const ToolGroup = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 `;
 
 const Label = styled.label`
   font-size: 14px;
-  color: ${props => props.theme.text};
   font-weight: 500;
+  color: ${props => props.theme.text};
+  font-family: ${props => props.theme.name === 'retro' ? 'MS Sans Serif, sans-serif' : 'inherit'};
 `;
 
-const ColorPicker = styled.input`
-  width: 40px;
-  height: 40px;
-  border: 2px solid ${props => props.theme.border};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'};
-  cursor: pointer;
-  
-  ${props => props.theme.name === 'retro' && `
-    -webkit-appearance: none;
-    &::-webkit-color-swatch-wrapper {
-      padding: 0;
+const ToolButton = styled.button`
+  background: ${props => {
+    if (props.theme.name === 'retro') {
+      return props.$active ? props.theme.buttonShadowDark : props.theme.buttonFace;
     }
-    &::-webkit-color-swatch {
-      border: none;
-    }
-  `}
-`;
-
-const ColorButton = styled.button`
-  width: 30px;
-  height: 30px;
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
-  border: 2px solid ${props => props.$selected ? props.theme.text : props.theme.border};
-  background: ${props => props.$color};
+    return props.$active ? props.theme.primary : props.theme.inputBackground;
+  }};
+  border: ${props => props.theme.name === 'retro' ? 
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+    `1px solid ${props.theme.border}`};
+  color: ${props => props.$active ? 'white' : props.theme.text};
+  padding: ${props => props.theme.name === 'retro' ? '4px 12px' : '8px 16px'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
   cursor: pointer;
-  position: relative;
+  font-size: ${props => props.theme.name === 'retro' ? '11px' : '14px'};
+  font-family: ${props => props.theme.name === 'retro' ? 'MS Sans Serif, sans-serif' : 'inherit'};
+  transition: all 0.2s ease;
   
   &:hover {
-    transform: scale(1.1);
+    background: ${props => props.$active ? props.theme.primary : props.theme.border};
   }
   
-  ${props => props.$selected && `
-    &::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 6px;
-      height: 6px;
-      background: ${props.$color === '#000000' ? 'white' : 'black'};
-      border-radius: 50%;
-    }
-  `}
+  &:active {
+    transform: ${props => props.theme.name === 'retro' ? 'none' : 'scale(0.98)'};
+  }
 `;
 
 const ColorGroup = styled.div`
   display: flex;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
+  flex-wrap: wrap;
+`;
+
+const ColorButton = styled.button`
+  width: 24px;
+  height: 24px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
+  border: ${props => props.$selected ? 
+    `3px solid ${props.theme.text}` : 
+    `2px solid ${props.theme.border}`};
+  background: ${props => props.$color};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: ${props => props.theme.name === 'retro' ? 'none' : 'scale(1.1)'};
+  }
+  
+  &:active {
+    transform: ${props => props.theme.name === 'retro' ? 'none' : 'scale(0.9)'};
+  }
+`;
+
+const ColorPicker = styled.input`
+  width: 32px;
+  height: 24px;
+  border: none;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '4px'};
+  cursor: pointer;
+  background: transparent;
+  
+  &::-webkit-color-swatch {
+    border: 1px solid ${props => props.theme.border};
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '4px'};
+  }
+  
+  &::-moz-color-swatch {
+    border: 1px solid ${props => props.theme.border};
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '4px'};
+  }
 `;
 
 const BrushSizeSlider = styled.input`
   width: 100px;
+  height: 4px;
+  border-radius: 2px;
+  background: ${props => props.theme.border};
+  outline: none;
+  
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
+    background: ${props => props.theme.primary || '#4a90e2'};
+    cursor: pointer;
+    border: ${props => props.theme.name === 'retro' ? `1px solid ${props.theme.buttonShadowDark}` : 'none'};
+  }
+  
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
+    background: ${props => props.theme.primary || '#4a90e2'};
+    cursor: pointer;
+    border: ${props => props.theme.name === 'retro' ? `1px solid ${props.theme.buttonShadowDark}` : 'none'};
+  }
 `;
 
 const BrushSizeDisplay = styled.span`
-  font-size: 14px;
+  font-size: 12px;
   color: ${props => props.theme.text};
-  min-width: 30px;
+  font-family: ${props => props.theme.name === 'retro' ? 'MS Sans Serif, sans-serif' : 'inherit'};
+  min-width: 32px;
   text-align: center;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+  
+  @media (max-width: 768px) {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
 `;
 
 const CanvasContainer = styled.div`
   flex: 1;
+  padding: 20px;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
-  background: ${props => props.theme.name === 'retro' ? '#c0c0c0' : '#f5f5f5'};
-  overflow: hidden;
-`;
-
-const Canvas = styled.canvas`
-  background: white;
-  border: 2px solid ${props => props.theme.border};
-  cursor: crosshair;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  display: block;
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid ${props => props.theme.border};
-`;
-
-const Button = styled.button`
-  padding: 8px 20px;
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'transparent'};
+  min-height: 0;
   
-  ${props => props.theme.name === 'retro' ? `
-    background: ${props.theme.buttonFace};
-    border: 1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
-    color: ${props.theme.buttonText};
-    box-shadow: 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset;
-    
-    &:active {
-      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
-      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
-      padding: 9px 19px 7px 21px;
-    }
-  ` : `
-    background: ${props.$primary ? props.theme.primary : 'transparent'};
-    color: ${props.$primary ? 'white' : props.theme.text};
-    border: 1px solid ${props.$primary ? props.theme.primary : props.theme.border};
-    
-    &:hover {
-      background: ${props.$primary ? props.theme.primaryDark : props.theme.border};
-      ${!props.$primary && `color: ${props.theme.text};`}
-    }
-  `}
-`;
-
-const ToolButton = styled.button`
-  padding: 8px 12px;
-  background: ${props => props.$active ? props.theme.primary : props.theme.background};
-  color: ${props => props.$active ? 'white' : props.theme.text};
-  border: 1px solid ${props => props.$active ? props.theme.primary : props.theme.border};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: ${props => props.$active ? props.theme.primaryDark : props.theme.border};
+  @media (max-width: 768px) {
+    padding: 10px;
   }
 `;
 
-const WhiteboardModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0 }) => {
+const Canvas = styled.canvas`
+  border: ${props => props.theme.name === 'retro' ? 
+    `2px solid ${props.theme.buttonShadowDark}` : 
+    `2px solid ${props.theme.border}`};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'};
+  background: white;
+  cursor: crosshair;
+  max-width: 100%;
+  max-height: 100%;
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.primary || '#4a90e2'};
+  }
+`;
+
+const WhiteboardModal = ({ isOpen, onClose, onSubmit, theme }) => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -222,7 +273,7 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0
   const [brushSize, setBrushSize] = useState(5);
   const [tool, setTool] = useState('brush'); // 'brush' or 'eraser'
   const [context, setContext] = useState(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 600, height: 400 });
+  const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 });
 
   const predefinedColors = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500'];
 
@@ -238,8 +289,8 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0
       const maxWidth = rect.width - padding;
       const maxHeight = rect.height - padding;
       
-      // Maintain aspect ratio
-      const aspectRatio = 3 / 2; // 600/400
+      // Maintain aspect ratio but use larger default size
+      const aspectRatio = 4 / 3; // 800/600
       let width = maxWidth;
       let height = width / aspectRatio;
       
@@ -247,6 +298,10 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0
         height = maxHeight;
         width = height * aspectRatio;
       }
+      
+      // Ensure minimum size
+      width = Math.max(width, 400);
+      height = Math.max(height, 300);
       
       setCanvasSize({ width, height });
     };
@@ -367,89 +422,107 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0
     link.click();
   };
 
+  const handleOutsideClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <WhiteboardContainer $isOpen={isOpen} $otherPanelsOpen={otherPanelsOpen}>
-      <Header>
-        <Title>Whiteboard</Title>
-        <CloseButton onClick={onClose}>
-          {theme?.name === 'retro' ? '✕' : '×'}
-        </CloseButton>
-      </Header>
-      
-      <ToolsContainer>
-        <ToolGroup>
-          <Label>Tool:</Label>
-          <ToolButton 
-            $active={tool === 'brush'} 
-            onClick={() => setTool('brush')}
-          >
-            Brush
-          </ToolButton>
-          <ToolButton 
-            $active={tool === 'eraser'} 
-            onClick={() => setTool('eraser')}
-          >
-            Eraser
-          </ToolButton>
-        </ToolGroup>
+    <ModalOverlay $isOpen={isOpen} onClick={handleOutsideClick}>
+      <WhiteboardContainer $isOpen={isOpen} onClick={(e) => e.stopPropagation()}>
+        <Header>
+          <Title>Whiteboard</Title>
+          <CloseButton onClick={onClose}>
+            {theme?.name === 'retro' ? '✕' : '×'}
+          </CloseButton>
+        </Header>
         
-        <ToolGroup>
-          <Label>Color:</Label>
-          <ColorGroup>
-            {predefinedColors.map((c) => (
-              <ColorButton
-                key={c}
-                $color={c}
-                $selected={color === c && tool !== 'eraser'}
-                onClick={() => {
-                  setColor(c);
-                  setTool('brush');
-                }}
+        <ToolsContainer>
+          <ToolGroup>
+            <Label>Tool:</Label>
+            <ToolButton 
+              $active={tool === 'brush'} 
+              onClick={() => setTool('brush')}
+            >
+              Brush
+            </ToolButton>
+            <ToolButton 
+              $active={tool === 'eraser'} 
+              onClick={() => setTool('eraser')}
+            >
+              Eraser
+            </ToolButton>
+          </ToolGroup>
+          
+          <ToolGroup>
+            <Label>Color:</Label>
+            <ColorGroup>
+              {predefinedColors.map((c) => (
+                <ColorButton
+                  key={c}
+                  $color={c}
+                  $selected={color === c && tool !== 'eraser'}
+                  onClick={() => {
+                    setColor(c);
+                    setTool('brush');
+                  }}
+                />
+              ))}
+              <ColorPicker 
+                type="color" 
+                value={color} 
+                onChange={(e) => setColor(e.target.value)}
+                disabled={tool === 'eraser'}
               />
-            ))}
-            <ColorPicker 
-              type="color" 
-              value={color} 
-              onChange={(e) => setColor(e.target.value)}
-              disabled={tool === 'eraser'}
+            </ColorGroup>
+          </ToolGroup>
+          
+          <ToolGroup>
+            <Label>Size:</Label>
+            <BrushSizeSlider 
+              type="range" 
+              min="1" 
+              max="50" 
+              value={brushSize} 
+              onChange={(e) => setBrushSize(e.target.value)}
             />
-          </ColorGroup>
-        </ToolGroup>
+            <BrushSizeDisplay>{brushSize}px</BrushSizeDisplay>
+          </ToolGroup>
+          
+          <ActionButtons>
+            <ToolButton onClick={clearCanvas}>Clear</ToolButton>
+            <ToolButton onClick={handleDownload}>Export</ToolButton>
+            <ToolButton onClick={handleDone} style={{ 
+              background: theme?.primary || '#4a90e2', 
+              color: 'white',
+              fontWeight: '600'
+            }}>
+              Send to Chat
+            </ToolButton>
+          </ActionButtons>
+        </ToolsContainer>
         
-        <ToolGroup>
-          <Label>Size:</Label>
-          <BrushSizeSlider 
-            type="range" 
-            min="1" 
-            max="50" 
-            value={brushSize} 
-            onChange={(e) => setBrushSize(e.target.value)}
+        <CanvasContainer ref={containerRef}>
+          <Canvas
+            ref={canvasRef}
+            width={canvasSize.width}
+            height={canvasSize.height}
+            style={{
+              width: `${canvasSize.width}px`,
+              height: `${canvasSize.height}px`
+            }}
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
           />
-          <BrushSizeDisplay>{brushSize}px</BrushSizeDisplay>
-        </ToolGroup>
-        
-        <ToolButton onClick={clearCanvas}>Clear</ToolButton>
-      </ToolsContainer>
-      
-      <CanvasContainer ref={containerRef}>
-        <Canvas 
-          ref={canvasRef}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
-        />
-      </CanvasContainer>
-      
-      <ButtonContainer>
-        <Button onClick={handleDownload}>Download</Button>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button $primary onClick={handleDone}>Done</Button>
-      </ButtonContainer>
-    </WhiteboardContainer>
+        </CanvasContainer>
+      </WhiteboardContainer>
+    </ModalOverlay>
   );
 };
 

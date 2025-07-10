@@ -365,7 +365,7 @@ const MobileAppContent = () => {
       title: 'New Chat',
       messages: []
     };
-    setChats([...chats, newChat]);
+    setChats([newChat, ...chats]);
     setActiveChat(newChat.id);
     setIsSidebarOpen(false); // Close sidebar after creating new chat
   };

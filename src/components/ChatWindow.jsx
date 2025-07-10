@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } f
 import { useTheme } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
+import HtmlArtifactModal from './HtmlArtifactModal';
 import { useToast } from '../contexts/ToastContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
@@ -61,6 +62,8 @@ const ChatWindow = forwardRef(({
   const [resetFileUpload, setResetFileUpload] = useState(false);
   const toast = useToast();
   const theme = useTheme();
+  const [artifactHTML, setArtifactHTML] = useState(null);
+  const [isArtifactModalOpen, setIsArtifactModalOpen] = useState(false);
 
   // Define scrollToBottom before passing it to the hook
   function scrollToBottom() {
@@ -126,6 +129,25 @@ const ChatWindow = forwardRef(({
       setResetFileUpload(false);
     }
   }, [chat?.id, initialSelectedModel, $sidebarCollapsed]);
+
+  useEffect(() => {
+    if (chat.messages.length > 0) {
+      const lastMsg = chat.messages[chat.messages.length - 1];
+      if (lastMsg.role === 'assistant' && lastMsg.content && !lastMsg.isLoading) {
+        const htmlMatch = lastMsg.content.match(/```html\n([\s\S]*?)\n```/);
+        if (htmlMatch && htmlMatch[1]) {
+          setArtifactHTML(htmlMatch[1]);
+          setIsArtifactModalOpen(true);
+        } else {
+          setArtifactHTML(null);
+        }
+      } else {
+        setArtifactHTML(null);
+      }
+    } else {
+      setArtifactHTML(null);
+    }
+  }, [chat.messages]);
 
   const handleFileSelected = async (files) => {
     if (!files) {
@@ -379,7 +401,6 @@ const ChatWindow = forwardRef(({
         $sidebarCollapsed={$sidebarCollapsed}
       >
         <ChatTitleSection $sidebarCollapsed={$sidebarCollapsed}>
-          {/* ModelSelector is displayed based on selectedModel, thinkingMode is handled by ChatInputArea */}
           {selectedModel !== 'instant' && (
             <ModelSelector
               selectedModel={selectedModel}
@@ -429,10 +450,10 @@ const ChatWindow = forwardRef(({
           animateDown={effectiveAnimateDownSignal} 
           $sidebarCollapsed={$sidebarCollapsed}
           settings={settings}
-          onSubmitMessage={sendChatMessage} // Use the function from the hook
+          onSubmitMessage={sendChatMessage}
           onFileSelected={handleFileSelected} 
-          isLoading={isLoading} // Use isLoading from the hook
-          isProcessingFile={isProcessingFile} // Pass isProcessingFile state
+          isLoading={isLoading}
+          isProcessingFile={isProcessingFile}
           uploadedFile={uploadedFileData}
           onClearAttachment={clearUploadedFile}
           onRemoveFile={removeFileByIndex}
@@ -455,10 +476,14 @@ const ChatWindow = forwardRef(({
           onCloseSandbox3D={onCloseSandbox3D}
           onToolbarToggle={onToolbarToggle}
           onLiveModeToggle={handleLiveModeToggle}
-          // Pass inputFocusChange if ChatInputArea needs to inform ChatWindow about focus for header opacity effect
-          // onInputFocusChange={inputFocusChange}
         />
       )}
+
+      <HtmlArtifactModal 
+        isOpen={isArtifactModalOpen}
+        onClose={() => setIsArtifactModalOpen(false)}
+        htmlContent={artifactHTML}
+      />
     </ChatWindowContainer>
   );
 });

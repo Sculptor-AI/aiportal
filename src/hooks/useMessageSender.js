@@ -4,6 +4,7 @@ import { generateImageApi } from '../services/imageService';
 import { getFlowchartSystemPrompt } from '../utils/flowchartTools';
 import { performDeepResearch } from '../services/deepResearchService';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
+import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
 
 // Helper function (can be outside or passed in if it uses external context like toast)
 const generateId = () => {
@@ -150,8 +151,9 @@ const useMessageSender = ({
       if (scrollToBottom) setTimeout(scrollToBottom, 100);
       
       try {
-        // Get flowchart system prompt
+        // Get flowchart system prompt and combine with SculptorAI base prompt
         const flowchartSystemPrompt = getFlowchartSystemPrompt();
+        const combinedSystemPrompt = `${SCULPTOR_AI_SYSTEM_PROMPT}\n\n${flowchartSystemPrompt}`;
         
         // Send message to AI with flowchart instructions
         const formattedHistory = chat.messages.map(msg => ({
@@ -169,7 +171,7 @@ const useMessageSender = ({
           false, // not search
           false, // not deep research
           false, // not create image
-          flowchartSystemPrompt // flowchart system prompt
+          combinedSystemPrompt // combined system prompt
         );
         
         for await (const chunk of messageGenerator) {
@@ -457,15 +459,17 @@ Example format:
 
 IMPORTANT: Always provide content after the </think> tag. Never end your response with just the thinking block.` : null;
 
-        // Check if the current model is a custom model and get its system prompt
-        let systemPromptToUse = thinkingModeSystemPrompt;
+        // Build the complete system prompt starting with SculptorAI base prompt
+        let systemPromptToUse = SCULPTOR_AI_SYSTEM_PROMPT;
+        
+        // Add custom model system prompt if applicable
         if (currentModelObj?.isCustomModel && currentModelObj?.systemPrompt) {
-          // If there's already a thinking mode prompt, combine them
-          if (thinkingModeSystemPrompt) {
-            systemPromptToUse = `${currentModelObj.systemPrompt}\n\n${thinkingModeSystemPrompt}`;
-          } else {
-            systemPromptToUse = currentModelObj.systemPrompt;
-          }
+          systemPromptToUse = `${systemPromptToUse}\n\n${currentModelObj.systemPrompt}`;
+        }
+        
+        // Add thinking mode prompt if applicable
+        if (thinkingModeSystemPrompt) {
+          systemPromptToUse = `${systemPromptToUse}\n\n${thinkingModeSystemPrompt}`;
         }
 
         // UNIFIED LOGIC: All models are sent through the sendMessage generator,

@@ -4,6 +4,8 @@ import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
+import ReactKatex from '@pkasila/react-katex';
+import 'katex/dist/katex.min.css';
 
 // Format markdown text including bold, italic, bullet points and code blocks
 const formatContent = (content) => {
@@ -36,6 +38,13 @@ const formatContent = (content) => {
 
 // Convert markdown syntax to HTML using a more straightforward approach
 const processText = (text) => {
+  // Helper function to parse and render LaTeX
+  const renderLatex = (latex, displayMode) => (
+    <ReactKatex key={`latex-${Math.random()}`} displayMode={displayMode}>
+      {latex}
+    </ReactKatex>
+  );
+
   // First, handle code blocks separately to avoid processing markdown inside them
   if (text.includes('```')) {
     const segments = [];
@@ -56,7 +65,7 @@ const processText = (text) => {
         // Process any text before this code block
         const textBeforeCode = lines.slice(lastIndex, i).join('\n');
         if (textBeforeCode.trim()) {
-          segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdown(textBeforeCode)}</span>);
+          segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdownText(textBeforeCode)}</span>);
         }
         
         inCodeBlock = true;
@@ -97,7 +106,7 @@ const processText = (text) => {
     if (lastIndex < lines.length) {
       const textAfterCode = lines.slice(lastIndex).join('\n');
       if (textAfterCode.trim()) {
-        segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdown(textAfterCode)}</span>);
+        segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdownText(textAfterCode)}</span>);
       }
     }
     
@@ -108,8 +117,51 @@ const processText = (text) => {
   }
 };
 
-// Process regular markdown (bullet points, bold, italic)
+// Update processMarkdown to handle LaTeX
 const processMarkdown = (text) => {
+  const parts = [];
+  let lastIndex = 0;
+
+  // Regex for display math: $$\n?...$$\n? or $$...$$
+  const displayRegex = /\$\$\s*([\s\S]*?)\s*\$\$/g;
+  // Regex for inline math: $...$ (not starting/ending with space)
+  const inlineRegex = /\$([^\s].*?[^\s])\$/g;
+
+  // First handle display math
+  let match;
+  while ((match = displayRegex.exec(text)) !== null) {
+    // Add text before
+    if (match.index > lastIndex) {
+      parts.push(processMarkdownText(text.substring(lastIndex, match.index)));
+    }
+    // Add LaTeX
+    parts.push(renderLatex(match[1], true));
+    lastIndex = match.index + match[0].length;
+  }
+  // Add remaining after display
+  let remaining = text.substring(lastIndex);
+
+  // Now handle inline in the remaining parts
+  lastIndex = 0;
+  while ((match = inlineRegex.exec(remaining)) !== null) {
+    // Add text before
+    if (match.index > lastIndex) {
+      parts.push(processMarkdownText(remaining.substring(lastIndex, match.index)));
+    }
+    // Add inline LaTeX
+    parts.push(renderLatex(match[1], false));
+    lastIndex = match.index + match[0].length;
+  }
+  // Add final remaining
+  if (lastIndex < remaining.length) {
+    parts.push(processMarkdownText(remaining.substring(lastIndex)));
+  }
+
+  return <>{parts}</>;
+};
+
+// New function for processing non-LaTeX markdown text (lines, bullets, etc.)
+const processMarkdownText = (text) => {
   const lines = text.split('\n');
   const result = [];
   let inList = false;
@@ -1031,6 +1083,20 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Use cleaned content if available, otherwise use original content
   const contentToProcess = cleanedContent || content;
   
+  const is3DScene = useMemo(() => {
+    if (role !== 'assistant' || isLoading || !content) return false;
+    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+    if (!jsonMatch) return false;
+    try {
+      const parsed = JSON.parse(jsonMatch[1]);
+      return Array.isArray(parsed) && parsed.every(obj => 
+        obj.id && obj.type && obj.position && obj.rotation && obj.scale
+      );
+    } catch (e) {
+      return false;
+    }
+  }, [content, role, isLoading]);
+  
   const getAvatar = () => {
     if (role === 'user') {
       return (
@@ -1621,6 +1687,26 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   <circle cx="5" cy="12" r="1"></circle>
                 </svg>
               </ActionButton>
+              {is3DScene && (
+                <ActionButton onClick={() => {
+                  const jsonMatch = contentToProcess.match(/```json\n([\s\S]*?)\n```/);
+                  if (jsonMatch) {
+                    try {
+                      const parsed = JSON.parse(jsonMatch[1]);
+                      if (Array.isArray(parsed)) {
+                        window.dispatchEvent(new CustomEvent('load3DScene', { detail: { objects: parsed } }));
+                      }
+                    } catch (e) {
+                      console.error('Failed to parse 3D scene JSON', e);
+                    }
+                  }
+                }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                  </svg>
+                  Load in 3D
+                </ActionButton>
+              )}
             </MessageActions>
           )}
         </MessageWrapper>
