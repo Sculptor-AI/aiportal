@@ -251,6 +251,14 @@ const ChatInputArea = forwardRef(({
       onLiveModeToggle(true);
     }
   };
+  
+  // Update live mode state when it changes externally
+  useEffect(() => {
+    // If live mode is closed externally, update local state
+    if (!onLiveModeToggle) {
+      setIsLiveModeOpen(false);
+    }
+  }, [onLiveModeToggle]);
 
   const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen || isFlowchartOpen || isSandbox3DOpen;
 
@@ -324,7 +332,8 @@ const ChatInputArea = forwardRef(({
           <WaveformButton
             onClick={handleWaveformClick}
             disabled={isLoading || isProcessingFile}
-            title="Live Mode"
+            title={isLiveModeOpen ? "Live Mode Active" : "Start Live Mode"}
+            $isActive={isLiveModeOpen}
           >
             <img
               src="/images/waveform.svg"
@@ -332,9 +341,22 @@ const ChatInputArea = forwardRef(({
               style={{
                 width: '25px',
                 height: '25px',
-                filter: 'invert(1) brightness(2)'
+                filter: isLiveModeOpen ? 'invert(0) brightness(1)' : 'invert(1) brightness(2)',
+                opacity: isLiveModeOpen ? '1' : '0.8'
               }}
             />
+            {isLiveModeOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#ff4444',
+                animation: 'pulse 1.5s infinite'
+              }} />
+            )}
           </WaveformButton>
           <SendButton
             onClick={handleInternalSubmit}

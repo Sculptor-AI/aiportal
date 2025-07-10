@@ -64,8 +64,8 @@ const SidebarTitleContainer = styled.div`
 `;
 
 const SidebarLogo = styled.img`
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 `;
 
@@ -409,7 +409,6 @@ const MobileSidebar = ({
         <SidebarHeader>
           <SidebarTitleContainer>
             <SidebarLogo src="/images/sculptor.svg" alt="Sculptor Logo" />
-            <SidebarTitle>Sculptor</SidebarTitle>
           </SidebarTitleContainer>
           <CloseButton onClick={onClose}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

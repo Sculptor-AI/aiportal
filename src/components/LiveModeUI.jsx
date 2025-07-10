@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import ModelIcon from './ModelIcon';
+import useGeminiLive from '../hooks/useGeminiLive';
 
 const LiveModeContainer = styled.div`
   display: flex;
@@ -245,6 +246,75 @@ const ErrorMessage = styled.div`
   margin-top: 10px;
 `;
 
+const TranscriptionContainer = styled.div`
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 20px;
+  max-width: 80%;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: slideUpFade 0.3s ease-out;
+  z-index: 10;
+  
+  @keyframes slideUpFade {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+`;
+
+const StatusIndicator = styled.div`
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 8px 12px;
+  background: ${props => {
+    switch (props.status) {
+      case 'connected': return '#4CAF50';
+      case 'recording': return '#FF4444';
+      case 'processing': return '#FF9800';
+      default: return '#666';
+    }
+  }};
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  z-index: 10;
+`;
+
+const ResponseContainer = styled.div`
+  position: absolute;
+  bottom: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  padding: 16px 24px;
+  border-radius: 16px;
+  max-width: 90%;
+  max-height: 200px;
+  overflow-y: auto;
+  text-align: left;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  animation: slideUpFade 0.3s ease-out;
+  z-index: 10;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+`;
+
 const LiveModeUI = ({ selectedModel, onClose }) => {
   const [microphoneActive, setMicrophoneActive] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
@@ -256,6 +326,64 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   
   const cameraVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
+  
+  // Gemini Live integration
+  const {
+    isConnected,
+    isRecording,
+    sessionActive,
+    transcription,
+    response,
+    error: geminiError,
+    status,
+    inputTranscription,
+    outputTranscription,
+    connect,
+    disconnect,
+    startSession,
+    endSession,
+    startRecording,
+    stopRecording,
+    toggleRecording,
+    clearTranscription,
+    clearResponse,
+    clearError
+  } = useGeminiLive({
+    apiKey: import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('google_api_key'),
+    model: selectedModel,
+    responseModality: 'text',
+    inputTranscriptionEnabled: true,
+    outputTranscriptionEnabled: true,
+    autoConnect: false
+  });
+  
+  // Sync microphone state with the hook's recording state
+  useEffect(() => {
+    setMicrophoneActive(isRecording);
+  }, [isRecording]);
+  
+  // Initialize connection and session when component mounts
+  useEffect(() => {
+    if (!isConnected) {
+      connect();
+    }
+  }, [isConnected, connect]);
+  
+  useEffect(() => {
+    if (isConnected && !sessionActive) {
+      startSession();
+    }
+  }, [isConnected, sessionActive, startSession]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (sessionActive) {
+        endSession();
+      }
+      disconnect();
+    };
+  }, [sessionActive, endSession, disconnect]);
 
   // Cleanup function to stop media streams
   const stopMediaStreams = () => {
@@ -289,8 +417,45 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
     }
   }, [screenStream]);
 
-  const handleMicrophoneToggle = () => {
-    setMicrophoneActive(!microphoneActive);
+  const handleMicrophoneToggle = async () => {
+    if (microphoneActive) {
+      // Stop recording and microphone
+      await stopRecording();
+      setMicrophoneActive(false);
+    } else {
+      // Start microphone and recording
+      if (isConnected) {
+        try {
+          // If no session is active, start one first
+          if (!sessionActive) {
+            await startSession();
+            // Wait a bit for session to be established
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+          await startRecording();
+          setMicrophoneActive(true);
+        } catch (error) {
+          console.error('Failed to start recording:', error);
+          // Show error in UI
+          if (error.message.includes('microphone') || error.message.includes('getUserMedia')) {
+            // Handle microphone permission error
+            console.error('Microphone permission denied or unavailable');
+          }
+        }
+      } else {
+        console.warn('Not connected - trying to reconnect...');
+        try {
+          await connect();
+          // Retry after connection
+          if (isConnected) {
+            await handleMicrophoneToggle();
+          }
+        } catch (error) {
+          console.error('Failed to connect:', error);
+        }
+      }
+    }
   };
 
   const handleCameraToggle = async () => {
@@ -361,9 +526,38 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
     }
   };
 
-  const handleClose = () => {
+  const handleClose = async () => {
+    // Stop all media streams
     stopMediaStreams();
+    
+    // Stop Gemini Live session
+    if (isRecording) {
+      await stopRecording();
+    }
+    if (sessionActive) {
+      endSession();
+    }
+    disconnect();
+    
+    // Close the live mode UI
     onClose();
+  };
+  
+  // Get status display text
+  const getStatusText = () => {
+    if (!isConnected) return 'Connecting to Gemini Live...';
+    if (!sessionActive) return 'Starting Session...';
+    if (isRecording) return 'Recording';
+    if (microphoneActive) return 'Ready';
+    return 'Connected to Gemini Live';
+  };
+  
+  // Get status color
+  const getStatusColor = () => {
+    if (!isConnected) return 'disconnected';
+    if (!sessionActive) return 'processing';
+    if (isRecording) return 'recording';
+    return 'connected';
   };
 
   return (
@@ -401,27 +595,51 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         </PreviewContainer>
       )}
       
+      {/* Status indicator */}
+      <StatusIndicator status={getStatusColor()}>
+        {getStatusText()}
+      </StatusIndicator>
+      
+      {/* Transcription display */}
+      {(transcription || inputTranscription) && (
+        <TranscriptionContainer>
+          <strong>You said:</strong> {transcription || inputTranscription}
+        </TranscriptionContainer>
+      )}
+      
+      {/* Response display */}
+      {response && (
+        <ResponseContainer>
+          <strong>AI Response:</strong><br />
+          {response}
+        </ResponseContainer>
+      )}
+      
       {/* Error messages */}
       {cameraError && <ErrorMessage>{cameraError}</ErrorMessage>}
       {screenError && <ErrorMessage>{screenError}</ErrorMessage>}
+      {geminiError && <ErrorMessage>Live Chat Error: {typeof geminiError === 'string' ? geminiError : 'Connection failed'}</ErrorMessage>}
       
       <ControlsContainer>
         <ControlButton
           variant="microphone"
-          $active={microphoneActive}
+          $active={microphoneActive || isRecording}
           onClick={handleMicrophoneToggle}
+          disabled={!sessionActive}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            {microphoneActive ? (
+            {microphoneActive || isRecording ? (
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1.2-9.1c0-.66.54-1.2 1.2-1.2s1.2.54 1.2 1.2l-.01 6.2c0 .66-.53 1.2-1.19 1.2s-1.2-.54-1.2-1.2V4.9zm6.2 6.1c0 3-2.54 5.1-5.1 5.1S6.8 14 6.8 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.8z"/>
             ) : (
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1.2-9.1c0-.66.54-1.2 1.2-1.2s1.2.54 1.2 1.2l-.01 6.2c0 .66-.53 1.2-1.19 1.2s-1.2-.54-1.2-1.2V4.9zm6.2 6.1c0 3-2.54 5.1-5.1 5.1S6.8 14 6.8 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.49 6-3.31 6-6.72h-1.8z"/>
             )}
-            {!microphoneActive && (
+            {!(microphoneActive || isRecording) && (
               <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
             )}
           </svg>
-          <ControlLabel>{microphoneActive ? 'Mute' : 'Unmute'}</ControlLabel>
+          <ControlLabel>
+            {isRecording ? 'Recording...' : microphoneActive ? 'Stop' : 'Start'}
+          </ControlLabel>
         </ControlButton>
         
         <ControlButton

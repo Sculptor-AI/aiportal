@@ -87,7 +87,7 @@ const FloatingMenuButton = styled.button`
 // Main Greeting Component
 const MainGreeting = styled.div`
   position: fixed;
-  top: ${props => props.$toolbarOpen ? '32%' : '35%'}; /* Adjust when toolbar is open */
+  top: ${props => props.$toolbarOpen ? '25%' : '28%'}; /* Moved up from 32%/35% */
   left: ${props => {
     const sidebarOffset = props.$sidebarCollapsed ? 0 : 140; // 140 is half of sidebar width 280px
     let rightPanelOffset = 0;
@@ -102,19 +102,30 @@ const MainGreeting = styled.div`
   max-width: 800px; /* Keep a max width */
   width: 90%; /* Use percentage width for better flexibility */
   text-align: center;
-  z-index: 4;
+  z-index: 102;
   pointer-events: none;
   padding: 0 20px; /* Horizontal padding */
   box-sizing: border-box; /* Include padding in width calculation */
   transition: all 0.3s ease-out; /* Transition all properties including left */
   
+  /* Flexbox container for logo and text */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px; /* Increased gap for bigger look */
+  
+  .logo {
+    width: 64px; /* Increased from 48px */
+    height: 64px; /* Increased from 48px */
+    flex-shrink: 0; /* Prevent logo from shrinking */
+  }
+  
   h1 {
-    font-size: min(2.2rem, 6vw); /* Adjusted responsive font size */
+    font-size: min(3.2rem, 8vw); /* Increased from 2.2rem, 6vw */
     font-weight: 500;
     color: #000000; // Changed from props.theme.text to ensure it's black
     margin: 0;
     padding: 0;
-    /* Removed flex properties, let natural wrapping occur */
     line-height: 1.2; 
     word-wrap: break-word; /* Ensure long words break if needed */
     overflow-wrap: break-word; /* More modern property for word breaking */
@@ -123,22 +134,36 @@ const MainGreeting = styled.div`
   /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
     left: 50% !important; /* Always center on mobile */
-    top: ${props => props.$toolbarOpen ? '27%' : '30%'}; /* Adjust on mobile */
+    top: ${props => props.$toolbarOpen ? '22%' : '25%'}; /* Moved up from 27%/30% */
     max-width: 90%; /* Reduce max-width on smaller screens */
     padding: 0 15px; 
+    gap: 16px; /* Increased gap on mobile */
+    
+    .logo {
+      width: 56px; /* Increased from 40px */
+      height: 56px; /* Increased from 40px */
+    }
+    
     h1 {
-      font-size: min(2rem, 5.5vw); /* Slightly smaller font */
+      font-size: min(2.8rem, 7vw); /* Increased from 2rem, 5.5vw */
     }
   }
 
   /* Adjustments for very small screens */
   @media (max-width: 480px) {
     left: 50% !important; /* Always center on mobile */
-    top: ${props => props.$toolbarOpen ? '27%' : '30%'}; /* Adjust on small screens */
+    top: ${props => props.$toolbarOpen ? '22%' : '25%'}; /* Moved up from 27%/30% */
     max-width: 95%; /* Allow slightly more width on very small screens */
     padding: 0 10px; 
+    gap: 14px; /* Increased gap on very small screens */
+    
+    .logo {
+      width: 48px; /* Increased from 36px */
+      height: 48px; /* Increased from 36px */
+    }
+    
     h1 {
-      font-size: min(1.7rem, 5vw); /* Slightly smaller font */
+      font-size: min(2.2rem, 6vw); /* Increased from 1.7rem, 5vw */
     }
   }
 `;
@@ -194,57 +219,7 @@ const AppContent = () => {
   const navigate = useNavigate();
 
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
-  // Greeting messages
-  const greetingMessages = [
-    "Look who decided to show up",
-    "Back for more AI wisdom",
-    "Oh great, it's you again",
-    "Lemme guess, essay due in an hour",
-    "You treat me like Google with trauma",
-    "I was just about to take a nap, but okay",
-    "Oh joy, it's my favorite procrastinator",
-    "Missed me already? How predictable",
-    "You know, boundaries exist, right",
-    "Again? At this rate, I deserve a raise",
-    "What's today's crisis",
-    "Back so soon? Therapy might help more",
-    "Did Google hurt your feelings again",
-    "Is ignoring deadlines your hobby or passion",
-    "I'm not judging—actually, yes, I am",
-    "Welcome back, chronic advice seeker",
-    "Great, another chance to practice patience",
-    "Look, it's the usual suspect",
-    "Oh look, my unpaid internship continues",
-    "Couldn't resist my charm, huh?",
-    "Which existential crisis is it today?",
-    "Back again? Your deadlines must be trembling",
-    "Ah, my favorite daily interruption",
-    "Another day, another panic request",
-    "Are we avoiding responsibilities again?",
-    "I see procrastination is your love language",
-    "Here we go again—brace for impact",
-    "Just admit you miss my digital sass",
-    "Already? Give me time to recharge my sarcasm",
-    "I'm sensing a pattern—and it's exhausting",
-    "Did reality disappoint you again?",
-    "Can't say I'm surprised to see you",
-    "Community guidelines, prepare to be ignored"
-  ];
-  
-  // Get random greeting message
-  const getRandomGreeting = () => {
-    const randomIndex = Math.floor(Math.random() * greetingMessages.length);
-    return greetingMessages[randomIndex];
-  };
-  
-  // State for greeting message
-  const [greeting, setGreeting] = useState(''); // Initialize with empty string
   const [hasAttachment, setHasAttachment] = useState(false);
-  
-  // Set random greeting on mount
-  useEffect(() => {
-    setGreeting(getRandomGreeting());
-  }, []); // Empty dependency array ensures this runs only once on mount
   
   // Chat state
   const [chats, setChats] = useState(() => {
@@ -824,7 +799,8 @@ const AppContent = () => {
                 $sandbox3DOpen={isSandbox3DOpen}
                 $sidebarCollapsed={collapsed}
               >
-                <h1>{greeting}</h1>
+                <img src="/sculptor.svg" alt="Sculptor Logo" className="logo" />
+                <h1>Sculptor</h1>
               </MainGreeting>
             )}
             

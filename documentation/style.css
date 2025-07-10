@@ -49,9 +49,41 @@ body {
     overflow-y: auto;
 }
 
+#sidebar-nav ul {
+    list-style: none;
+    padding-left: 20px;
+}
+
+#sidebar-nav ul li .folder {
+    cursor: pointer;
+    font-weight: bold;
+    display: block;
+    padding: 10px 0;
+}
+
+#sidebar-nav ul li .folder::before {
+    content: '\25B8'; /* Right-pointing triangle */
+    display: inline-block;
+    margin-right: 6px;
+    transition: transform 0.2s;
+}
+
+#sidebar-nav ul li.open > .folder::before {
+    transform: rotate(90deg);
+}
+
+#sidebar-nav ul li ul {
+    display: none;
+    padding-left: 15px;
+}
+
+#sidebar-nav ul li.open > ul {
+    display: block;
+}
+
 #sidebar-nav a {
     display: block;
-    padding: 15px 20px;
+    padding: 10px 0;
     color: var(--sidebar-text);
     text-decoration: none;
     transition: background-color 0.3s;
@@ -63,6 +95,8 @@ body {
 
 #sidebar-nav a.active {
     background-color: var(--primary-color);
+    border-radius: 3px;
+    padding-left: 10px;
 }
 
 .main-content {

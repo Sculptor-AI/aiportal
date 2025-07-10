@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import AdminLoginModal from './AdminLoginModal';
@@ -75,6 +75,18 @@ const UserInfo = styled.div`
   margin-bottom: 16px;
 `;
 
+const AvatarContainer = styled.div`
+  position: relative;
+  width: 60px;
+  height: 60px;
+  margin-right: 16px;
+  cursor: pointer;
+  
+  &:hover .avatar-overlay {
+    opacity: 1;
+  }
+`;
+
 const Avatar = styled.div`
   width: 60px;
   height: 60px;
@@ -86,7 +98,34 @@ const Avatar = styled.div`
   justify-content: center;
   font-size: 1.8rem;
   font-weight: bold;
-  margin-right: 16px;
+  background-image: ${props => props.$profilePicture ? `url(${props.$profilePicture})` : 'none'};
+  background-size: cover;
+  background-position: center;
+`;
+
+const AvatarOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+    color: white;
+  }
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
 `;
 
 const UserDetails = styled.div`
@@ -183,6 +222,10 @@ const formatDate = (dateString) => {
 const ProfileModal = ({ closeModal }) => {
   const { user, adminUser, logout, adminLogout } = useAuth();
   const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [profilePicture, setProfilePicture] = useState(
+    localStorage.getItem('profilePicture') || null
+  );
+  const fileInputRef = useRef(null);
   
   if (!user) return null;
   
@@ -206,6 +249,40 @@ const ProfileModal = ({ closeModal }) => {
       console.error('Admin logout error:', err);
     }
   };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check if file is an image
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+      
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Please select an image smaller than 5MB');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageData = e.target.result;
+        setProfilePicture(imageData);
+        localStorage.setItem('profilePicture', imageData);
+        
+        // Dispatch custom event to update sidebar
+        window.dispatchEvent(new CustomEvent('profilePictureChanged', { 
+          detail: { profilePicture: imageData } 
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   
   const handleOutsideClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -226,12 +303,27 @@ const ProfileModal = ({ closeModal }) => {
         <ModalBody>
           <ProfileSection>
             <UserInfo>
-              <Avatar>{avatarLetter}</Avatar>
+              <AvatarContainer onClick={handleAvatarClick}>
+                <Avatar $profilePicture={profilePicture}>
+                  {!profilePicture && avatarLetter}
+                </Avatar>
+                <AvatarOverlay className="avatar-overlay">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                  </svg>
+                </AvatarOverlay>
+              </AvatarContainer>
               <UserDetails>
                 <Username>{user.username}</Username>
                 <JoinDate>Member since {formatDate(user.createdAt)}</JoinDate>
               </UserDetails>
             </UserInfo>
+            <HiddenFileInput
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+            />
           </ProfileSection>
           
           <ProfileSection>

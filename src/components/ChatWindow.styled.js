@@ -407,6 +407,9 @@ export const WaveformButton = styled.button`
     if (props.theme.name === 'retro') {
       return props.theme.buttonFace;
     }
+    if (props.$isActive) {
+      return '#ff4444';
+    }
     return props.disabled ? '#ccc' : props.theme.buttonGradient;
   }};
   color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'white'};
@@ -426,16 +429,22 @@ export const WaveformButton = styled.button`
   transition: all 0.2s;
   box-shadow: ${props => props.theme.name === 'retro' ? 
     `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-    '0 2px 8px rgba(0,0,0,0.1)'};
+    props.$isActive ? '0 0 0 2px rgba(255, 68, 68, 0.3)' : '0 2px 8px rgba(0,0,0,0.1)'};
   
   &:hover:not(:disabled) {
-    background: ${props => props.theme.name === 'retro' ? 
-      props.theme.buttonFace : 
-      props.theme.buttonHoverGradient};
+    background: ${props => {
+      if (props.theme.name === 'retro') {
+        return props.theme.buttonFace;
+      }
+      if (props.$isActive) {
+        return '#ff6666';
+      }
+      return props.theme.buttonHoverGradient;
+    }};
     transform: translateY(-50%) ${props => props.theme.name === 'retro' ? '' : 'scale(1.05)'};
     box-shadow: ${props => props.theme.name === 'retro' ? 
       `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-      '0 4px 12px rgba(0,0,0,0.15)'};
+      props.$isActive ? '0 0 0 2px rgba(255, 68, 68, 0.5)' : '0 4px 12px rgba(0,0,0,0.15)'};
   }
   
   &:active:not(:disabled) {
@@ -449,6 +458,19 @@ export const WaveformButton = styled.button`
   &:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+  
+  // Add keyframes for pulse animation
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 1;
+    }
   }
 `;
 
@@ -526,7 +548,7 @@ export const EmptyState = styled.div`
   /* -webkit-backdrop-filter: blur(5px); */ // Vendor prefix for backdrop-filter
   width: 100%;
   max-width: 600px;
-  z-index: 5; // Higher than MainGreeting (4) but lower than InputContainer (100)
+  z-index: 8; // Lower than MainGreeting (10) but higher than ChatWindowContainer (5)
   pointer-events: none; /* Allow clicks to pass through */
   opacity: 1; /* Default opacity */
 

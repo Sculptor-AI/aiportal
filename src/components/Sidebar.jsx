@@ -3,7 +3,7 @@ import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { Link, useLocation } from 'react-router-dom';
 
-// Styled Components (Keep all your existing styled components definitions)
+// Styled Components - Updated for Grok.com-inspired design
 const SidebarContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -13,13 +13,12 @@ const SidebarContainer = styled.div`
   color: ${props => props.theme.text};
   border-right: 1px solid ${props => props.theme.border};
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: all 0.3s ease;
   position: fixed;
   top: 0;
   left: ${props => props.$collapsed ? '-280px' : '0'};
   z-index: 101;
   opacity: ${props => props.$collapsed ? '0' : '1'};
-  transform: translateX(0); /* Removed extra transform to fix alignment */
   
   @media (max-width: 768px) {
     left: ${props => (props.$collapsed ? '-100%' : '0')};
@@ -27,21 +26,19 @@ const SidebarContainer = styled.div`
     width: 100%;
     z-index: 100;
     border-right: none;
-    transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-    transform: translateX(0); /* Removed extra transform to fix alignment */
+    transition: all 0.3s ease;
   }
 `;
 
 const LogoContainer = styled.div`
   display: flex;
   align-items: center;
-  padding-left: 6px;
+  padding: 0 6px;
 
   img {
-    height: 26px;
-    width: 26px; /* Explicit width */
-    margin-right: 10px;
-    object-fit: contain; /* Added for better SVG scaling */
+    height: 32px;
+    width: 32px;
+    object-fit: contain;
   }
 
   @media (max-width: 768px) {
@@ -50,40 +47,37 @@ const LogoContainer = styled.div`
 `;
 
 const LogoText = styled.span`
-  font-family: 'SegoeUI-Bold', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: bold;
-  font-size: 20px;
-  letter-spacing: 0.5px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 18px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  padding-left: 2px;
 `;
 
 const CollapseButton = styled.button`
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: transparent;
   border: none;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  display: ${props => props.theme.name === 'retro' ? 'none' : 'flex'}; /* Hide for retro theme */
+  display: ${props => props.theme.name === 'retro' ? 'none' : 'flex'};
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
   position: ${props => props.$collapsed ? 'fixed' : 'relative'};
-  top: ${props => props.$collapsed ? '14px' : '0'};
-  left: ${props => props.$collapsed ? '18px' : '0'};
+  top: ${props => props.$collapsed ? '16px' : '0'};
+  left: ${props => props.$collapsed ? '16px' : '0'};
   z-index: 30;
-  opacity: 0.7;
+  opacity: 0.6;
+  border-radius: 4px;
 
   svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 1.5px;
+    width: 16px;
+    height: 16px;
   }
 
   &:hover {
-    background: ${props => props.$collapsed ? 'transparent' : 'rgba(255,255,255,0.08)'};
-    border-radius: ${props => props.$collapsed ? '0' : '6px'};
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
     opacity: 1;
   }
 
@@ -95,7 +89,7 @@ const CollapseButton = styled.button`
 const TopBarContainer = styled.div`
   display: flex;
   align-items: center;
-  padding: 14px 12px 14px 16px;
+  padding: 16px 16px 12px 16px;
   width: 100%;
   justify-content: space-between;
   flex-shrink: 0;
@@ -103,7 +97,7 @@ const TopBarContainer = styled.div`
   @media (max-width: 768px) {
     &.mobile-top-bar {
         display: flex !important;
-        padding: 14px 12px;
+        padding: 16px;
         width: 100%;
         justify-content: space-between;
     }
@@ -114,166 +108,91 @@ const TopBarContainer = styled.div`
 `;
 
 const MobileLogoContainer = styled.div`
-  display: none; // Hidden by default
+  display: none;
   align-items: center;
-  margin-right: 10px; // Spacing between logo and toggle button
+  margin-right: 10px;
 
   img {
-    height: 30px;
-    margin-right: 5px;
+    height: 32px;
   }
 
   @media (max-width: 768px) {
-    display: flex; // Shown only on mobile
+    display: flex;
   }
 `;
 
 const MobileLogoText = styled.span`
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-weight: 600;
   font-size: 16px;
-  letter-spacing: 0.5px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 `;
 
 const NewChatButton = styled.button`
   background: ${props => {
     if (props.theme.name === 'retro') return props.theme.buttonFace;
-    if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.12)';
-    if (props.theme.name === 'dark') return 'rgba(255,255,255,0.05)';
-    return '#ffffff';
+    if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.1)';
+    if (props.theme.name === 'dark') return 'rgba(255,255,255,0.06)';
+    return 'rgba(0,0,0,0.03)';
   }};
   color: ${props => {
     if (props.theme.name === 'lakeside') return 'rgb(198, 146, 20)';
-    if (props.theme.name === 'dark') return '#ffffff';
-    return '#2d2d2d';
+    return props.theme.text;
   }};
   border: ${props => {
     if (props.theme.name === 'retro') {
       return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
     }
-    if (props.theme.name === 'lakeside') return '1px solid rgba(198, 146, 20, 0.2)';
-    if (props.theme.name === 'dark') return '1px solid rgba(255,255,255,0.1)';
-    return '1px solid rgba(0,0,0,0.08)';
+    return '1px solid rgba(0,0,0,0.06)';
   }};
-  padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '11px 16px'};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '10px'};
+  padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '10px 12px'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
   font-weight: 400;
   font-size: 14px;
-  letter-spacing: -0.01em;
   display: flex;
   align-items: center;
-  justify-content: ${props => props.theme.name === 'retro' ? 'flex-start' : 'flex-start'};
-  gap: ${props => props.theme.name === 'retro' ? '12px' : '10px'};
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: ${props => {
-    if (props.theme.name === 'retro') {
-      return `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset`;
-    }
-    if (props.theme.name === 'dark') return '0 1px 3px rgba(0,0,0,0.3)';
-    return '0 1px 2px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.02)';
-  }};
-  margin: 12px 16px 20px;
+  justify-content: flex-start;
+  gap: 8px;
+  transition: all 0.2s ease;
+  margin: 0 16px 16px;
   width: calc(100% - 32px);
   flex-shrink: 0;
-  position: relative;
-  overflow: hidden;
-
-  /* Add subtle gradient overlay for depth */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: ${props => {
-      if (props.theme.name === 'retro') return 'none';
-      if (props.theme.name === 'dark') return 'linear-gradient(to bottom, rgba(255,255,255,0.03), transparent)';
-      return 'linear-gradient(to bottom, rgba(255,255,255,0.8), transparent)';
-    }};
-    pointer-events: none;
-  }
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   &:hover {
     background: ${props => {
       if (props.theme.name === 'retro') return props.theme.buttonFace;
-      if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.18)';
-      if (props.theme.name === 'dark') return 'rgba(255,255,255,0.08)';
-      return '#f8f8f8';
+      if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
+      if (props.theme.name === 'dark') return 'rgba(255,255,255,0.1)';
+      return 'rgba(0,0,0,0.06)';
     }};
-    transform: ${props => props.theme.name === 'retro' ? 'none' : 'translateY(-0.5px)'};
-    box-shadow: ${props => {
-      if (props.theme.name === 'retro') {
-        return `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset`;
-      }
-      if (props.theme.name === 'dark') return '0 2px 6px rgba(0,0,0,0.4)';
-      return '0 2px 5px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)';
-    }};
-    
-    svg {
-      transform: scale(1.05);
-    }
+    cursor: pointer;
   }
 
   &:active {
-    ${props => props.theme.name === 'retro' && `
-      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
-      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
-      padding-top: 9px;
-      padding-left: 16px;
-    `}
-    ${props => props.theme.name !== 'retro' && `
-      transform: translateY(0);
-      box-shadow: ${props.theme.name === 'dark' ? '0 1px 2px rgba(0,0,0,0.4)' : '0 1px 2px rgba(0,0,0,0.1)'};
-    `}
+    transform: translateY(1px);
   }
 
   svg {
-    position: relative;
-    z-index: 1;
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    margin-right: ${props => props.$collapsed ? '0' : (props.theme.name === 'retro' ? '0' : '2px')};
-    color: ${props => {
-      if (props.theme.name === 'lakeside') return 'rgb(198, 146, 20)';
-      if (props.theme.name === 'dark') return '#ffffff';
-      return '#2d2d2d';
-    }};
-    width: ${props => props.theme.name === 'retro' ? '14px' : '18px'};
-    height: ${props => props.theme.name === 'retro' ? '14px' : '18px'};
-    stroke-width: 2.5;
+    width: 16px;
+    height: 16px;
+    opacity: 0.8;
   }
 
   span {
-    position: relative;
-    z-index: 1;
     opacity: ${props => props.$collapsed ? '0' : '1'};
-    transform: translateX(0);
     visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-    white-space: nowrap;
-    transition: opacity 0.2s ease, visibility 0.2s;
-    transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
-    ${props => props.theme.name === 'retro' && `
-      font-family: 'MSW98UI', 'MS Sans Serif', 'Tahoma', sans-serif;
-      font-size: 12px;
-    `}
+    transition: opacity 0.2s ease;
   }
 
   @media (max-width: 768px) {
     width: auto;
     margin: 0 10px 10px auto;
-    padding: ${props => props.theme.name === 'retro' ? '8px 14px' : '10px 16px'};
-    border-radius: ${props => props.theme.name === 'retro' ? '0' : '10px'};
-    font-size: 14px;
+    padding: 10px 12px;
     
     span {
         opacity: 1;
-        transform: translateX(0);
         visibility: visible;
-        display: inline-block;
-    }
-    svg {
-        margin-right: ${props => props.theme.name === 'retro' ? '10px' : '6px'};
     }
   }
 `;
@@ -283,7 +202,6 @@ const ScrollableContent = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-top: 5px;
 
   .mobile-only {
     display: none !important;
@@ -303,97 +221,63 @@ const ScrollableContent = styled.div`
 const ChatList = styled.div`
   flex-grow: 1;
   overflow-y: auto;
-  padding: 0 ${props => props.$collapsed ? '8px' : '12px'};
+  padding: 0 16px;
   display: flex;
   flex-direction: column;
-  align-items: ${props => props.$collapsed ? 'center' : 'stretch'};
-  margin-bottom: 10px;
-  gap: 4px;
+  margin-bottom: 8px;
+  gap: 2px;
 
   @media (max-width: 768px) {
      max-height: none;
-     padding: 0 12px;
-     align-items: stretch;
+     padding: 0 16px;
      flex-grow: 0;
   }
 
   &::-webkit-scrollbar {
-    width: 5px;
+    width: 4px;
   }
   &::-webkit-scrollbar-track {
     background: transparent;
   }
   &::-webkit-scrollbar-thumb {
     background: ${props => props.theme.border};
-    border-radius: 10px;
+    border-radius: 2px;
   }
 `;
 
 const ChatItem = styled.div`
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: ${props => props.$collapsed ? 'center' : 'space-between'};
+  justify-content: space-between;
   background: ${props => {
     if (!props.$active) return 'transparent';
     if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.1)';
-    if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.15)';
-    if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.12)';
-    return 'rgba(0, 0, 0, 0.06)'; // For light and other themes
+    if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.08)';
+    return 'rgba(0, 0, 0, 0.04)';
   }};
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   width: 100%;
-  height: auto;
   position: relative;
   
   &:hover {
     background: ${props => {
       if (props.$active) {
         if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
-        if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.20)';
-        if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.15)';
-        return 'rgba(0, 0, 0, 0.08)'; // For light and other themes active hover
-      } else { // Not active, but hovered
-        if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.07)';
-        if (props.theme.name === 'bisexual') return 'rgba(255, 255, 255, 0.07)';
-        if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.07)';
-        return 'rgba(0, 0, 0, 0.03)'; // For light and other themes non-active hover
+        if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.12)';
+        return 'rgba(0, 0, 0, 0.06)';
+      } else {
+        if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.05)';
+        if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.04)';
+        return 'rgba(0, 0, 0, 0.02)';
       }
     }};
   }
 
-  /* Special styling for lakeside theme active items */
-  ${props => props.theme.name === 'lakeside' && props.$active && `
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      height: 100%;
-      width: 4px;
-      background: rgb(198, 146, 20);
-      border-radius: 4px 0 0 4px;
-    }
-  `}
-
-  /* Special styling for dark theme active items */
-  ${props => props.theme.name === 'dark' && props.$active && `
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  `}
-  
-  /* Special styling for light theme active items */
-  ${props => props.theme.name === 'light' && props.$active && `
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  `}
-  
-  /* Common active item styling */
-  ${props => props.$active && `
-  `}
-
   @media (max-width: 768px) {
-      justify-content: space-between; /* Always space-between on mobile */
+      justify-content: space-between;
   }
 `;
 
@@ -401,104 +285,90 @@ const ChatTitle = styled.div`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1; /* Take available space */
-  margin-right: 5px; /* Space before delete button */
+  flex: 1;
+  margin-right: 8px;
   opacity: ${props => props.$collapsed ? '0' : '1'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-  transition: opacity 0.2s ease, visibility 0.2s;
-  transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
+  transition: opacity 0.2s ease;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
   font-size: 14px;
   font-weight: 400;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   @media (max-width: 768px) {
-      opacity: 1; /* Always visible on mobile */
+      opacity: 1;
       visibility: visible;
   }
 `;
 
-// New Share Button styled component
 const ShareButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : '#888'};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   cursor: pointer;
-  padding: 5px;
-  display: flex; /* Align icon nicely */
+  padding: 4px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px; /* Add slight rounding */
-  opacity: 0; /* Hidden by default */
+  border-radius: 4px;
+  opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease, background-color 0.2s ease;
-  flex-shrink: 0; /* Prevent shrinking */
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 
-  /* Show on ChatItem hover only when not collapsed */
   ${ChatItem}:hover & {
-      opacity: ${props => props.$collapsed ? '0' : '1'};
+      opacity: ${props => props.$collapsed ? '0' : '0.6'};
       visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
   &:hover {
-    color: ${props => props.theme.name === 'lakeside' ? 'rgb(238, 186, 60)' : '#1e88e5'}; // Different hover color
-    background-color: rgba(255, 255, 255, 0.08);
+    opacity: 1 !important;
+    background-color: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
   }
 
-  /* Ensure it's always visible & hoverable on mobile */
   @media (max-width: 768px) {
-      opacity: 1;
+      opacity: 0.6;
       visibility: visible;
-      ${ChatItem}:hover & { /* Keep styles consistent */
-          opacity: 1;
-          visibility: visible;
-      }
   }
 `;
 
 const DeleteButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : '#888'};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   cursor: pointer;
-  padding: 5px;
-  display: flex; /* Align icon nicely */
+  padding: 4px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px; /* Add slight rounding */
-  opacity: 0; /* Hidden by default */
+  border-radius: 4px;
+  opacity: 0;
   visibility: hidden;
-  transition: opacity 0.2s ease, visibility 0.2s ease, background-color 0.2s ease;
-  flex-shrink: 0; /* Prevent shrinking */
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 
-  /* Show on ChatItem hover only when not collapsed */
   ${ChatItem}:hover & {
-      opacity: ${props => props.$collapsed ? '0' : '1'};
+      opacity: ${props => props.$collapsed ? '0' : '0.6'};
       visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
   &:hover {
-    color: ${props => props.theme.name === 'lakeside' ? 'rgb(238, 186, 60)' : '#d32f2f'};
-    background-color: rgba(255, 255, 255, 0.08); /* Slight background on hover */
+    opacity: 1 !important;
+    background-color: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
   }
 
-  /* Ensure it's always visible & hoverable on mobile */
   @media (max-width: 768px) {
-      opacity: 1;
+      opacity: 0.6;
       visibility: visible;
-      ${ChatItem}:hover & { /* Keep styles consistent */
-          opacity: 1;
-          visibility: visible;
-      }
   }
 `;
 
 const ButtonContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px; /* Space between buttons */
+  gap: 4px;
   flex-shrink: 0;
 
-  /* Control visibility based on parent hover */
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0.2s ease;
@@ -508,98 +378,90 @@ const ButtonContainer = styled.div`
       visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
-  /* Ensure buttons are always visible on mobile */
   @media (max-width: 768px) {
       opacity: 1;
       visibility: visible;
-      ${ChatItem}:hover & {
-          opacity: 1;
-          visibility: visible;
-      }
   }
 `;
 
 const BottomSection = styled.div`
-  padding: ${props => props.$collapsed ? '10px 5px' : '15px'};
-  border-top: 1px solid ${props => props.theme.border};
-  margin-top: auto; /* Push to bottom */
-  flex-shrink: 0; /* Prevent shrinking */
+  padding: ${props => props.$collapsed ? '8px' : '12px 16px'};
+  margin-top: auto;
+  flex-shrink: 0;
 
-  /* Remove border and adjust padding for mobile view within ScrollableContent */
   @media (max-width: 768px) {
-      border-top: none;
-      padding: 10px 15px; /* Consistent padding */
+      padding: 8px 16px;
   }
 `;
 
 const SectionHeader = styled.div`
   padding: 0 16px;
-  margin-top: 8px;
-  margin-bottom: 8px;
-  font-size: 12px;
+  margin: 12px 0 8px 0;
+  font-size: 11px;
   text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  opacity: ${props => props.$collapsed ? '0' : (props.theme.name === 'lakeside' ? '1' : '0.7')};
+  opacity: ${props => props.$collapsed ? '0' : '0.6'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-  transition: opacity 0.2s ease, visibility 0.2s;
-  transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
+  transition: opacity 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   @media (max-width: 768px) {
-      opacity: ${props => props.theme.name === 'lakeside' ? '1' : '0.7'};
+      opacity: 0.6;
       visibility: visible;
-      margin-top: 4px; /* Reduced since mobile has its own new chat/search section */
   }
 `;
 
 const ModelDropdownContainer = styled.div`
   position: relative;
   width: 100%;
-  padding: 5px 15px; /* Match button horizontal padding */
+  padding: 8px 16px;
 
   @media (max-width: 768px) {
-    padding: 0 10px 10px; /* Adjust padding */
+    padding: 0 16px 8px;
   }
 `;
 
 const ModelDropdownButton = styled.button`
   width: 100%;
   background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : props.theme.inputBackground};
-  border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border};
-  border-radius: 12px;
-  padding: ${props => props.$collapsed ? '8px' : '10px 12px'}; /* Adjust padding */
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 6px;
+  padding: ${props => props.$collapsed ? '8px' : '8px 12px'};
   display: flex;
   align-items: center;
   justify-content: ${props => props.$collapsed ? 'center' : 'space-between'};
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 38px; /* Ensure consistent height */
+  min-height: 36px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   &:hover {
-    border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.border};
+    border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)'};
   }
 
-  /* Icon and text container */
   > div {
       display: flex;
       align-items: center;
-      gap: 8px; /* Space between icon and text */
-      overflow: hidden; /* Prevent text overflow issues */
+      gap: 8px;
+      overflow: hidden;
   }
 
-  /* Dropdown arrow */
   > svg:last-child {
       transition: transform 0.2s;
       transform: ${props => props.$isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
-      flex-shrink: 0; /* Prevent arrow shrinking */
+      flex-shrink: 0;
       opacity: ${props => props.$collapsed ? '0' : '1'};
       visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
   @media (max-width: 768px) {
-      justify-content: space-between; /* Always space-between */
-      padding: 10px 12px; /* Consistent padding */
-       > svg:last-child { /* Ensure arrow is always visible */
+      justify-content: space-between;
+      padding: 8px 12px;
+       > svg:last-child {
            opacity: 1;
            visibility: visible;
        }
@@ -609,8 +471,7 @@ const ModelDropdownButton = styled.button`
 const ModelDropdownText = styled.span`
   opacity: ${props => props.$collapsed ? '0' : '1'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-  transition: opacity 0.2s ease, visibility 0.2s;
-  transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
+  transition: opacity 0.2s ease;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-weight: 400;
   white-space: nowrap;
@@ -618,147 +479,145 @@ const ModelDropdownText = styled.span`
   text-overflow: ellipsis;
 
   @media (max-width: 768px) {
-      opacity: 1; /* Always visible on mobile */
+      opacity: 1;
       visibility: visible;
   }
 `;
 
 const ModelDropdownContent = styled.div`
   position: absolute;
-  bottom: calc(100% + 5px); /* Position above the button with gap */
-  left: 15px; /* Align with container padding */
-  right: 15px; /* Align with container padding */
+  bottom: calc(100% + 8px);
+  left: 16px;
+  right: 16px;
   background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : props.theme.inputBackground};
-  border-radius: 12px;
-  border: 1px solid ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : props.theme.border}; /* Add border */
+  border-radius: 6px;
+  border: 1px solid ${props => props.theme.border};
   z-index: 30;
   overflow: hidden;
-  max-height: 200px; /* Limit height */
-  overflow-y: auto; /* Allow scrolling if needed */
+  max-height: 200px;
+  overflow-y: auto;
   display: ${props => props.$isOpen ? 'block' : 'none'};
   animation: fadeIn 0.2s ease;
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
   }
 
   @media (max-width: 768px) {
-      left: 10px;
-      right: 10px;
-      /* Consider positioning below on mobile if space is limited */
-      /* bottom: auto; top: calc(100% + 5px); */
+      left: 16px;
+      right: 16px;
   }
 `;
 
 const ModelOption = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  margin: 4px; /* Add margin around options */
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 2px;
   cursor: pointer;
   transition: background 0.2s ease;
   background: ${props => {
     if (props.$isSelected) {
-      return props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.15)' : 'rgba(255,255,255,0.1)';
+      return props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 'rgba(0,0,0,0.06)';
     }
     return 'transparent';
   }};
-  border-radius: 8px; /* Match dropdown button */
+  border-radius: 4px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 
   &:hover {
-    background: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 'rgba(255,255,255,0.05)'};
+    background: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.08)' : 'rgba(0,0,0,0.04)'};
   }
 `;
 
 const ModelInfo = styled.div`
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent text overflow */
+  overflow: hidden;
   opacity: ${props => props.$collapsed ? '0' : '1'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-  transition: opacity 0.2s ease, visibility 0.2s;
-  transition-delay: ${props => props.$collapsed ? '0s' : '0.05s'};
+  transition: opacity 0.2s ease;
 
   @media (max-width: 768px) {
-      opacity: 1; /* Always visible on mobile */
+      opacity: 1;
       visibility: visible;
   }
 `;
 
 const ModelName = styled.span`
-  font-weight: ${props => props.$isSelected ? '600' : '400'};
+  font-weight: ${props => props.$isSelected ? '500' : '400'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 0.9rem;
+  font-size: 14px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 `;
 
 const ModelDescription = styled.span`
-  font-size: 0.8rem;
+  font-size: 12px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : `${props.theme.text}80`};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 `;
 
 const SidebarButton = styled.button`
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 12px;
+  padding: 10px 12px;
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-size: 14px;
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
   justify-content: flex-start;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   
   &:hover {
-    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.03)'};
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
   }
   
   svg {
-    margin-right: 10px;
-    width: 18px;
-    height: 18px;
-    opacity: 0.8;
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
     color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
   }
 `;
 
 const ProfileButton = styled(SidebarButton)`
- /* Inherits styles from SidebarButton */
- /* No specific overrides needed based on current styles */
+ /* Inherits all styles from SidebarButton */
 `;
 
-// Mobile dropdown toggle button
 const MobileToggleButton = styled.button`
-  display: none; // Hidden by default
+  display: none;
   background: transparent;
   border: none;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   border-radius: 4px;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   cursor: pointer;
   transition: all 0.2s ease;
   align-items: center;
   justify-content: center;
 
   @media (max-width: 768px) {
-    display: ${props => props.theme.name === 'retro' ? 'none' : 'flex'}; // Hide in retro theme on mobile
-    margin-left: 8px; /* Add space from logo */
+    display: ${props => props.theme.name === 'retro' ? 'none' : 'flex'};
+    margin-left: 8px;
   }
 
   &:hover {
-    background: rgba(255,255,255,0.05);
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
   }
 
   svg {
@@ -768,23 +627,21 @@ const MobileToggleButton = styled.button`
 `;
 
 const SidebarSection = styled.div`
-  border-top: 1px solid ${props => 
-    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : 
-    (props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)')};
+  border-top: 1px solid ${props => props.theme.border};
   padding: 8px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 `;
 
 const NavLink = styled(Link)`
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 12px;
+  padding: 10px 12px;
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: 6px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-size: 14px;
   font-weight: 400;
@@ -792,36 +649,24 @@ const NavLink = styled(Link)`
   transition: all 0.2s ease;
   justify-content: flex-start;
   text-decoration: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   
   &:hover {
-    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.03)'};
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
   }
   
   svg {
-    margin-right: 10px;
-    width: 18px;
-    height: 18px;
-    opacity: 0.8;
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
     color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
   }
 `;
 
 const SearchInputContainer = styled.div`
-  padding: 8px 16px;
-  margin-bottom: 8px;
-  display: ${props => props.$isSearching ? 'block' : 'none'};
-  animation: slideDown 0.2s ease;
-
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+  padding: 4px 16px;
+  margin-bottom: 4px;
 `;
 
 const SearchInputWrapper = styled.div`
@@ -831,12 +676,11 @@ const SearchInputWrapper = styled.div`
   background: ${props => 
     props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : 
     props.theme.inputBackground};
-  border: 1px solid ${props => 
-    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.3)' : 
-    props.theme.border};
-  border-radius: 10px;
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 20px;
   overflow: hidden;
   transition: border-color 0.2s ease;
+  min-height: 32px;
 
   &:focus-within {
     border-color: ${props => 
@@ -847,30 +691,31 @@ const SearchInputWrapper = styled.div`
 
 const SearchInput = styled.input`
   flex: 1;
-  padding: 10px 12px;
+  padding: 6px 8px 6px 4px;
   background: transparent;
   border: none;
   outline: none;
   color: ${props => 
     props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 
     props.theme.text};
-  font-size: 14px;
+  font-size: 13px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   &::placeholder {
     color: ${props => 
       props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.5)' : 
-      `${props.theme.text}66`};
+      `${props.theme.text}60`};
   }
 `;
 
 const SearchCloseButton = styled.button`
   background: none;
   border: none;
-  padding: 8px 12px;
+  padding: 8px;
   cursor: pointer;
   color: ${props => 
     props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : 
-    `${props.theme.text}66`};
+    `${props.theme.text}60`};
   transition: color 0.2s ease;
   display: flex;
   align-items: center;
@@ -883,18 +728,91 @@ const SearchCloseButton = styled.button`
   }
 
   svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 `;
 
 const NoResultsMessage = styled.div`
   text-align: center;
-  padding: 20px;
+  padding: 16px;
   color: ${props => 
     props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : 
-    `${props.theme.text}66`};
+    `${props.theme.text}60`};
   font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+`;
+
+const ProfileDropdownContainer = styled.div`
+  position: relative;
+`;
+
+const ProfileDropdown = styled.div`
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: ${props => 
+    props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : 
+    props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 6px;
+  z-index: 30;
+  overflow: hidden;
+  display: ${props => props.$isOpen ? 'block' : 'none'};
+  animation: fadeIn 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+const ProfileDropdownItem = styled.button`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  justify-content: flex-start;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  &:hover {
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
+  }
+  
+  svg {
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
+  }
+`;
+
+const ProfileAvatar = styled.div`
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: ${props => props.theme.primary};
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  margin-right: 8px;
+  background-image: ${props => props.$profilePicture ? `url(${props.$profilePicture})` : 'none'};
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
 `;
 
 // --- React Component ---
@@ -920,9 +838,12 @@ const Sidebar = ({
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [profilePicture, setProfilePicture] = useState(
+    localStorage.getItem('profilePicture') || null
+  );
   const location = useLocation();
 
   // Ensure sidebar is always expanded in retro theme
@@ -931,6 +852,37 @@ const Sidebar = ({
       setCollapsed(false);
     }
   }, [theme, $collapsed, setCollapsed]);
+
+  // Listen for profile picture changes
+  useEffect(() => {
+    const handleProfilePictureChange = (event) => {
+      setProfilePicture(event.detail.profilePicture);
+    };
+
+    window.addEventListener('profilePictureChanged', handleProfilePictureChange);
+    return () => {
+      window.removeEventListener('profilePictureChanged', handleProfilePictureChange);
+    };
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Close profile dropdown if clicking outside
+      if (isProfileDropdownOpen && !event.target.closest('[data-profile-dropdown]')) {
+        setIsProfileDropdownOpen(false);
+      }
+      // Close model dropdown if clicking outside  
+      if (isModelDropdownOpen && !event.target.closest('[data-model-dropdown]')) {
+        setIsModelDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileDropdownOpen, isModelDropdownOpen]);
 
   // Toggle mobile content visibility
   const toggleMobileExpanded = () => {
@@ -978,18 +930,29 @@ const Sidebar = ({
   };
 
   // Handle search functionality
-  const handleSearchClick = () => {
-    setIsSearching(true);
-    setSearchTerm('');
-  };
-
-  const handleSearchClose = () => {
-    setIsSearching(false);
-    setSearchTerm('');
-  };
-
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
+  };
+
+  // Handle profile dropdown
+  const handleProfileClick = () => {
+    setIsProfileDropdownOpen(!isProfileDropdownOpen);
+  };
+
+  const handleSettingsClick = () => {
+    setIsProfileDropdownOpen(false);
+    toggleSettings();
+  };
+
+  const handleInfoClick = () => {
+    setIsProfileDropdownOpen(false);
+    toggleProfile();
+  };
+
+  const handleSignOutClick = () => {
+    setIsProfileDropdownOpen(false);
+    // Add sign out logic here
+    console.log('Sign out clicked');
   };
 
   // Filter chats based on search term
@@ -1010,7 +973,6 @@ const Sidebar = ({
                src={'/images/sculptor.svg'} 
                alt={'Sculptor AI'} 
              />
-             <LogoText>{'Sculptor'}</LogoText>
            </LogoContainer>
            
            {/* Left Collapse Button (now on the right) - hidden for retro theme */}
@@ -1027,44 +989,41 @@ const Sidebar = ({
            )}
         </TopBarContainer>
         
-        {/* New Chat and Search Buttons Section */}
+        {/* New Chat Button Section */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
-          <SidebarSection style={{ paddingTop: '8px', paddingBottom: '8px', borderTop: 'none' }}>
+          <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }}>
             <SidebarButton onClick={createNewChat}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9"></path>
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
               </svg>
-              <span>New chat</span>
-            </SidebarButton>
-            
-            <SidebarButton onClick={handleSearchClick}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-              <span>Search chats</span>
+              <span>New Chat</span>
             </SidebarButton>
           </SidebarSection>
         )}
 
-        {/* Search Input Section */}
+        {/* Persistent Search Input Section */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
-          <SearchInputContainer $isSearching={isSearching}>
+          <SearchInputContainer>
             <SearchInputWrapper>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '12px', opacity: 0.6, color: 'currentColor' }}>
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
               <SearchInput
                 type="text"
-                placeholder="Search your chats..."
+                placeholder="Search chats..."
                 value={searchTerm}
                 onChange={handleSearchChange}
-                autoFocus
               />
-              <SearchCloseButton onClick={handleSearchClose}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </SearchCloseButton>
+              {searchTerm && (
+                <SearchCloseButton onClick={() => setSearchTerm('')}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </SearchCloseButton>
+              )}
             </SearchInputWrapper>
           </SearchInputContainer>
         )}
@@ -1133,7 +1092,6 @@ const Sidebar = ({
               src={'/images/sculptor.svg'} 
               alt={'Sculptor AI'} 
             />
-            <MobileLogoText>{'Sculptor'}</MobileLogoText>
           </MobileLogoContainer>
           {/* Toggle Button */}
           <MobileToggleButton
@@ -1159,42 +1117,39 @@ const Sidebar = ({
             {/* Scrollable Area (Models, Chats) */}
             <ScrollableContent $isExpanded={isMobileExpanded || (theme && theme.name === 'retro')}>
               
-              {/* New Chat and Search Buttons for Mobile */}
+              {/* New Chat Button for Mobile */}
               <div className="mobile-only" style={{ display: 'none' }}>
-                <SidebarSection style={{ paddingTop: '8px', paddingBottom: '8px', borderTop: 'none' }}>
+                <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }}>
                   <SidebarButton onClick={createNewChat}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 20h9"></path>
                       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                     </svg>
-                    <span>New chat</span>
-                  </SidebarButton>
-                  
-                  <SidebarButton onClick={handleSearchClick}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="11" cy="11" r="8"></circle>
-                      <path d="m21 21-4.35-4.35"></path>
-                    </svg>
-                    <span>Search chats</span>
+                    <span>New Chat</span>
                   </SidebarButton>
                 </SidebarSection>
 
-                {/* Search Input for Mobile */}
-                <SearchInputContainer $isSearching={isSearching}>
+                {/* Persistent Search Input for Mobile */}
+                <SearchInputContainer>
                   <SearchInputWrapper>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '12px', opacity: 0.6, color: 'currentColor' }}>
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <path d="m21 21-4.35-4.35"></path>
+                    </svg>
                     <SearchInput
                       type="text"
-                      placeholder="Search your chats..."
+                      placeholder="Search chats..."
                       value={searchTerm}
                       onChange={handleSearchChange}
-                      autoFocus
                     />
-                    <SearchCloseButton onClick={handleSearchClose}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                      </svg>
-                    </SearchCloseButton>
+                    {searchTerm && (
+                      <SearchCloseButton onClick={() => setSearchTerm('')}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </SearchCloseButton>
+                    )}
                   </SearchInputWrapper>
                 </SearchInputContainer>
               </div>
@@ -1264,28 +1219,59 @@ const Sidebar = ({
               {copyStatus && <div style={{ padding: '5px 10px', fontSize: '11px', color: '#aaa', textAlign: 'center' }}>{copyStatus}</div>}
             </ScrollableContent>
 
-            {/* --- Bottom Buttons Section (Profile, Settings) --- */}
+            {/* --- Bottom Buttons Section (Profile with Dropdown) --- */}
             {/* Rendered outside ScrollableContent to stick to bottom */}
-            <SidebarSection>
-                {/* Profile / Sign In Button */}
-                <SidebarButton
-                  onClick={toggleProfile}
-                  title={isLoggedIn ? `View profile: ${username}` : "Sign In"}
-                >
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
-                   </svg>
-                   <span>{isLoggedIn ? username : 'Sign In'}</span>
-                </SidebarButton>
+            <SidebarSection style={{ borderTop: 'none' }}>
+                {/* Profile / Sign In Button with Dropdown */}
+                <ProfileDropdownContainer data-profile-dropdown>
+                  <ProfileButton
+                    onClick={handleProfileClick}
+                    title={isLoggedIn ? `View profile: ${username}` : "Sign In"}
+                  >
+                     {isLoggedIn ? (
+                       <ProfileAvatar $profilePicture={profilePicture}>
+                         {!profilePicture && username.charAt(0).toUpperCase()}
+                       </ProfileAvatar>
+                     ) : (
+                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+                       </svg>
+                     )}
+                     <span>{isLoggedIn ? username : 'Sign In'}</span>
+                  </ProfileButton>
 
-                {/* Settings Button */}
-                <SidebarButton onClick={toggleSettings} title="Open Settings">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                   </svg>
-                   <span>Settings</span>
-                </SidebarButton>
-              </SidebarSection>
+                  {/* Profile Dropdown Menu */}
+                  <ProfileDropdown $isOpen={isProfileDropdownOpen}>
+                    <ProfileDropdownItem onClick={handleSettingsClick}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                      </svg>
+                      <span>Settings</span>
+                    </ProfileDropdownItem>
+                    
+                    <ProfileDropdownItem onClick={handleInfoClick}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                      </svg>
+                      <span>Info</span>
+                    </ProfileDropdownItem>
+                    
+                    {isLoggedIn && (
+                      <ProfileDropdownItem onClick={handleSignOutClick}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                          <polyline points="16 17 21 12 16 7"></polyline>
+                          <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        <span>Sign Out</span>
+                      </ProfileDropdownItem>
+                    )}
+                  </ProfileDropdown>
+                </ProfileDropdownContainer>
+            </SidebarSection>
           </>
         )}
         {/* --- END: Main content area --- */}
