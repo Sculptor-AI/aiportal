@@ -68,6 +68,10 @@ const MODEL_LOGOS = {
   'anthropic/claude-3-opus': '/images/claude-logo.png',
   'anthropic/claude-3-sonnet': '/images/claude-logo.png',
   
+  // Grok models
+  'grok-beta': '/images/grok-logo.png',
+  'x-ai/grok-beta': '/images/grok-logo.png',
+  
   // Sculptor model
   'ursa-minor': '/images/sculptor.svg'
 };
@@ -151,6 +155,8 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
         imageUrl = '/images/meta-logo.png';
       } else if (modelId?.includes('deepseek')) {
         imageUrl = '/images/deepseek-logo.png';
+      } else if (modelId?.includes('grok') || modelId?.includes('x-ai')) {
+        imageUrl = '/images/grok-logo.png';
       }
     }
     

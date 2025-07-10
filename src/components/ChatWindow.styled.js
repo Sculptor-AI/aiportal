@@ -8,15 +8,7 @@ export const ChatWindowContainer = styled.div`
   width: 100%;
   margin-left: ${props => props.$sidebarCollapsed ? '0' : '300px'}; /* 280px sidebar + 20px margin */
   transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  background: ${props => {
-    if (props.theme.name === 'retro') return 'rgb(0, 128, 128)';
-    if (props.theme.name === 'dark' || props.theme.name === 'oled') {
-      return props.theme.background;
-    }
-    return props.theme.chat;
-  }};
-  // backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
-  // -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
+  background: ${props => props.theme.sidebar};
   font-size: ${props => {
     switch(props.fontSize) {
       case 'small': return '0.9rem';

@@ -5,7 +5,7 @@ export const lightTheme = {
   name: 'light',
   background: 'linear-gradient(145deg, #f0f2f5, #e6e9ee)',
   sidebar: 'rgba(255, 255, 255, 1)',
-  chat: 'rgba(255, 255, 255, 0.6)',
+  chat: 'rgba(255, 255, 255, 1)',
   text: '#212529',
   border: 'rgba(0, 0, 0, 0.06)',
   messageUser: 'rgba(255, 255, 255, 0.8)',
@@ -26,7 +26,7 @@ export const darkTheme = {
   name: 'dark',
   background: 'linear-gradient(145deg, #141414, #1e1e1e)',
   sidebar: 'rgba(30, 30, 30, 1)',
-  chat: 'rgba(35, 35, 35, 0.6)',
+  chat: 'rgba(30, 30, 30, 1)',
   text: '#f0f2f5',
   border: 'rgba(255, 255, 255, 0.06)',
   messageUser: 'rgba(50, 50, 50, 0.8)',
@@ -48,7 +48,7 @@ export const oledTheme = {
   name: 'oled',
   background: '#000000', // True black background
   sidebar: 'rgba(10, 10, 10, 1)',
-  chat: 'rgba(5, 5, 5, 0.6)',
+  chat: 'rgba(10, 10, 10, 1)',
   text: '#f0f2f5',
   border: 'rgba(255, 255, 255, 0.06)',
   messageUser: 'rgba(30, 30, 30, 0.8)',
@@ -73,7 +73,7 @@ export const oceanTheme = {
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   sidebar: 'linear-gradient(rgba(10, 30, 50, 1), rgba(10, 40, 60, 1))', // Deep blue transparent gradient
-  chat: 'rgba(10, 30, 50, 0.6)', // Dark blue with transparency
+  chat: 'linear-gradient(rgba(10, 30, 50, 1), rgba(10, 40, 60, 1))', // Dark blue with transparency
   text: '#ffffff',
   border: 'rgba(255, 255, 255, 0.1)',
   messageUser: 'rgba(25, 55, 85, 0.8)',
@@ -98,7 +98,7 @@ export const forestTheme = {
   backgroundSize: 'cover',
   backgroundPosition: 'center',
   sidebar: 'linear-gradient(rgba(20, 35, 15, 1), rgba(25, 45, 20, 1))', // Dark green gradient that matches forest
-  chat: 'rgba(20, 30, 15, 0.6)', // Dark green with transparency
+  chat: 'linear-gradient(rgba(20, 35, 15, 1), rgba(25, 45, 20, 1))', // Dark green with transparency
   text: '#ffffff',
   border: 'rgba(255, 255, 255, 0.1)',
   messageUser: 'rgba(40, 60, 30, 0.8)', // Medium green for user messages
@@ -154,7 +154,7 @@ export const lakesideTheme = {
   name: 'lakeside',
   background: 'rgba(23, 23, 23)',
   sidebar: 'rgba(120, 47, 64, 1)', // Maroon sidebar as specified
-  chat: 'rgba(25, 25, 30, 0.7)',
+  chat: 'rgba(120, 47, 64, 1)',
   text: '#f0f2f5',
   border: 'rgba(198, 146, 20, 0.15)', // Gold-tinted borders
   messageUser: 'rgba(40, 40, 45, 0.8)',
@@ -178,7 +178,7 @@ export const prideTheme = {
   background: 'linear-gradient(rgba(10, 10, 10, 0.7), rgba(0, 0, 0, 0.75)), linear-gradient(135deg, #E40303 0%, #FF8C00 16.67%, #FFED00 33.33%, #008026 50%, #004DFF 66.67%, #750787 83.33%, #E40303 100%)',
   backgroundAttachment: 'fixed', // Make background fixed for a cooler effect with scrolling
   sidebar: 'rgba(30, 30, 40, 1)', // Slightly lighter, more modern dark
-  chat: 'rgba(20, 20, 25, 0.8)', // Consistent dark base for chat area
+  chat: 'rgba(30, 30, 40, 1)',
   text: '#f0f2f5', // Softer white for better readability
   border: 'rgba(220, 220, 255, 0.15)', // Slightly brighter border
   // Enhanced rainbow glow using specific pride colors - removed
@@ -208,7 +208,7 @@ export const transTheme = {
   backgroundAttachment: 'fixed',
   // Slightly adjusted UI element backgrounds to let background color influence them more
   sidebar: 'rgba(30, 25, 35, 1)',
-  chat: 'rgba(20, 15, 25, 0.75)',
+  chat: 'rgba(30, 25, 35, 1)',
   text: '#f0f2f5',
   border: 'rgba(245, 169, 184, 0.3)', // Slightly more visible pink border
   borderGlow: 'none',
@@ -233,7 +233,7 @@ export const galaxyTheme = {
   background: 'linear-gradient(135deg, #0f052b, #12063b, #1b0a4a)',
   backgroundAttachment: 'fixed',
   sidebar: 'rgba(15, 10, 40, 1)',
-  chat: 'rgba(20, 15, 50, 0.7)',
+  chat: 'rgba(15, 10, 40, 1)',
   text: '#e0e0ff',
   border: 'rgba(255, 255, 255, 0.1)',
   messageUser: 'rgba(35, 25, 70, 0.8)',
@@ -255,7 +255,7 @@ export const sunsetTheme = {
   name: 'sunset',
   background: 'linear-gradient(145deg, #ff7e5f, #feb47b)',
   sidebar: 'rgba(255, 126, 95, 1)',
-  chat: 'rgba(254, 180, 123, 0.6)',
+  chat: 'rgba(255, 126, 95, 1)',
   text: '#2d0b00',
   border: 'rgba(0, 0, 0, 0.1)',
   messageUser: 'rgba(255, 230, 200, 0.8)',
@@ -278,7 +278,7 @@ export const cyberpunkTheme = {
   background: 'linear-gradient(145deg, #0f0c29, #302b63, #24243e)',
   backgroundAttachment: 'fixed',
   sidebar: 'rgba(0, 0, 0, 1)',
-  chat: 'rgba(15, 15, 30, 0.6)',
+  chat: 'rgba(0, 0, 0, 1)',
   text: '#f5f5f5',
   border: 'rgba(255, 0, 255, 0.2)',
   messageUser: 'rgba(50, 10, 60, 0.8)',
@@ -300,7 +300,7 @@ export const bubblegumTheme = {
   name: 'bubblegum',
   background: 'linear-gradient(145deg, #ff9a9e, #fad0c4)',
   sidebar: 'rgba(255, 150, 180, 1)',
-  chat: 'rgba(255, 200, 220, 0.6)',
+  chat: 'rgba(255, 150, 180, 1)',
   text: '#551133',
   border: 'rgba(255, 0, 128, 0.2)',
   messageUser: 'rgba(255, 182, 193, 0.8)',
@@ -322,7 +322,7 @@ export const desertTheme = {
   name: 'desert',
   background: 'linear-gradient(145deg, #c79081, #dfa579)',
   sidebar: 'rgba(199, 144, 129, 1)',
-  chat: 'rgba(223, 165, 121, 0.6)',
+  chat: 'rgba(199, 144, 129, 1)',
   text: '#3e2b1f',
   border: 'rgba(60, 30, 20, 0.2)',
   messageUser: 'rgba(238, 194, 150, 0.8)',
@@ -344,7 +344,7 @@ export const retroTheme = {
   name: 'retro',
   background: '#008080', // Teal desktop background
   sidebar: '#C0C0C0',    // Classic gray for UI elements
-  chat: '#FFFFFF',        // White for chat area (like a document)
+  chat: '#C0C0C0',        // White for chat area (like a document)
   text: '#000000',        // Black text
   border: '#808080',      // Dark gray for general borders
   windowTitleBarBackground: '#000080', // Navy blue for title bars
@@ -415,6 +415,17 @@ export const modelThemes = {
     primary: '#2E0854',     // Deep purple
     secondary: '#6A1B9A',   // Lighter purple
     gradient: 'linear-gradient(135deg, #2E0854, #6A1B9A)'
+  },
+  // Add Grok theme
+  'grok-beta': {
+    primary: '#000000',     // Black
+    secondary: '#1DA1F2',   // Twitter blue
+    gradient: 'linear-gradient(135deg, #000000, #1DA1F2)'
+  },
+  'x-ai/grok-beta': {
+    primary: '#000000',     // Black
+    secondary: '#1DA1F2',   // Twitter blue
+    gradient: 'linear-gradient(135deg, #000000, #1DA1F2)'
   }
 };
 

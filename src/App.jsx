@@ -35,7 +35,7 @@ const AppContainer = styled.div`
   height: 100vh;
   overflow: hidden;
   position: relative;
-  background: ${props => props.theme.background};
+  background: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
   transition: background 0.3s ease;
 `;

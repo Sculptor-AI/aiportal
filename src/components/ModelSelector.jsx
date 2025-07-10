@@ -304,6 +304,7 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
     if (modelId.includes('gpt') || modelId.includes('chatgpt')) return 'OpenAI';
     if (modelId.includes('nemotron')) return 'NVIDIA';
     if (modelId.includes('mercury')) return 'Inception AI';
+    if (modelId.includes('grok') || modelId.includes('x-ai')) return 'xAI';
     if (modelId.includes('ursa')) return 'Custom GGUF';
     return 'AI Provider';
   };
@@ -367,6 +368,11 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
     // Check for Mercury models
     if (modelId.includes('mercury')) {
       return 'mercury';
+    }
+    
+    // Check for Grok models
+    if (modelId.includes('grok') || modelId.includes('x-ai')) {
+      return 'grok';
     }
     
     // Default to openrouter for other backend models
