@@ -3,7 +3,6 @@ import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
-import ToolCallsContainer from './ToolCallsContainer';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
 
 // Format markdown text including bold, italic, bullet points and code blocks
@@ -746,21 +745,263 @@ const ThinkingContent = styled.div`
   border-left: ${props => props.expanded ? `2px solid ${props.theme.text}30` : 'none'};
 `;
 
-const ThinkingDropdown = ({ thinkingContent }) => {
+const ToolActivitySection = styled.div`
+  margin-bottom: 15px;
+`;
+
+const ToolActivitySectionHeader = styled.div`
+  font-size: 0.9em;
+  font-weight: 600;
+  color: ${props => props.theme.text}dd;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const ToolActivityItemHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+`;
+
+const ToolActivityItem = styled.div`
+  background: ${props => props.theme.name === 'light' ? 'rgba(248, 249, 250, 0.8)' : 'rgba(32, 33, 36, 0.8)'};
+  border: 1px solid ${props => props.theme.border || '#e1e5e9'};
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const ToolActivityIcon = styled.span`
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+`;
+
+const ToolActivityName = styled.span`
+  font-weight: 500;
+  color: ${props => props.theme.text};
+  flex: 1;
+`;
+
+const pulseAnimation = keyframes`
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+`;
+
+const ToolActivityStatus = styled.span`
+  font-size: 0.75em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  
+  ${props => {
+    switch (props.status) {
+      case 'pending':
+        return `
+          background: rgba(251, 191, 36, 0.2);
+          color: #f59e0b;
+          border: 1px solid rgba(251, 191, 36, 0.3);
+        `;
+      case 'executing':
+        return `
+          background: rgba(59, 130, 246, 0.2);
+          color: #3b82f6;
+          border: 1px solid rgba(59, 130, 246, 0.3);
+          animation: ${pulseAnimation} 2s infinite;
+        `;
+      case 'completed':
+        return `
+          background: rgba(16, 185, 129, 0.2);
+          color: #10b981;
+          border: 1px solid rgba(16, 185, 129, 0.3);
+        `;
+      case 'error':
+        return `
+          background: rgba(239, 68, 68, 0.2);
+          color: #ef4444;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+        `;
+      default:
+        return `
+          background: rgba(107, 114, 128, 0.2);
+          color: #6b7280;
+          border: 1px solid rgba(107, 114, 128, 0.3);
+        `;
+    }
+  }}
+`;
+
+const ToolActivityDetail = styled.div`
+  margin-top: 8px;
+`;
+
+const ToolActivityLabel = styled.div`
+  font-size: 0.8em;
+  font-weight: 500;
+  color: ${props => props.theme.text}aa;
+  margin-bottom: 4px;
+`;
+
+const ToolActivityValue = styled.div`
+  font-size: 0.8em;
+  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(20, 21, 24, 0.7)'};
+  border: 1px solid ${props => props.theme.border}50;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 80px;
+  overflow-y: auto;
+  color: ${props => props.theme.text}dd;
+  
+  &::-webkit-scrollbar {
+    width: 3px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border};
+    border-radius: 2px;
+  }
+`;
+
+const ToolActivityError = styled.div`
+  font-size: 0.8em;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #ef4444;
+  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+`;
+
+const ThinkingSection = styled.div`
+  ${props => props.hasToolActivity ? 'border-top: 1px solid ' + (props.theme.border || '#e1e5e9') + '30; padding-top: 15px; margin-top: 5px;' : ''}
+`;
+
+const ThinkingSectionHeader = styled.div`
+  font-size: 0.9em;
+  font-weight: 600;
+  color: ${props => props.theme.text}dd;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
   const [expanded, setExpanded] = useState(false);
   
   const toggleExpanded = () => {
     setExpanded(!expanded);
   };
   
+  const hasThinking = thinkingContent && thinkingContent.toString().trim();
+  const hasToolActivity = toolCalls && toolCalls.length > 0;
+  
+  if (!hasThinking && !hasToolActivity) {
+    return null;
+  }
+  
+  const getHeaderTitle = () => {
+    if (hasThinking && hasToolActivity) return 'Thoughts & Tools';
+    if (hasThinking) return 'Thoughts';
+    return 'Tool Activity';
+  };
+  
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending': return '⏳';
+      case 'executing': return '⚙️';
+      case 'completed': return '✅';
+      case 'error': return '❌';
+      default: return '🔧';
+    }
+  };
+  
   return (
     <ThinkingDropdownContainer>
       <ThinkingHeader onClick={toggleExpanded}>
-        <span>Thoughts</span>
+        <span>{getHeaderTitle()}</span>
         <ThinkingArrow expanded={expanded}>▾</ThinkingArrow>
       </ThinkingHeader>
       <ThinkingContent expanded={expanded}>
-        {thinkingContent}
+        {hasToolActivity && (
+          <ToolActivitySection>
+            <ToolActivitySectionHeader>🛠️ Tool Activity</ToolActivitySectionHeader>
+            {toolCalls.map((toolCall, index) => (
+              <ToolActivityItem key={toolCall.tool_id || index}>
+                <ToolActivityItemHeader>
+                  <ToolActivityIcon>
+                    {getStatusIcon(toolCall.status)}
+                  </ToolActivityIcon>
+                  <ToolActivityName>
+                    {toolCall.tool_name || 'Unknown Tool'}
+                  </ToolActivityName>
+                  <ToolActivityStatus status={toolCall.status}>
+                    {toolCall.status || 'pending'}
+                  </ToolActivityStatus>
+                </ToolActivityItemHeader>
+                
+                {toolCall.parameters && Object.keys(toolCall.parameters).length > 0 && (
+                  <ToolActivityDetail>
+                    <ToolActivityLabel>Parameters:</ToolActivityLabel>
+                    <ToolActivityValue>
+                      {JSON.stringify(toolCall.parameters, null, 2)}
+                    </ToolActivityValue>
+                  </ToolActivityDetail>
+                )}
+                
+                {toolCall.result && toolCall.status === 'completed' && (
+                  <ToolActivityDetail>
+                    <ToolActivityLabel>Result:</ToolActivityLabel>
+                    <ToolActivityValue>
+                      {typeof toolCall.result === 'string' ? toolCall.result : JSON.stringify(toolCall.result, null, 2)}
+                    </ToolActivityValue>
+                  </ToolActivityDetail>
+                )}
+                
+                {toolCall.error && toolCall.status === 'error' && (
+                  <ToolActivityDetail>
+                    <ToolActivityLabel>Error:</ToolActivityLabel>
+                    <ToolActivityError>
+                      {toolCall.error}
+                    </ToolActivityError>
+                  </ToolActivityDetail>
+                )}
+              </ToolActivityItem>
+            ))}
+          </ToolActivitySection>
+        )}
+        
+        {hasThinking && (
+          <ThinkingSection hasToolActivity={hasToolActivity}>
+            {hasToolActivity && <ThinkingSectionHeader>💭 Reasoning</ThinkingSectionHeader>}
+            {thinkingContent}
+          </ThinkingSection>
+        )}
       </ThinkingContent>
     </ThinkingDropdownContainer>
   );
@@ -1236,7 +1477,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 // If content has thinking tags, show thinking dropdown first, then main content
                 return (
                   <>
-                    <ThinkingDropdown thinkingContent={processedContent.thinking} />
+                    <ThinkingDropdown thinkingContent={processedContent.thinking} toolCalls={toolCalls} />
                     {isLoading ? (
                       <StreamingMarkdownRenderer 
                         text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
@@ -1257,8 +1498,15 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </>
                 );
               } else {
-                // If content has no thinking tags, display it normally (as before)
-                return contentToProcess.split('\n\n-').map((part, index) => {
+                // If content has no thinking tags, but may have tool activity
+                const hasToolActivity = toolCalls && toolCalls.length > 0;
+                
+                return (
+                  <>
+                    {hasToolActivity && (
+                      <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
+                    )}
+                    {contentToProcess.split('\n\n-').map((part, index) => {
                   if (index === 0) {
                     // This is the main content part - process markdown formatting
                     const formattedPart = formatContent(part);
@@ -1288,19 +1536,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   }
                   // This is the model signature part
                   return <em key={`signature-part-${index}`}>- {part}</em>;
-                });
+                    })}
+                  </>
+                );
               }
             })()}
           </Content>
           
-          {/* Tool calls section */}
-          {toolCalls && toolCalls.length > 0 && (
-            <ToolCallsContainer 
-              toolCalls={toolCalls}
-              availableTools={availableTools}
-              theme={theme}
-            />
-          )}
           
           {/* Sources section */}
           {hasSources && !isLoading && (
