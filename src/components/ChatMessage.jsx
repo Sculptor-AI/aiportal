@@ -745,28 +745,86 @@ const ThinkingContent = styled.div`
   border-left: ${props => props.expanded ? `2px solid ${props.theme.text}30` : 'none'};
 `;
 
-const ThinkingDropdown = ({ thinkingContent }) => {
+const ThinkingDropdown = ({ thinkingContent, toolActivity }) => {
   const [expanded, setExpanded] = useState(false);
   
   const toggleExpanded = () => {
     setExpanded(!expanded);
   };
   
+  const hasThinking = thinkingContent && thinkingContent.toString().trim();
+  const hasToolActivity = toolActivity && toolActivity.length > 0;
+  
+  if (!hasThinking && !hasToolActivity) {
+    return null;
+  }
+  
   return (
     <ThinkingDropdownContainer>
       <ThinkingHeader onClick={toggleExpanded}>
-        <span>Thoughts</span>
+        <span>
+          {hasThinking && hasToolActivity ? 'Thoughts & Tools' : 
+           hasThinking ? 'Thoughts' : 'Tool Activity'}
+        </span>
         <ThinkingArrow expanded={expanded}>▾</ThinkingArrow>
       </ThinkingHeader>
       <ThinkingContent expanded={expanded}>
-        {thinkingContent}
+        {hasToolActivity && (
+          <div style={{ marginBottom: hasThinking ? '15px' : '0' }}>
+            <div style={{ fontSize: '0.9em', fontWeight: '500', marginBottom: '8px', opacity: '0.8' }}>
+              Tool Activity
+            </div>
+            {toolActivity.map((activity, index) => (
+              <div key={index} style={{ 
+                marginBottom: '8px', 
+                padding: '8px', 
+                background: 'rgba(0, 0, 0, 0.05)', 
+                borderRadius: '6px',
+                fontSize: '0.85em'
+              }}>
+                <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+                  {activity.type === 'tool_call' ? `🔧 ${activity.name || 'Tool'}` :
+                   activity.type === 'tool_execution' ? `⚙️ Executing ${activity.name || 'tool'}` :
+                   activity.type === 'tool_result' ? `✅ ${activity.name || 'Tool'} completed` :
+                   activity.type === 'tool_error' ? `❌ ${activity.name || 'Tool'} failed` :
+                   `🔄 ${activity.type}`}
+                </div>
+                {activity.input && (
+                  <div style={{ opacity: '0.7', marginBottom: '4px' }}>
+                    <strong>Input:</strong> {typeof activity.input === 'string' ? activity.input : JSON.stringify(activity.input)}
+                  </div>
+                )}
+                {activity.output && (
+                  <div style={{ opacity: '0.7' }}>
+                    <strong>Output:</strong> {typeof activity.output === 'string' ? activity.output : JSON.stringify(activity.output)}
+                  </div>
+                )}
+                {activity.error && (
+                  <div style={{ opacity: '0.7', color: '#dc3545' }}>
+                    <strong>Error:</strong> {activity.error}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {hasThinking && (
+          <div>
+            {hasToolActivity && (
+              <div style={{ fontSize: '0.9em', fontWeight: '500', marginBottom: '8px', opacity: '0.8' }}>
+                Reasoning
+              </div>
+            )}
+            {thinkingContent}
+          </div>
+        )}
       </ThinkingContent>
     </ThinkingDropdownContainer>
   );
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolActivity } = message;
   
   // Debug logging
   if (role === 'assistant' && sources) {
@@ -1235,7 +1293,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 // If content has thinking tags, show thinking dropdown first, then main content
                 return (
                   <>
-                    <ThinkingDropdown thinkingContent={processedContent.thinking} />
+                    <ThinkingDropdown thinkingContent={processedContent.thinking} toolActivity={toolActivity} />
                     {isLoading ? (
                       <StreamingMarkdownRenderer 
                         text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
@@ -1256,8 +1314,15 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </>
                 );
               } else {
-                // If content has no thinking tags, display it normally (as before)
-                return contentToProcess.split('\n\n-').map((part, index) => {
+                // If content has no thinking tags, but may have tool activity
+                const hasToolActivity = toolActivity && toolActivity.length > 0;
+                
+                return (
+                  <>
+                    {hasToolActivity && (
+                      <ThinkingDropdown thinkingContent={null} toolActivity={toolActivity} />
+                    )}
+                    {contentToProcess.split('\n\n-').map((part, index) => {
                   if (index === 0) {
                     // This is the main content part - process markdown formatting
                     const formattedPart = formatContent(part);
@@ -1287,7 +1352,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   }
                   // This is the model signature part
                   return <em key={`signature-part-${index}`}>- {part}</em>;
-                });
+                    })}
+                  </>
+                );
               }
             })()}
           </Content>

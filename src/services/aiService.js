@@ -230,6 +230,13 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
               continue;
             }
             
+            // Handle tool events
+            if (parsed.type && parsed.type.startsWith('tool_')) {
+              // Yield tool events as special objects
+              yield { type: 'tool', event: parsed };
+              continue;
+            }
+            
             // Handle content chunks
             if (parsed.choices?.[0]?.delta?.content) {
               hasReceivedContent = true;

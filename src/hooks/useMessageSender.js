@@ -477,6 +477,7 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
         );
         
         let messageSources = [];
+        let toolActivity = [];
         
         for await (const chunk of messageGenerator) {
           // Check if chunk is an object with type 'sources'
@@ -486,9 +487,27 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
             continue;
           }
           
+          // Check if chunk is a tool event
+          if (typeof chunk === 'object' && chunk.type === 'tool') {
+            // Collect tool activity to show in thinking dropdown
+            toolActivity.push(chunk.event);
+            
+            // Update message with tool activity but don't change content
+            updateMessage(currentChatId, aiMessageId, { 
+              content: streamedContent, 
+              isLoading: true,
+              toolActivity: toolActivity 
+            });
+            continue;
+          }
+          
           // Otherwise it's a content chunk
           streamedContent += chunk;
-          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
+          updateMessage(currentChatId, aiMessageId, { 
+            content: streamedContent, 
+            isLoading: true,
+            toolActivity: toolActivity.length > 0 ? toolActivity : undefined 
+          });
         }
         finalAssistantContent = streamedContent;
         
@@ -501,6 +520,11 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
           // Fallback to old method if needed
           messageUpdates.sources = window.__lastSearchSources;
           window.__lastSearchSources = null;
+        }
+        
+        // Add tool activity if we received any
+        if (toolActivity.length > 0) {
+          messageUpdates.toolActivity = toolActivity;
         }
         
         updateMessage(currentChatId, aiMessageId, messageUpdates);
