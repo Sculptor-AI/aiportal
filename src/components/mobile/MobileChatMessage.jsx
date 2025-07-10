@@ -7,25 +7,32 @@ const MessageContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: ${props => props.$isUser ? 'flex-end' : 'flex-start'};
+  width: 100%;
 `;
 
 const MessageBubble = styled.div`
-  max-width: 85%;
-  padding: 12px 16px;
-  border-radius: 18px;
+  max-width: ${props => props.$isUser ? '85%' : 'calc(100% - 30px)'};
+  padding: ${props => props.$isUser ? '12px 16px' : '0'};
+  padding-right: ${props => props.$isUser ? '16px' : '20px'};
+  border-radius: ${props => props.$isUser ? '20px' : '0'};
   word-wrap: break-word;
   position: relative;
+  margin-right: ${props => props.$isUser ? '0' : '0'};
+  margin-left: ${props => props.$isUser ? 'auto' : '10px'};
   
   ${props => props.$isUser ? `
-    background: ${props.theme.primary};
-    color: white;
+    background: ${
+      props.theme.name === 'dark' || props.theme.name === 'oled' 
+        ? 'rgba(40, 40, 45, 0.95)' 
+        : props.theme.primary
+    };
+    color: ${props.theme.name === 'dark' || props.theme.name === 'oled' ? props.theme.text : 'white'};
     border-bottom-right-radius: 8px;
-    margin-left: auto;
-  ` : `
-    background: ${props.theme.inputBackground};
-    color: ${props.theme.text};
-    border-bottom-left-radius: 8px;
+    box-shadow: 0 2px 10px ${props.theme.shadow};
     border: 1px solid ${props.theme.border};
+  ` : `
+    background: transparent;
+    color: ${props.theme.text};
   `}
   
   /* Handle long content gracefully */

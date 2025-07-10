@@ -6,9 +6,15 @@ export const ChatWindowContainer = styled.div`
   flex-direction: column;
   height: 100%;
   width: 100%;
-  margin-left: ${props => props.$sidebarCollapsed ? '0' : '280px'}; /* Push content when sidebar is expanded */
+  margin-left: ${props => props.$sidebarCollapsed ? '0' : '300px'}; /* 280px sidebar + 20px margin */
   transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  background: ${props => props.theme.name === 'retro' ? 'rgb(0, 128, 128)' : props.theme.chat};
+  background: ${props => {
+    if (props.theme.name === 'retro') return 'rgb(0, 128, 128)';
+    if (props.theme.name === 'dark' || props.theme.name === 'oled') {
+      return props.theme.background;
+    }
+    return props.theme.chat;
+  }};
   // backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   // -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   font-size: ${props => {
@@ -29,7 +35,7 @@ export const ChatWindowContainer = styled.div`
 `;
 
 export const ChatHeader = styled.div`
-  padding: 5px 20px 15px 45px; // Reduced top padding to align with hamburger menu
+  padding: 5px 20px 15px ${props => props.$sidebarCollapsed ? '45px' : '20px'}; // Adjust left padding based on sidebar state
   display: flex;
   align-items: flex-start; // Change from center to flex-start for better alignment
   justify-content: flex-start;
@@ -37,6 +43,7 @@ export const ChatHeader = styled.div`
   -webkit-backdrop-filter: blur(5px);
   z-index: 101; // Changed from 10 to 101
   position: relative;
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
 export const ChatTitleSection = styled.div`
@@ -44,7 +51,7 @@ export const ChatTitleSection = styled.div`
   flex-direction: column;
   flex: 1;
   gap: 4px; // Use gap instead of margin for more consistent spacing
-  padding-left: ${props => props.$sidebarCollapsed ? '20px' : '-45px'}; // Move further left when sidebar is open since hamburger disappears
+  padding-left: ${props => props.$sidebarCollapsed ? '20px' : '0px'}; // Reset padding when sidebar is open
   transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
@@ -71,12 +78,18 @@ export const MessageList = styled.div`
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 20px;
+  padding: 20px 0;
   padding-bottom: ${props => props.theme.name === 'retro' ? '140px' : '115px'}; /* Add extra padding for retro theme */
   display: flex;
   flex-direction: column;
   width: 100%;
   position: relative;
+  background: ${props => {
+    if (props.theme.name === 'dark' || props.theme.name === 'oled') {
+      return 'transparent';
+    }
+    return props.theme.name === 'retro' ? 'transparent' : 'rgba(255, 255, 255, 0.05)';
+  }};
   
   /* Stylish scrollbar */
   &::-webkit-scrollbar {
@@ -175,7 +188,7 @@ export const InputContainer = styled.div`
 
     const centerPosition = $sidebarCollapsed 
       ? `calc(50% + ${rightPanelOffset}px)` 
-      : `calc(50% + 140px + ${rightPanelOffset}px)`; // 140px is half of sidebar width 280px
+      : `calc(50% + 160px + ${rightPanelOffset}px)`; // Increased from 140px to 160px to account for sidebar's 20px left margin // 140px is half of sidebar width 280px
     
     if ($animateDown) {
       return css`
@@ -577,6 +590,8 @@ export const ActionChipsContainer = styled.div`
   gap: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
   pointer-events: auto;
   width: ${props => props.theme.name === 'retro' ? '90%' : '95%'};
+  overflow: hidden;
+  position: relative;
 `;
 
 export const ActionChip = styled.button`
@@ -781,5 +796,85 @@ export const ToolbarItem = styled.button`
     height: 18px;
     color: ${props => props.theme.text};
     opacity: 0.8;
+  }
+`;
+
+export const OverflowChipButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '20px'};
+  background-color: ${props => {
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    return 'rgba(0, 0, 0, 0.03)';
+  }};
+  border: ${props => {
+    if (props.theme.name === 'retro') {
+      return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
+    }
+    return '1px solid rgba(0, 0, 0, 0.05)';
+  }};
+  color: ${props => props.theme.text + '99'};
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+    'none'};
+  min-width: 44px;
+  
+  &:hover {
+    background-color: ${props => {
+      if (props.theme.name === 'retro') {
+        return props.theme.buttonFace;
+      }
+      return 'rgba(0, 0, 0, 0.06)';
+    }};
+    color: ${props => props.theme.text};
+  }
+
+  &:active:not(:disabled) {
+    ${props => props.theme.name === 'retro' && `
+      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
+      padding: 7px 11px 5px 13px;
+    `}
+  }
+`;
+
+export const OverflowDropdown = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'};
+  box-shadow: ${props => props.theme.name === 'retro' ? 
+    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` : 
+    '0 4px 12px rgba(0, 0, 0, 0.15)'};
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+  z-index: 1000;
+  
+  // Animate in
+  animation: fadeIn 0.2s ease-out;
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 `; 

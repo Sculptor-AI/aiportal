@@ -89,7 +89,7 @@ const MainGreeting = styled.div`
   position: fixed;
   top: ${props => props.$toolbarOpen ? '25%' : '28%'}; /* Moved up from 32%/35% */
   left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 0 : 140; // 140 is half of sidebar width 280px
+    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160; // Increased from 140px to 160px to account for sidebar's 20px left margin
     let rightPanelOffset = 0;
     if (props.$whiteboardOpen) rightPanelOffset -= 225;
     if (props.$equationEditorOpen) rightPanelOffset -= 225;
@@ -123,7 +123,7 @@ const MainGreeting = styled.div`
   h1 {
     font-size: min(3.2rem, 8vw); /* Increased from 2.2rem, 6vw */
     font-weight: 500;
-    color: #000000; // Changed from props.theme.text to ensure it's black
+    color: ${props => props.theme.text};
     margin: 0;
     padding: 0;
     line-height: 1.2; 

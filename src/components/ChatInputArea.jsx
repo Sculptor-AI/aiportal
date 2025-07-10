@@ -19,7 +19,9 @@ import {
   FilePreviewChip,
   FilePreviewIcon,
   FilePreviewName,
-  FilePreviewRemove
+  FilePreviewRemove,
+  OverflowChipButton,
+  OverflowDropdown
 } from './ChatWindow.styled';
 
 const ChatInputArea = forwardRef(({
@@ -67,12 +69,18 @@ const ChatInputArea = forwardRef(({
   const [isImagePromptMode, setIsImagePromptMode] = useState(false);
   const [isFlowchartPromptMode, setIsFlowchartPromptMode] = useState(false);
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
+  const [visibleChips, setVisibleChips] = useState(['mode', 'search', 'deep-research', 'create']);
+  const [hiddenChips, setHiddenChips] = useState([]);
+  const [showOverflowDropdown, setShowOverflowDropdown] = useState(false);
 
   const inputRef = useRef(null);
   const toolbarRef = useRef(null);
   const toolbarContainerRef = useRef(null);
   const modeAnchorRef = useRef(null);
   const createAnchorRef = useRef(null);
+  const chipsContainerRef = useRef(null);
+  const chipRefs = useRef([]);
+  const overflowButtonRef = useRef(null);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -107,6 +115,86 @@ const ChatInputArea = forwardRef(({
       onToolbarToggle(showToolbar);
     }
   }, [showToolbar, onToolbarToggle]);
+
+  // Responsive chip management
+  useEffect(() => {
+    const handleResize = () => {
+      if (!chipsContainerRef.current) return;
+      
+      const containerWidth = chipsContainerRef.current.offsetWidth;
+      const hammerButtonWidth = 44; // HammerButton width + gap
+      const overflowButtonWidth = 50; // Width for "..." button
+      let availableWidth = containerWidth - hammerButtonWidth;
+      
+      // Define all chips
+      const allChips = ['mode', 'search', 'deep-research', 'create'];
+      
+      let currentWidth = 0;
+      const visible = [];
+      const hidden = [];
+      
+      for (let i = 0; i < allChips.length; i++) {
+        const chipRef = chipRefs.current[i];
+        if (chipRef) {
+          const chipWidth = chipRef.offsetWidth + 8; // Include gap
+          
+          // Check if we need to show overflow button
+          const needsOverflow = i < allChips.length - 1 && currentWidth + chipWidth > availableWidth - overflowButtonWidth;
+          const isLastAndFits = i === allChips.length - 1 && currentWidth + chipWidth <= availableWidth;
+          
+          if (needsOverflow) {
+            // This chip and remaining chips go to hidden
+            hidden.push(...allChips.slice(i));
+            break;
+          } else if (isLastAndFits || currentWidth + chipWidth <= availableWidth) {
+            // This chip fits
+            visible.push(allChips[i]);
+            currentWidth += chipWidth;
+          } else {
+            // This chip doesn't fit
+            hidden.push(...allChips.slice(i));
+            break;
+          }
+        } else {
+          // Fallback if ref not available - assume it fits
+          visible.push(allChips[i]);
+        }
+      }
+      
+      // Only update state if there's actually a change
+      if (JSON.stringify(visible) !== JSON.stringify(visibleChips) || 
+          JSON.stringify(hidden) !== JSON.stringify(hiddenChips)) {
+        setVisibleChips(visible);
+        setHiddenChips(hidden);
+      }
+    };
+    
+    // Use a timeout to ensure DOM is updated
+    const timeoutId = setTimeout(handleResize, 100);
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [thinkingMode, selectedActionChip, createType]);
+
+  // Close overflow dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showOverflowDropdown && 
+          overflowButtonRef.current && 
+          !overflowButtonRef.current.contains(event.target)) {
+        setShowOverflowDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showOverflowDropdown]);
 
   const handleInternalSubmit = () => {
     if (isLoading || isProcessingFile) return;
@@ -262,6 +350,185 @@ const ChatInputArea = forwardRef(({
 
   const isAnyModalOpen = isEquationEditorOpen || isWhiteboardOpen || showModeModal || showCreateModal || isGraphingOpen || isFlowchartOpen || isSandbox3DOpen;
 
+  // Helper function to render a chip
+  const renderChip = (chipData, index, isHidden = false) => {
+    const { type } = chipData;
+    const ref = isHidden ? null : (el) => { chipRefs.current[index] = el; };
+    
+    if (type === 'mode') {
+      return (
+        <ActionChip
+          key="mode"
+          ref={isHidden ? null : (el) => { 
+            if (el) {
+              modeAnchorRef.current = el;
+              if (!isHidden) chipRefs.current[index] = el;
+            }
+          }}
+          selected={thinkingMode !== null}
+          onClick={() => {
+            if (isHidden) setShowOverflowDropdown(false);
+            if (modeAnchorRef.current) {
+              modeAnchorRef.current.offsetHeight;
+              const currentRect = modeAnchorRef.current.getBoundingClientRect();
+              setModeMenuRect(currentRect);
+            }
+            setShowModeModal(true);
+          }}
+        >
+          {theme.name === 'retro' ? (
+            <RetroIconWrapper>
+              <img src="/images/retroTheme/modeIcon.png" alt="Mode" style={{ width: '16px', height: '16px' }} />
+            </RetroIconWrapper>
+          ) : thinkingMode === 'thinking' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+              <line x1="16" y1="8" x2="2" y2="22"></line>
+              <line x1="17.5" y1="15" x2="9" y2="15"></line>
+            </svg>
+          ) : thinkingMode === 'instant' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+              <rect x="9" y="9" width="6" height="6"></rect>
+              <line x1="9" y1="2" x2="9" y2="4"></line>
+              <line x1="15" y1="2" x2="15" y2="4"></line>
+              <line x1="9" y1="20" x2="9" y2="22"></line>
+              <line x1="15" y1="20" x2="15" y2="22"></line>
+              <line x1="20" y1="9" x2="22" y2="9"></line>
+              <line x1="20" y1="14" x2="22" y2="14"></line>
+              <line x1="2" y1="9" x2="4" y2="9"></line>
+              <line x1="2" y1="14" x2="4" y2="14"></line>
+            </svg>
+          )}
+          {thinkingMode === 'thinking' ? 'Thinking' : thinkingMode === 'instant' ? 'Instant' : 'Mode'}
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </ActionChip>
+      );
+    } else if (type === 'search') {
+      return (
+        <ActionChip
+          key="search"
+          ref={ref}
+          selected={selectedActionChip === 'search'}
+          onClick={() => {
+            if (isHidden) setShowOverflowDropdown(false);
+            if (selectedActionChip === 'search') {
+              setSelectedActionChip(null);
+            } else {
+              setSelectedActionChip('search');
+              setThinkingMode(null);
+            }
+          }}
+        >
+          {theme.name === 'retro' ? (
+            <RetroIconWrapper>
+              <img src="/images/retroTheme/searchIcon.png" alt="Search" style={{ width: '16px', height: '16px' }} />
+            </RetroIconWrapper>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          )}
+          Search
+        </ActionChip>
+      );
+    } else if (type === 'deep-research') {
+      return (
+        <ActionChip
+          key="deep-research"
+          ref={ref}
+          selected={selectedActionChip === 'deep-research'}
+          onClick={() => {
+            if (isHidden) setShowOverflowDropdown(false);
+            if (selectedActionChip === 'deep-research') {
+              setSelectedActionChip(null);
+            } else {
+              setSelectedActionChip('deep-research');
+              setThinkingMode(null);
+            }
+          }}
+        >
+          {theme.name === 'retro' ? (
+            <RetroIconWrapper>
+              <img src="/images/retroTheme/deepResearch.png" alt="Deep Research" style={{ width: '16px', height: '16px' }} />
+            </RetroIconWrapper>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
+            </svg>
+          )}
+          Deep research
+        </ActionChip>
+      );
+    } else if (type === 'create') {
+      return (
+        <ActionChip
+          key="create"
+          ref={isHidden ? null : (el) => { 
+            if (el) {
+              createAnchorRef.current = el;
+              if (!isHidden) chipRefs.current[index] = el;
+            }
+          }}
+          selected={selectedActionChip === 'create-image' || selectedActionChip === 'create-video' || selectedActionChip === 'create-flowchart'}
+          onClick={() => {
+            if (isHidden) setShowOverflowDropdown(false);
+            if (createAnchorRef.current) {
+              createAnchorRef.current.offsetHeight;
+              const currentRect = createAnchorRef.current.getBoundingClientRect();
+              setCreateMenuRect(currentRect);
+            }
+            setShowCreateModal(true);
+          }}
+        >
+          {theme.name === 'retro' ? (
+            <RetroIconWrapper>
+              <img src="/images/retroTheme/createIcon.png" alt="Create" style={{ width: '16px', height: '16px' }} />
+            </RetroIconWrapper>
+          ) : createType === 'image' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+          ) : createType === 'video' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <line x1="7" y1="2" x2="7" y2="22"></line>
+              <line x1="17" y1="2" x2="17" y2="22"></line>
+            </svg>
+          ) : createType === 'flowchart' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="18" r="3"></circle>
+              <circle cx="6" cy="6" r="3"></circle>
+              <circle cx="18" cy="6" r="3"></circle>
+              <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
+              <path d="M12 12v3"></path>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+          )}
+          {createType === 'image' ? 'Create image' : createType === 'video' ? 'Create video' : createType === 'flowchart' ? 'Create flowchart' : 'Create'}
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </ActionChip>
+      );
+    }
+    return null;
+  };
+
   useImperativeHandle(ref, () => ({
     appendToInput: (text) => {
       setInputMessage(prev => prev + text);
@@ -373,7 +640,7 @@ const ChatInputArea = forwardRef(({
           </SendButton>
         </InputRow>
 
-        <ActionChipsContainer>
+        <ActionChipsContainer ref={chipsContainerRef}>
           <HammerButton
             ref={toolbarRef}
             $isOpen={showToolbar}
@@ -389,105 +656,31 @@ const ChatInputArea = forwardRef(({
             )}
           </HammerButton>
           
-          <ActionChip
-            ref={modeAnchorRef}
-            selected={thinkingMode !== null}
-            onClick={() => {
-              if (modeAnchorRef.current) {
-                // Force a reflow before getting the rect might help in some edge cases
-                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-                modeAnchorRef.current.offsetHeight;
-                const currentRect = modeAnchorRef.current.getBoundingClientRect();
-                console.log('[ChatInputArea] Mode Chip - Captured Rect:', JSON.stringify(currentRect));
-                setModeMenuRect(currentRect);
-              }
-              setShowModeModal(true);
-            }}
-          >
-            {theme.name === 'retro' ? (
-              <RetroIconWrapper>
-                <img src="/images/retroTheme/modeIcon.png" alt="Mode" style={{ width: '16px', height: '16px' }} />
-              </RetroIconWrapper>
-            ) : thinkingMode === 'thinking' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
-                <line x1="16" y1="8" x2="2" y2="22"></line>
-                <line x1="17.5" y1="15" x2="9" y2="15"></line>
-              </svg>
-            ) : thinkingMode === 'instant' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-                <rect x="9" y="9" width="6" height="6"></rect>
-                <line x1="9" y1="2" x2="9" y2="4"></line>
-                <line x1="15" y1="2" x2="15" y2="4"></line>
-                <line x1="9" y1="20" x2="9" y2="22"></line>
-                <line x1="15" y1="20" x2="15" y2="22"></line>
-                <line x1="20" y1="9" x2="22" y2="9"></line>
-                <line x1="20" y1="14" x2="22" y2="14"></line>
-                <line x1="2" y1="9" x2="4" y2="9"></line>
-                <line x1="2" y1="14" x2="4" y2="14"></line>
-              </svg>
-            )}
-            {thinkingMode === 'thinking' ? 'Thinking' : thinkingMode === 'instant' ? 'Instant' : 'Mode'}
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </ActionChip>
+          {/* Render visible chips */}
+          {visibleChips.map((chip, index) => renderChip({
+            type: chip
+          }, index))}
           
-          <ActionChip
-            selected={selectedActionChip === 'search'}
-            onClick={() => {
-              if (selectedActionChip === 'search') {
-                setSelectedActionChip(null);
-              } else {
-                setSelectedActionChip('search');
-                setThinkingMode(null); // Reset thinking mode
-              }
-            }}
-          >
-            {theme.name === 'retro' ? ( <RetroIconWrapper><img src="/images/retroTheme/searchIcon.png" alt="Search" style={{ width: '16px', height: '16px' }} /></RetroIconWrapper> ) : ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> )}
-            Search
-          </ActionChip>
-          
-          <ActionChip
-            selected={selectedActionChip === 'deep-research'}
-            onClick={() => {
-              if (selectedActionChip === 'deep-research') {
-                setSelectedActionChip(null);
-              } else {
-                setSelectedActionChip('deep-research');
-                setThinkingMode(null); // Reset thinking mode
-              }
-            }}
-          >
-            {theme.name === 'retro' ? ( <RetroIconWrapper><img src="/images/retroTheme/deepResearch.png" alt="Deep Research" style={{ width: '16px', height: '16px' }} /></RetroIconWrapper> ) : ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg> )}
-            Deep research
-          </ActionChip>
-          
-          <ActionChip
-            ref={createAnchorRef}
-            selected={selectedActionChip === 'create-image' || selectedActionChip === 'create-video' || selectedActionChip === 'create-flowchart'}
-            onClick={() => {
-              if (createAnchorRef.current) {
-                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-                createAnchorRef.current.offsetHeight;
-                const currentRect = createAnchorRef.current.getBoundingClientRect();
-                console.log('[ChatInputArea] Create Chip - Captured Rect:', JSON.stringify(currentRect));
-                setCreateMenuRect(currentRect);
-              }
-              setShowCreateModal(true);
-            }}
-          >
-            {theme.name === 'retro' ? ( <RetroIconWrapper><img src="/images/retroTheme/createIcon.png" alt="Create" style={{ width: '16px', height: '16px' }} /></RetroIconWrapper> ) : createType === 'image' ? ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> ) : createType === 'video' ? ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line></svg> ) : createType === 'flowchart' ? ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><circle cx="18" cy="6" r="3"></circle><path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path><path d="M12 12v3"></path></svg> ) : ( <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> )}
-            {createType === 'image' ? 'Create image' : createType === 'video' ? 'Create video' : createType === 'flowchart' ? 'Create flowchart' : 'Create'}
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '3px', opacity: 0.7 }}>
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </ActionChip>
+          {/* Render overflow button if there are hidden chips */}
+          {hiddenChips.length > 0 && (
+            <div style={{ position: 'relative' }}>
+              <OverflowChipButton
+                ref={overflowButtonRef}
+                onClick={() => setShowOverflowDropdown(!showOverflowDropdown)}
+                theme={theme}
+              >
+                •••
+              </OverflowChipButton>
+              
+              {showOverflowDropdown && (
+                <OverflowDropdown theme={theme}>
+                  {hiddenChips.map((chip) => renderChip({
+                    type: chip
+                  }, -1, true))}
+                </OverflowDropdown>
+              )}
+            </div>
+          )}
         </ActionChipsContainer>
 
         <ToolbarContainer $isOpen={showToolbar} ref={toolbarContainerRef}>

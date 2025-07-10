@@ -8,24 +8,29 @@ const SidebarContainer = styled.div`
   display: flex;
   flex-direction: column;
   width: ${props => props.$collapsed ? '0' : '280px'};
-  height: 100%;
+  height: calc(100vh - 40px); /* Reduced height to add margin from top/bottom */
   background: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
-  border-right: 1px solid ${props => props.theme.border};
+  border: 1px solid ${props => props.theme.border}; /* Changed from border-right to full border */
+  border-radius: 20px; /* Added border-radius for curved appearance */
   overflow: hidden;
   transition: all 0.3s ease;
   position: fixed;
-  top: 0;
-  left: ${props => props.$collapsed ? '-280px' : '0'};
+  top: 20px; /* Added top margin */
+  left: ${props => props.$collapsed ? '-280px' : '20px'}; /* Added left margin when expanded */
   z-index: 101;
   opacity: ${props => props.$collapsed ? '0' : '1'};
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Added shadow for floating effect */
   
   @media (max-width: 768px) {
     left: ${props => (props.$collapsed ? '-100%' : '0')};
     top: 0;
     width: 100%;
+    height: 100vh; /* Full height on mobile */
     z-index: 100;
-    border-right: none;
+    border: none;
+    border-radius: 0; /* No border radius on mobile */
+    box-shadow: none; /* No shadow on mobile */
     transition: all 0.3s ease;
   }
 `;

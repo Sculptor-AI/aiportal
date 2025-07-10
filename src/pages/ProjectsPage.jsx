@@ -9,8 +9,8 @@ const ProjectsPageContainer = styled.div`
   background-color: ${props => props.theme.background};
   color: ${props => props.theme.text};
   overflow-y: auto;
-  width: ${props => (props.$collapsed ? '100%' : 'calc(100% - 280px)')};
-  margin-left: ${props => (props.$collapsed ? '0' : '280px')};
+  width: ${props => (props.$collapsed ? '100%' : 'calc(100% - 320px)')};
+  margin-left: ${props => (props.$collapsed ? '0' : '320px')};
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 

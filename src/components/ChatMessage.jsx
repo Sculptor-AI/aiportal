@@ -298,6 +298,7 @@ const Pre = styled.pre`
 
 const Message = styled.div`
   display: flex;
+  flex-direction: ${props => props.$alignment === 'right' ? 'column' : 'row'};
   margin-bottom: ${props => {
     // Apply message spacing settings
     const spacing = props.theme.messageSpacing || 'comfortable';
@@ -307,20 +308,24 @@ const Message = styled.div`
       default: return '24px'; // comfortable
     }
   }};
-  align-items: flex-start;
+  align-items: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   max-width: 100%;
   width: 100%;
   justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
+  padding: 0;
+  padding-right: ${props => props.$alignment === 'right' ? '20px' : '0'};
 `;
 
 const Avatar = styled.div`
-  width: 36px;
-  height: 36px;
+  width: ${props => props.role === 'user' ? '24px' : '36px'};
+  height: ${props => props.role === 'user' ? '24px' : '36px'};
   border-radius: ${props => props.$useModelIcon ? '0' : '50%'};
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 14px;
+  margin-right: ${props => props.role === 'user' ? '0' : '14px'};
+  margin-left: ${props => props.role === 'user' ? '0' : '20px'};
+  margin-top: ${props => props.role === 'user' ? '8px' : '0'};
   font-weight: 600;
   flex-shrink: 0;
   background: ${props => props.$useModelIcon 
@@ -328,56 +333,93 @@ const Avatar = styled.div`
     : (props.role === 'user' 
         ? props.theme.buttonGradient 
         : props.theme.secondary)};
-  color: white;
+  color: ${props => props.role === 'user' ? props.theme.text : 'white'};
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
+  order: ${props => props.role === 'user' ? '2' : '1'};
+  opacity: ${props => props.role === 'user' ? '0.6' : '1'};
   
   &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    transform: ${props => props.role === 'user' ? 'none' : 'scale(1.05)'};
+    box-shadow: ${props => props.role === 'user' ? 'none' : '0 3px 10px rgba(0, 0, 0, 0.15)'};
+    opacity: ${props => props.role === 'user' ? '0.8' : '1'};
+  }
+  
+  svg {
+    width: ${props => props.role === 'user' ? '16px' : '20px'};
+    height: ${props => props.role === 'user' ? '16px' : '20px'};
+  }
+`;
+
+const MessageWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  max-width: ${props => props.role === 'user' ? '70%' : 'calc(100% - 60px)'};
+  flex: ${props => props.role === 'user' ? '0 1 auto' : '1'};
+  order: ${props => props.role === 'user' ? '1' : '2'};
+  align-items: ${props => props.role === 'user' ? 'flex-end' : 'flex-start'};
+  
+  @media (max-width: 768px) {
+    max-width: ${props => props.role === 'user' ? '85%' : 'calc(100% - 60px)'};
   }
 `;
 
 const Content = styled.div`
-  padding: 15px 18px;
-  border-radius: ${props => {
-    // Apply bubble style
-    const bubbleStyle = props.$bubbleStyle || 'modern';
-    switch (bubbleStyle) {
-      case 'classic': return '8px';
-      case 'minimal': return '0';
-      default: return '18px'; // modern
-    }
-  }};
-  max-width: 90%;
+  padding: ${props => props.role === 'user' ? '15px 18px' : '0'};
+  padding-right: ${props => props.role === 'user' ? '18px' : '40px'};
+  border-radius: ${props => props.role === 'user' ? '20px 20px 4px 20px' : '0'};
   width: fit-content;
   white-space: pre-wrap;
   background: ${props => {
-    // Apply bubble style
-    const bubbleStyle = props.$bubbleStyle || 'modern';
-    if (bubbleStyle === 'minimal') {
+    // User messages have background, AI messages are transparent
+    if (props.role === 'user') {
+      // For dark/oled themes, use darker backgrounds
+      if (props.theme.name === 'dark' || props.theme.name === 'oled') {
+        return 'rgba(40, 40, 45, 0.95)';
+      }
+      return props.theme.messageUser;
+    } else {
+      // AI messages have no background
       return 'transparent';
     }
-    return props.role === 'user' ? props.theme.messageUser : props.theme.messageAi;
   }};
   color: ${props => props.theme.text};
   box-shadow: ${props => {
-    // Apply bubble style
-    const bubbleStyle = props.$bubbleStyle || 'modern';
-    if (bubbleStyle === 'minimal') {
-      return 'none';
+    // Only user messages have shadow
+    if (props.role === 'user') {
+      return `0 2px 10px ${props.theme.shadow}`;
     }
-    return `0 2px 10px ${props.theme.shadow}`;
+    return 'none';
   }};
   line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
-  backdrop-filter: ${props => props.$bubbleStyle === 'minimal' ? 'none' : 'blur(5px)'};
-  -webkit-backdrop-filter: ${props => props.$bubbleStyle === 'minimal' ? 'none' : 'blur(5px)'};
-  border: ${props => props.$bubbleStyle === 'minimal' ? 'none' : `1px solid ${props.theme.border}`};
+  backdrop-filter: ${props => props.role === 'user' ? 'blur(5px)' : 'none'};
+  -webkit-backdrop-filter: ${props => props.role === 'user' ? 'blur(5px)' : 'none'};
+  border: ${props => props.role === 'user' ? `1px solid ${props.theme.border}` : 'none'};
+  margin-left: ${props => props.role === 'user' ? 'auto' : '0'};
+  margin-right: ${props => props.role === 'user' ? '0' : '0'};
+  position: relative;
+  
+  /* Bubble pointer for user messages */
+  ${props => props.role === 'user' && `
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: -8px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid ${props.theme.name === 'dark' || props.theme.name === 'oled' 
+        ? 'rgba(40, 40, 45, 0.95)' 
+        : props.theme.messageUser};
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+    }
+  `}
   
   /* Special border for bisexual theme */
-  ${props => props.theme.name === 'bisexual' && `
+  ${props => props.theme.name === 'bisexual' && props.role === 'user' && `
     border: none;
     position: relative;
     
@@ -388,12 +430,14 @@ const Content = styled.div`
       left: -1px;
       right: -1px;
       bottom: -1px;
-      background: ${props.role === 'user' ? 
-        'linear-gradient(145deg, #D60270, #9B4F96)' : 
-        'linear-gradient(145deg, #9B4F96, #0038A8)'};
+      background: linear-gradient(145deg, #D60270, #9B4F96);
       border-radius: 19px;
       z-index: -1;
       opacity: 0.3;
+    }
+    
+    &::after {
+      border-left-color: #D60270;
     }
   `}
   
@@ -421,7 +465,9 @@ const Content = styled.div`
   
   @media (max-width: 768px) {
     max-width: 100%;
-    padding: 12px 14px;
+    padding: ${props => props.role === 'user' ? '12px 14px' : '0'};
+    padding-right: ${props => props.role === 'user' ? '14px' : '20px'};
+    margin-right: ${props => props.role === 'user' ? '0' : '0'};
   }
 `;
 
@@ -434,35 +480,38 @@ const Timestamp = styled.div`
 
 const MessageActions = styled.div`
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-top: 8px;
-  border-top: 1px solid ${props => props.theme.border}30;
-  padding-top: 8px;
+  padding: 0;
+  opacity: 1;
+  width: fit-content;
+  max-width: 100%;
+  align-self: flex-start;
 `;
 
 const ActionButton = styled.button`
   background: none;
   border: none;
   font-size: 0.8rem;
-  color: ${props => props.theme.text}80;
+  color: ${props => props.theme.text}60;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 8px;
   transition: all 0.2s;
   
   &:hover {
     background: ${props => props.theme.text}10;
-    color: ${props => props.theme.text};
+    color: ${props => props.theme.text}90;
   }
   
   svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 `;
 
@@ -742,7 +791,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   
   const getAvatar = () => {
     if (role === 'user') {
-      return 'U';
+      return (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      );
     } else if (showModelIcons && modelId) {
       const modelIconProps = {
         modelId,
@@ -759,8 +813,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Determine if we should use a model icon (for AI messages with a modelId)
   const useModelIcon = role === 'assistant' && showModelIcons && modelId;
 
-  // Get message alignment from settings
-  const messageAlignment = settings.messageAlignment || 'left';
+  // Get message alignment from settings, but default user messages to right
+  const messageAlignment = role === 'user' ? 'right' : (settings.messageAlignment || 'left');
 
   // Get bubble style from settings
   const bubbleStyle = settings.bubbleStyle || 'modern';
@@ -887,28 +941,29 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
     return (
       <Message $alignment={messageAlignment}>
-        {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <Content role={role} $bubbleStyle={bubbleStyle}>
-          {generatedFlowchartContent}
-          {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-            <MessageActions>
-              <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
-              {status === 'completed' && flowchartData && (
-                <>
-                  <div style={{ flexGrow: 1 }}></div>
-                  <ActionButton onClick={() => navigator.clipboard.writeText(flowchartData).then(() => console.log('Flowchart data copied'))}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    Copy Instructions
-                  </ActionButton>
-                </>
-              )}
-            </MessageActions>
-          )}
-        </Content>
-        {messageAlignment === 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        <MessageWrapper role={role}>
+          <Content role={role} $bubbleStyle={bubbleStyle}>
+            {generatedFlowchartContent}
+            {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
+              <MessageActions role={role}>
+                <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
+                {status === 'completed' && flowchartData && (
+                  <>
+                    <div style={{ flexGrow: 1 }}></div>
+                    <ActionButton onClick={() => navigator.clipboard.writeText(flowchartData).then(() => console.log('Flowchart data copied'))}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      Copy Instructions
+                    </ActionButton>
+                  </>
+                )}
+              </MessageActions>
+            )}
+          </Content>
+        </MessageWrapper>
       </Message>
     );
   }
@@ -1008,51 +1063,52 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
     return (
       <Message $alignment={messageAlignment}>
-        {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <Content role={role} $bubbleStyle={bubbleStyle}>
-          {deepResearchContent}
-          {/* Show sources if available */}
-          {hasSources && status === 'completed' && (
-            <SourcesContainer>
-              {displaySources.map((source, index) => (
-                <SourceButton
-                  key={index}
-                  onClick={() => window.open(source.url, '_blank')}
-                  title={source.title}
-                >
-                  <SourceFavicon 
-                    src={getFaviconUrl(source.url)}
-                    alt=""
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                  <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {source.title || extractDomain(source.url)}
-                  </span>
-                </SourceButton>
-              ))}
-            </SourcesContainer>
-          )}
-          {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-            <MessageActions>
-              <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
-              {status === 'completed' && content && (
-                <>
-                  <div style={{ flexGrow: 1 }}></div>
-                  <ActionButton onClick={() => navigator.clipboard.writeText(content).then(() => console.log('Research results copied'))}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    Copy Results
-                  </ActionButton>
-                </>
-              )}
-            </MessageActions>
-          )}
-        </Content>
-        {messageAlignment === 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        <MessageWrapper role={role}>
+          <Content role={role} $bubbleStyle={bubbleStyle}>
+            {deepResearchContent}
+            {/* Show sources if available */}
+            {hasSources && status === 'completed' && (
+              <SourcesContainer>
+                {displaySources.map((source, index) => (
+                  <SourceButton
+                    key={index}
+                    onClick={() => window.open(source.url, '_blank')}
+                    title={source.title}
+                  >
+                    <SourceFavicon 
+                      src={getFaviconUrl(source.url)}
+                      alt=""
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                    <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {source.title || extractDomain(source.url)}
+                    </span>
+                  </SourceButton>
+                ))}
+              </SourcesContainer>
+            )}
+            {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
+              <MessageActions role={role}>
+                <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
+                {status === 'completed' && content && (
+                  <>
+                    <div style={{ flexGrow: 1 }}></div>
+                    <ActionButton onClick={() => navigator.clipboard.writeText(content).then(() => console.log('Research results copied'))}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      Copy Results
+                    </ActionButton>
+                  </>
+                )}
+              </MessageActions>
+            )}
+          </Content>
+          </MessageWrapper>
       </Message>
     );
   }
@@ -1092,28 +1148,29 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
     return (
       <Message $alignment={messageAlignment}>
-        {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
-          {generatedImageContent}
-          {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-            <MessageActions>
-              <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
-              {status === 'completed' && imageUrl && (
-                <>
-                  <div style={{ flexGrow: 1 }}></div>
-                  <ActionButton onClick={() => navigator.clipboard.writeText(imageUrl).then(() => console.log('Image URL copied'))}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                    </svg>
-                    Copy URL
-                  </ActionButton>
-                </>
-              )}
-            </MessageActions>
-          )}
-        </Content>
-        {messageAlignment === 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        <MessageWrapper role={role}>
+          <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+            {generatedImageContent}
+            {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
+              <MessageActions role={role}>
+                <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
+                {status === 'completed' && imageUrl && (
+                  <>
+                    <div style={{ flexGrow: 1 }}></div>
+                    <ActionButton onClick={() => navigator.clipboard.writeText(imageUrl).then(() => console.log('Image URL copied'))}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      Copy URL
+                    </ActionButton>
+                  </>
+                )}
+              </MessageActions>
+            )}
+          </Content>
+          </MessageWrapper>
       </Message>
     );
   }
@@ -1127,134 +1184,113 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
         </ErrorMessage>
       ) : (
-        <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
-          {image && (
-            <MessageImage src={image} alt="Uploaded image" />
-          )}
-          {hasPdfAttachment && (
-            <FileAttachmentContainer>
-              <FileIcon style={{ color: '#e64a3b' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <path d="M9 15h6"></path>
-                  <path d="M9 11h6"></path>
-                </svg>
-              </FileIcon>
-              <FileName>{file.name || 'document.pdf'}</FileName>
-            </FileAttachmentContainer>
-          )}
-          {hasTextAttachment && (
-            <FileAttachmentContainer>
-              <FileIcon style={{ color: '#4285F4' }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-              </FileIcon>
-              <FileName>{file.name || 'document.txt'}</FileName>
-            </FileAttachmentContainer>
-          )}
-          {(() => {
-            // If loading and no content yet, show thinking indicator
-            if (isLoading && !content) {
-              return (
-                <ThinkingContainer>
-                  <SpinnerIcon />
-                  Thinking
-                </ThinkingContainer>
-              );
-            }
-            
-            // Process content and show main content + thinking dropdown if applicable
-            const processedContent = formatContent(contentToProcess);
-            const isMercury = modelId?.toLowerCase().includes('mercury');
-            
-            if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
-              // If content has thinking tags, show thinking dropdown first, then main content
-              return (
-                <>
-                  <ThinkingDropdown thinkingContent={processedContent.thinking} />
-                  {isLoading ? (
-                    <StreamingMarkdownRenderer 
-                      text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
-                      isStreaming={true}
-                      theme={theme}
-                    />
-                  ) : isMercury ? (
-                    <TextDiffusionAnimation 
-                      finalText={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
-                      isActive={!isLoading}
-                      messageId={id}
-                      speed={60}
-                      diffusionDuration={750}
-                    />
-                  ) : (
-                    processedContent.main
-                  )}
-                </>
-              );
-            } else {
-              // If content has no thinking tags, display it normally (as before)
-              return contentToProcess.split('\n\n-').map((part, index) => {
-                if (index === 0) {
-                  // This is the main content part - process markdown formatting
-                  const formattedPart = formatContent(part);
-                  const mainText = typeof formattedPart === 'string' ? formattedPart : part;
-                  
-                  return (
-                    <React.Fragment key={`content-part-${index}`}>
-                      {isLoading ? (
-                        <StreamingMarkdownRenderer 
-                          text={mainText}
-                          isStreaming={true}
-                          theme={theme}
-                        />
-                      ) : isMercury ? (
-                        <TextDiffusionAnimation 
-                          finalText={mainText}
-                          isActive={!isLoading}
-                          messageId={id}
-                          speed={60}
-                          diffusionDuration={750}
-                        />
-                      ) : (
-                        formattedPart
-                      )}
-                    </React.Fragment>
-                  );
-                }
-                // This is the model signature part
-                return <em key={`signature-part-${index}`}>- {part}</em>;
-              });
-            }
-          })()}
-          
-          {/* Message action buttons - only show for completed messages (not loading) */}
-          {!isLoading && contentToProcess && (
-            <MessageActions>
-              {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
-              <div style={{ flexGrow: 1 }}></div>
-              <ActionButton onClick={handleCopyText}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-                Copy
-              </ActionButton>
-              <ActionButton onClick={handleReadAloud}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-                </svg>
-                Read
-              </ActionButton>
-            </MessageActions>
-          )}
+        <MessageWrapper role={role}>
+          <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+            {image && (
+              <MessageImage src={image} alt="Uploaded image" />
+            )}
+            {hasPdfAttachment && (
+              <FileAttachmentContainer>
+                <FileIcon style={{ color: '#e64a3b' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <path d="M9 15h6"></path>
+                    <path d="M9 11h6"></path>
+                  </svg>
+                </FileIcon>
+                <FileName>{file.name || 'document.pdf'}</FileName>
+              </FileAttachmentContainer>
+            )}
+            {hasTextAttachment && (
+              <FileAttachmentContainer>
+                <FileIcon style={{ color: '#4285F4' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                </FileIcon>
+                <FileName>{file.name || 'document.txt'}</FileName>
+              </FileAttachmentContainer>
+            )}
+            {(() => {
+              // If loading and no content yet, show thinking indicator
+              if (isLoading && !content) {
+                return (
+                  <ThinkingContainer>
+                    <SpinnerIcon />
+                    Thinking
+                  </ThinkingContainer>
+                );
+              }
+              
+              // Process content and show main content + thinking dropdown if applicable
+              const processedContent = formatContent(contentToProcess);
+              const isMercury = modelId?.toLowerCase().includes('mercury');
+              
+              if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
+                // If content has thinking tags, show thinking dropdown first, then main content
+                return (
+                  <>
+                    <ThinkingDropdown thinkingContent={processedContent.thinking} />
+                    {isLoading ? (
+                      <StreamingMarkdownRenderer 
+                        text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
+                        isStreaming={true}
+                        theme={theme}
+                      />
+                    ) : isMercury ? (
+                      <TextDiffusionAnimation 
+                        finalText={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
+                        isActive={!isLoading}
+                        messageId={id}
+                        speed={60}
+                        diffusionDuration={750}
+                      />
+                    ) : (
+                      processedContent.main
+                    )}
+                  </>
+                );
+              } else {
+                // If content has no thinking tags, display it normally (as before)
+                return contentToProcess.split('\n\n-').map((part, index) => {
+                  if (index === 0) {
+                    // This is the main content part - process markdown formatting
+                    const formattedPart = formatContent(part);
+                    const mainText = typeof formattedPart === 'string' ? formattedPart : part;
+                    
+                    return (
+                      <React.Fragment key={`content-part-${index}`}>
+                        {isLoading ? (
+                          <StreamingMarkdownRenderer 
+                            text={mainText}
+                            isStreaming={true}
+                            theme={theme}
+                          />
+                        ) : isMercury ? (
+                          <TextDiffusionAnimation 
+                            finalText={mainText}
+                            isActive={!isLoading}
+                            messageId={id}
+                            speed={60}
+                            diffusionDuration={750}
+                          />
+                        ) : (
+                          formattedPart
+                        )}
+                      </React.Fragment>
+                    );
+                  }
+                  // This is the model signature part
+                  return <em key={`signature-part-${index}`}>- {part}</em>;
+                });
+              }
+            })()}
+          </Content>
           
           {/* Sources section */}
           {hasSources && !isLoading && (
@@ -1267,9 +1303,76 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               ))}
             </SourcesContainer>
           )}
-        </Content>
+          
+          {/* Message action buttons - only show for completed AI messages (not loading) */}
+          {!isLoading && contentToProcess && role === 'assistant' && (
+            <MessageActions role={role}>
+              {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
+              <div style={{ flexGrow: 1 }}></div>
+              {role === 'assistant' && (
+                <ActionButton onClick={() => window.location.reload()}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                </ActionButton>
+              )}
+              <ActionButton onClick={handleCopyText}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </ActionButton>
+              <ActionButton onClick={() => {
+                // Share functionality
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'AI Chat Message',
+                    text: contentToProcess
+                  });
+                }
+              }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+              </ActionButton>
+              {role === 'assistant' && (
+                <>
+                  <ActionButton onClick={() => console.log('Thumbs up')}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                    </svg>
+                  </ActionButton>
+                  <ActionButton onClick={() => console.log('Thumbs down')}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
+                    </svg>
+                  </ActionButton>
+                </>
+              )}
+              <ActionButton onClick={handleReadAloud}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                </svg>
+              </ActionButton>
+              <ActionButton onClick={() => console.log('More options')}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="1"></circle>
+                  <circle cx="19" cy="12" r="1"></circle>
+                  <circle cx="5" cy="12" r="1"></circle>
+                </svg>
+              </ActionButton>
+            </MessageActions>
+          )}
+        </MessageWrapper>
       )}
-      {messageAlignment === 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
     </Message>
   );
 };
