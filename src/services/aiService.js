@@ -230,6 +230,30 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
               continue;
             }
             
+            // Handle tool calls summary
+            if (parsed.type === 'tool_calls_summary') {
+              yield { type: 'tool_calls_summary', summary: parsed };
+              continue;
+            }
+            
+            // Handle tools available event
+            if (parsed.type === 'tools_available') {
+              yield { type: 'tools_available', tools: parsed.tools };
+              continue;
+            }
+            
+            // Handle tool system errors
+            if (parsed.type === 'tool_system_error') {
+              yield { type: 'tool_system_error', error: parsed.error };
+              continue;
+            }
+            
+            // Handle tool calls summary
+            if (parsed.type === 'tool_calls_summary') {
+              yield { type: 'tool_calls_summary', summary: parsed };
+              continue;
+            }
+            
             // Handle content chunks
             if (parsed.choices?.[0]?.delta?.content) {
               hasReceivedContent = true;

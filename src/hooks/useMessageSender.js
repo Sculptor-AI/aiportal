@@ -477,6 +477,7 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
         );
         
         let messageSources = [];
+        let toolCalls = [];
         
         for await (const chunk of messageGenerator) {
           // Check if chunk is an object with type 'sources'
@@ -486,13 +487,78 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
             continue;
           }
           
+          // Handle tool events
+          if (typeof chunk === 'object' && chunk.type === 'tool_event') {
+            const toolData = chunk.tool_data;
+            
+            // Update tool calls array
+            const existingIndex = toolCalls.findIndex(tc => tc.tool_id === toolData.tool_id);
+            if (existingIndex >= 0) {
+              // Update existing tool call
+              toolCalls[existingIndex] = { ...toolCalls[existingIndex], ...toolData };
+            } else {
+              // Add new tool call
+              toolCalls.push(toolData);
+            }
+            
+            // Update message with tool calls
+            updateMessage(currentChatId, aiMessageId, { 
+              content: streamedContent, 
+              isLoading: true,
+              toolCalls: [...toolCalls] // Create new array to trigger re-render
+            });
+            continue;
+          }
+          
+          // Handle tools available event
+          if (typeof chunk === 'object' && chunk.type === 'tools_available') {
+            updateMessage(currentChatId, aiMessageId, { 
+              content: streamedContent, 
+              isLoading: true,
+              availableTools: chunk.tools
+            });
+            continue;
+          }
+          
+          // Handle tool system errors
+          if (typeof chunk === 'object' && chunk.type === 'tool_system_error') {
+            console.error('Tool system error:', chunk.error);
+            // Could show this as a toast notification
+            addAlert({
+              message: `Tool system error: ${chunk.error}`,
+              type: 'warning',
+              autoHide: true
+            });
+            continue;
+          }
+          
+          // Handle tool calls summary
+          if (typeof chunk === 'object' && chunk.type === 'tool_calls_summary') {
+            // Update final tool calls summary
+            updateMessage(currentChatId, aiMessageId, { 
+              content: streamedContent, 
+              isLoading: true,
+              toolCallsSummary: chunk.summary
+            });
+            continue;
+          }
+          
           // Otherwise it's a content chunk
           streamedContent += chunk;
-          updateMessage(currentChatId, aiMessageId, { content: streamedContent, isLoading: true });
+          updateMessage(currentChatId, aiMessageId, { 
+            content: streamedContent, 
+            isLoading: true,
+            toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined
+          });
         }
         finalAssistantContent = streamedContent;
         
         const messageUpdates = { content: streamedContent, isLoading: false };
+        
+        // Add tool calls if we have them
+        if (toolCalls.length > 0) {
+          messageUpdates.toolCalls = toolCalls;
+        }
         
         // Add sources if we received them
         if (messageSources.length > 0) {
