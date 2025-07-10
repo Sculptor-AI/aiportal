@@ -3,6 +3,7 @@ import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
+import ToolCallsContainer from './ToolCallsContainer';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
 
 // Format markdown text including bold, italic, bullet points and code blocks
@@ -766,7 +767,7 @@ const ThinkingDropdown = ({ thinkingContent }) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools } = message;
   
   // Debug logging
   if (role === 'assistant' && sources) {
@@ -1291,6 +1292,15 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               }
             })()}
           </Content>
+          
+          {/* Tool calls section */}
+          {toolCalls && toolCalls.length > 0 && (
+            <ToolCallsContainer 
+              toolCalls={toolCalls}
+              availableTools={availableTools}
+              theme={theme}
+            />
+          )}
           
           {/* Sources section */}
           {hasSources && !isLoading && (
