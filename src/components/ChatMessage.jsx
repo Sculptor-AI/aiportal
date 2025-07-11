@@ -132,14 +132,242 @@ const processMarkdownText = (text) => {
   const lines = text.split('\n');
   const result = [];
   let inList = false;
+  let inNumberedList = false;
   let listItems = [];
+  let numberedListItems = [];
   
   // Process line by line
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
+    // Headings
+    if (line.startsWith('# ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading1 key={`h1-${i}`}>
+          {processInlineFormatting(line.substring(2))}
+        </Heading1>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('## ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading2 key={`h2-${i}`}>
+          {processInlineFormatting(line.substring(3))}
+        </Heading2>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('### ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading3 key={`h3-${i}`}>
+          {processInlineFormatting(line.substring(4))}
+        </Heading3>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('#### ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading4 key={`h4-${i}`}>
+          {processInlineFormatting(line.substring(5))}
+        </Heading4>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('##### ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading5 key={`h5-${i}`}>
+          {processInlineFormatting(line.substring(6))}
+        </Heading5>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('###### ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading6 key={`h6-${i}`}>
+          {processInlineFormatting(line.substring(7))}
+        </Heading6>
+      );
+      continue;
+    }
+    
+    // Horizontal rule
+    if (line === '---' || line === '***' || line === '___') {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(<HorizontalRule key={`hr-${i}`} />);
+      continue;
+    }
+    
+    // Blockquote
+    if (line.startsWith('> ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Blockquote key={`quote-${i}`}>
+          <Paragraph>
+            {processInlineFormatting(line.substring(2))}
+          </Paragraph>
+        </Blockquote>
+      );
+      continue;
+    }
+    
     // Bullet point
-    if (line.startsWith('* ')) {
+    if (line.startsWith('* ') || line.startsWith('- ')) {
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
       inList = true;
       const itemContent = line.substring(2);
       listItems.push(
@@ -148,32 +376,58 @@ const processMarkdownText = (text) => {
       continue;
     }
     
-    // End of a list
-    if (inList && (!line.startsWith('* ') || line === '')) {
-      result.push(
-        <BulletList key={`list-${i}`}>
-          {listItems}
-        </BulletList>
-      );
-      inList = false;
-      listItems = [];
-      
-      if (line !== '') {
+    // Numbered list
+    const numberedMatch = line.match(/^(\d+)\.\s/);
+    if (numberedMatch) {
+      if (inList) {
         result.push(
-          <div key={`text-${i}`}>{processInlineFormatting(line)}</div>
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
         );
-      } else {
-        result.push(<br key={`br-${i}`} />);
+        inList = false;
+        listItems = [];
+      }
+      inNumberedList = true;
+      const itemContent = line.substring(numberedMatch[0].length);
+      numberedListItems.push(
+        <li key={`nitem-${i}`}>{processInlineFormatting(itemContent)}</li>
+      );
+      continue;
+    }
+    
+    // End of lists
+    if ((inList || inNumberedList) && line === '') {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
       }
       continue;
     }
     
     // Regular text line
-    if (!inList && line !== '') {
+    if (!inList && !inNumberedList && line !== '') {
       result.push(
-        <div key={`text-${i}`}>{processInlineFormatting(line)}</div>
+        <Paragraph key={`p-${i}`}>
+          {processInlineFormatting(line)}
+        </Paragraph>
       );
-    } else if (!inList) {
+    } else if (!inList && !inNumberedList) {
+      // Empty line
       result.push(<br key={`br-${i}`} />);
     }
   }
@@ -187,11 +441,54 @@ const processMarkdownText = (text) => {
     );
   }
   
+  if (inNumberedList && numberedListItems.length > 0) {
+    result.push(
+      <NumberedList key="nlist-end">
+        {numberedListItems}
+      </NumberedList>
+    );
+  }
+  
   return <>{result}</>;
 };
 
-// Process inline formatting (bold, italic)
+// Process inline formatting (bold, italic, links)
 const processInlineFormatting = (text) => {
+  const parts = [];
+  let lastIndex = 0;
+  
+  // Handle links first
+  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let match;
+  
+  while ((match = linkPattern.exec(text)) !== null) {
+    // Add text before the link
+    if (match.index > lastIndex) {
+      const beforeText = text.substring(lastIndex, match.index);
+      parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(beforeText)}</span>);
+    }
+    
+    // Add the link
+    parts.push(
+      <Link key={`link-${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer">
+        {processBoldItalic(match[1])}
+      </Link>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add any remaining text
+  if (lastIndex < text.length) {
+    const remainingText = text.substring(lastIndex);
+    parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(remainingText)}</span>);
+  }
+  
+  return parts.length > 0 ? <>{parts}</> : processBoldItalic(text);
+};
+
+// Process bold and italic formatting
+const processBoldItalic = (text) => {
   // First handle bold text
   const boldPattern = /\*\*(.*?)\*\*/g;
   const parts = [];
@@ -215,7 +512,7 @@ const processInlineFormatting = (text) => {
     parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex))}</span>);
   }
   
-  return <>{parts}</>;
+  return parts.length > 0 ? <>{parts}</> : processItalic(text);
 };
 
 // Process italic text
@@ -572,32 +869,214 @@ const LoadingDots = styled.span`
   animation: ${pulse} 1.5s infinite;
 `;
 
-// Add style components for markdown formatting
+// Add style components for markdown formatting aligned with design language
 const Bold = styled.span`
   font-weight: 700;
+  color: ${props => props.theme.text};
 `;
 
 const Italic = styled.span`
   font-style: italic;
+  color: ${props => props.theme.text};
+`;
+
+const Heading1 = styled.h1`
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 1.5rem 0 1rem 0;
+  color: ${props => props.theme.text};
+  border-bottom: 2px solid ${props => props.theme.border};
+  padding-bottom: 0.5rem;
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading2 = styled.h2`
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1.3rem 0 0.8rem 0;
+  color: ${props => props.theme.text};
+  border-bottom: 1px solid ${props => props.theme.border};
+  padding-bottom: 0.4rem;
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading3 = styled.h3`
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 1.1rem 0 0.6rem 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading4 = styled.h4`
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading5 = styled.h5`
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.9rem 0 0.4rem 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading6 = styled.h6`
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0.8rem 0 0.3rem 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Paragraph = styled.p`
+  margin: 0.8rem 0;
+  line-height: 1.6;
+  color: ${props => props.theme.text};
+  
+  &:first-child {
+    margin-top: 0;
+  }
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
 `;
 
 const BulletList = styled.ul`
   list-style-type: none;
   padding-left: 0;
-  margin: 0.5em 0;
+  margin: 0.8rem 0;
   
   li {
     position: relative;
-    padding-left: 1.2em;
-    margin: 0.4em 0;
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+    line-height: 1.6;
+    color: ${props => props.theme.text};
     
     &:before {
       content: "•";
       position: absolute;
-      left: 0.2em;
-      color: ${props => props.theme.text};
+      left: 0.3em;
+      color: ${props => props.theme.primary};
+      font-weight: bold;
+      font-size: 1.2em;
     }
   }
+`;
+
+const NumberedList = styled.ol`
+  padding-left: 1.5em;
+  margin: 0.8rem 0;
+  
+  li {
+    margin: 0.5em 0;
+    line-height: 1.6;
+    color: ${props => props.theme.text};
+  }
+`;
+
+const Blockquote = styled.blockquote`
+  border-left: 4px solid ${props => props.theme.primary};
+  margin: 1rem 0;
+  padding: 0.8rem 0 0.8rem 1.2rem;
+  background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: ${props => props.theme.text};
+  
+  p {
+    margin: 0;
+    line-height: 1.6;
+  }
+`;
+
+const Link = styled.a`
+  color: ${props => props.theme.primary};
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.2s ease;
+  
+  &:hover {
+    border-bottom-color: ${props => props.theme.primary};
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 8px;
+  overflow: hidden;
+  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+`;
+
+const TableHeader = styled.th`
+  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: ${props => props.theme.text};
+  border-bottom: 1px solid ${props => props.theme.border};
+`;
+
+const TableCell = styled.td`
+  padding: 12px;
+  border-bottom: 1px solid ${props => props.theme.border};
+  color: ${props => props.theme.text};
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const TableRow = styled.tr`
+  &:last-child td {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
+  }
+`;
+
+const HorizontalRule = styled.hr`
+  border: none;
+  height: 1px;
+  background: ${props => props.theme.border};
+  margin: 2rem 0;
+  border-radius: 1px;
 `;
 
 const MessageImage = styled.img`
@@ -1321,7 +1800,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
           </div>
           <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-            {formatContent(content, isLanguageExecutable, supportedLanguages)}
+            {formatContent(contentToProcess, isLanguageExecutable, supportedLanguages)}
           </div>
         </>
       );
