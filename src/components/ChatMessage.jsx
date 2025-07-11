@@ -10,8 +10,15 @@ import useSupportedLanguages from '../hooks/useSupportedLanguages';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
 
+// Helper function to parse and render LaTeX
+const renderLatex = (latex, displayMode) => (
+  <ReactKatex key={`latex-${Math.random()}`} displayMode={displayMode}>
+    {latex}
+  </ReactKatex>
+);
+
 // Format markdown text including bold, italic, bullet points and code blocks
-const formatContent = (content) => {
+const formatContent = (content, isLanguageExecutable = null, supportedLanguages = []) => {
   if (!content) return '';
   
   // Extract thinking content if present
@@ -30,29 +37,22 @@ const formatContent = (content) => {
   // If we have thinking content, return an object with both processed contents
   if (thinkingContent) {
     return {
-      main: processText(mainContent),
-      thinking: processText(thinkingContent)
+      main: processText(mainContent, true, isLanguageExecutable, supportedLanguages),
+      thinking: processText(thinkingContent, true, isLanguageExecutable, supportedLanguages)
     };
   }
   
   // Otherwise, just process the content normally
-  return processText(mainContent);
+  return processText(mainContent, true, isLanguageExecutable, supportedLanguages);
 };
 
 // Convert markdown syntax to HTML using a more straightforward approach
-const processText = (text, enableCodeExecution = true) => {
-  // Helper function to parse and render LaTeX
-  const renderLatex = (latex, displayMode) => (
-    <ReactKatex key={`latex-${Math.random()}`} displayMode={displayMode}>
-      {latex}
-    </ReactKatex>
-  );
-
+const processText = (text, enableCodeExecution = true, isLanguageExecutable = null, supportedLanguages = []) => {
   // Use the new code block processor for consistency
   return processCodeBlocks(text, {
     onCodeBlock: ({ language, content: codeContent, isComplete, key, theme }) => {
       // Use CodeBlockWithExecution if code execution is enabled and language is executable
-      if (enableCodeExecution && isLanguageExecutable(language)) {
+      if (enableCodeExecution && isLanguageExecutable && isLanguageExecutable(language)) {
         return (
           <CodeBlockWithExecution
             key={key}
@@ -1321,7 +1321,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
           </div>
           <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-            {formatContent(content)}
+            {formatContent(content, isLanguageExecutable, supportedLanguages)}
           </div>
         </>
       );
@@ -1504,7 +1504,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               }
               
               // Process content and show main content + thinking dropdown if applicable
-              const processedContent = formatContent(contentToProcess);
+              const processedContent = formatContent(contentToProcess, isLanguageExecutable, supportedLanguages);
               const isMercury = modelId?.toLowerCase().includes('mercury');
               
               if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
@@ -1543,7 +1543,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                     {contentToProcess.split('\n\n-').map((part, index) => {
                   if (index === 0) {
                     // This is the main content part - process markdown formatting
-                    const formattedPart = formatContent(part);
+                    const formattedPart = formatContent(part, isLanguageExecutable, supportedLanguages);
                     const mainText = typeof formattedPart === 'string' ? formattedPart : part;
                     
                     return (
