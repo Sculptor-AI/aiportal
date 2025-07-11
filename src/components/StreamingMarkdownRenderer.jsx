@@ -2,6 +2,9 @@ import React from 'react';
 import styled, { keyframes } from 'styled-components';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
+import { processCodeBlocks } from '../utils/codeBlockProcessor';
+import CodeBlockWithExecution from './CodeBlockWithExecution';
+import useSupportedLanguages from '../hooks/useSupportedLanguages';
 
 // Styled components for markdown formatting (reused from ChatMessage)
 const Bold = styled.span`
@@ -218,8 +221,11 @@ const StreamingMarkdownRenderer = ({
   text = '', 
   isStreaming = false,
   showCursor = true,
-  theme = {}
+  theme = {},
+  enableCodeExecution = true
 }) => {
+  const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
+
   if (!text) {
     return isStreaming && showCursor ? <Cursor $show={true} theme={theme}>|</Cursor> : null;
   }
@@ -233,82 +239,41 @@ const StreamingMarkdownRenderer = ({
 
   // Process the text and handle code blocks
   const processContent = (content) => {
-    if (content.includes('```')) {
-      const segments = [];
-      const lines = content.split('\n');
-      let lastIndex = 0;
-      let inCodeBlock = false;
-      let currentLang = "";
-      let codeBlockCount = 0;
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        
-        // Start of code block
-        if (line.startsWith('```') && !inCodeBlock) {
-          // Process any text before this code block
-          const textBeforeCode = lines.slice(lastIndex, i).join('\n');
-          if (textBeforeCode.trim()) {
-            segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdown(textBeforeCode)}</span>);
-          }
-          
-          inCodeBlock = true;
-          currentLang = line.substring(3).trim() || 'code';
-          lastIndex = i + 1; // Start collecting code from next line
-          continue;
-        }
-        
-        // End of code block
-        if (line.startsWith('```') && inCodeBlock) {
-          const codeContent = lines.slice(lastIndex, i).join('\n');
-          
-          segments.push(
-            <CodeBlock key={`code-${codeBlockCount++}`} theme={theme}>
-              <CodeHeader theme={theme}>
-                <CodeLanguage theme={theme}>{currentLang}</CodeLanguage>
-                <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(codeContent)}>
-                  Copy
-                </CopyButton>
-              </CodeHeader>
-              <Pre theme={theme}>{codeContent}</Pre>
-            </CodeBlock>
+    return processCodeBlocks(content, {
+      isStreaming,
+      theme,
+      onCodeBlock: ({ language, content: codeContent, isComplete, key, theme }) => {
+        // Use CodeBlockWithExecution if code execution is enabled and language is executable
+        if (enableCodeExecution && isLanguageExecutable(language)) {
+          return (
+            <CodeBlockWithExecution
+              key={key}
+              language={language}
+              content={codeContent}
+              theme={theme}
+              supportedLanguages={supportedLanguages}
+              onExecutionComplete={(result, error, executionTime) => {
+                console.log('Code execution completed:', { result, error, executionTime });
+              }}
+            />
           );
-          
-          inCodeBlock = false;
-          lastIndex = i + 1; // Start collecting text from next line
-          continue;
         }
-      }
-      
-      // Add any remaining text after the last code block
-      if (lastIndex < lines.length) {
-        const textAfterCode = lines.slice(lastIndex).join('\n');
-        if (textAfterCode.trim()) {
-          segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdown(textAfterCode)}</span>);
-        }
-      }
-      
-      // If we're in the middle of a code block (streaming), show it as a partial code block
-      if (inCodeBlock && lastIndex <= lines.length) {
-        const partialCode = lines.slice(lastIndex).join('\n');
-        segments.push(
-          <CodeBlock key={`partial-code-${codeBlockCount}`} theme={theme}>
+        
+        // Fall back to regular code block for non-executable languages
+        return (
+          <CodeBlock key={key} theme={theme}>
             <CodeHeader theme={theme}>
-              <CodeLanguage theme={theme}>{currentLang}</CodeLanguage>
-              <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(partialCode)}>
+              <CodeLanguage theme={theme}>{language}</CodeLanguage>
+              <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(codeContent)}>
                 Copy
               </CopyButton>
             </CodeHeader>
-            <Pre theme={theme}>{partialCode}</Pre>
+            <Pre theme={theme}>{codeContent}</Pre>
           </CodeBlock>
         );
-      }
-      
-      return <>{segments}</>;
-    } else {
-      // No code blocks, process all text as markdown
-      return processMarkdown(content);
-    }
+      },
+      onTextSegment: (textSegment) => processMarkdown(textSegment)
+    });
   };
 
   // Process regular markdown (bullet points, bold, italic)

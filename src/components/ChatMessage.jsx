@@ -4,6 +4,9 @@ import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
+import { processCodeBlocks } from '../utils/codeBlockProcessor';
+import CodeBlockWithExecution from './CodeBlockWithExecution';
+import useSupportedLanguages from '../hooks/useSupportedLanguages';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
 
@@ -37,7 +40,7 @@ const formatContent = (content) => {
 };
 
 // Convert markdown syntax to HTML using a more straightforward approach
-const processText = (text) => {
+const processText = (text, enableCodeExecution = true) => {
   // Helper function to parse and render LaTeX
   const renderLatex = (latex, displayMode) => (
     <ReactKatex key={`latex-${Math.random()}`} displayMode={displayMode}>
@@ -45,76 +48,40 @@ const processText = (text) => {
     </ReactKatex>
   );
 
-  // First, handle code blocks separately to avoid processing markdown inside them
-  if (text.includes('```')) {
-    const segments = [];
-    let lastIndex = 0;
-    let inCodeBlock = false;
-    let currentLang = "";
-    let currentCode = "";
-    let codeBlockCount = 0;
-    
-    // Find all code block markers
-    const lines = text.split('\n');
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      
-      // Start of code block
-      if (line.startsWith('```') && !inCodeBlock) {
-        // Process any text before this code block
-        const textBeforeCode = lines.slice(lastIndex, i).join('\n');
-        if (textBeforeCode.trim()) {
-          segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdownText(textBeforeCode)}</span>);
-        }
-        
-        inCodeBlock = true;
-        currentLang = line.substring(3).trim() || 'code';
-        currentCode = "";
-        lastIndex = i + 1; // Start collecting code from next line
-        continue;
-      }
-      
-      // End of code block
-      if (line.startsWith('```') && inCodeBlock) {
-        const codeContent = lines.slice(lastIndex, i).join('\n');
-        
-        segments.push(
-          <CodeBlock key={`code-${codeBlockCount++}`} className={currentLang}>
-            <CodeHeader>
-              <CodeLanguage>{currentLang}</CodeLanguage>
-              <CopyButton onClick={() => navigator.clipboard.writeText(codeContent)}>
-                Copy
-              </CopyButton>
-            </CodeHeader>
-            <Pre>{codeContent}</Pre>
-          </CodeBlock>
+  // Use the new code block processor for consistency
+  return processCodeBlocks(text, {
+    onCodeBlock: ({ language, content: codeContent, isComplete, key, theme }) => {
+      // Use CodeBlockWithExecution if code execution is enabled and language is executable
+      if (enableCodeExecution && isLanguageExecutable(language)) {
+        return (
+          <CodeBlockWithExecution
+            key={key}
+            language={language}
+            content={codeContent}
+            theme={theme}
+            supportedLanguages={supportedLanguages}
+            onExecutionComplete={(result, error, executionTime) => {
+              console.log('Code execution completed:', { result, error, executionTime });
+            }}
+          />
         );
-        
-        inCodeBlock = false;
-        lastIndex = i + 1; // Start collecting text from next line
-        continue;
       }
       
-      // Collecting code content when inside a code block
-      if (inCodeBlock) {
-        continue; // We'll collect all lines in the code block at once
-      }
-    }
-    
-    // Add any remaining text after the last code block
-    if (lastIndex < lines.length) {
-      const textAfterCode = lines.slice(lastIndex).join('\n');
-      if (textAfterCode.trim()) {
-        segments.push(<span key={`text-segment-${segments.length}`}>{processMarkdownText(textAfterCode)}</span>);
-      }
-    }
-    
-    return <>{segments}</>;
-  } else {
-    // No code blocks, process all text as markdown
-    return processMarkdown(text);
-  }
+      // Fall back to regular code block for non-executable languages
+      return (
+        <CodeBlock key={key} className={language}>
+          <CodeHeader>
+            <CodeLanguage>{language}</CodeLanguage>
+            <CopyButton onClick={() => navigator.clipboard.writeText(codeContent)}>
+              Copy
+            </CopyButton>
+          </CodeHeader>
+          <Pre>{codeContent}</Pre>
+        </CodeBlock>
+      );
+    },
+    onTextSegment: (textSegment) => processMarkdown(textSegment)
+  });
 };
 
 // Update processMarkdown to handle LaTeX
@@ -1061,6 +1028,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools } = message;
+  const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
   
   // Debug logging
   if (role === 'assistant' && sources) {
