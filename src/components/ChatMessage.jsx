@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
@@ -18,7 +18,7 @@ const renderLatex = (latex, displayMode) => (
 );
 
 // Format markdown text including bold, italic, bullet points and code blocks
-const formatContent = (content, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
+const robustFormatContent = (content, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
   if (!content) return '';
   
   // Extract thinking content if present
@@ -1597,20 +1597,39 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       });
   };
 
-  // Function to handle text-to-speech
+  // TTS state for toggle
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speechSynthesisRef = useRef(null);
+
+  // Function to handle text-to-speech (toggle)
   const handleReadAloud = () => {
     if ('speechSynthesis' in window) {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        return;
+      }
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
-      
       const textToRead = cleanedContent || content;
-      const utterance = new SpeechSynthesisUtterance(textToRead);
+      const utterance = new window.SpeechSynthesisUtterance(textToRead);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      setIsSpeaking(true);
       window.speechSynthesis.speak(utterance);
+      speechSynthesisRef.current = utterance;
     } else {
       console.error('Text-to-speech not supported in this browser');
-      // Could show user notification that TTS is not supported
     }
   };
+
+  // Ensure TTS state resets if user navigates away or message changes
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    };
+  }, [content, cleanedContent]);
 
   // Determine if the message has sources to display
   const displaySources = extractedSources.length > 0 ? extractedSources : (Array.isArray(sources) ? sources : []);
@@ -1801,7 +1820,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
           </div>
           <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-            {formatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)}
+            {robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)}
           </div>
         </>
       );
@@ -1984,7 +2003,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               }
               
               // Process content and show main content + thinking dropdown if applicable
-              const processedContent = formatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme);
+              const processedContent = robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme);
               const isMercury = modelId?.toLowerCase().includes('mercury');
               
               if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
@@ -2023,7 +2042,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                     {contentToProcess.split('\n\n-').map((part, index) => {
                   if (index === 0) {
                     // This is the main content part - process markdown formatting
-                    const formattedPart = formatContent(part, isLanguageExecutable, supportedLanguages, theme);
+                    const formattedPart = robustFormatContent(part, isLanguageExecutable, supportedLanguages, theme);
                     const mainText = typeof formattedPart === 'string' ? formattedPart : part;
                     
                     return (
@@ -2121,12 +2140,20 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </ActionButton>
                 </>
               )}
-              <ActionButton onClick={handleReadAloud}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-                </svg>
+              <ActionButton onClick={handleReadAloud} title={isSpeaking ? 'Stop speaking' : 'Read aloud'}>
+                {isSpeaking ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                  </svg>
+                )}
               </ActionButton>
               <ActionButton onClick={() => console.log('More options')}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
