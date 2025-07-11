@@ -238,8 +238,8 @@ const AppContent = () => {
       const savedChats = localStorage.getItem('chats');
       if (savedChats) {
         const parsed = JSON.parse(savedChats);
-        // Validate the parsed data is an array
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        // Validate the parsed data is an array and has valid chat objects
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(chat => chat.id && chat.title)) {
           console.log("Loaded chats from localStorage:", parsed);
           return parsed;
         }
@@ -254,8 +254,21 @@ const AppContent = () => {
   });
   
   const [activeChat, setActiveChat] = useState(() => {
-    const savedActiveChat = localStorage.getItem('activeChat');
-    return savedActiveChat ? JSON.parse(savedActiveChat) : chats[0]?.id;
+    try {
+      const savedActiveChat = localStorage.getItem('activeChat');
+      if (savedActiveChat) {
+        const parsedActiveChat = JSON.parse(savedActiveChat);
+        // Validate that the saved activeChat exists in the loaded chats
+        const chatExists = chats.some(chat => chat.id === parsedActiveChat);
+        if (chatExists) {
+          return parsedActiveChat;
+        }
+      }
+    } catch (err) {
+      console.error("Error loading activeChat from localStorage:", err);
+    }
+    // Default to first chat if no valid activeChat
+    return chats[0]?.id || null;
   });
 
   // Project state
@@ -488,6 +501,20 @@ const AppContent = () => {
   // Save chats to localStorage whenever they change
   // Note: Individual functions handle localStorage saving to avoid cyclic references
 
+  // Validate activeChat and ensure we always have a valid chat
+  useEffect(() => {
+    const currentChat = chats.find(chat => chat.id === activeChat);
+    if (!currentChat && chats.length > 0) {
+      // If activeChat doesn't exist but we have chats, set to first chat
+      setActiveChat(chats[0].id);
+    } else if (!currentChat && chats.length === 0) {
+      // If no chats exist, create a new one
+      const newChat = { id: uuidv4(), title: 'New Chat', messages: [] };
+      setChats([newChat]);
+      setActiveChat(newChat.id);
+    }
+  }, [chats, activeChat]);
+
   useEffect(() => {
     localStorage.setItem('activeChat', JSON.stringify(activeChat));
   }, [activeChat]);
@@ -702,6 +729,17 @@ const AppContent = () => {
   const handleModelChange = (modelId) => {
     setSelectedModel(modelId);
     // Any other actions needed when model changes, like saving to storage
+  };
+
+  // Function to reset chats and start fresh
+  const resetChats = () => {
+    const newChat = { id: uuidv4(), title: 'New Chat', messages: [] };
+    setChats([newChat]);
+    setActiveChat(newChat.id);
+    // Clear localStorage to start fresh
+    localStorage.removeItem('chats');
+    localStorage.removeItem('activeChat');
+    console.log('Chats reset to fresh state');
   };
   
   // Chrome Demo Toast
