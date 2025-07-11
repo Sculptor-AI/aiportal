@@ -52,6 +52,7 @@ const ChatWindow = forwardRef(({
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
   const [isProcessingFile, setIsProcessingFile] = useState(false); 
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   
   const messagesEndRef = useRef(null);
   const chatInputAreaRef = useRef(null);
@@ -354,7 +355,6 @@ const ChatWindow = forwardRef(({
     }
   };
 
-  const [isFocused, setIsFocused] = useState(false);
   // const inputFocusChange = (isFocusedState) => { // This was not used, can be removed if ChatInputArea handles focus internally for sidebar effects
   //   if ($sidebarCollapsed) {
   //     setIsFocused(isFocusedState);
