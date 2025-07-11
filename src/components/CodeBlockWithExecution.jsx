@@ -4,8 +4,8 @@ import { processCodeBlocks } from '../utils/codeBlockProcessor';
 
 // Styled components for the enhanced code block
 const CodeBlockContainer = styled.div`
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
-  border: 1px solid ${props => props.theme.border || 'rgba(0,0,0,0.1)'};
+  background: ${props => props.theme?.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  border: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.1)'};
   border-radius: 8px;
   overflow: hidden;
   margin: 12px 0;
@@ -19,13 +19,17 @@ const CodeHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.6)' : 'rgba(40, 40, 40, 0.8)'};
-  border-bottom: 1px solid ${props => props.theme.border || 'rgba(0,0,0,0.1)'};
+  background: ${props => props.theme?.name === 'light' ? 'rgba(240, 240, 240, 0.6)' : 'rgba(40, 40, 40, 0.8)'};
+  border-bottom: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.1)'};
   font-size: 0.8em;
 `;
 
 const CodeLanguage = styled.span`
-  color: ${props => props.theme.text || '#000'};
+  color: ${props => {
+    const themeColor = props.theme?.text;
+    if (themeColor) return themeColor;
+    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
+  }} !important;
   font-weight: 500;
   text-transform: uppercase;
   font-size: 0.75em;
@@ -40,8 +44,12 @@ const ButtonGroup = styled.div`
 
 const ActionButton = styled.button`
   background: none;
-  border: 1px solid ${props => props.theme.border || 'rgba(0,0,0,0.2)'};
-  color: ${props => props.theme.text || '#000'};
+  border: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.2)'};
+  color: ${props => {
+    const themeColor = props.theme?.text;
+    if (themeColor) return themeColor;
+    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
+  }} !important;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.7em;
@@ -52,7 +60,11 @@ const ActionButton = styled.button`
   gap: 4px;
   
   &:hover {
-    background: ${props => props.theme.text || '#000'}10;
+    background: ${props => {
+      const themeColor = props.theme?.text;
+      if (themeColor) return themeColor + '10';
+      return props.theme?.name === 'dark' ? '#ffffff10' : '#00000010';
+    }};
   }
   
   &:disabled {
@@ -68,7 +80,13 @@ const Pre = styled.pre`
   white-space: pre-wrap;
   word-wrap: break-word;
   background: none;
-  color: ${props => props.theme.text || '#000'};
+  color: ${props => {
+    // Ensure we always have a visible color
+    const themeColor = props.theme?.text;
+    if (themeColor) return themeColor;
+    // Fallback to black for light themes, white for dark themes
+    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
+  }} !important;
   line-height: 1.4;
   
   /* Custom scrollbar */
@@ -85,11 +103,16 @@ const Pre = styled.pre`
     background: rgba(0,0,0,0.3);
     border-radius: 4px;
   }
+  
+  code {
+    color: inherit !important;
+    background: none !important;
+  }
 `;
 
 const ExecutionResults = styled.div`
-  border-top: 1px solid ${props => props.theme.border || 'rgba(0,0,0,0.1)'};
-  background: ${props => props.theme.name === 'light' ? 'rgba(248, 250, 252, 0.8)' : 'rgba(25, 25, 25, 0.8)'};
+  border-top: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.1)'};
+  background: ${props => props.theme?.name === 'light' ? 'rgba(248, 250, 252, 0.8)' : 'rgba(25, 25, 25, 0.8)'};
   padding: 12px;
   font-size: 0.85em;
 `;
@@ -100,19 +123,28 @@ const ResultsHeader = styled.div`
   align-items: center;
   margin-bottom: 8px;
   font-weight: 600;
+  color: ${props => {
+    const themeColor = props.theme?.text;
+    if (themeColor) return themeColor;
+    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
+  }} !important;
 `;
 
 const ExecutionTime = styled.span`
   font-size: 0.8em;
-  color: ${props => props.theme.text || '#000'}80;
+  color: ${props => {
+    const themeColor = props.theme?.text;
+    if (themeColor) return themeColor + '80';
+    return props.theme?.name === 'dark' ? '#ffffff80' : '#00000080';
+  }} !important;
 `;
 
 const OutputContent = styled.pre`
   margin: 0;
   padding: 8px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(20, 20, 20, 0.8)'};
+  background: ${props => props.theme?.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(20, 20, 20, 0.8)'};
   border-radius: 4px;
-  border: 1px solid ${props => props.theme.border || 'rgba(0,0,0,0.1)'};
+  border: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.1)'};
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
   font-size: 0.85em;
   line-height: 1.4;
@@ -120,17 +152,22 @@ const OutputContent = styled.pre`
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  color: ${props => {
+    const themeColor = props.theme?.text;
+    if (themeColor) return themeColor;
+    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
+  }} !important;
 `;
 
 const ErrorOutput = styled(OutputContent)`
-  color: #e53e3e;
-  background: ${props => props.theme.name === 'light' ? 'rgba(254, 242, 242, 0.8)' : 'rgba(45, 25, 25, 0.8)'};
+  color: #e53e3e !important;
+  background: ${props => props.theme?.name === 'light' ? 'rgba(254, 242, 242, 0.8)' : 'rgba(45, 25, 25, 0.8)'};
   border-color: #fed7d7;
 `;
 
 const SuccessOutput = styled(OutputContent)`
-  color: #38a169;
-  background: ${props => props.theme.name === 'light' ? 'rgba(240, 253, 244, 0.8)' : 'rgba(25, 45, 25, 0.8)'};
+  color: #38a169 !important;
+  background: ${props => props.theme?.name === 'light' ? 'rgba(240, 253, 244, 0.8)' : 'rgba(25, 45, 25, 0.8)'};
   border-color: #c6f6d5;
 `;
 
@@ -143,6 +180,13 @@ const CodeBlockWithExecution = ({
   supportedLanguages = [],
   onExecutionComplete = null
 }) => {
+  // Ensure theme has default values to prevent low visibility
+  const safeTheme = {
+    name: theme.name || 'light',
+    text: theme.text || '#000',
+    border: theme.border || 'rgba(0,0,0,0.1)',
+    ...theme
+  };
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -219,9 +263,9 @@ const CodeBlockWithExecution = ({
   const isExecutable = supportedLanguages.some(lang => lang.id === language);
 
   return (
-    <CodeBlockContainer theme={theme}>
-      <CodeHeader theme={theme}>
-        <CodeLanguage theme={theme}>
+    <CodeBlockContainer theme={safeTheme}>
+      <CodeHeader theme={safeTheme}>
+        <CodeLanguage theme={safeTheme}>
           {getLanguageDisplayName(language)}
         </CodeLanguage>
         <ButtonGroup>
@@ -230,7 +274,7 @@ const CodeBlockWithExecution = ({
               <ActionButton
                 onClick={executeCode}
                 disabled={isExecuting}
-                theme={theme}
+                theme={safeTheme}
                 title="Run code"
               >
                 {isExecuting ? 'Running...' : 'Run'}
@@ -239,7 +283,7 @@ const CodeBlockWithExecution = ({
           )}
           <ActionButton
             onClick={() => copyToClipboard(content)}
-            theme={theme}
+            theme={safeTheme}
             title="Copy code"
           >
             Copy
@@ -247,7 +291,7 @@ const CodeBlockWithExecution = ({
           {showResults && (
             <ActionButton
               onClick={clearResults}
-              theme={theme}
+              theme={safeTheme}
               title="Clear results"
             >
               Clear
@@ -256,17 +300,17 @@ const CodeBlockWithExecution = ({
         </ButtonGroup>
       </CodeHeader>
       
-      <Pre theme={theme} style={{ color: theme.text || '#000' }}>
-        <code style={{ color: 'inherit' }}>{content}</code>
+      <Pre theme={safeTheme}>
+        <code>{content}</code>
       </Pre>
 
       {/* Execution Results */}
       {showResults && (result || error || isExecuting) && (
-        <ExecutionResults theme={theme}>
-          <ResultsHeader>
+        <ExecutionResults theme={safeTheme}>
+          <ResultsHeader theme={safeTheme}>
             <span>Execution Results</span>
             {executionTime && (
-              <ExecutionTime theme={theme}>
+              <ExecutionTime theme={safeTheme}>
                 {executionTime}ms
               </ExecutionTime>
             )}
@@ -278,7 +322,7 @@ const CodeBlockWithExecution = ({
               <div style={{ marginBottom: '8px', fontWeight: '600', color: '#e53e3e' }}>
                 Error
               </div>
-              <ErrorOutput theme={theme}>{error}</ErrorOutput>
+              <ErrorOutput theme={safeTheme}>{error}</ErrorOutput>
             </div>
           )}
 
@@ -291,13 +335,13 @@ const CodeBlockWithExecution = ({
               {result.output && (
                 <div style={{ marginBottom: '8px' }}>
                   <div style={{ marginBottom: '4px', fontWeight: '500' }}>Output:</div>
-                  <SuccessOutput theme={theme}>{result.output}</SuccessOutput>
+                  <SuccessOutput theme={safeTheme}>{result.output}</SuccessOutput>
                 </div>
               )}
               {result.result && (
                 <div>
                   <div style={{ marginBottom: '4px', fontWeight: '500' }}>Result:</div>
-                  <OutputContent theme={theme}>
+                  <OutputContent theme={safeTheme}>
                     {JSON.stringify(result.result, null, 2)}
                   </OutputContent>
                 </div>
@@ -311,7 +355,7 @@ const CodeBlockWithExecution = ({
               <div style={{ marginBottom: '8px', fontWeight: '600', color: '#e53e3e' }}>
                 Execution Failed
               </div>
-              <ErrorOutput theme={theme}>{result.error}</ErrorOutput>
+              <ErrorOutput theme={safeTheme}>{result.error}</ErrorOutput>
             </div>
           )}
         </ExecutionResults>
