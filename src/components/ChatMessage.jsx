@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
@@ -18,7 +18,7 @@ const renderLatex = (latex, displayMode) => (
 );
 
 // Format markdown text including bold, italic, bullet points and code blocks
-const formatContent = (content, isLanguageExecutable = null, supportedLanguages = []) => {
+const robustFormatContent = (content, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
   if (!content) return '';
   
   // Extract thinking content if present
@@ -37,20 +37,20 @@ const formatContent = (content, isLanguageExecutable = null, supportedLanguages 
   // If we have thinking content, return an object with both processed contents
   if (thinkingContent) {
     return {
-      main: processText(mainContent, true, isLanguageExecutable, supportedLanguages),
-      thinking: processText(thinkingContent, true, isLanguageExecutable, supportedLanguages)
+      main: processText(mainContent, true, isLanguageExecutable, supportedLanguages, theme),
+      thinking: processText(thinkingContent, true, isLanguageExecutable, supportedLanguages, theme)
     };
   }
   
   // Otherwise, just process the content normally
-  return processText(mainContent, true, isLanguageExecutable, supportedLanguages);
+  return processText(mainContent, true, isLanguageExecutable, supportedLanguages, theme);
 };
 
 // Convert markdown syntax to HTML using a more straightforward approach
-const processText = (text, enableCodeExecution = true, isLanguageExecutable = null, supportedLanguages = []) => {
+const processText = (text, enableCodeExecution = true, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
   // Use the new code block processor for consistency
   return processCodeBlocks(text, {
-    onCodeBlock: ({ language, content: codeContent, isComplete, key, theme }) => {
+    onCodeBlock: ({ language, content: codeContent, isComplete, key, theme: blockTheme }) => {
       // Use CodeBlockWithExecution if code execution is enabled and language is executable
       if (enableCodeExecution && isLanguageExecutable && isLanguageExecutable(language)) {
         return (
@@ -58,7 +58,7 @@ const processText = (text, enableCodeExecution = true, isLanguageExecutable = nu
             key={key}
             language={language}
             content={codeContent}
-            theme={theme}
+            theme={blockTheme || theme}
             supportedLanguages={supportedLanguages}
             onExecutionComplete={(result, error, executionTime) => {
               console.log('Code execution completed:', { result, error, executionTime });
@@ -69,23 +69,24 @@ const processText = (text, enableCodeExecution = true, isLanguageExecutable = nu
       
       // Fall back to regular code block for non-executable languages
       return (
-        <CodeBlock key={key} className={language}>
-          <CodeHeader>
-            <CodeLanguage>{language}</CodeLanguage>
-            <CopyButton onClick={() => navigator.clipboard.writeText(codeContent)}>
+        <CodeBlock key={key} theme={blockTheme || theme}>
+          <CodeHeader theme={blockTheme || theme}>
+            <CodeLanguage theme={blockTheme || theme}>{language}</CodeLanguage>
+            <CopyButton theme={blockTheme || theme} onClick={() => navigator.clipboard.writeText(codeContent)}>
               Copy
             </CopyButton>
           </CodeHeader>
-          <Pre>{codeContent}</Pre>
+          <Pre theme={blockTheme || theme}>{codeContent}</Pre>
         </CodeBlock>
       );
     },
-    onTextSegment: (textSegment) => processMarkdown(textSegment)
+    onTextSegment: (textSegment) => processMarkdown(textSegment, theme),
+    theme
   });
 };
 
 // Update processMarkdown to handle LaTeX
-const processMarkdown = (text) => {
+const processMarkdown = (text, theme = {}) => {
   const parts = [];
   let lastIndex = 0;
 
@@ -99,7 +100,7 @@ const processMarkdown = (text) => {
   while ((match = displayRegex.exec(text)) !== null) {
     // Add text before
     if (match.index > lastIndex) {
-      parts.push(processMarkdownText(text.substring(lastIndex, match.index)));
+      parts.push(processMarkdownText(text.substring(lastIndex, match.index), theme));
     }
     // Add LaTeX
     parts.push(renderLatex(match[1], true));
@@ -113,7 +114,7 @@ const processMarkdown = (text) => {
   while ((match = inlineRegex.exec(remaining)) !== null) {
     // Add text before
     if (match.index > lastIndex) {
-      parts.push(processMarkdownText(remaining.substring(lastIndex, match.index)));
+      parts.push(processMarkdownText(remaining.substring(lastIndex, match.index), theme));
     }
     // Add inline LaTeX
     parts.push(renderLatex(match[1], false));
@@ -121,59 +122,313 @@ const processMarkdown = (text) => {
   }
   // Add final remaining
   if (lastIndex < remaining.length) {
-    parts.push(processMarkdownText(remaining.substring(lastIndex)));
+    parts.push(processMarkdownText(remaining.substring(lastIndex), theme));
   }
 
   return <>{parts}</>;
 };
 
 // New function for processing non-LaTeX markdown text (lines, bullets, etc.)
-const processMarkdownText = (text) => {
+const processMarkdownText = (text, theme = {}) => {
   const lines = text.split('\n');
   const result = [];
   let inList = false;
+  let inNumberedList = false;
   let listItems = [];
+  let numberedListItems = [];
   
   // Process line by line
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
-    // Bullet point
-    if (line.startsWith('* ')) {
-      inList = true;
-      const itemContent = line.substring(2);
-      listItems.push(
-        <li key={`item-${i}`}>{processInlineFormatting(itemContent)}</li>
+    // Headings
+    if (line.startsWith('# ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading1 key={`h1-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(2), theme)}
+        </Heading1>
       );
       continue;
     }
     
-    // End of a list
-    if (inList && (!line.startsWith('* ') || line === '')) {
-      result.push(
-        <BulletList key={`list-${i}`}>
-          {listItems}
-        </BulletList>
-      );
-      inList = false;
-      listItems = [];
-      
-      if (line !== '') {
+    if (line.startsWith('## ')) {
+      if (inList) {
         result.push(
-          <div key={`text-${i}`}>{processInlineFormatting(line)}</div>
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
         );
-      } else {
-        result.push(<br key={`br-${i}`} />);
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading2 key={`h2-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(3), theme)}
+        </Heading2>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('### ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading3 key={`h3-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(4), theme)}
+        </Heading3>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('#### ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading4 key={`h4-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(5), theme)}
+        </Heading4>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('##### ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading5 key={`h5-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(6), theme)}
+        </Heading5>
+      );
+      continue;
+    }
+    
+    if (line.startsWith('###### ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Heading6 key={`h6-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(7), theme)}
+        </Heading6>
+      );
+      continue;
+    }
+    
+    // Horizontal rule
+    if (line === '---' || line === '***' || line === '___') {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(<HorizontalRule key={`hr-${i}`} theme={theme} />);
+      continue;
+    }
+    
+    // Blockquote
+    if (line.startsWith('> ')) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      result.push(
+        <Blockquote key={`quote-${i}`} theme={theme}>
+          <Paragraph theme={theme}>
+            {processInlineFormatting(line.substring(2), theme)}
+          </Paragraph>
+        </Blockquote>
+      );
+      continue;
+    }
+    
+    // Bullet point
+    if (line.startsWith('* ') || line.startsWith('- ')) {
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
+      }
+      inList = true;
+      const itemContent = line.substring(2);
+      listItems.push(
+        <li key={`item-${i}`}>{processInlineFormatting(itemContent, theme)}</li>
+      );
+      continue;
+    }
+    
+    // Numbered list
+    const numberedMatch = line.match(/^(\d+)\.\s/);
+    if (numberedMatch) {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      inNumberedList = true;
+      const itemContent = line.substring(numberedMatch[0].length);
+      numberedListItems.push(
+        <li key={`nitem-${i}`}>{processInlineFormatting(itemContent, theme)}</li>
+      );
+      continue;
+    }
+    
+    // End of lists
+    if ((inList || inNumberedList) && line === '') {
+      if (inList) {
+        result.push(
+          <BulletList key={`list-${i}`} theme={theme}>
+            {listItems}
+          </BulletList>
+        );
+        inList = false;
+        listItems = [];
+      }
+      if (inNumberedList) {
+        result.push(
+          <NumberedList key={`nlist-${i}`} theme={theme}>
+            {numberedListItems}
+          </NumberedList>
+        );
+        inNumberedList = false;
+        numberedListItems = [];
       }
       continue;
     }
     
     // Regular text line
-    if (!inList && line !== '') {
+    if (!inList && !inNumberedList && line !== '') {
       result.push(
-        <div key={`text-${i}`}>{processInlineFormatting(line)}</div>
+        <Paragraph key={`p-${i}`} theme={theme}>
+          {processInlineFormatting(line, theme)}
+        </Paragraph>
       );
-    } else if (!inList) {
+    } else if (!inList && !inNumberedList) {
+      // Empty line
       result.push(<br key={`br-${i}`} />);
     }
   }
@@ -181,17 +436,60 @@ const processMarkdownText = (text) => {
   // Add any remaining list items
   if (inList && listItems.length > 0) {
     result.push(
-      <BulletList key="list-end">
+      <BulletList key="list-end" theme={theme}>
         {listItems}
       </BulletList>
+    );
+  }
+  
+  if (inNumberedList && numberedListItems.length > 0) {
+    result.push(
+      <NumberedList key="nlist-end" theme={theme}>
+        {numberedListItems}
+      </NumberedList>
     );
   }
   
   return <>{result}</>;
 };
 
-// Process inline formatting (bold, italic)
-const processInlineFormatting = (text) => {
+// Process inline formatting (bold, italic, links)
+const processInlineFormatting = (text, theme = {}) => {
+  const parts = [];
+  let lastIndex = 0;
+  
+  // Handle links first
+  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let match;
+  
+  while ((match = linkPattern.exec(text)) !== null) {
+    // Add text before the link
+    if (match.index > lastIndex) {
+      const beforeText = text.substring(lastIndex, match.index);
+      parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(beforeText, theme)}</span>);
+    }
+    
+    // Add the link
+    parts.push(
+      <Link key={`link-${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer" theme={theme}>
+        {processBoldItalic(match[1], theme)}
+      </Link>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add any remaining text
+  if (lastIndex < text.length) {
+    const remainingText = text.substring(lastIndex);
+    parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(remainingText, theme)}</span>);
+  }
+  
+  return parts.length > 0 ? <>{parts}</> : processBoldItalic(text, theme);
+};
+
+// Process bold and italic formatting
+const processBoldItalic = (text, theme = {}) => {
   // First handle bold text
   const boldPattern = /\*\*(.*?)\*\*/g;
   const parts = [];
@@ -201,25 +499,25 @@ const processInlineFormatting = (text) => {
   while ((match = boldPattern.exec(text)) !== null) {
     // Add text before the bold part
     if (match.index > lastIndex) {
-      parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex, match.index))}</span>);
+      parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex, match.index), theme)}</span>);
     }
     
     // Add the bold text (also process any italic within it)
-    parts.push(<Bold key={`bold-${match.index}`}>{processItalic(match[1])}</Bold>);
+    parts.push(<Bold key={`bold-${match.index}`} theme={theme}>{processItalic(match[1], theme)}</Bold>);
     
     lastIndex = match.index + match[0].length;
   }
   
   // Add any remaining text
   if (lastIndex < text.length) {
-    parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex))}</span>);
+    parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex), theme)}</span>);
   }
   
-  return <>{parts}</>;
+  return parts.length > 0 ? <>{parts}</> : processItalic(text, theme);
 };
 
 // Process italic text
-const processItalic = (text) => {
+const processItalic = (text, theme = {}) => {
   if (!text) return null;
   
   const italicPattern = /\*((?!\*).+?)\*/g;
@@ -234,7 +532,7 @@ const processItalic = (text) => {
     }
     
     // Add the italic text
-    parts.push(<Italic key={`italic-${match.index}`}>{match[1]}</Italic>);
+    parts.push(<Italic key={`italic-${match.index}`} theme={theme}>{match[1]}</Italic>);
     
     lastIndex = match.index + match[0].length;
   }
@@ -572,32 +870,214 @@ const LoadingDots = styled.span`
   animation: ${pulse} 1.5s infinite;
 `;
 
-// Add style components for markdown formatting
+// Add style components for markdown formatting aligned with design language
 const Bold = styled.span`
   font-weight: 700;
+  color: ${props => props.theme.text};
 `;
 
 const Italic = styled.span`
   font-style: italic;
+  color: ${props => props.theme.text};
+`;
+
+const Heading1 = styled.h1`
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 1.5rem 0 1rem 0;
+  color: ${props => props.theme.text};
+  border-bottom: 2px solid ${props => props.theme.border};
+  padding-bottom: 0.5rem;
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading2 = styled.h2`
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 1.3rem 0 0.8rem 0;
+  color: ${props => props.theme.text};
+  border-bottom: 1px solid ${props => props.theme.border};
+  padding-bottom: 0.4rem;
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading3 = styled.h3`
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 1.1rem 0 0.6rem 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading4 = styled.h4`
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading5 = styled.h5`
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.9rem 0 0.4rem 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading6 = styled.h6`
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0.8rem 0 0.3rem 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Paragraph = styled.p`
+  margin: 0.8rem 0;
+  line-height: 1.6;
+  color: ${props => props.theme.text};
+  
+  &:first-child {
+    margin-top: 0;
+  }
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
 `;
 
 const BulletList = styled.ul`
   list-style-type: none;
   padding-left: 0;
-  margin: 0.5em 0;
+  margin: 0.8rem 0;
   
   li {
     position: relative;
-    padding-left: 1.2em;
-    margin: 0.4em 0;
+    padding-left: 1.5em;
+    margin: 0.5em 0;
+    line-height: 1.6;
+    color: ${props => props.theme.text};
     
     &:before {
       content: "•";
       position: absolute;
-      left: 0.2em;
-      color: ${props => props.theme.text};
+      left: 0.3em;
+      color: ${props => props.theme.primary};
+      font-weight: bold;
+      font-size: 1.2em;
     }
   }
+`;
+
+const NumberedList = styled.ol`
+  padding-left: 1.5em;
+  margin: 0.8rem 0;
+  
+  li {
+    margin: 0.5em 0;
+    line-height: 1.6;
+    color: ${props => props.theme.text};
+  }
+`;
+
+const Blockquote = styled.blockquote`
+  border-left: 4px solid ${props => props.theme.primary};
+  margin: 1rem 0;
+  padding: 0.8rem 0 0.8rem 1.2rem;
+  background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: ${props => props.theme.text};
+  
+  p {
+    margin: 0;
+    line-height: 1.6;
+  }
+`;
+
+const Link = styled.a`
+  color: ${props => props.theme.primary};
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.2s ease;
+  
+  &:hover {
+    border-bottom-color: ${props => props.theme.primary};
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 8px;
+  overflow: hidden;
+  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+`;
+
+const TableHeader = styled.th`
+  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  color: ${props => props.theme.text};
+  border-bottom: 1px solid ${props => props.theme.border};
+`;
+
+const TableCell = styled.td`
+  padding: 12px;
+  border-bottom: 1px solid ${props => props.theme.border};
+  color: ${props => props.theme.text};
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const TableRow = styled.tr`
+  &:last-child td {
+    border-bottom: none;
+  }
+  
+  &:hover {
+    background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
+  }
+`;
+
+const HorizontalRule = styled.hr`
+  border: none;
+  height: 1px;
+  background: ${props => props.theme.border};
+  margin: 2rem 0;
+  border-radius: 1px;
 `;
 
 const MessageImage = styled.img`
@@ -1117,20 +1597,39 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       });
   };
 
-  // Function to handle text-to-speech
+  // TTS state for toggle
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speechSynthesisRef = useRef(null);
+
+  // Function to handle text-to-speech (toggle)
   const handleReadAloud = () => {
     if ('speechSynthesis' in window) {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        return;
+      }
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
-      
       const textToRead = cleanedContent || content;
-      const utterance = new SpeechSynthesisUtterance(textToRead);
+      const utterance = new window.SpeechSynthesisUtterance(textToRead);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      setIsSpeaking(true);
       window.speechSynthesis.speak(utterance);
+      speechSynthesisRef.current = utterance;
     } else {
       console.error('Text-to-speech not supported in this browser');
-      // Could show user notification that TTS is not supported
     }
   };
+
+  // Ensure TTS state resets if user navigates away or message changes
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    };
+  }, [content, cleanedContent]);
 
   // Determine if the message has sources to display
   const displaySources = extractedSources.length > 0 ? extractedSources : (Array.isArray(sources) ? sources : []);
@@ -1321,7 +1820,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
           </div>
           <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-            {formatContent(content, isLanguageExecutable, supportedLanguages)}
+            {robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)}
           </div>
         </>
       );
@@ -1504,7 +2003,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               }
               
               // Process content and show main content + thinking dropdown if applicable
-              const processedContent = formatContent(contentToProcess, isLanguageExecutable, supportedLanguages);
+              const processedContent = robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme);
               const isMercury = modelId?.toLowerCase().includes('mercury');
               
               if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
@@ -1512,68 +2011,28 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 return (
                   <>
                     <ThinkingDropdown thinkingContent={processedContent.thinking} toolCalls={toolCalls} />
-                    {isLoading ? (
-                      <StreamingMarkdownRenderer 
-                        text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
-                        isStreaming={true}
-                        theme={theme}
-                      />
-                    ) : isMercury ? (
-                      <TextDiffusionAnimation 
-                        finalText={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
-                        isActive={!isLoading}
-                        messageId={id}
-                        speed={60}
-                        diffusionDuration={750}
-                      />
-                    ) : (
-                      processedContent.main
-                    )}
-                  </>
-                );
-              } else {
-                // If content has no thinking tags, but may have tool activity
-                const hasToolActivity = toolCalls && toolCalls.length > 0;
-                
-                return (
-                  <>
-                    {hasToolActivity && (
-                      <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
-                    )}
-                    {contentToProcess.split('\n\n-').map((part, index) => {
-                  if (index === 0) {
-                    // This is the main content part - process markdown formatting
-                    const formattedPart = formatContent(part, isLanguageExecutable, supportedLanguages);
-                    const mainText = typeof formattedPart === 'string' ? formattedPart : part;
-                    
-                    return (
-                      <React.Fragment key={`content-part-${index}`}>
-                        {isLoading ? (
-                          <StreamingMarkdownRenderer 
-                            text={mainText}
-                            isStreaming={true}
-                            theme={theme}
-                          />
-                        ) : isMercury ? (
-                          <TextDiffusionAnimation 
-                            finalText={mainText}
-                            isActive={!isLoading}
-                            messageId={id}
-                            speed={60}
-                            diffusionDuration={750}
-                          />
-                        ) : (
-                          formattedPart
-                        )}
-                      </React.Fragment>
-                    );
-                  }
-                  // This is the model signature part
-                  return <em key={`signature-part-${index}`}>- {part}</em>;
-                    })}
+                    <StreamingMarkdownRenderer 
+                      text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
+                      isStreaming={isLoading}
+                      theme={theme}
+                    />
                   </>
                 );
               }
+              // If content has no thinking tags, but may have tool activity
+              const hasToolActivity = toolCalls && toolCalls.length > 0;
+              return (
+                <>
+                  {hasToolActivity && (
+                    <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
+                  )}
+                  <StreamingMarkdownRenderer 
+                    text={contentToProcess}
+                    isStreaming={isLoading}
+                    theme={theme}
+                  />
+                </>
+              );
             })()}
           </Content>
           
@@ -1641,12 +2100,20 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </ActionButton>
                 </>
               )}
-              <ActionButton onClick={handleReadAloud}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-                </svg>
+              <ActionButton onClick={handleReadAloud} title={isSpeaking ? 'Stop speaking' : 'Read aloud'}>
+                {isSpeaking ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                  </svg>
+                )}
               </ActionButton>
               <ActionButton onClick={() => console.log('More options')}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
