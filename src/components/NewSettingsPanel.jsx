@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import TetrisGame from './TetrisGame';
+import { useAuth } from '../contexts/AuthContext';
 
 const SettingsOverlay = styled.div`
   position: fixed;
@@ -1023,10 +1024,11 @@ const SettingDescription = styled.p`
   `}
 `;
 
-const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
+const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboarding }) => {
   const [activeSection, setActiveSection] = useState('general');
   const [localSettings, setLocalSettings] = useState(settings || {});
   const [showTetris, setShowTetris] = useState(false);
+  const { adminUser } = useAuth();
   
   // Add a helper function to determine if in dark mode
   const isDarkMode = () => {
@@ -1126,6 +1128,18 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             </svg>
             Accessibility
           </NavItem>
+          
+          {adminUser && (
+            <NavItem 
+              onClick={() => setActiveSection('developer')} 
+              $active={activeSection === 'developer'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+              </svg>
+              Developer
+            </NavItem>
+          )}
           
           <NavItem 
             onClick={() => setActiveSection('about')} 
@@ -1265,6 +1279,35 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                   <option value="georgia">Georgia</option>
                   <option value="merriweather">Merriweather</option>
                 </SelectBox>
+              </SettingGroup>
+
+              <SettingGroup>
+                <SettingLabel>Sidebar Style</SettingLabel>
+                <RadioGroup>
+                  <RadioOption isSelected={localSettings.sidebarStyle === 'floating' || !localSettings.sidebarStyle}>
+                    <input
+                      type="radio"
+                      name="sidebarStyle"
+                      value="floating"
+                      checked={localSettings.sidebarStyle === 'floating' || !localSettings.sidebarStyle}
+                      onChange={() => handleChange('sidebarStyle', 'floating')}
+                    />
+                    Floating
+                  </RadioOption>
+                  <RadioOption isSelected={localSettings.sidebarStyle === 'traditional'}>
+                    <input
+                      type="radio"
+                      name="sidebarStyle"
+                      value="traditional"
+                      checked={localSettings.sidebarStyle === 'traditional'}
+                      onChange={() => handleChange('sidebarStyle', 'traditional')}
+                    />
+                    Traditional
+                  </RadioOption>
+                </RadioGroup>
+                <SettingDescription>
+                  Choose between a floating sidebar with rounded corners and margins, or a traditional sidebar that connects to the side of the screen.
+                </SettingDescription>
               </SettingGroup>
             </div>
           )}
@@ -1542,6 +1585,34 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             </div>
           )}
           
+          {activeSection === 'developer' && adminUser && (
+            <div>
+              <SectionTitle>Developer</SectionTitle>
+              
+              <SettingGroup>
+                <SettingLabel>Onboarding</SettingLabel>
+                <SettingDescription>
+                  Reset the onboarding flow for testing purposes. This will show the welcome tutorial again.
+                </SettingDescription>
+                <SaveButton 
+                  onClick={() => {
+                    if (onRestartOnboarding) {
+                      onRestartOnboarding();
+                      closeModal();
+                    }
+                  }}
+                  style={{ 
+                    position: 'relative',
+                    bottom: 'auto',
+                    right: 'auto',
+                    marginTop: '10px'
+                  }}
+                >
+                  Restart Onboarding
+                </SaveButton>
+              </SettingGroup>
+            </div>
+          )}
           
           {activeSection === 'about' && (
             <AboutContainer>

@@ -45,6 +45,13 @@ const MainContentArea = styled.div`
   flex: 1;
   display: flex;
   height: 100%;
+  margin-left: ${props => {
+    // Only add left margin for traditional sidebar style when sidebar is not collapsed
+    if (props.$sidebarStyle === 'traditional' && !props.$sidebarCollapsed) {
+      return '280px';
+    }
+    return '0';
+  }};
   margin-right: ${props => {
     // Handle multiple panels being open (whiteboard is now a full-screen modal)
     let totalMargin = 0;
@@ -54,7 +61,11 @@ const MainContentArea = styled.div`
     if (props.$sandbox3DOpen) totalMargin += 450;
     return `${totalMargin}px`;
   }};
-  transition: margin-right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1), margin-right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
 `;
 
 // Add back the floating hamburger button
@@ -677,6 +688,17 @@ const AppContent = () => {
     }
   };
 
+  // Handle onboarding restart (for admin users)
+  const handleRestartOnboarding = () => {
+    if (user) {
+      // Remove the onboarding completion marker
+      localStorage.removeItem(`onboarding_completed_${user.id}`);
+      
+      // Show onboarding again
+      setShowOnboarding(true);
+    }
+  };
+
   const handleModelChange = (modelId) => {
     setSelectedModel(modelId);
     // Any other actions needed when model changes, like saving to storage
@@ -822,6 +844,8 @@ const AppContent = () => {
             $graphingOpen={isGraphingOpen}
             $flowchartOpen={isFlowchartOpen}
             $sandbox3DOpen={isSandbox3DOpen}
+            $sidebarStyle={settings.sidebarStyle || 'floating'}
+            $sidebarCollapsed={collapsed}
           >
             {collapsed && (
               <FloatingMenuButton onClick={() => setCollapsed(false)}>
@@ -865,6 +889,7 @@ const AppContent = () => {
               onModelChange={handleModelChange}
               collapsed={collapsed} 
               setCollapsed={setCollapsed} 
+              settings={settings}
             />
             {console.log('Available models for ChatWindow:', availableModels)}
             <Routes>
@@ -1008,6 +1033,7 @@ ${JSON.stringify(objects, null, 2)}
               settings={settings}
               updateSettings={updateSettings}
               closeModal={() => setIsSettingsOpen(false)}
+              onRestartOnboarding={handleRestartOnboarding}
             />
           )}
           

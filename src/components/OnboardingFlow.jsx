@@ -37,16 +37,16 @@ const OnboardingContainer = styled.div`
 
 const LeftPanel = styled.div`
   flex: 1;
-  padding: 40px;
+  padding: 20px 40px;
   background: ${props => props.theme.sidebar};
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   
   @media (max-width: 768px) {
     flex: 1;
-    padding: 20px;
+    padding: 15px 20px;
     min-height: 60vh;
   }
 `;
@@ -70,13 +70,15 @@ const RightPanel = styled.div`
 const WelcomeTitle = styled.h1`
   font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  margin-top: 10px;
   text-align: center;
   color: ${props => props.theme.text};
   
   @media (max-width: 768px) {
     font-size: 2rem;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+    margin-top: 8px;
   }
 `;
 
@@ -92,7 +94,7 @@ const StepIndicator = styled.div`
   display: flex;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 40px;
+  margin-bottom: 0px;
 `;
 
 const StepDot = styled.div`
@@ -122,7 +124,7 @@ const StepTitle = styled.h2`
 const StepDescription = styled.p`
   font-size: 1rem;
   color: ${props => props.theme.text}BB;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   line-height: 1.5;
 `;
 
@@ -137,6 +139,18 @@ const OptionGrid = styled.div`
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: 12px;
     max-width: 100%;
+  }
+  
+  &.theme-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    max-width: 400px;
+    
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-width: 300px;
+    }
   }
 `;
 
@@ -163,6 +177,12 @@ const OptionCard = styled.div`
     justify-content: center;
     font-weight: 500;
     color: ${props => props.theme.text};
+    
+    &.small {
+      padding: 12px 8px;
+      min-height: 60px;
+      font-size: 0.85rem;
+    }
   }
   
   &.light-theme {
@@ -175,6 +195,12 @@ const OptionCard = styled.div`
     background: ${props => props.$selected ? '#0078d7' : '#1a1a1a'};
     color: ${props => props.$selected ? '#ffffff' : '#ffffff'};
     border-color: ${props => props.$selected ? '#0078d7' : '#333333'};
+  }
+  
+  &.oled-theme {
+    background: ${props => props.$selected ? '#0078d7' : '#000000'};
+    color: ${props => props.$selected ? '#ffffff' : '#ffffff'};
+    border-color: ${props => props.$selected ? '#0078d7' : '#111111'};
   }
   
   &.ocean-theme {
@@ -190,14 +216,69 @@ const OptionCard = styled.div`
   }
   
   &.pride-theme {
-    background: ${props => props.$selected ? '#ff0000' : 'linear-gradient(135deg, #ff0000, #ff9900, #ffff00, #33cc33, #3399ff, #9933ff)'};
+    background: ${props => props.$selected ? '#E40303' : 'linear-gradient(135deg, #E40303, #FF8C00, #FFED00, #008026, #004DFF, #750787)'};
     color: white;
-    border-color: ${props => props.$selected ? '#ff0000' : 'transparent'};
+    border-color: ${props => props.$selected ? '#E40303' : 'transparent'};
+  }
+  
+  &.trans-theme {
+    background: ${props => props.$selected ? '#5BCEFA' : 'linear-gradient(135deg, #5BCEFA, #F5A9B8, #FFFFFF)'};
+    color: ${props => props.$selected ? '#ffffff' : '#000000'};
+    border-color: ${props => props.$selected ? '#5BCEFA' : 'transparent'};
+  }
+  
+  &.bisexual-theme {
+    background: ${props => props.$selected ? '#D60270' : 'linear-gradient(135deg, #D60270, #9B4F96, #0038A8)'};
+    color: white;
+    border-color: ${props => props.$selected ? '#D60270' : 'transparent'};
+  }
+  
+  &.galaxy-theme {
+    background: ${props => props.$selected ? '#7b61ff' : 'linear-gradient(135deg, #0f052b, #12063b, #1b0a4a)'};
+    color: white;
+    border-color: ${props => props.$selected ? '#7b61ff' : 'transparent'};
+  }
+  
+  &.sunset-theme {
+    background: ${props => props.$selected ? '#ff7e5f' : 'linear-gradient(135deg, #ff7e5f, #feb47b)'};
+    color: ${props => props.$selected ? '#ffffff' : '#2d0b00'};
+    border-color: ${props => props.$selected ? '#ff7e5f' : 'transparent'};
+  }
+  
+  &.cyberpunk-theme {
+    background: ${props => props.$selected ? '#ff00cc' : 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)'};
+    color: white;
+    border-color: ${props => props.$selected ? '#ff00cc' : 'transparent'};
+  }
+  
+  &.bubblegum-theme {
+    background: ${props => props.$selected ? '#ff69b4' : 'linear-gradient(135deg, #ff9a9e, #fad0c4)'};
+    color: ${props => props.$selected ? '#ffffff' : '#551133'};
+    border-color: ${props => props.$selected ? '#ff69b4' : 'transparent'};
+  }
+  
+  &.desert-theme {
+    background: ${props => props.$selected ? '#d86f45' : 'linear-gradient(135deg, #c79081, #dfa579)'};
+    color: ${props => props.$selected ? '#ffffff' : '#3e2b1f'};
+    border-color: ${props => props.$selected ? '#d86f45' : 'transparent'};
+  }
+  
+  &.lakeside-theme {
+    background: ${props => props.$selected ? '#c69214' : 'linear-gradient(135deg, #783f40, #c69214)'};
+    color: white;
+    border-color: ${props => props.$selected ? '#c69214' : 'transparent'};
+  }
+  
+  &.retro-theme {
+    background: ${props => props.$selected ? '#000080' : '#C0C0C0'};
+    color: ${props => props.$selected ? '#ffffff' : '#000000'};
+    border-color: ${props => props.$selected ? '#000080' : '#808080'};
+    border-style: ${props => props.$selected ? 'solid' : 'inset'};
+    border-width: 2px;
   }
 `;
 
-const FontSizePreview = styled.div`
-  margin-top: 8px;
+const FontSizeLabel = styled.div`
   font-weight: 600;
   
   &.small { font-size: 0.9rem; }
@@ -216,10 +297,47 @@ const BubbleStylePreview = styled.div`
   &.minimal { border-radius: 0; border: 1px solid ${props => props.theme.border}; }
 `;
 
+const SidebarIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: -2px;
+`;
+
+const IndicatorSquare = styled.div`
+  width: 16px;
+  height: 16px;
+  position: relative;
+  
+  &.connected {
+    background: ${props => props.theme.text};
+    border-radius: 2px;
+  }
+  
+  &.floating {
+    background: ${props => props.theme.background};
+    border: 2px solid ${props => props.theme.text};
+    border-radius: 2px;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 8px;
+      height: 8px;
+      background: ${props => props.theme.text};
+      border-radius: 1px;
+    }
+  }
+`;
+
 const NavigationButtons = styled.div`
   display: flex;
   justify-content: space-between;
-  margin-top: 40px;
+  margin-top: 20px;
   width: 100%;
   max-width: 600px;
 `;
@@ -261,10 +379,47 @@ const PreviewContainer = styled.div`
   transform: translate(-50%, -50%);
   width: 90%;
   max-width: 400px;
+  height: 300px;
   background: ${props => props.theme.background};
   border-radius: 12px;
-  padding: 20px;
+  padding: ${props => props.$sidebarStyle === 'floating' ? '16px' : '0'};
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  overflow: hidden;
+`;
+
+const PreviewSidebar = styled.div`
+  width: 80px;
+  background: ${props => props.theme.sidebar};
+  border-radius: ${props => props.$sidebarStyle === 'connected' ? '12px 0 0 12px' : '8px'};
+  padding: 16px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+`;
+
+const PreviewMain = styled.div`
+  flex: 1;
+  background: ${props => props.theme.chat};
+  border-radius: ${props => props.$sidebarStyle === 'connected' ? '0 12px 12px 0' : '8px'};
+  padding: 16px;
+  margin-left: ${props => props.$sidebarStyle === 'floating' ? '8px' : '0'};
+  display: flex;
+  flex-direction: column;
+`;
+
+const PreviewSidebarItem = styled.div`
+  width: 32px;
+  height: 32px;
+  background: ${props => props.theme.primary}40;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${props => props.theme.text};
+  font-size: 12px;
+  font-weight: 500;
 `;
 
 const PreviewHeader = styled.div`
@@ -291,10 +446,7 @@ const PreviewAvatar = styled.div`
 
 const PreviewMessage = styled.div`
   padding: 12px 16px;
-  border-radius: ${props => 
-    props.$bubbleStyle === 'modern' ? '16px' : 
-    props.$bubbleStyle === 'classic' ? '4px' : '0'
-  };
+  border-radius: 16px;
   background: ${props => props.theme.messageAi};
   color: ${props => props.theme.text};
   font-size: ${props => 
@@ -302,9 +454,6 @@ const PreviewMessage = styled.div`
     props.$fontSize === 'large' ? '1.1rem' : '1rem'
   };
   margin-bottom: 12px;
-  ${props => props.$bubbleStyle === 'minimal' && `
-    border: 1px solid ${props.theme.border};
-  `}
 `;
 
 const PreviewInput = styled.div`
@@ -324,7 +473,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
   const [selections, setSelections] = useState({
     theme: 'light',
     fontSize: 'medium',
-    bubbleStyle: 'modern'
+    sidebarStyle: 'floating'
   });
 
   const steps = [
@@ -334,9 +483,19 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
       options: [
         { id: 'light', label: 'Light', className: 'light-theme' },
         { id: 'dark', label: 'Dark', className: 'dark-theme' },
+        { id: 'oled', label: 'OLED', className: 'oled-theme' },
         { id: 'ocean', label: 'Ocean', className: 'ocean-theme' },
         { id: 'forest', label: 'Forest', className: 'forest-theme' },
-        { id: 'pride', label: 'Pride', className: 'pride-theme' }
+        { id: 'pride', label: 'Pride', className: 'pride-theme' },
+        { id: 'trans', label: 'Trans', className: 'trans-theme' },
+        { id: 'bisexual', label: 'Bisexual', className: 'bisexual-theme' },
+        { id: 'galaxy', label: 'Galaxy', className: 'galaxy-theme' },
+        { id: 'sunset', label: 'Sunset', className: 'sunset-theme' },
+        { id: 'cyberpunk', label: 'Cyberpunk', className: 'cyberpunk-theme' },
+        { id: 'bubblegum', label: 'Bubblegum', className: 'bubblegum-theme' },
+        { id: 'desert', label: 'Desert', className: 'desert-theme' },
+        { id: 'lakeside', label: 'Lakeside', className: 'lakeside-theme' },
+        { id: 'retro', label: 'Retro', className: 'retro-theme' }
       ],
       selectionKey: 'theme'
     },
@@ -351,14 +510,13 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
       selectionKey: 'fontSize'
     },
     {
-      title: 'Message Style',
-      description: 'How would you like your messages to look?',
+      title: 'Sidebar Style',
+      description: 'Choose how you want the sidebar to appear',
       options: [
-        { id: 'modern', label: 'Modern', description: 'Rounded corners' },
-        { id: 'classic', label: 'Classic', description: 'Square corners' },
-        { id: 'minimal', label: 'Minimal', description: 'Clean lines' }
+        { id: 'floating', label: 'Floating', indicator: true },
+        { id: 'connected', label: 'Connected', indicator: true }
       ],
-      selectionKey: 'bubbleStyle'
+      selectionKey: 'sidebarStyle'
     }
   ];
 
@@ -396,9 +554,6 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
           {currentStep === 0 && (
             <>
               <WelcomeTitle theme={currentTheme}>Welcome to Sculptor!</WelcomeTitle>
-              <WelcomeSubtitle theme={currentTheme}>
-                Let's personalize your experience. This will only take a minute.
-              </WelcomeSubtitle>
             </>
           )}
           
@@ -420,20 +575,29 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
               {steps[currentStep].description}
             </StepDescription>
             
-            <OptionGrid>
+            <OptionGrid className={currentStep === 0 ? 'theme-grid' : ''}>
               {steps[currentStep].options.map((option) => (
                 <OptionCard
                   key={option.id}
-                  className={`theme-option ${option.className || ''}`}
+                  className={`theme-option ${option.className || ''} ${currentStep === 0 ? 'small' : ''}`}
                   $selected={selections[steps[currentStep].selectionKey] === option.id}
                   onClick={() => handleOptionSelect(option.id)}
                   theme={currentTheme}
                 >
-                  {option.label}
-                  {option.preview && (
-                    <FontSizePreview className={option.id}>
-                      Sample text
-                    </FontSizePreview>
+                  {option.preview ? (
+                    <FontSizeLabel className={option.id}>
+                      {option.label}
+                    </FontSizeLabel>
+                  ) : option.indicator ? (
+                    <SidebarIndicator>
+                      <span>{option.label}</span>
+                      <IndicatorSquare 
+                        className={option.id}
+                        theme={currentTheme}
+                      />
+                    </SidebarIndicator>
+                  ) : (
+                    option.label
                   )}
                   {option.description && (
                     <div style={{ fontSize: '0.85rem', marginTop: '4px', opacity: 0.8 }}>
@@ -476,37 +640,36 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
         </LeftPanel>
         
         <RightPanel theme={currentTheme}>
-          <PreviewContainer theme={currentTheme}>
-            <PreviewHeader theme={currentTheme}>
-              <PreviewAvatar theme={currentTheme}>AI</PreviewAvatar>
-              <div>
-                <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>AI Assistant</div>
-                <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Online</div>
-              </div>
-            </PreviewHeader>
+          <PreviewContainer theme={currentTheme} $sidebarStyle={selections.sidebarStyle}>
+            <PreviewSidebar theme={currentTheme} $sidebarStyle={selections.sidebarStyle}>
+              <PreviewSidebarItem theme={currentTheme}>💬</PreviewSidebarItem>
+              <PreviewSidebarItem theme={currentTheme}>⚙️</PreviewSidebarItem>
+              <PreviewSidebarItem theme={currentTheme}>📁</PreviewSidebarItem>
+            </PreviewSidebar>
             
-            <PreviewMessage 
-              theme={currentTheme}
-              $bubbleStyle={selections.bubbleStyle}
-              $fontSize={selections.fontSize}
-            >
-              Hello! I'm your AI assistant. This is how our conversation will look with your selected settings.
-            </PreviewMessage>
-            
-            <PreviewMessage 
-              theme={currentTheme}
-              $bubbleStyle={selections.bubbleStyle}
-              $fontSize={selections.fontSize}
-            >
-              Feel free to ask me anything!
-            </PreviewMessage>
-            
-            <PreviewInput 
-              theme={currentTheme}
-              $fontSize={selections.fontSize}
-            >
-              Type your message here...
-            </PreviewInput>
+            <PreviewMain theme={currentTheme} $sidebarStyle={selections.sidebarStyle}>
+              <PreviewHeader theme={currentTheme}>
+                <PreviewAvatar theme={currentTheme}>AI</PreviewAvatar>
+                <div>
+                  <div style={{ fontWeight: '500', fontSize: '0.9rem' }}>AI Assistant</div>
+                  <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Online</div>
+                </div>
+              </PreviewHeader>
+              
+              <PreviewMessage 
+                theme={currentTheme}
+                $fontSize={selections.fontSize}
+              >
+                Hi! Welcome to SculptorAI!
+              </PreviewMessage>
+              
+              <PreviewInput 
+                theme={currentTheme}
+                $fontSize={selections.fontSize}
+              >
+                Type your message here...
+              </PreviewInput>
+            </PreviewMain>
           </PreviewContainer>
         </RightPanel>
       </OnboardingContainer>
