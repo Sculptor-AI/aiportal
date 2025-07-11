@@ -18,7 +18,7 @@ const renderLatex = (latex, displayMode) => (
 );
 
 // Format markdown text including bold, italic, bullet points and code blocks
-const formatContent = (content, isLanguageExecutable = null, supportedLanguages = []) => {
+const formatContent = (content, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
   if (!content) return '';
   
   // Extract thinking content if present
@@ -37,20 +37,20 @@ const formatContent = (content, isLanguageExecutable = null, supportedLanguages 
   // If we have thinking content, return an object with both processed contents
   if (thinkingContent) {
     return {
-      main: processText(mainContent, true, isLanguageExecutable, supportedLanguages),
-      thinking: processText(thinkingContent, true, isLanguageExecutable, supportedLanguages)
+      main: processText(mainContent, true, isLanguageExecutable, supportedLanguages, theme),
+      thinking: processText(thinkingContent, true, isLanguageExecutable, supportedLanguages, theme)
     };
   }
   
   // Otherwise, just process the content normally
-  return processText(mainContent, true, isLanguageExecutable, supportedLanguages);
+  return processText(mainContent, true, isLanguageExecutable, supportedLanguages, theme);
 };
 
 // Convert markdown syntax to HTML using a more straightforward approach
-const processText = (text, enableCodeExecution = true, isLanguageExecutable = null, supportedLanguages = []) => {
+const processText = (text, enableCodeExecution = true, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
   // Use the new code block processor for consistency
   return processCodeBlocks(text, {
-    onCodeBlock: ({ language, content: codeContent, isComplete, key, theme }) => {
+    onCodeBlock: ({ language, content: codeContent, isComplete, key, theme: blockTheme }) => {
       // Use CodeBlockWithExecution if code execution is enabled and language is executable
       if (enableCodeExecution && isLanguageExecutable && isLanguageExecutable(language)) {
         return (
@@ -58,7 +58,7 @@ const processText = (text, enableCodeExecution = true, isLanguageExecutable = nu
             key={key}
             language={language}
             content={codeContent}
-            theme={theme}
+            theme={blockTheme || theme}
             supportedLanguages={supportedLanguages}
             onExecutionComplete={(result, error, executionTime) => {
               console.log('Code execution completed:', { result, error, executionTime });
@@ -69,23 +69,24 @@ const processText = (text, enableCodeExecution = true, isLanguageExecutable = nu
       
       // Fall back to regular code block for non-executable languages
       return (
-        <CodeBlock key={key} className={language}>
-          <CodeHeader>
-            <CodeLanguage>{language}</CodeLanguage>
-            <CopyButton onClick={() => navigator.clipboard.writeText(codeContent)}>
+        <CodeBlock key={key} theme={blockTheme || theme}>
+          <CodeHeader theme={blockTheme || theme}>
+            <CodeLanguage theme={blockTheme || theme}>{language}</CodeLanguage>
+            <CopyButton theme={blockTheme || theme} onClick={() => navigator.clipboard.writeText(codeContent)}>
               Copy
             </CopyButton>
           </CodeHeader>
-          <Pre>{codeContent}</Pre>
+          <Pre theme={blockTheme || theme}>{codeContent}</Pre>
         </CodeBlock>
       );
     },
-    onTextSegment: (textSegment) => processMarkdown(textSegment)
+    onTextSegment: (textSegment) => processMarkdown(textSegment, theme),
+    theme
   });
 };
 
 // Update processMarkdown to handle LaTeX
-const processMarkdown = (text) => {
+const processMarkdown = (text, theme = {}) => {
   const parts = [];
   let lastIndex = 0;
 
@@ -99,7 +100,7 @@ const processMarkdown = (text) => {
   while ((match = displayRegex.exec(text)) !== null) {
     // Add text before
     if (match.index > lastIndex) {
-      parts.push(processMarkdownText(text.substring(lastIndex, match.index)));
+      parts.push(processMarkdownText(text.substring(lastIndex, match.index), theme));
     }
     // Add LaTeX
     parts.push(renderLatex(match[1], true));
@@ -113,7 +114,7 @@ const processMarkdown = (text) => {
   while ((match = inlineRegex.exec(remaining)) !== null) {
     // Add text before
     if (match.index > lastIndex) {
-      parts.push(processMarkdownText(remaining.substring(lastIndex, match.index)));
+      parts.push(processMarkdownText(remaining.substring(lastIndex, match.index), theme));
     }
     // Add inline LaTeX
     parts.push(renderLatex(match[1], false));
@@ -121,14 +122,14 @@ const processMarkdown = (text) => {
   }
   // Add final remaining
   if (lastIndex < remaining.length) {
-    parts.push(processMarkdownText(remaining.substring(lastIndex)));
+    parts.push(processMarkdownText(remaining.substring(lastIndex), theme));
   }
 
   return <>{parts}</>;
 };
 
 // New function for processing non-LaTeX markdown text (lines, bullets, etc.)
-const processMarkdownText = (text) => {
+const processMarkdownText = (text, theme = {}) => {
   const lines = text.split('\n');
   const result = [];
   let inList = false;
@@ -144,7 +145,7 @@ const processMarkdownText = (text) => {
     if (line.startsWith('# ')) {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -153,7 +154,7 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -161,8 +162,8 @@ const processMarkdownText = (text) => {
         numberedListItems = [];
       }
       result.push(
-        <Heading1 key={`h1-${i}`}>
-          {processInlineFormatting(line.substring(2))}
+        <Heading1 key={`h1-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(2), theme)}
         </Heading1>
       );
       continue;
@@ -171,7 +172,7 @@ const processMarkdownText = (text) => {
     if (line.startsWith('## ')) {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -180,7 +181,7 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -188,8 +189,8 @@ const processMarkdownText = (text) => {
         numberedListItems = [];
       }
       result.push(
-        <Heading2 key={`h2-${i}`}>
-          {processInlineFormatting(line.substring(3))}
+        <Heading2 key={`h2-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(3), theme)}
         </Heading2>
       );
       continue;
@@ -198,7 +199,7 @@ const processMarkdownText = (text) => {
     if (line.startsWith('### ')) {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -207,7 +208,7 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -215,8 +216,8 @@ const processMarkdownText = (text) => {
         numberedListItems = [];
       }
       result.push(
-        <Heading3 key={`h3-${i}`}>
-          {processInlineFormatting(line.substring(4))}
+        <Heading3 key={`h3-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(4), theme)}
         </Heading3>
       );
       continue;
@@ -225,7 +226,7 @@ const processMarkdownText = (text) => {
     if (line.startsWith('#### ')) {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -234,7 +235,7 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -242,8 +243,8 @@ const processMarkdownText = (text) => {
         numberedListItems = [];
       }
       result.push(
-        <Heading4 key={`h4-${i}`}>
-          {processInlineFormatting(line.substring(5))}
+        <Heading4 key={`h4-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(5), theme)}
         </Heading4>
       );
       continue;
@@ -252,7 +253,7 @@ const processMarkdownText = (text) => {
     if (line.startsWith('##### ')) {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -261,7 +262,7 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -269,8 +270,8 @@ const processMarkdownText = (text) => {
         numberedListItems = [];
       }
       result.push(
-        <Heading5 key={`h5-${i}`}>
-          {processInlineFormatting(line.substring(6))}
+        <Heading5 key={`h5-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(6), theme)}
         </Heading5>
       );
       continue;
@@ -279,7 +280,7 @@ const processMarkdownText = (text) => {
     if (line.startsWith('###### ')) {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -288,7 +289,7 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -296,8 +297,8 @@ const processMarkdownText = (text) => {
         numberedListItems = [];
       }
       result.push(
-        <Heading6 key={`h6-${i}`}>
-          {processInlineFormatting(line.substring(7))}
+        <Heading6 key={`h6-${i}`} theme={theme}>
+          {processInlineFormatting(line.substring(7), theme)}
         </Heading6>
       );
       continue;
@@ -307,7 +308,7 @@ const processMarkdownText = (text) => {
     if (line === '---' || line === '***' || line === '___') {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -316,14 +317,14 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
         inNumberedList = false;
         numberedListItems = [];
       }
-      result.push(<HorizontalRule key={`hr-${i}`} />);
+      result.push(<HorizontalRule key={`hr-${i}`} theme={theme} />);
       continue;
     }
     
@@ -340,7 +341,7 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -348,9 +349,9 @@ const processMarkdownText = (text) => {
         numberedListItems = [];
       }
       result.push(
-        <Blockquote key={`quote-${i}`}>
-          <Paragraph>
-            {processInlineFormatting(line.substring(2))}
+        <Blockquote key={`quote-${i}`} theme={theme}>
+          <Paragraph theme={theme}>
+            {processInlineFormatting(line.substring(2), theme)}
           </Paragraph>
         </Blockquote>
       );
@@ -361,7 +362,7 @@ const processMarkdownText = (text) => {
     if (line.startsWith('* ') || line.startsWith('- ')) {
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -371,7 +372,7 @@ const processMarkdownText = (text) => {
       inList = true;
       const itemContent = line.substring(2);
       listItems.push(
-        <li key={`item-${i}`}>{processInlineFormatting(itemContent)}</li>
+        <li key={`item-${i}`}>{processInlineFormatting(itemContent, theme)}</li>
       );
       continue;
     }
@@ -381,7 +382,7 @@ const processMarkdownText = (text) => {
     if (numberedMatch) {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -391,7 +392,7 @@ const processMarkdownText = (text) => {
       inNumberedList = true;
       const itemContent = line.substring(numberedMatch[0].length);
       numberedListItems.push(
-        <li key={`nitem-${i}`}>{processInlineFormatting(itemContent)}</li>
+        <li key={`nitem-${i}`}>{processInlineFormatting(itemContent, theme)}</li>
       );
       continue;
     }
@@ -400,7 +401,7 @@ const processMarkdownText = (text) => {
     if ((inList || inNumberedList) && line === '') {
       if (inList) {
         result.push(
-          <BulletList key={`list-${i}`}>
+          <BulletList key={`list-${i}`} theme={theme}>
             {listItems}
           </BulletList>
         );
@@ -409,7 +410,7 @@ const processMarkdownText = (text) => {
       }
       if (inNumberedList) {
         result.push(
-          <NumberedList key={`nlist-${i}`}>
+          <NumberedList key={`nlist-${i}`} theme={theme}>
             {numberedListItems}
           </NumberedList>
         );
@@ -422,8 +423,8 @@ const processMarkdownText = (text) => {
     // Regular text line
     if (!inList && !inNumberedList && line !== '') {
       result.push(
-        <Paragraph key={`p-${i}`}>
-          {processInlineFormatting(line)}
+        <Paragraph key={`p-${i}`} theme={theme}>
+          {processInlineFormatting(line, theme)}
         </Paragraph>
       );
     } else if (!inList && !inNumberedList) {
@@ -435,7 +436,7 @@ const processMarkdownText = (text) => {
   // Add any remaining list items
   if (inList && listItems.length > 0) {
     result.push(
-      <BulletList key="list-end">
+      <BulletList key="list-end" theme={theme}>
         {listItems}
       </BulletList>
     );
@@ -443,7 +444,7 @@ const processMarkdownText = (text) => {
   
   if (inNumberedList && numberedListItems.length > 0) {
     result.push(
-      <NumberedList key="nlist-end">
+      <NumberedList key="nlist-end" theme={theme}>
         {numberedListItems}
       </NumberedList>
     );
@@ -453,7 +454,7 @@ const processMarkdownText = (text) => {
 };
 
 // Process inline formatting (bold, italic, links)
-const processInlineFormatting = (text) => {
+const processInlineFormatting = (text, theme = {}) => {
   const parts = [];
   let lastIndex = 0;
   
@@ -465,13 +466,13 @@ const processInlineFormatting = (text) => {
     // Add text before the link
     if (match.index > lastIndex) {
       const beforeText = text.substring(lastIndex, match.index);
-      parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(beforeText)}</span>);
+      parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(beforeText, theme)}</span>);
     }
     
     // Add the link
     parts.push(
-      <Link key={`link-${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer">
-        {processBoldItalic(match[1])}
+      <Link key={`link-${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer" theme={theme}>
+        {processBoldItalic(match[1], theme)}
       </Link>
     );
     
@@ -481,14 +482,14 @@ const processInlineFormatting = (text) => {
   // Add any remaining text
   if (lastIndex < text.length) {
     const remainingText = text.substring(lastIndex);
-    parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(remainingText)}</span>);
+    parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(remainingText, theme)}</span>);
   }
   
-  return parts.length > 0 ? <>{parts}</> : processBoldItalic(text);
+  return parts.length > 0 ? <>{parts}</> : processBoldItalic(text, theme);
 };
 
 // Process bold and italic formatting
-const processBoldItalic = (text) => {
+const processBoldItalic = (text, theme = {}) => {
   // First handle bold text
   const boldPattern = /\*\*(.*?)\*\*/g;
   const parts = [];
@@ -498,25 +499,25 @@ const processBoldItalic = (text) => {
   while ((match = boldPattern.exec(text)) !== null) {
     // Add text before the bold part
     if (match.index > lastIndex) {
-      parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex, match.index))}</span>);
+      parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex, match.index), theme)}</span>);
     }
     
     // Add the bold text (also process any italic within it)
-    parts.push(<Bold key={`bold-${match.index}`}>{processItalic(match[1])}</Bold>);
+    parts.push(<Bold key={`bold-${match.index}`} theme={theme}>{processItalic(match[1], theme)}</Bold>);
     
     lastIndex = match.index + match[0].length;
   }
   
   // Add any remaining text
   if (lastIndex < text.length) {
-    parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex))}</span>);
+    parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex), theme)}</span>);
   }
   
-  return parts.length > 0 ? <>{parts}</> : processItalic(text);
+  return parts.length > 0 ? <>{parts}</> : processItalic(text, theme);
 };
 
 // Process italic text
-const processItalic = (text) => {
+const processItalic = (text, theme = {}) => {
   if (!text) return null;
   
   const italicPattern = /\*((?!\*).+?)\*/g;
@@ -531,7 +532,7 @@ const processItalic = (text) => {
     }
     
     // Add the italic text
-    parts.push(<Italic key={`italic-${match.index}`}>{match[1]}</Italic>);
+    parts.push(<Italic key={`italic-${match.index}`} theme={theme}>{match[1]}</Italic>);
     
     lastIndex = match.index + match[0].length;
   }
@@ -1800,7 +1801,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
           </div>
           <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-            {formatContent(contentToProcess, isLanguageExecutable, supportedLanguages)}
+            {formatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)}
           </div>
         </>
       );
@@ -1983,7 +1984,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               }
               
               // Process content and show main content + thinking dropdown if applicable
-              const processedContent = formatContent(contentToProcess, isLanguageExecutable, supportedLanguages);
+              const processedContent = formatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme);
               const isMercury = modelId?.toLowerCase().includes('mercury');
               
               if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
@@ -2022,7 +2023,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                     {contentToProcess.split('\n\n-').map((part, index) => {
                   if (index === 0) {
                     // This is the main content part - process markdown formatting
-                    const formattedPart = formatContent(part, isLanguageExecutable, supportedLanguages);
+                    const formattedPart = formatContent(part, isLanguageExecutable, supportedLanguages, theme);
                     const mainText = typeof formattedPart === 'string' ? formattedPart : part;
                     
                     return (

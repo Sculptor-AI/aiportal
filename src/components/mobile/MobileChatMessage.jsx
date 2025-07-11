@@ -321,19 +321,22 @@ const parseMessageContent = (content) => {
 };
 
 // Simple code block component for mobile
-const SimpleCodeBlock = ({ language, content }) => (
+const SimpleCodeBlock = ({ language, content, theme = {} }) => (
   <pre style={{
-    background: '#f5f5f5',
-    border: '1px solid #ddd',
+    background: theme.name === 'dark' || theme.name === 'oled' ? 'rgba(30, 30, 30, 0.9)' : 'rgba(246, 248, 250, 0.9)',
+    border: `1px solid ${theme.border || 'rgba(0,0,0,0.1)'}`,
     borderRadius: '8px',
     padding: '12px',
     margin: '8px 0',
     overflow: 'auto',
-    fontFamily: 'Monaco, Consolas, monospace',
+    fontFamily: 'SF Mono, Monaco, Consolas, monospace',
     fontSize: '14px',
-    lineHeight: '1.4'
+    lineHeight: '1.4',
+    color: theme.text || '#000000',
+    backdropFilter: 'blur(5px)',
+    WebkitBackdropFilter: 'blur(5px)'
   }}>
-    <code>{content}</code>
+    <code style={{ color: 'inherit' }}>{content}</code>
   </pre>
 );
 
@@ -385,6 +388,7 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
                     key={index}
                     language={part.language}
                     content={part.content}
+                    theme={theme}
                   />
                 );
               } else {
