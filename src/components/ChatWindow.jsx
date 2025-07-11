@@ -150,6 +150,21 @@ const ChatWindow = forwardRef(({
     }
   }, [chat?.messages]);
 
+  useEffect(() => {
+    if (onAttachmentChange) {
+      onAttachmentChange(!!uploadedFileData);
+    }
+  }, [uploadedFileData, onAttachmentChange]);
+
+  useImperativeHandle(ref, () => ({
+    handleFileSelected,
+    appendToInput: (text) => {
+      if (chatInputAreaRef.current && chatInputAreaRef.current.appendToInput) {
+        chatInputAreaRef.current.appendToInput(text);
+      }
+    }
+  }));
+
   const handleFileSelected = async (files) => {
     if (!files) {
       setUploadedFileData(null);
