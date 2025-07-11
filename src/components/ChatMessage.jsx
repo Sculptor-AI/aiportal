@@ -2039,37 +2039,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                     {hasToolActivity && (
                       <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
                     )}
-                    {contentToProcess.split('\n\n-').map((part, index) => {
-                  if (index === 0) {
-                    // This is the main content part - process markdown formatting
-                    const formattedPart = robustFormatContent(part, isLanguageExecutable, supportedLanguages, theme);
-                    const mainText = typeof formattedPart === 'string' ? formattedPart : part;
-                    
-                    return (
-                      <React.Fragment key={`content-part-${index}`}>
-                        {isLoading ? (
-                          <StreamingMarkdownRenderer 
-                            text={mainText}
-                            isStreaming={true}
-                            theme={theme}
-                          />
-                        ) : isMercury ? (
-                          <TextDiffusionAnimation 
-                            finalText={mainText}
-                            isActive={!isLoading}
-                            messageId={id}
-                            speed={60}
-                            diffusionDuration={750}
-                          />
-                        ) : (
-                          formattedPart
-                        )}
-                      </React.Fragment>
-                    );
-                  }
-                  // This is the model signature part
-                  return <em key={`signature-part-${index}`}>- {part}</em>;
-                    })}
+                    {isLoading ? (
+                      <StreamingMarkdownRenderer text={contentToProcess} isStreaming={true} theme={theme} />
+                    ) : isMercury ? (
+                      <TextDiffusionAnimation finalText={contentToProcess} isActive={!isLoading} messageId={id} speed={60} diffusionDuration={750} />
+                    ) : (
+                      robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)
+                    )}
                   </>
                 );
               }
