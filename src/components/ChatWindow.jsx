@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { useTheme } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
@@ -49,123 +49,53 @@ const ChatWindow = forwardRef(({
   onCloseSandbox3D,
   onToolbarToggle,
 }, ref) => {
+  // All hooks at the top level - no conditional returns before this
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
   const [isProcessingFile, setIsProcessingFile] = useState(false); 
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  
-  const messagesEndRef = useRef(null);
-  const chatInputAreaRef = useRef(null);
-  
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chat?.title || 'New Conversation');
   const [uploadedFileData, setUploadedFileData] = useState(null); 
   const [resetFileUpload, setResetFileUpload] = useState(false);
-  const toast = useToast();
-  const theme = useTheme();
   const [artifactHTML, setArtifactHTML] = useState(null);
   const [isArtifactModalOpen, setIsArtifactModalOpen] = useState(false);
-
-  // Define scrollToBottom before passing it to the hook
-  function scrollToBottom() {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }
-
-  const { isLoading, submitMessage: sendChatMessage } = useMessageSender({
-    chat,
-    selectedModel,
-    settings,
-    availableModels,
-    addMessage,
-    updateMessage,
-    updateChatTitle,
-    toastContext: toast,
-    scrollToBottom,
-    setUploadedFileData, 
-    setResetFileUpload,
-    onAttachmentChange,
-  });
-
-  const chatIsEmpty = !chat || !chat.messages || chat.messages.length === 0;
-  const prevIsEmptyRef = useRef(chatIsEmpty);
   const [animateDown, setAnimateDown] = useState(false);
-  const shouldStartAnimationThisRender = prevIsEmptyRef.current && !chatIsEmpty;
+  
+  const messagesEndRef = useRef(null);
+  const chatInputAreaRef = useRef(null);
+  const prevIsEmptyRef = useRef(false);
+  
+  const toast = useToast();
+  const theme = useTheme();
 
-  useEffect(() => {
-    if (shouldStartAnimationThisRender) {
-      setAnimateDown(true);
-      const timer = setTimeout(() => {
-        setAnimateDown(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [shouldStartAnimationThisRender]);
+  // Memoized values
+  const chatIsEmpty = useMemo(() => {
+    return !chat || !chat.messages || chat.messages.length === 0;
+  }, [chat]);
 
-  useEffect(() => {
-    prevIsEmptyRef.current = chatIsEmpty;
-  });
-
-  useEffect(() => {
-    if (chatIsEmpty) {
-      setAnimateDown(false);
-    }
+  const shouldStartAnimationThisRender = useMemo(() => {
+    return prevIsEmptyRef.current && !chatIsEmpty;
   }, [chatIsEmpty]);
 
-  const effectiveAnimateDownSignal = animateDown || shouldStartAnimationThisRender;
-  
-  useEffect(() => {
-    // Initial scroll and scroll on new messages
-    scrollToBottom();
-  }, [chat?.messages]);
-  
-  useEffect(() => {
-    if (initialSelectedModel && initialSelectedModel !== selectedModel) {
-      setSelectedModel(initialSelectedModel);
-    }
-  }, [initialSelectedModel, selectedModel]);
-  
-  useEffect(() => {
-    if (chat?.id && initialSelectedModel && $sidebarCollapsed) {
-      setSelectedModel(initialSelectedModel);
-      setResetFileUpload(false);
-    }
-  }, [chat?.id, initialSelectedModel, $sidebarCollapsed]);
+  const effectiveAnimateDownSignal = useMemo(() => {
+    return animateDown || shouldStartAnimationThisRender;
+  }, [animateDown, shouldStartAnimationThisRender]);
 
-  useEffect(() => {
-    if (chat && chat.messages && chat.messages.length > 0) {
-      const lastMsg = chat.messages[chat.messages.length - 1];
-      if (lastMsg.role === 'assistant' && lastMsg.content && !lastMsg.isLoading) {
-        const htmlMatch = lastMsg.content.match(/```html\n([\s\S]*?)\n```/);
-        if (htmlMatch && htmlMatch[1]) {
-          setArtifactHTML(htmlMatch[1]);
-          setIsArtifactModalOpen(true);
-        } else {
-          setArtifactHTML(null);
-        }
-      } else {
-        setArtifactHTML(null);
-      }
-    } else {
-      setArtifactHTML(null);
-    }
-  }, [chat?.messages]);
+  const showEmptyStateStatic = useMemo(() => {
+    return showGreeting && chatIsEmpty && !effectiveAnimateDownSignal;
+  }, [showGreeting, chatIsEmpty, effectiveAnimateDownSignal]);
 
-  useEffect(() => {
-    if (onAttachmentChange) {
-      onAttachmentChange(!!uploadedFileData);
-    }
-  }, [uploadedFileData, onAttachmentChange]);
+  const animateEmptyStateOut = useMemo(() => {
+    return (!chatIsEmpty || shouldStartAnimationThisRender || !showGreeting) && effectiveAnimateDownSignal;
+  }, [chatIsEmpty, shouldStartAnimationThisRender, showGreeting, effectiveAnimateDownSignal]);
 
-  useImperativeHandle(ref, () => ({
-    handleFileSelected,
-    appendToInput: (text) => {
-      if (chatInputAreaRef.current && chatInputAreaRef.current.appendToInput) {
-        chatInputAreaRef.current.appendToInput(text);
-      }
-    }
-  }));
+  // Callbacks
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
 
-  const handleFileSelected = async (files) => {
+  const handleFileSelected = useCallback(async (files) => {
     if (!files) {
       setUploadedFileData(null);
       if (onAttachmentChange) onAttachmentChange(false);
@@ -283,33 +213,69 @@ const ChatWindow = forwardRef(({
       setIsProcessingFile(false);
       setResetFileUpload(false);
     } catch (error) {
-      console.error('Error processing files:', error);
-      alert(`Error processing files: ${error.message}`);
-      setUploadedFileData(null); 
-      setIsProcessingFile(false); 
-      setResetFileUpload(true);
-      setTimeout(() => setResetFileUpload(false), 0);
+      console.error('Error processing file:', error);
+      toast?.showToast('Error processing file', 'error');
+      setIsProcessingFile(false);
       if (onAttachmentChange) onAttachmentChange(false);
     }
-  };
+  }, [uploadedFileData, onAttachmentChange, toast]);
 
-  const handleStartEditing = () => {
+  const clearUploadedFile = useCallback(() => {
+    setUploadedFileData(null);
+    setResetFileUpload(prev => !prev);
+    if (onAttachmentChange) {
+      onAttachmentChange(false);
+    }
+  }, [onAttachmentChange]);
+
+  const removeFileByIndex = useCallback((index) => {
+    if (!uploadedFileData) return;
+    
+    const filesArray = Array.isArray(uploadedFileData) ? uploadedFileData : [uploadedFileData];
+    const newFiles = filesArray.filter((_, i) => i !== index);
+    
+    if (newFiles.length === 0) {
+      clearUploadedFile();
+    } else {
+      setUploadedFileData(newFiles);
+    }
+  }, [uploadedFileData, clearUploadedFile]);
+
+  const handleModelChange = useCallback((modelId) => {
+    setSelectedModel(modelId);
+    if (availableModels) {
+      localStorage.setItem('selectedModel', modelId);
+      if (onModelChange && typeof onModelChange === 'function') {
+        onModelChange(modelId);
+      }
+    }
+  }, [availableModels, onModelChange]);
+
+  const handleLiveModeToggle = useCallback((isOpen) => {
+    setIsLiveModeOpen(isOpen);
+  }, []);
+
+  const handleCloseLiveMode = useCallback(() => {
+    setIsLiveModeOpen(false);
+  }, []);
+
+  const handleStartEditing = useCallback(() => {
     setIsEditingTitle(true);
     setEditedTitle(chat?.title || 'New Conversation');
-  };
+  }, [chat?.title]);
 
-  const handleTitleChange = (e) => {
+  const handleTitleChange = useCallback((e) => {
     setEditedTitle(e.target.value);
-  };
+  }, []);
 
-  const handleTitleSave = () => {
-    if (editedTitle.trim() && chat) {
-      updateChatTitle(chat.id, editedTitle.trim());
+  const handleTitleSave = useCallback(() => {
+    if (chat && updateChatTitle) {
+      updateChatTitle(chat.id, editedTitle);
     }
     setIsEditingTitle(false);
-  };
+  }, [chat, updateChatTitle, editedTitle]);
 
-  const handleTitleKeyDown = (e) => {
+  const handleTitleKeyDown = useCallback((e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       handleTitleSave();
@@ -317,18 +283,81 @@ const ChatWindow = forwardRef(({
       setIsEditingTitle(false);
       setEditedTitle(chat?.title || 'New Conversation');
     }
-  };
+  }, [handleTitleSave, chat?.title]);
 
-  const handleLiveModeToggle = (isOpen) => {
-    setIsLiveModeOpen(isOpen);
-  };
+  // Message sender hook
+  const { isLoading, submitMessage: sendChatMessage } = useMessageSender({
+    chat,
+    selectedModel,
+    settings,
+    availableModels,
+    addMessage,
+    updateMessage,
+    updateChatTitle,
+    toastContext: toast,
+    scrollToBottom,
+    setUploadedFileData, 
+    setResetFileUpload,
+    onAttachmentChange,
+  });
 
-  const handleCloseLiveMode = () => {
-    setIsLiveModeOpen(false);
-  };
+  // Effects
+  useEffect(() => {
+    if (shouldStartAnimationThisRender) {
+      setAnimateDown(true);
+      const timer = setTimeout(() => {
+        setAnimateDown(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldStartAnimationThisRender]);
 
-  const showEmptyStateStatic = showGreeting && chatIsEmpty && !effectiveAnimateDownSignal;
-  const animateEmptyStateOut = (!chatIsEmpty || shouldStartAnimationThisRender || !showGreeting) && effectiveAnimateDownSignal;
+  useEffect(() => {
+    prevIsEmptyRef.current = chatIsEmpty;
+  }, [chatIsEmpty]);
+
+  useEffect(() => {
+    if (chatIsEmpty) {
+      setAnimateDown(false);
+    }
+  }, [chatIsEmpty]);
+
+  useEffect(() => {
+    // Initial scroll and scroll on new messages
+    scrollToBottom();
+  }, [chat?.messages, scrollToBottom]);
+  
+  useEffect(() => {
+    if (initialSelectedModel && initialSelectedModel !== selectedModel) {
+      setSelectedModel(initialSelectedModel);
+    }
+  }, [initialSelectedModel, selectedModel]);
+  
+  useEffect(() => {
+    if (chat?.id && initialSelectedModel && $sidebarCollapsed) {
+      setSelectedModel(initialSelectedModel);
+      setResetFileUpload(false);
+    }
+  }, [chat?.id, initialSelectedModel, $sidebarCollapsed]);
+
+  useEffect(() => {
+    if (chat && chat.messages && chat.messages.length > 0) {
+      const lastMsg = chat.messages[chat.messages.length - 1];
+      if (lastMsg.role === 'assistant' && lastMsg.content && !lastMsg.isLoading) {
+        const htmlMatch = lastMsg.content.match(/```html\n([\s\S]*?)\n```/);
+        if (htmlMatch && htmlMatch[1]) {
+          setArtifactHTML(htmlMatch[1]);
+          setIsArtifactModalOpen(true);
+        } else {
+          setArtifactHTML(null);
+        }
+      } else {
+        setArtifactHTML(null);
+      }
+    } else {
+      setArtifactHTML(null);
+    }
+  }, [chat?.messages]);
 
   useEffect(() => {
     if (onAttachmentChange) {
@@ -336,6 +365,17 @@ const ChatWindow = forwardRef(({
     }
   }, [uploadedFileData, onAttachmentChange]);
 
+  // Imperative handle
+  useImperativeHandle(ref, () => ({
+    handleFileSelected,
+    appendToInput: (text) => {
+      if (chatInputAreaRef.current && chatInputAreaRef.current.appendToInput) {
+        chatInputAreaRef.current.appendToInput(text);
+      }
+    }
+  }), [handleFileSelected]);
+
+  // Early return for no chat - after all hooks
   if (!chat) {
     return (
       <ChatWindowContainer fontSize={settings?.fontSize} $sidebarCollapsed={$sidebarCollapsed}>
@@ -359,52 +399,6 @@ const ChatWindow = forwardRef(({
       </ChatWindowContainer>
     );
   }
-  
-  const handleModelChange = (modelId) => {
-    setSelectedModel(modelId);
-    if (availableModels) {
-      localStorage.setItem('selectedModel', modelId);
-      if (onModelChange && typeof onModelChange === 'function') {
-        onModelChange(modelId);
-      }
-    }
-  };
-
-  // const inputFocusChange = (isFocusedState) => { // This was not used, can be removed if ChatInputArea handles focus internally for sidebar effects
-  //   if ($sidebarCollapsed) {
-  //     setIsFocused(isFocusedState);
-  //   }
-  // };
-
-  const clearUploadedFile = () => {
-    setUploadedFileData(null);
-    setResetFileUpload(prev => !prev);
-    if (onAttachmentChange) {
-      onAttachmentChange(false);
-    }
-  };
-
-  const removeFileByIndex = (index) => {
-    if (!uploadedFileData) return;
-    
-    const filesArray = Array.isArray(uploadedFileData) ? uploadedFileData : [uploadedFileData];
-    const newFiles = filesArray.filter((_, i) => i !== index);
-    
-    if (newFiles.length === 0) {
-      clearUploadedFile();
-    } else {
-      setUploadedFileData(newFiles);
-    }
-  };
-
-  useImperativeHandle(ref, () => ({
-    handleFileSelected,
-    appendToInput: (text) => {
-      if (chatInputAreaRef.current && chatInputAreaRef.current.appendToInput) {
-        chatInputAreaRef.current.appendToInput(text);
-      }
-    }
-  }));
 
   return (
     <ChatWindowContainer 
