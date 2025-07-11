@@ -22,12 +22,12 @@ const Italic = styled.span`
 `;
 
 const Heading1 = styled.h1`
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 700;
-  margin: 1.5rem 0 1rem 0;
+  margin: 1rem 0 0.5rem 0;
   color: ${props => props.theme.text};
   border-bottom: 2px solid ${props => props.theme.border};
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
   line-height: 1.3;
   
   &:first-child {
@@ -36,12 +36,12 @@ const Heading1 = styled.h1`
 `;
 
 const Heading2 = styled.h2`
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 600;
-  margin: 1.3rem 0 0.8rem 0;
+  margin: 0.8rem 0 0.4rem 0;
   color: ${props => props.theme.text};
   border-bottom: 1px solid ${props => props.theme.border};
-  padding-bottom: 0.4rem;
+  padding-bottom: 0.2rem;
   line-height: 1.3;
   
   &:first-child {
@@ -50,9 +50,9 @@ const Heading2 = styled.h2`
 `;
 
 const Heading3 = styled.h3`
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  margin: 1.1rem 0 0.6rem 0;
+  margin: 0.6rem 0 0.3rem 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -62,9 +62,9 @@ const Heading3 = styled.h3`
 `;
 
 const Heading4 = styled.h4`
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
-  margin: 1rem 0 0.5rem 0;
+  margin: 0.5rem 0 0.2rem 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -74,9 +74,9 @@ const Heading4 = styled.h4`
 `;
 
 const Heading5 = styled.h5`
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
-  margin: 0.9rem 0 0.4rem 0;
+  margin: 0.4rem 0 0.2rem 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -86,9 +86,9 @@ const Heading5 = styled.h5`
 `;
 
 const Heading6 = styled.h6`
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  margin: 0.8rem 0 0.3rem 0;
+  margin: 0.3rem 0 0.1rem 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -98,8 +98,8 @@ const Heading6 = styled.h6`
 `;
 
 const Paragraph = styled.p`
-  margin: 0.8rem 0;
-  line-height: 1.6;
+  margin: 0.4rem 0;
+  line-height: 1.5;
   color: ${props => props.theme.text};
   
   &:first-child {
@@ -114,41 +114,41 @@ const Paragraph = styled.p`
 const BulletList = styled.ul`
   list-style-type: none;
   padding-left: 0;
-  margin: 0.8rem 0;
+  margin: 0.4rem 0;
   
   li {
     position: relative;
-    padding-left: 1.5em;
-    margin: 0.5em 0;
-    line-height: 1.6;
+    padding-left: 1.2em;
+    margin: 0.3em 0;
+    line-height: 1.5;
     color: ${props => props.theme.text};
     
     &:before {
       content: "•";
       position: absolute;
-      left: 0.3em;
+      left: 0.2em;
       color: ${props => props.theme.primary};
       font-weight: bold;
-      font-size: 1.2em;
+      font-size: 1.1em;
     }
   }
 `;
 
 const NumberedList = styled.ol`
-  padding-left: 1.5em;
-  margin: 0.8rem 0;
+  padding-left: 1.2em;
+  margin: 0.4rem 0;
   
   li {
-    margin: 0.5em 0;
-    line-height: 1.6;
+    margin: 0.3em 0;
+    line-height: 1.5;
     color: ${props => props.theme.text};
   }
 `;
 
 const Blockquote = styled.blockquote`
   border-left: 4px solid ${props => props.theme.primary};
-  margin: 1rem 0;
-  padding: 0.8rem 0 0.8rem 1.2rem;
+  margin: 0.5rem 0;
+  padding: 0.4rem 0 0.4rem 1rem;
   background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
   border-radius: 0 8px 8px 0;
   font-style: italic;
@@ -156,7 +156,7 @@ const Blockquote = styled.blockquote`
   
   p {
     margin: 0;
-    line-height: 1.6;
+    line-height: 1.5;
   }
 `;
 
@@ -174,7 +174,7 @@ const Link = styled.a`
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  margin: 1rem 0;
+  margin: 0.5rem 0;
   border: 1px solid ${props => props.theme.border};
   border-radius: 8px;
   overflow: hidden;
@@ -185,7 +185,7 @@ const Table = styled.table`
 
 const TableHeader = styled.th`
   background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
-  padding: 12px;
+  padding: 8px 10px;
   text-align: left;
   font-weight: 600;
   color: ${props => props.theme.text};
@@ -193,7 +193,7 @@ const TableHeader = styled.th`
 `;
 
 const TableCell = styled.td`
-  padding: 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid ${props => props.theme.border};
   color: ${props => props.theme.text};
   
@@ -217,7 +217,7 @@ const CodeBlock = styled.div`
   border: 1px solid ${props => props.theme.border};
   border-radius: 12px;
   overflow: hidden;
-  margin: 1rem 0;
+  margin: 0.5rem 0;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
   font-size: 0.9em;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
@@ -229,7 +229,7 @@ const CodeHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 8px 12px;
   background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
   border-bottom: 1px solid ${props => props.theme.border};
   font-size: 0.8em;
@@ -262,13 +262,13 @@ const CopyButton = styled.button`
 
 const Pre = styled.pre`
   margin: 0;
-  padding: 14px;
+  padding: 10px;
   overflow-x: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
   background: none;
   color: ${props => props.theme.text};
-  line-height: 1.5;
+  line-height: 1.4;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
   
   /* Custom scrollbar */
@@ -301,7 +301,7 @@ const HorizontalRule = styled.hr`
   border: none;
   height: 1px;
   background: ${props => props.theme.border};
-  margin: 2rem 0;
+  margin: 1rem 0;
   border-radius: 1px;
 `;
 
@@ -528,7 +528,7 @@ const StreamingMarkdownRenderer = ({
   return (
     <div style={{ 
       fontFamily: 'inherit', 
-      lineHeight: 1.6, 
+      lineHeight: 1.5, 
       wordWrap: 'break-word', 
       whiteSpace: 'pre-wrap',
       color: theme.text || '#000'
