@@ -2,6 +2,10 @@ import React from 'react';
 import styled, { keyframes } from 'styled-components';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { processCodeBlocks } from '../utils/codeBlockProcessor';
 import CodeBlockWithExecution from './CodeBlockWithExecution';
 import useSupportedLanguages from '../hooks/useSupportedLanguages';
@@ -313,6 +317,11 @@ const Cursor = styled.span`
   }
 `;
 
+const Strikethrough = styled.del`
+  text-decoration: line-through;
+  color: ${props => props.theme.text};
+`;
+
 // Process inline formatting (bold, italic, inline code, links)
 const processInlineFormatting = (text, theme) => {
   if (!text) return text;
@@ -462,368 +471,58 @@ const StreamingMarkdownRenderer = ({
     </ReactKatex>
   );
 
-  // Process the text and handle code blocks
-  const processContent = (content) => {
-    return processCodeBlocks(content, {
-      isStreaming,
-      theme,
-      onCodeBlock: ({ language, content: codeContent, isComplete, key, theme }) => {
-        // Use CodeBlockWithExecution if code execution is enabled and language is executable
-        if (enableCodeExecution && isLanguageExecutable(language)) {
+  // Custom renderers for markdown elements
+  const components = {
+    h1: props => <Heading1 {...props} theme={theme} />,
+    h2: props => <Heading2 {...props} theme={theme} />,
+    h3: props => <Heading3 {...props} theme={theme} />,
+    h4: props => <Heading4 {...props} theme={theme} />,
+    h5: props => <Heading5 {...props} theme={theme} />,
+    h6: props => <Heading6 {...props} theme={theme} />,
+    p: props => <Paragraph {...props} theme={theme} />,
+    ul: props => <BulletList {...props} theme={theme} />,
+    ol: props => <NumberedList {...props} theme={theme} />,
+    li: props => <li {...props} style={{ color: theme.text }} />,
+    blockquote: props => <Blockquote {...props} theme={theme} />,
+    a: props => <Link {...props} theme={theme} />,
+    table: props => <Table {...props} theme={theme} />,
+    th: props => <TableHeader {...props} theme={theme} />,
+    td: props => <TableCell {...props} theme={theme} />,
+    del: props => <Strikethrough {...props} theme={theme} />,
+    code({node, inline, className, children, ...props}) {
+      const match = /language-(\w+)/.exec(className || '');
+      const language = match ? match[1] : '';
+      if (!inline) {
+        // Use CodeBlockWithExecution for executable code
+        if (enableCodeExecution && isLanguageExecutable && isLanguageExecutable(language)) {
           return (
             <CodeBlockWithExecution
-              key={key}
               language={language}
-              content={codeContent}
+              content={String(children).replace(/\n$/, '')}
               theme={theme}
               supportedLanguages={supportedLanguages}
-              onExecutionComplete={(result, error, executionTime) => {
-                console.log('Code execution completed:', { result, error, executionTime });
-              }}
             />
           );
         }
-        
-        // Fall back to regular code block for non-executable languages
+        // Otherwise, use styled code block
         return (
-          <CodeBlock key={key} theme={theme}>
+          <CodeBlock key={`code-block-${Math.random()}`} theme={theme}>
             <CodeHeader theme={theme}>
               <CodeLanguage theme={theme}>{language}</CodeLanguage>
-              <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(codeContent)}>
+              <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}>
                 Copy
               </CopyButton>
             </CodeHeader>
-            <Pre theme={theme}>{codeContent}</Pre>
+            <Pre theme={theme}>
+              <code className={className} style={{ color: theme.text }}>{children}</code>
+            </Pre>
           </CodeBlock>
         );
-      },
-      onTextSegment: (textSegment) => processMarkdown(textSegment)
-    });
-  };
-
-  // Process regular markdown (headings, lists, paragraphs, etc.)
-  const processMarkdown = (text) => {
-    const lines = text.split('\n');
-    const result = [];
-    let inList = false;
-    let inNumberedList = false;
-    let listItems = [];
-    let numberedListItems = [];
-    
-    // Process line by line
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      
-      // Headings
-      if (line.startsWith('# ')) {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        result.push(
-          <Heading1 key={`h1-${i}`} theme={theme}>
-            {processInlineFormatting(line.substring(2), theme)}
-          </Heading1>
-        );
-        continue;
       }
-      
-      if (line.startsWith('## ')) {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        result.push(
-          <Heading2 key={`h2-${i}`} theme={theme}>
-            {processInlineFormatting(line.substring(3), theme)}
-          </Heading2>
-        );
-        continue;
-      }
-      
-      if (line.startsWith('### ')) {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        result.push(
-          <Heading3 key={`h3-${i}`} theme={theme}>
-            {processInlineFormatting(line.substring(4), theme)}
-          </Heading3>
-        );
-        continue;
-      }
-      
-      if (line.startsWith('#### ')) {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        result.push(
-          <Heading4 key={`h4-${i}`} theme={theme}>
-            {processInlineFormatting(line.substring(5), theme)}
-          </Heading4>
-        );
-        continue;
-      }
-      
-      if (line.startsWith('##### ')) {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        result.push(
-          <Heading5 key={`h5-${i}`} theme={theme}>
-            {processInlineFormatting(line.substring(6), theme)}
-          </Heading5>
-        );
-        continue;
-      }
-      
-      if (line.startsWith('###### ')) {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        result.push(
-          <Heading6 key={`h6-${i}`} theme={theme}>
-            {processInlineFormatting(line.substring(7), theme)}
-          </Heading6>
-        );
-        continue;
-      }
-      
-      // Horizontal rule
-      if (line === '---' || line === '***' || line === '___') {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        result.push(<HorizontalRule key={`hr-${i}`} theme={theme} />);
-        continue;
-      }
-      
-      // Blockquote
-      if (line.startsWith('> ')) {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        result.push(
-          <Blockquote key={`quote-${i}`} theme={theme}>
-            <Paragraph theme={theme}>
-              {processInlineFormatting(line.substring(2), theme)}
-            </Paragraph>
-          </Blockquote>
-        );
-        continue;
-      }
-      
-      // Bullet point
-      if (line.startsWith('* ') || line.startsWith('- ')) {
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        inList = true;
-        const itemContent = line.substring(2);
-        listItems.push(
-          <li key={`item-${i}`}>{processInlineFormatting(itemContent, theme)}</li>
-        );
-        continue;
-      }
-      
-      // Numbered list
-      const numberedMatch = line.match(/^(\d+)\.\s/);
-      if (numberedMatch) {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        inNumberedList = true;
-        const itemContent = line.substring(numberedMatch[0].length);
-        numberedListItems.push(
-          <li key={`nitem-${i}`}>{processInlineFormatting(itemContent, theme)}</li>
-        );
-        continue;
-      }
-      
-      // End of lists
-      if ((inList || inNumberedList) && line === '') {
-        if (inList) {
-          result.push(
-            <BulletList key={`list-${i}`} theme={theme}>
-              {listItems}
-            </BulletList>
-          );
-          inList = false;
-          listItems = [];
-        }
-        if (inNumberedList) {
-          result.push(
-            <NumberedList key={`nlist-${i}`} theme={theme}>
-              {numberedListItems}
-            </NumberedList>
-          );
-          inNumberedList = false;
-          numberedListItems = [];
-        }
-        continue;
-      }
-      
-      // Regular text line
-      if (!inList && !inNumberedList && line !== '') {
-        result.push(
-          <Paragraph key={`p-${i}`} theme={theme}>
-            {processInlineFormatting(line, theme)}
-          </Paragraph>
-        );
-      } else if (!inList && !inNumberedList) {
-        // Empty line
-        result.push(<br key={`br-${i}`} />);
-      }
-    }
-    
-    // Add any remaining list items
-    if (inList && listItems.length > 0) {
-      result.push(
-        <BulletList key="list-end" theme={theme}>
-          {listItems}
-        </BulletList>
-      );
-    }
-    
-    if (inNumberedList && numberedListItems.length > 0) {
-      result.push(
-        <NumberedList key="nlist-end" theme={theme}>
-          {numberedListItems}
-        </NumberedList>
-      );
-    }
-    
-    return <>{result}</>;
+      // Inline code
+      return <InlineCode theme={theme}>{children}</InlineCode>;
+    },
+    // Optionally, add math/latex support here if you want to parse $...$ and $$...$$
   };
 
   return (
@@ -834,7 +533,12 @@ const StreamingMarkdownRenderer = ({
       whiteSpace: 'pre-wrap',
       color: theme.text || '#000'
     }}>
-      {processContent(text)}
+      <ReactMarkdown
+        children={text}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={components}
+      />
       {isStreaming && showCursor && (
         <Cursor $show={true} theme={theme}>|</Cursor>
       )}
