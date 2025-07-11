@@ -529,8 +529,22 @@ const MobileChatWindow = ({
     return (
       <MobileChatContainer>
         <EmptyState>
-          <h3>No chat selected</h3>
-          <p>Create a new chat to get started</p>
+          <h3>No chat available</h3>
+          <p>Creating a new chat...</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{ 
+              marginTop: '10px', 
+              padding: '8px 16px', 
+              background: '#007bff', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer' 
+            }}
+          >
+            Refresh Page
+          </button>
         </EmptyState>
       </MobileChatContainer>
     );

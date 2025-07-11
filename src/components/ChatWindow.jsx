@@ -380,7 +380,24 @@ const ChatWindow = forwardRef(({
     return (
       <ChatWindowContainer fontSize={settings?.fontSize} $sidebarCollapsed={$sidebarCollapsed}>
         <EmptyState $isExiting={animateEmptyStateOut}>
-          {/* Minimal content for when no chat is selected */}
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <h3>No chat available</h3>
+            <p>Creating a new chat...</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{ 
+                marginTop: '10px', 
+                padding: '8px 16px', 
+                background: '#007bff', 
+                color: 'white', 
+                border: 'none', 
+                borderRadius: '4px', 
+                cursor: 'pointer' 
+              }}
+            >
+              Refresh Page
+            </button>
+          </div>
         </EmptyState>
          <ChatInputArea 
             chatIsEmpty={true} 
