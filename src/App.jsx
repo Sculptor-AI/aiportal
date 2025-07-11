@@ -30,6 +30,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import WorkspacePage from './pages/WorkspacePage';
 import ForcedLoginScreen from './components/ForcedLoginScreen';
 import MobileForcedLoginScreen from './components/mobile/MobileForcedLoginScreen';
+import DinosaurRunGame from './components/DinosaurRunGame';
 
 const AppContainer = styled.div`
   display: flex;
@@ -129,6 +130,13 @@ const MainGreeting = styled.div`
     width: 64px; /* Increased from 48px */
     height: 64px; /* Increased from 48px */
     flex-shrink: 0; /* Prevent logo from shrinking */
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.05);
+    }
   }
   
   h1 {
@@ -140,6 +148,13 @@ const MainGreeting = styled.div`
     line-height: 1.2; 
     word-wrap: break-word; /* Ensure long words break if needed */
     overflow-wrap: break-word; /* More modern property for word breaking */
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    
+    &:hover {
+      transform: scale(1.02);
+    }
   }
 
   /* Adjustments for medium to small screens */
@@ -445,6 +460,7 @@ const AppContent = () => {
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [flowchartData, setFlowchartData] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showDinosaurGame, setShowDinosaurGame] = useState(false);
   const chatWindowRef = useRef(null);
 
   // Update settings when user changes
@@ -741,6 +757,16 @@ const AppContent = () => {
     localStorage.removeItem('activeChat');
     console.log('Chats reset to fresh state');
   };
+
+  // Double-click handler for the sculptor logo/text to activate the game
+  const handleSculptorDoubleClick = () => {
+    setShowDinosaurGame(true);
+  };
+
+  // Function to exit the game
+  const handleExitGame = () => {
+    setShowDinosaurGame(false);
+  };
   
   // Chrome Demo Toast
   const showChromeToast = () => {
@@ -896,7 +922,7 @@ const AppContent = () => {
             )}
             
             {/* Main greeting that appears at the top of the page */}
-            {getCurrentChat()?.messages.length === 0 && settings.showGreeting && !isMobile && location.pathname === '/' && (
+            {getCurrentChat()?.messages.length === 0 && settings.showGreeting && !isMobile && location.pathname === '/' && !showDinosaurGame && (
               <MainGreeting
                 $toolbarOpen={isToolbarOpen}
                 $equationEditorOpen={isEquationEditorOpen}
@@ -905,8 +931,8 @@ const AppContent = () => {
                 $sandbox3DOpen={isSandbox3DOpen}
                 $sidebarCollapsed={collapsed}
               >
-                <img src="/sculptor.svg" alt="Sculptor Logo" className="logo" />
-                <h1>Sculptor</h1>
+                <img src="/sculptor.svg" alt="Sculptor Logo" className="logo" onDoubleClick={handleSculptorDoubleClick} />
+                <h1 onDoubleClick={handleSculptorDoubleClick}>Sculptor</h1>
               </MainGreeting>
             )}
             
@@ -1081,6 +1107,19 @@ ${JSON.stringify(objects, null, 2)}
           
           {showOnboarding && (
             <OnboardingFlow onComplete={handleOnboardingComplete} />
+          )}
+
+          {showDinosaurGame && (
+            <DinosaurRunGame 
+              onExit={handleExitGame}
+              $toolbarOpen={isToolbarOpen}
+              $sidebarCollapsed={collapsed}
+              $whiteboardOpen={isWhiteboardOpen}
+              $equationEditorOpen={isEquationEditorOpen}
+              $graphingOpen={isGraphingOpen}
+              $flowchartOpen={isFlowchartOpen}
+              $sandbox3DOpen={isSandbox3DOpen}
+            />
           )}
         </AppContainer>
       </GlobalStylesProvider>
