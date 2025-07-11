@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import StreamingMarkdownRenderer from '../StreamingMarkdownRenderer';
+import { processCodeBlocks } from '../../utils/codeBlockProcessor';
 
 const MessageContainer = styled.div`
   margin: 16px 0;
@@ -205,38 +206,21 @@ const parseMessageContent = (content) => {
   if (!content) return [];
   
   const parts = [];
-  const codeBlockRegex = /```(\w+)?\n([\s\S]*?)\n```/g;
-  let lastIndex = 0;
-  let match;
   
-  while ((match = codeBlockRegex.exec(content)) !== null) {
-    // Add text before code block
-    if (match.index > lastIndex) {
-      const textBefore = content.slice(lastIndex, match.index);
-      if (textBefore.trim()) {
-        parts.push({ type: 'text', content: textBefore });
-      }
-    }
-    
-    // Add code block
-    parts.push({
+  // Use the new code block processor for consistency
+  const segments = processCodeBlocks(content, {
+    onCodeBlock: ({ language, content: codeContent, isComplete }) => ({
       type: 'code',
-      language: match[1] || 'text',
-      content: match[2]
-    });
-    
-    lastIndex = match.index + match[0].length;
-  }
+      language: language || 'text',
+      content: codeContent
+    }),
+    onTextSegment: (textSegment) => ({
+      type: 'text',
+      content: textSegment
+    })
+  });
   
-  // Add remaining text
-  if (lastIndex < content.length) {
-    const remainingText = content.slice(lastIndex);
-    if (remainingText.trim()) {
-      parts.push({ type: 'text', content: remainingText });
-    }
-  }
-  
-  return parts.length > 0 ? parts : [{ type: 'text', content }];
+  return segments.length > 0 ? segments : [{ type: 'text', content }];
 };
 
 // Simple code block component for mobile

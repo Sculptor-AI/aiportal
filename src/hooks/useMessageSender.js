@@ -5,6 +5,7 @@ import { getFlowchartSystemPrompt } from '../utils/flowchartTools';
 import { performDeepResearch } from '../services/deepResearchService';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
+import { hasIncompleteCodeBlock, validateCodeBlockSyntax } from '../utils/codeBlockProcessor';
 
 // Helper function (can be outside or passed in if it uses external context like toast)
 const generateId = () => {
@@ -549,6 +550,15 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
           
           // Otherwise it's a content chunk
           streamedContent += chunk;
+          
+          // Validate code block syntax during streaming
+          if (streamedContent.includes('```')) {
+            const issues = validateCodeBlockSyntax(streamedContent);
+            if (issues.length > 0) {
+              console.warn('Code block syntax issues detected during streaming:', issues);
+            }
+          }
+          
           updateMessage(currentChatId, aiMessageId, { 
             content: streamedContent, 
             isLoading: true,
