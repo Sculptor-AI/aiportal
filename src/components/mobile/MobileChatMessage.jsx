@@ -7,82 +7,19 @@ const MessageContainer = styled.div`
   margin: 16px 0;
   display: flex;
   flex-direction: column;
-  align-items: ${props => {
-    // Use message alignment setting if available, otherwise fall back to role-based alignment
-    if (props.$alignment === 'right') {
-      return 'flex-end';
-    } else if (props.$alignment === 'left') {
-      return 'flex-start';
-    }
-    // Fall back to role-based alignment
-    return props.$isUser ? 'flex-end' : 'flex-start';
-  }};
+  align-items: ${props => props.$isUser ? 'flex-end' : 'flex-start'};
   width: 100%;
 `;
 
 const MessageBubble = styled.div`
-  max-width: ${props => {
-    // Use message alignment setting if available, otherwise fall back to role-based alignment
-    if (props.$alignment === 'right') {
-      return '85%';
-    } else if (props.$alignment === 'left') {
-      return 'calc(100% - 30px)';
-    }
-    // Fall back to role-based alignment
-    return props.$isUser ? '85%' : 'calc(100% - 30px)';
-  }};
-  padding: ${props => {
-    // Use message alignment setting if available, otherwise fall back to role-based alignment
-    if (props.$alignment === 'right') {
-      return '12px 16px';
-    } else if (props.$alignment === 'left') {
-      return '0';
-    }
-    // Fall back to role-based alignment
-    return props.$isUser ? '12px 16px' : '0';
-  }};
-  padding-right: ${props => {
-    // Use message alignment setting if available, otherwise fall back to role-based alignment
-    if (props.$alignment === 'right') {
-      return '16px';
-    } else if (props.$alignment === 'left') {
-      return '20px';
-    }
-    // Fall back to role-based alignment
-    return props.$isUser ? '16px' : '20px';
-  }};
-  border-radius: ${props => {
-    // Use message alignment setting if available, otherwise fall back to role-based alignment
-    if (props.$alignment === 'right') {
-      return '20px';
-    } else if (props.$alignment === 'left') {
-      return '0';
-    }
-    // Fall back to role-based alignment
-    return props.$isUser ? '20px' : '0';
-  }};
+  max-width: ${props => props.$isUser ? '85%' : 'calc(100% - 30px)'};
+  padding: ${props => props.$isUser ? '12px 16px' : '0'};
+  padding-right: ${props => props.$isUser ? '16px' : '20px'};
+  border-radius: ${props => props.$isUser ? '20px' : '0'};
   word-wrap: break-word;
   position: relative;
-  margin-right: ${props => {
-    // Use message alignment setting if available, otherwise fall back to role-based alignment
-    if (props.$alignment === 'right') {
-      return '0';
-    } else if (props.$alignment === 'left') {
-      return '0';
-    }
-    // Fall back to role-based alignment
-    return props.$isUser ? '0' : '0';
-  }};
-  margin-left: ${props => {
-    // Use message alignment setting if available, otherwise fall back to role-based alignment
-    if (props.$alignment === 'right') {
-      return 'auto';
-    } else if (props.$alignment === 'left') {
-      return '10px';
-    }
-    // Fall back to role-based alignment
-    return props.$isUser ? 'auto' : '10px';
-  }};
+  margin-right: ${props => props.$isUser ? '0' : '0'};
+  margin-left: ${props => props.$isUser ? 'auto' : '10px'};
   
   ${props => props.$isUser ? `
     background: ${
@@ -252,16 +189,7 @@ const MessageTimestamp = styled.div`
   font-size: 12px;
   color: ${props => props.theme.text}66;
   margin-top: 4px;
-  text-align: ${props => {
-    // Use message alignment setting if available, otherwise fall back to role-based alignment
-    if (props.$alignment === 'right') {
-      return 'right';
-    } else if (props.$alignment === 'left') {
-      return 'left';
-    }
-    // Fall back to role-based alignment
-    return props.$isUser ? 'right' : 'left';
-  }};
+  text-align: ${props => props.$isUser ? 'right' : 'left'};
 `;
 
 const ErrorMessage = styled.div`
@@ -340,12 +268,9 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
   const isUser = message.role === 'user';
   const contentParts = parseMessageContent(message.content);
   
-  // Get message alignment from settings
-  const messageAlignment = settings.messageAlignment || 'left';
-  
   return (
-    <MessageContainer $isUser={isUser} $alignment={messageAlignment}>
-      <MessageBubble $isUser={isUser} $alignment={messageAlignment}>
+    <MessageContainer $isUser={isUser}>
+      <MessageBubble $isUser={isUser}>
         {message.image && !imageError && (
           <MessageImage
             src={message.image}
@@ -402,7 +327,7 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
       </MessageBubble>
       
       {settings?.showTimestamps && message.timestamp && (
-        <MessageTimestamp $isUser={isUser} $alignment={messageAlignment}>
+        <MessageTimestamp $isUser={isUser}>
           {formatTimestamp(message.timestamp)}
         </MessageTimestamp>
       )}
