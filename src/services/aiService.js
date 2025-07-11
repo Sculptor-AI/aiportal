@@ -32,29 +32,40 @@ const isBackendModel = (modelId, availableModels = []) => {
 export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false, systemPrompt = null) {
   // Get user's assigned backend API key from session
   let apiKey = null;
+  let user = null;
+  let isLoggedIn = false;
+  
   try {
     const userJSON = sessionStorage.getItem('ai_portal_current_user');
     if (userJSON) {
-      const user = JSON.parse(userJSON);
+      user = JSON.parse(userJSON);
+      isLoggedIn = true;
+      console.log('[aiService] User found in session:', user.username);
+      
       // User's assigned backend API key should be stored as their accessToken
       if (user.accessToken && user.accessToken.startsWith('ak_')) {
         apiKey = user.accessToken;
+        console.log('[aiService] Using user API key');
       } else if (user.accessToken) {
         // Use JWT token if available
         apiKey = user.accessToken;
+        console.log('[aiService] Using user JWT token');
       }
+    } else {
+      console.log('[aiService] No user session found');
     }
   } catch (e) {
     console.error('Error getting user session:', e);
   }
 
-  // Fallback API key for development/testing
+  // Fallback API key for development/testing - but warn about it
   if (!apiKey) {
+    console.warn('[aiService] No user authentication found, using fallback API key');
     apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
   }
 
   if (!apiKey) {
-    throw new Error('Backend API key is required. Please add it in Settings.');
+    throw new Error('Backend API key is required. Please log in to use AI features.');
   }
 
   try {

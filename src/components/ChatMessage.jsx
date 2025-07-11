@@ -11,8 +11,8 @@ import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
 
 // Helper function to parse and render LaTeX
-const renderLatex = (latex, displayMode) => (
-  <ReactKatex key={`latex-${Math.random()}`} displayMode={displayMode}>
+const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
+  <ReactKatex key={`${keyPrefix}-${latex.length}-${displayMode}`} displayMode={displayMode}>
     {latex}
   </ReactKatex>
 );
@@ -89,6 +89,7 @@ const processText = (text, enableCodeExecution = true, isLanguageExecutable = nu
 const processMarkdown = (text, theme = {}) => {
   const parts = [];
   let lastIndex = 0;
+  let keyCounter = 0;
 
   // Regex for display math: $$\n?...$$\n? or $$...$$
   const displayRegex = /\$\$\s*([\s\S]*?)\s*\$\$/g;
@@ -100,10 +101,14 @@ const processMarkdown = (text, theme = {}) => {
   while ((match = displayRegex.exec(text)) !== null) {
     // Add text before
     if (match.index > lastIndex) {
-      parts.push(processMarkdownText(text.substring(lastIndex, match.index), theme));
+      parts.push(
+        <span key={`text-${keyCounter++}`}>
+          {processMarkdownText(text.substring(lastIndex, match.index), theme)}
+        </span>
+      );
     }
     // Add LaTeX
-    parts.push(renderLatex(match[1], true));
+    parts.push(renderLatex(match[1], true, `display-${keyCounter++}`));
     lastIndex = match.index + match[0].length;
   }
   // Add remaining after display
@@ -114,15 +119,23 @@ const processMarkdown = (text, theme = {}) => {
   while ((match = inlineRegex.exec(remaining)) !== null) {
     // Add text before
     if (match.index > lastIndex) {
-      parts.push(processMarkdownText(remaining.substring(lastIndex, match.index), theme));
+      parts.push(
+        <span key={`text-${keyCounter++}`}>
+          {processMarkdownText(remaining.substring(lastIndex, match.index), theme)}
+        </span>
+      );
     }
     // Add inline LaTeX
-    parts.push(renderLatex(match[1], false));
+    parts.push(renderLatex(match[1], false, `inline-${keyCounter++}`));
     lastIndex = match.index + match[0].length;
   }
   // Add final remaining
   if (lastIndex < remaining.length) {
-    parts.push(processMarkdownText(remaining.substring(lastIndex), theme));
+    parts.push(
+      <span key={`text-${keyCounter++}`}>
+        {processMarkdownText(remaining.substring(lastIndex), theme)}
+      </span>
+    );
   }
 
   return <>{parts}</>;
@@ -457,6 +470,7 @@ const processMarkdownText = (text, theme = {}) => {
 const processInlineFormatting = (text, theme = {}) => {
   const parts = [];
   let lastIndex = 0;
+  let keyCounter = 0;
   
   // Handle links first
   const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
@@ -466,12 +480,12 @@ const processInlineFormatting = (text, theme = {}) => {
     // Add text before the link
     if (match.index > lastIndex) {
       const beforeText = text.substring(lastIndex, match.index);
-      parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(beforeText, theme)}</span>);
+      parts.push(<span key={`text-${keyCounter++}`}>{processBoldItalic(beforeText, theme)}</span>);
     }
     
     // Add the link
     parts.push(
-      <Link key={`link-${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer" theme={theme}>
+      <Link key={`link-${keyCounter++}`} href={match[2]} target="_blank" rel="noopener noreferrer" theme={theme}>
         {processBoldItalic(match[1], theme)}
       </Link>
     );
@@ -482,7 +496,7 @@ const processInlineFormatting = (text, theme = {}) => {
   // Add any remaining text
   if (lastIndex < text.length) {
     const remainingText = text.substring(lastIndex);
-    parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(remainingText, theme)}</span>);
+    parts.push(<span key={`text-${keyCounter++}`}>{processBoldItalic(remainingText, theme)}</span>);
   }
   
   return parts.length > 0 ? <>{parts}</> : processBoldItalic(text, theme);
@@ -494,23 +508,24 @@ const processBoldItalic = (text, theme = {}) => {
   const boldPattern = /\*\*(.*?)\*\*/g;
   const parts = [];
   let lastIndex = 0;
+  let keyCounter = 0;
   let match;
   
   while ((match = boldPattern.exec(text)) !== null) {
     // Add text before the bold part
     if (match.index > lastIndex) {
-      parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex, match.index), theme)}</span>);
+      parts.push(<span key={`text-${keyCounter++}`}>{processItalic(text.substring(lastIndex, match.index), theme)}</span>);
     }
     
     // Add the bold text (also process any italic within it)
-    parts.push(<Bold key={`bold-${match.index}`} theme={theme}>{processItalic(match[1], theme)}</Bold>);
+    parts.push(<Bold key={`bold-${keyCounter++}`} theme={theme}>{processItalic(match[1], theme)}</Bold>);
     
     lastIndex = match.index + match[0].length;
   }
   
   // Add any remaining text
   if (lastIndex < text.length) {
-    parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex), theme)}</span>);
+    parts.push(<span key={`text-${keyCounter++}`}>{processItalic(text.substring(lastIndex), theme)}</span>);
   }
   
   return parts.length > 0 ? <>{parts}</> : processItalic(text, theme);
@@ -523,23 +538,24 @@ const processItalic = (text, theme = {}) => {
   const italicPattern = /\*((?!\*).+?)\*/g;
   const parts = [];
   let lastIndex = 0;
+  let keyCounter = 0;
   let match;
   
   while ((match = italicPattern.exec(text)) !== null) {
     // Add text before the italic part
     if (match.index > lastIndex) {
-      parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex, match.index)}</span>);
+      parts.push(<span key={`text-${keyCounter++}`}>{text.substring(lastIndex, match.index)}</span>);
     }
     
     // Add the italic text
-    parts.push(<Italic key={`italic-${match.index}`} theme={theme}>{match[1]}</Italic>);
+    parts.push(<Italic key={`italic-${keyCounter++}`} theme={theme}>{match[1]}</Italic>);
     
     lastIndex = match.index + match[0].length;
   }
   
   // Add any remaining text
   if (lastIndex < text.length) {
-    parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex)}</span>);
+    parts.push(<span key={`text-${keyCounter++}`}>{text.substring(lastIndex)}</span>);
   }
   
   return <>{parts.length > 0 ? parts : text}</>;

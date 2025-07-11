@@ -310,7 +310,7 @@ const IndicatorSquare = styled.div`
   height: 16px;
   position: relative;
   
-  &.connected {
+  &.traditional {
     background: ${props => props.theme.text};
     border-radius: 2px;
   }
@@ -391,7 +391,7 @@ const PreviewContainer = styled.div`
 const PreviewSidebar = styled.div`
   width: 80px;
   background: ${props => props.theme.sidebar};
-  border-radius: ${props => props.$sidebarStyle === 'connected' ? '12px 0 0 12px' : '8px'};
+  border-radius: ${props => props.$sidebarStyle === 'traditional' ? '12px 0 0 12px' : '8px'};
   padding: 16px 8px;
   display: flex;
   flex-direction: column;
@@ -402,7 +402,7 @@ const PreviewSidebar = styled.div`
 const PreviewMain = styled.div`
   flex: 1;
   background: ${props => props.theme.chat};
-  border-radius: ${props => props.$sidebarStyle === 'connected' ? '0 12px 12px 0' : '8px'};
+  border-radius: ${props => props.$sidebarStyle === 'traditional' ? '0 12px 12px 0' : '8px'};
   padding: 16px;
   margin-left: ${props => props.$sidebarStyle === 'floating' ? '8px' : '0'};
   display: flex;
@@ -514,7 +514,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
       description: 'Choose how you want the sidebar to appear',
       options: [
         { id: 'floating', label: 'Floating', indicator: true },
-        { id: 'connected', label: 'Connected', indicator: true }
+        { id: 'traditional', label: 'Connected', indicator: true }
       ],
       selectionKey: 'sidebarStyle'
     }

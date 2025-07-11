@@ -24,7 +24,7 @@ const Italic = styled.span`
 const Heading1 = styled.h1`
   font-size: 1.6rem;
   font-weight: 700;
-  margin: 1rem 0 0.5rem 0;
+  margin: 0;
   color: ${props => props.theme.text};
   border-bottom: 2px solid ${props => props.theme.border};
   padding-bottom: 0.3rem;
@@ -38,7 +38,7 @@ const Heading1 = styled.h1`
 const Heading2 = styled.h2`
   font-size: 1.3rem;
   font-weight: 600;
-  margin: 0.8rem 0 0.4rem 0;
+  margin: 0;
   color: ${props => props.theme.text};
   border-bottom: 1px solid ${props => props.theme.border};
   padding-bottom: 0.2rem;
@@ -52,7 +52,7 @@ const Heading2 = styled.h2`
 const Heading3 = styled.h3`
   font-size: 1.1rem;
   font-weight: 600;
-  margin: 0.6rem 0 0.3rem 0;
+  margin: 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -64,7 +64,7 @@ const Heading3 = styled.h3`
 const Heading4 = styled.h4`
   font-size: 1rem;
   font-weight: 600;
-  margin: 0.5rem 0 0.2rem 0;
+  margin: 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -76,7 +76,7 @@ const Heading4 = styled.h4`
 const Heading5 = styled.h5`
   font-size: 0.9rem;
   font-weight: 600;
-  margin: 0.4rem 0 0.2rem 0;
+  margin: 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -88,7 +88,7 @@ const Heading5 = styled.h5`
 const Heading6 = styled.h6`
   font-size: 0.85rem;
   font-weight: 600;
-  margin: 0.3rem 0 0.1rem 0;
+  margin: 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -98,7 +98,7 @@ const Heading6 = styled.h6`
 `;
 
 const Paragraph = styled.p`
-  margin: 0.4rem 0;
+  margin: 0;
   line-height: 1.5;
   color: ${props => props.theme.text};
   
@@ -114,12 +114,12 @@ const Paragraph = styled.p`
 const BulletList = styled.ul`
   list-style-type: none;
   padding-left: 0;
-  margin: 0.4rem 0;
+  margin: 0;
   
   li {
     position: relative;
     padding-left: 1.2em;
-    margin: 0.3em 0;
+    margin: 0;
     line-height: 1.5;
     color: ${props => props.theme.text};
     
@@ -136,10 +136,10 @@ const BulletList = styled.ul`
 
 const NumberedList = styled.ol`
   padding-left: 1.2em;
-  margin: 0.4rem 0;
+  margin: 0;
   
   li {
-    margin: 0.3em 0;
+    margin: 0;
     line-height: 1.5;
     color: ${props => props.theme.text};
   }

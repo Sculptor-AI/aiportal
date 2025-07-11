@@ -46,13 +46,7 @@ const MainContentArea = styled.div`
   flex: 1;
   display: flex;
   height: 100%;
-  margin-left: ${props => {
-    // Only add left margin for traditional sidebar style when sidebar is not collapsed
-    if (props.$sidebarStyle === 'traditional' && !props.$sidebarCollapsed) {
-      return '280px';
-    }
-    return '0';
-  }};
+  margin-left: 0;
   margin-right: ${props => {
     // Handle multiple panels being open (whiteboard is now a full-screen modal)
     let totalMargin = 0;

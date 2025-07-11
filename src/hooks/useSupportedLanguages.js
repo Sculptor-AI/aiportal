@@ -14,20 +14,8 @@ const useSupportedLanguages = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await fetch('/api/tools/languages');
-      const data = await response.json();
-      
-      if (data.success) {
-        setSupportedLanguages(data.languages);
-      } else {
-        throw new Error(data.error || 'Failed to fetch supported languages');
-      }
-    } catch (error) {
-      console.error('Failed to fetch supported languages:', error);
-      setError(error.message);
-      
-      // Fallback to common languages if API fails
-      setSupportedLanguages([
+      // Use predefined languages directly since the API endpoint doesn't exist
+      const fallbackLanguages = [
         { id: 'javascript', name: 'JavaScript', executable: true },
         { id: 'python', name: 'Python', executable: true },
         { id: 'java', name: 'Java', executable: true },
@@ -79,7 +67,13 @@ const useSupportedLanguages = () => {
         { id: 'ini', name: 'INI', executable: false },
         { id: 'markdown', name: 'Markdown', executable: false },
         { id: 'text', name: 'Plain Text', executable: false }
-      ]);
+      ];
+      
+      setSupportedLanguages(fallbackLanguages);
+    } catch (error) {
+      console.error('Failed to initialize supported languages:', error);
+      setError(error.message);
+      setSupportedLanguages([]);
     } finally {
       setIsLoading(false);
     }

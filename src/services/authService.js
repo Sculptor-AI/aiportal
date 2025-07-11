@@ -269,7 +269,7 @@ export const adminLogout = async () => {
       await fetch(buildApiUrl('/admin/auth/logout'), {
         method: 'POST',
         headers: {
-          'X-Admin-Token': adminUser.adminToken
+          'Authorization': `Bearer ${adminUser.adminToken}`
         }
       });
     }
@@ -291,7 +291,7 @@ export const getAdminAuthHeaders = () => {
   const adminUser = getCurrentAdminUser();
   if (adminUser && adminUser.adminToken) {
     return {
-      'X-Admin-Token': adminUser.adminToken
+      'Authorization': `Bearer ${adminUser.adminToken}`
     };
   }
   return {};
