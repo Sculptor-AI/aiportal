@@ -2011,44 +2011,28 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 return (
                   <>
                     <ThinkingDropdown thinkingContent={processedContent.thinking} toolCalls={toolCalls} />
-                    {isLoading ? (
-                      <StreamingMarkdownRenderer 
-                        text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
-                        isStreaming={true}
-                        theme={theme}
-                      />
-                    ) : isMercury ? (
-                      <TextDiffusionAnimation 
-                        finalText={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
-                        isActive={!isLoading}
-                        messageId={id}
-                        speed={60}
-                        diffusionDuration={750}
-                      />
-                    ) : (
-                      processedContent.main
-                    )}
-                  </>
-                );
-              } else {
-                // If content has no thinking tags, but may have tool activity
-                const hasToolActivity = toolCalls && toolCalls.length > 0;
-                
-                return (
-                  <>
-                    {hasToolActivity && (
-                      <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
-                    )}
-                    {isLoading ? (
-                      <StreamingMarkdownRenderer text={contentToProcess} isStreaming={true} theme={theme} />
-                    ) : isMercury ? (
-                      <TextDiffusionAnimation finalText={contentToProcess} isActive={!isLoading} messageId={id} speed={60} diffusionDuration={750} />
-                    ) : (
-                      robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)
-                    )}
+                    <StreamingMarkdownRenderer 
+                      text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
+                      isStreaming={isLoading}
+                      theme={theme}
+                    />
                   </>
                 );
               }
+              // If content has no thinking tags, but may have tool activity
+              const hasToolActivity = toolCalls && toolCalls.length > 0;
+              return (
+                <>
+                  {hasToolActivity && (
+                    <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
+                  )}
+                  <StreamingMarkdownRenderer 
+                    text={contentToProcess}
+                    isStreaming={isLoading}
+                    theme={theme}
+                  />
+                </>
+              );
             })()}
           </Content>
           
