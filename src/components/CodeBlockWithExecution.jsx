@@ -25,11 +25,7 @@ const CodeHeader = styled.div`
 `;
 
 const CodeLanguage = styled.span`
-  color: ${props => {
-    const themeColor = props.theme?.text;
-    if (themeColor) return themeColor;
-    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
-  }} !important;
+  color: ${props => props.theme?.text || '#000000'} !important;
   font-weight: 500;
   text-transform: uppercase;
   font-size: 0.75em;
@@ -45,11 +41,7 @@ const ButtonGroup = styled.div`
 const ActionButton = styled.button`
   background: none;
   border: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.2)'};
-  color: ${props => {
-    const themeColor = props.theme?.text;
-    if (themeColor) return themeColor;
-    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
-  }} !important;
+  color: ${props => props.theme?.text || '#000000'} !important;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.7em;
@@ -60,11 +52,7 @@ const ActionButton = styled.button`
   gap: 4px;
   
   &:hover {
-    background: ${props => {
-      const themeColor = props.theme?.text;
-      if (themeColor) return themeColor + '10';
-      return props.theme?.name === 'dark' ? '#ffffff10' : '#00000010';
-    }};
+    background: ${props => (props.theme?.text || '#000000') + '10'};
   }
   
   &:disabled {
@@ -80,13 +68,7 @@ const Pre = styled.pre`
   white-space: pre-wrap;
   word-wrap: break-word;
   background: none;
-  color: ${props => {
-    // Ensure we always have a visible color
-    const themeColor = props.theme?.text;
-    if (themeColor) return themeColor;
-    // Fallback to black for light themes, white for dark themes
-    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
-  }} !important;
+  color: ${props => props.theme?.text || '#000000'} !important;
   line-height: 1.4;
   
   /* Custom scrollbar */
@@ -123,20 +105,12 @@ const ResultsHeader = styled.div`
   align-items: center;
   margin-bottom: 8px;
   font-weight: 600;
-  color: ${props => {
-    const themeColor = props.theme?.text;
-    if (themeColor) return themeColor;
-    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
-  }} !important;
+  color: ${props => props.theme?.text || '#000000'} !important;
 `;
 
 const ExecutionTime = styled.span`
   font-size: 0.8em;
-  color: ${props => {
-    const themeColor = props.theme?.text;
-    if (themeColor) return themeColor + '80';
-    return props.theme?.name === 'dark' ? '#ffffff80' : '#00000080';
-  }} !important;
+  color: ${props => (props.theme?.text || '#000000') + '80'} !important;
 `;
 
 const OutputContent = styled.pre`
@@ -152,11 +126,7 @@ const OutputContent = styled.pre`
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
-  color: ${props => {
-    const themeColor = props.theme?.text;
-    if (themeColor) return themeColor;
-    return props.theme?.name === 'dark' ? '#ffffff' : '#000000';
-  }} !important;
+  color: ${props => props.theme?.text || '#000000'} !important;
 `;
 
 const ErrorOutput = styled(OutputContent)`
@@ -180,12 +150,12 @@ const CodeBlockWithExecution = ({
   supportedLanguages = [],
   onExecutionComplete = null
 }) => {
-  // Ensure theme has default values to prevent low visibility
+  // Preserve original theme values, only add minimal fallbacks
   const safeTheme = {
+    ...theme,
     name: theme.name || 'light',
-    text: theme.text || '#000',
-    border: theme.border || 'rgba(0,0,0,0.1)',
-    ...theme
+    text: theme.text || (theme.name === 'dark' ? '#ffffff' : '#000000'),
+    border: theme.border || 'rgba(0,0,0,0.1)'
   };
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState(null);
