@@ -4,8 +4,8 @@ import { processCodeBlocks } from '../utils/codeBlockProcessor';
 
 // Styled components for the enhanced code block
 const CodeBlockContainer = styled.div`
-  background: ${props => props.theme?.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
-  border: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.1)'};
+  background: ${props => props.theme?.cardBackground || (props.theme?.name === 'dark' || props.theme?.name === 'oled' ? '#1e1e1e' : '#f8f8f8')};
+  border: 1px solid ${props => props.theme?.border || (props.theme?.name === 'dark' || props.theme?.name === 'oled' ? '#333' : '#e0e0e0')};
   border-radius: 8px;
   overflow: hidden;
   margin: 12px 0;
@@ -19,8 +19,8 @@ const CodeHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: ${props => props.theme?.name === 'light' ? 'rgba(240, 240, 240, 0.6)' : 'rgba(40, 40, 40, 0.8)'};
-  border-bottom: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.1)'};
+  background: ${props => props.theme?.name === 'dark' || props.theme?.name === 'oled' ? '#2d2d2d' : '#f0f0f0'};
+  border-bottom: 1px solid ${props => props.theme?.border || (props.theme?.name === 'dark' || props.theme?.name === 'oled' ? '#333' : '#e0e0e0')};
   font-size: 0.8em;
 `;
 
@@ -93,8 +93,8 @@ const Pre = styled.pre`
 `;
 
 const ExecutionResults = styled.div`
-  border-top: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.1)'};
-  background: ${props => props.theme?.name === 'light' ? 'rgba(248, 250, 252, 0.8)' : 'rgba(25, 25, 25, 0.8)'};
+  border-top: 1px solid ${props => props.theme?.border || (props.theme?.name === 'dark' || props.theme?.name === 'oled' ? '#333' : '#e0e0e0')};
+  background: ${props => props.theme?.name === 'dark' || props.theme?.name === 'oled' ? '#2d2d2d' : '#f0f0f0'};
   padding: 12px;
   font-size: 0.85em;
 `;
@@ -116,9 +116,9 @@ const ExecutionTime = styled.span`
 const OutputContent = styled.pre`
   margin: 0;
   padding: 8px;
-  background: ${props => props.theme?.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(20, 20, 20, 0.8)'};
+  background: ${props => props.theme?.cardBackground || (props.theme?.name === 'dark' || props.theme?.name === 'oled' ? '#1e1e1e' : '#ffffff')};
   border-radius: 4px;
-  border: 1px solid ${props => props.theme?.border || 'rgba(0,0,0,0.1)'};
+  border: 1px solid ${props => props.theme?.border || (props.theme?.name === 'dark' || props.theme?.name === 'oled' ? '#333' : '#e0e0e0')};
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
   font-size: 0.85em;
   line-height: 1.4;
@@ -131,13 +131,13 @@ const OutputContent = styled.pre`
 
 const ErrorOutput = styled(OutputContent)`
   color: #e53e3e !important;
-  background: ${props => props.theme?.name === 'light' ? 'rgba(254, 242, 242, 0.8)' : 'rgba(45, 25, 25, 0.8)'};
+  background: ${props => props.theme?.name === 'dark' || props.theme?.name === 'oled' ? 'rgba(45, 25, 25, 0.8)' : 'rgba(254, 242, 242, 0.8)'};
   border-color: #fed7d7;
 `;
 
 const SuccessOutput = styled(OutputContent)`
   color: #38a169 !important;
-  background: ${props => props.theme?.name === 'light' ? 'rgba(240, 253, 244, 0.8)' : 'rgba(25, 45, 25, 0.8)'};
+  background: ${props => props.theme?.name === 'dark' || props.theme?.name === 'oled' ? 'rgba(25, 45, 25, 0.8)' : 'rgba(240, 253, 244, 0.8)'};
   border-color: #c6f6d5;
 `;
 
