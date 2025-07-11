@@ -350,7 +350,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
     clearError
   } = useGeminiLive({
     apiKey: import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('google_api_key'),
-    model: selectedModel,
+    model: selectedModel?.includes('gemini') ? selectedModel : 'gemini-2.0-flash-exp', // Always use Gemini for live mode
     responseModality: 'text',
     inputTranscriptionEnabled: true,
     outputTranscriptionEnabled: true,
@@ -364,16 +364,32 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   
   // Initialize connection and session when component mounts
   useEffect(() => {
-    if (!isConnected) {
-      connect();
-    }
-  }, [isConnected, connect]);
+    const initializeConnection = async () => {
+      if (!isConnected) {
+        try {
+          await connect();
+        } catch (error) {
+          console.error('Failed to connect:', error);
+        }
+      }
+    };
+    
+    initializeConnection();
+  }, []); // Only run once on mount
   
   useEffect(() => {
-    if (isConnected && !sessionActive) {
-      startSession();
-    }
-  }, [isConnected, sessionActive, startSession]);
+    const initializeSession = async () => {
+      if (isConnected && !sessionActive && status === 'connected') {
+        try {
+          await startSession();
+        } catch (error) {
+          console.error('Failed to start session:', error);
+        }
+      }
+    };
+    
+    initializeSession();
+  }, [isConnected, sessionActive, status]); // Only depend on these specific states
   
   // Cleanup on unmount
   useEffect(() => {
@@ -545,6 +561,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   
   // Get status display text
   const getStatusText = () => {
+    console.log('Current status:', status, 'isConnected:', isConnected, 'sessionActive:', sessionActive);
     if (!isConnected) return 'Connecting to Gemini Live...';
     if (!sessionActive) return 'Starting Session...';
     if (isRecording) return 'Recording';

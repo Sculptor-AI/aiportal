@@ -1,415 +1,309 @@
 class GeminiLiveService {
   constructor() {
-    this.ws = null;
+    this.baseUrl = 'https://api.sculptorai.org/api/v1/live-audio';
+    this.apiKey = null;
     this.sessionId = null;
     this.isConnected = false;
-    this.onTranscriptionCallback = null;
     this.onResponseCallback = null;
+    this.onTranscriptionCallback = null;
     this.onErrorCallback = null;
     this.onStatusCallback = null;
     this.mediaRecorder = null;
-    this.audioChunks = [];
     this.isRecording = false;
   }
 
-  // Connect directly to Google's Gemini Live API
+  // Connect using REST API instead of WebSocket
   async connect(apiKey = null) {
+    console.log('GeminiLiveService.connect() called');
+    
     if (this.isConnected) {
+      console.log('Already connected, skipping connection attempt');
       return;
     }
+
+    // Get API key using the same pattern as aiService
+    if (!apiKey) {
+      console.log('No API key provided, attempting to get from session storage...');
+      // Get user's assigned backend API key from session
+      try {
+        const userJSON = sessionStorage.getItem('ai_portal_current_user');
+        if (userJSON) {
+          const user = JSON.parse(userJSON);
+          console.log('Found user in session storage:', user.username);
+          // User's assigned backend API key should be stored as their accessToken
+          if (user.accessToken && user.accessToken.startsWith('ak_')) {
+            apiKey = user.accessToken;
+            console.log('Using user API key from session storage');
+          } else {
+            console.log('User accessToken does not start with ak_:', user.accessToken ? user.accessToken.substring(0, 10) + '...' : 'null');
+          }
+        } else {
+          console.log('No user found in session storage');
+        }
+      } catch (e) {
+        console.error('Error getting user session:', e);
+      }
+
+      // Fallback API key for development/testing (same as aiService)
+      if (!apiKey) {
+        console.log('Using fallback API key for development');
+        apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+      }
+    }
+
+    // Store the API key for future requests
+    this.apiKey = apiKey;
+    console.log('Using API key:', apiKey ? apiKey.substring(0, 10) + '...' : 'null');
     
-    // Get API key from environment or parameter
-    const googleApiKey = apiKey || import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('google_api_key');
-    
-    if (!googleApiKey) {
-      const error = 'Google API key is required for Gemini Live API. Please set VITE_GOOGLE_API_KEY in your environment or provide it as a parameter.';
+    if (!this.apiKey) {
+      const error = 'API key is required for live audio service. Please log in to access this feature.';
+      console.error('Connection failed:', error);
       this.onErrorCallback?.(error);
       throw new Error(error);
     }
-    
+
     try {
-      // Connect to Google's Gemini Live API WebSocket endpoint
-      const wsUrl = `wss://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?key=${googleApiKey}`;
+      console.log('Testing connection to:', `${this.baseUrl}/sessions`);
       
-      this.ws = new WebSocket(wsUrl);
-      
-      return new Promise((resolve, reject) => {
-        const connectionTimeout = setTimeout(() => {
-          if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-            try {
-              this.ws.close();
-            } catch (e) {
-              // Ignore close errors
-            }
-          }
-          if (!this.isConnected) {
-            const error = 'Connection to Gemini Live API timed out';
-            this.onErrorCallback?.(error);
-            reject(new Error(error));
-          }
-        }, 10000); // 10 second timeout for Google's API
-        
-        this.ws.onopen = () => {
-          clearTimeout(connectionTimeout);
-          this.isConnected = true;
-          this.onStatusCallback?.('connected');
-          console.log('✅ Connected to Gemini Live API');
-          resolve();
-        };
-        
-        this.ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            this.handleGeminiMessage(data);
-          } catch (error) {
-            console.error('Error parsing Gemini API message:', error);
-          }
-        };
-        
-        this.ws.onerror = (error) => {
-          clearTimeout(connectionTimeout);
-          console.error('Gemini Live API connection failed:', error);
-          const errorMessage = 'Failed to connect to Gemini Live API. Please check your API key and internet connection.';
-          this.onErrorCallback?.(errorMessage);
-          reject(new Error(errorMessage));
-        };
-        
-        this.ws.onclose = (event) => {
-          clearTimeout(connectionTimeout);
-          if (this.isConnected) {
-            this.isConnected = false;
-            this.onStatusCallback?.('disconnected');
-          }
-          console.log('Gemini Live API connection closed:', event.code, event.reason);
-        };
+      // Test connection to the API
+      const response = await fetch(`${this.baseUrl}/sessions`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey,
+        },
       });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (response.ok) {
+        this.isConnected = true;
+        this.onStatusCallback?.('connected');
+        console.log('✅ Connected to live audio backend via REST API');
+      } else {
+        const errorText = await response.text().catch(() => '');
+        console.error('Connection failed with status:', response.status, response.statusText);
+        console.error('Error response body:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
+      }
     } catch (error) {
-      console.error('Error connecting to Gemini Live API:', error);
+      console.error('Error connecting to live audio server:', error);
+      const errorMessage = `Failed to connect to live audio server: ${error.message}`;
+      this.onErrorCallback?.(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Handle polling for responses (since we're using REST instead of WebSocket)
+  async pollForResponse() {
+    if (!this.sessionId || !this.apiKey) return;
+
+    try {
+      const response = await fetch(`${this.baseUrl}/session/${this.sessionId}/status`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Handle any response data if needed
+      }
+    } catch (error) {
+      console.error('Error polling for response:', error);
+    }
+  }
+
+  // Start a new session using REST API
+  async startSession(options = {}) {
+    // Wait a bit if we just connected to ensure connection is stable
+    if (this.isConnected) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Not connected to live audio server');
+    }
+
+    if (!this.apiKey) {
+      throw new Error('API key is required');
+    }
+
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const startMessage = {
+      session_id: sessionId,
+      model: options.model || 'gemini-live-2.5-flash-preview',
+      response_modality: 'text',
+      input_transcription: true,
+      output_transcription: true,
+    };
+
+    try {
+      console.log('🚀 Starting live audio session with backend...', startMessage);
+      
+      const response = await fetch(`${this.baseUrl}/session/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey,
+        },
+        body: JSON.stringify(startMessage),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.sessionId = sessionId;
+        this.onStatusCallback?.('session_started');
+        console.log('Backend confirmed session started:', sessionId);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error starting session:', error);
       this.onErrorCallback?.(error.message);
       throw error;
     }
   }
-  
 
-  // Handle incoming messages from Google's Gemini Live API
-  handleGeminiMessage(data) {
+  // End current session using REST API
+  async endSession() {
+    if (!this.sessionId || !this.apiKey) return;
+
     try {
-      // Handle different types of messages from Gemini Live API
-      if (data.candidates && data.candidates.length > 0) {
-        const candidate = data.candidates[0];
-        
-        // Handle content updates
-        if (candidate.content && candidate.content.parts) {
-          const textParts = candidate.content.parts.filter(part => part.text);
-          if (textParts.length > 0) {
-            const response = textParts.map(part => part.text).join('');
-            this.onResponseCallback?.(response);
-          }
-        }
-        
-        // Handle audio transcription if available
-        if (candidate.transcription) {
-          this.onTranscriptionCallback?.(candidate.transcription);
-        }
-      }
+      console.log('Ending session with backend...');
       
-      // Handle server events
-      if (data.serverEvents) {
-        data.serverEvents.forEach(event => {
-          if (event.turnComplete) {
-            console.log('Turn completed');
-          } else if (event.interrupted) {
-            console.log('Turn interrupted');
-          }
-        });
-      }
-      
-      // Handle usage metadata
-      if (data.usageMetadata) {
-        console.log('Usage metadata:', data.usageMetadata);
-      }
-      
-    } catch (error) {
-      console.error('Error handling Gemini message:', error);
-      this.onErrorCallback?.('Error processing response from Gemini Live API');
-    }
-  }
-
-  // Start a new session with Gemini Live API
-  startSession(options = {}) {
-    if (!this.isConnected) {
-      throw new Error('Not connected to Gemini Live API');
-    }
-
-    this.sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Send setup message to Gemini Live API
-    const setupMessage = {
-      setup: {
-        model: 'models/gemini-2.0-flash-exp',
-        generationConfig: {
-          responseModalities: ['TEXT'], // Can be 'TEXT' or 'AUDIO'
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: {
-                voiceName: 'Aoede' // Available voices: Aoede, Charon, Fenrir, Kore, Puck
-              }
-            }
-          }
+      const response = await fetch(`${this.baseUrl}/session/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey,
         },
-        systemInstruction: {
-          parts: [{
-            text: 'You are a helpful AI assistant. Respond naturally to voice conversations.'
-          }]
-        }
+        body: JSON.stringify({
+          session_id: this.sessionId,
+        }),
+      });
+
+      if (response.ok) {
+        this.sessionId = null;
+        this.onStatusCallback?.('session_ended');
+        console.log('Backend confirmed session ended');
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    };
-
-    console.log('🚀 Starting Gemini Live session...');
-    this.ws.send(JSON.stringify(setupMessage));
-    
-    // Mark session as active
-    this.onStatusCallback?.('session_started');
-  }
-
-  // End current session
-  endSession() {
-    if (this.ws && this.isConnected) {
-      this.ws.send(JSON.stringify({
-        type: 'end_session'
-      }));
-      this.sessionId = null;
+    } catch (error) {
+      console.error('Error ending session:', error);
+      this.onErrorCallback?.(error.message);
     }
   }
 
-  // Send audio chunk to Gemini Live API
-  sendAudioChunk(audioData, format = 'webm', sampleRate = 16000, channels = 1) {
-    if (!this.isConnected || !this.sessionId) {
-      throw new Error('Session not active');
-    }
+  // Send audio chunk using REST API
+  async sendAudioChunk(audioData, format = 'webm') {
+    if (!this.sessionId || !this.apiKey) return;
 
     try {
-      // Convert audio to base64 if it's not already
       const base64Audio = audioData.startsWith('data:') ? audioData.split(',')[1] : audioData;
-      
-      // Send audio data to Gemini Live API
       const audioMessage = {
-        realtimeInput: {
-          mediaChunks: [{
-            mimeType: `audio/${format}`,
-            data: base64Audio
-          }]
-        }
+        session_id: this.sessionId,
+        audio_data: base64Audio,
+        format: format,
+        sample_rate: 16000,
+        channels: 1,
       };
 
-      this.ws.send(JSON.stringify(audioMessage));
-      console.log('🎤 Audio chunk sent to Gemini Live API');
+      const response = await fetch(`${this.baseUrl}/transcribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey,
+        },
+        body: JSON.stringify(audioMessage),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Handle the response data
+        if (data.transcript || data.inputTranscription) {
+          this.onTranscriptionCallback?.(data.transcript || data.inputTranscription);
+        }
+        if (data.response) {
+          this.onResponseCallback?.(data.response);
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error sending audio chunk:', error);
-      this.onErrorCallback?.('Failed to send audio to Gemini Live API');
+      this.onErrorCallback?.(`Failed to send audio: ${error.message}`);
     }
   }
 
   // Start recording from microphone
-  async startRecording() {
-    if (this.isRecording) {
-      console.warn('Already recording');
-      return;
-    }
-
-    try {
-      console.log('🎤 Requesting microphone access...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 16000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true
-        }
-      });
-
-      console.log('✅ Microphone access granted');
-      this.mediaRecorder = new MediaRecorder(stream);
-      this.audioChunks = [];
-
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.audioChunks.push(event.data);
-          this.processAudioChunk(event.data);
-        }
-      };
-
-      this.mediaRecorder.onstop = () => {
-        stream.getTracks().forEach(track => track.stop());
-        console.log('🎤 Recording stopped');
-      };
-
-      this.mediaRecorder.start(1000); // Send chunks every 1 second
-      this.isRecording = true;
-      this.onStatusCallback?.('recording_started');
-      console.log('🎤 Recording started');
-    } catch (error) {
-      console.error('Microphone access error:', error);
-      const errorMessage = error instanceof Error ? error.message : 
-                         error instanceof Event ? 'Microphone access failed' : 
-                         'Failed to start recording';
-      this.onErrorCallback?.(errorMessage);
-      throw new Error(errorMessage);
-    }
+  startRecording(onStopCallback) {
+    if (this.isRecording) return;
+    navigator.mediaDevices.getUserMedia({
+        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+    })
+    .then(stream => {
+        this.isRecording = true;
+        this.onStatusCallback?.('recording_started');
+        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        
+        this.mediaRecorder.ondataavailable = event => {
+            if (event.data.size > 0) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    this.sendAudioChunk(reader.result.toString(), 'webm');
+                };
+                reader.readAsDataURL(event.data);
+            }
+        };
+        
+        this.mediaRecorder.onstop = () => {
+            this.isRecording = false;
+            this.onStatusCallback?.('recording_stopped');
+            stream.getTracks().forEach(track => track.stop());
+            if (onStopCallback) onStopCallback();
+        };
+        
+        this.mediaRecorder.start(1000);
+    })
+    .catch(error => {
+        console.error('Error accessing microphone:', error);
+        this.onErrorCallback?.('Microphone access denied. Please allow microphone access in your browser settings.');
+    });
   }
 
   // Stop recording
   stopRecording() {
     if (this.mediaRecorder && this.isRecording) {
       this.mediaRecorder.stop();
-      this.isRecording = false;
-      this.onStatusCallback?.('recording_stopped');
     }
   }
 
-  // Process audio chunk and send to server
-  async processAudioChunk(audioBlob) {
-    try {
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-      this.sendAudioChunk(base64Audio, 'webm', 16000, 1);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 
-                         error instanceof Event ? 'Audio processing failed' : 
-                         'Failed to process audio';
-      this.onErrorCallback?.(errorMessage);
-    }
-  }
+  onResponse(callback) { this.onResponseCallback = callback; }
+  onTranscription(callback) { this.onTranscriptionCallback = callback; }
+  onError(callback) { this.onErrorCallback = callback; }
+  onStatus(callback) { this.onStatusCallback = callback; }
 
-  // Set callback functions
-  onTranscription(callback) {
-    this.onTranscriptionCallback = callback;
-  }
-
-  onResponse(callback) {
-    this.onResponseCallback = callback;
-  }
-
-  onError(callback) {
-    this.onErrorCallback = callback;
-  }
-
-  onStatus(callback) {
-    this.onStatusCallback = callback;
-  }
-
-  // REST API methods for fallback
-  async startSessionREST(options = {}) {
-    const defaultOptions = {
-      session_id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      model: 'gemini-live-2.5-flash-preview',
-      response_modality: 'text',
-      input_transcription: true,
-      output_transcription: true
-    };
-
-    const sessionOptions = { ...defaultOptions, ...options };
-
-    try {
-      const response = await fetch('/api/v1/live-audio/session/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(sessionOptions)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      this.sessionId = sessionOptions.session_id;
-      return data;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 
-                         error instanceof Event ? 'Failed to start session' : 
-                         'Session start failed';
-      this.onErrorCallback?.(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }
-
-  async transcribeAudioREST(audioData, format = 'webm', sampleRate = 16000, channels = 1) {
-    if (!this.sessionId) {
-      throw new Error('No active session');
-    }
-
-    try {
-      const response = await fetch('/api/v1/live-audio/transcribe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          session_id: this.sessionId,
-          audio_data: audioData,
-          format,
-          sample_rate: sampleRate,
-          channels
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 
-                         error instanceof Event ? 'Failed to transcribe audio' : 
-                         'Transcription failed';
-      this.onErrorCallback?.(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }
-
-  async endSessionREST() {
-    if (!this.sessionId) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/v1/live-audio/session/end', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          session_id: this.sessionId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      this.sessionId = null;
-      return await response.json();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 
-                         error instanceof Event ? 'Failed to end session' : 
-                         'Session end failed';
-      this.onErrorCallback?.(errorMessage);
-      throw new Error(errorMessage);
-    }
-  }
-
-  // Utility methods
+  // Disconnect and cleanup
   disconnect() {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
-    }
     this.isConnected = false;
     this.sessionId = null;
+    this.apiKey = null;
+    
+    // Stop recording if active
+    if (this.isRecording) {
+      this.stopRecording();
+    }
   }
 
+  // Utility methods for compatibility
   isSessionActive() {
     return this.sessionId !== null;
   }

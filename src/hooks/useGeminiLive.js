@@ -28,14 +28,13 @@ const useGeminiLive = (options = {}) => {
       serviceRef.current = new GeminiLiveService();
       
       // Set up callbacks
-      serviceRef.current.onTranscription((data) => {
-        setTranscription(data.transcript || '');
-        setInputTranscription(data.inputTranscription || '');
-        setOutputTranscription(data.outputTranscription || '');
+      serviceRef.current.onTranscription((transcriptionText) => {
+        setTranscription(transcriptionText || '');
+        setInputTranscription(transcriptionText || '');
       });
 
-      serviceRef.current.onResponse((data) => {
-        setResponse(data.response || data.transcript || '');
+      serviceRef.current.onResponse((responseText) => {
+        setResponse(responseText || '');
       });
 
       serviceRef.current.onError((error) => {
@@ -48,13 +47,20 @@ const useGeminiLive = (options = {}) => {
       });
 
       serviceRef.current.onStatus((newStatus) => {
+        console.log('Status callback received:', newStatus);
         setStatus(newStatus);
-        setIsConnected(newStatus === 'connected' || newStatus === 'session_started');
+        const newIsConnected = newStatus === 'connected' || newStatus === 'session_started';
+        console.log('Setting isConnected to:', newIsConnected);
+        setIsConnected(newIsConnected);
         setSessionActive(newStatus === 'session_started');
         setIsRecording(newStatus === 'recording_started');
         
         if (newStatus === 'recording_stopped') {
           setIsRecording(false);
+        }
+        
+        if (newStatus === 'session_ended') {
+          setSessionActive(false);
         }
       });
     }
@@ -76,8 +82,10 @@ const useGeminiLive = (options = {}) => {
   const connect = useCallback(async () => {
     if (serviceRef.current && !isConnected) {
       try {
+        console.log('Attempting to connect to Gemini Live API...');
         await serviceRef.current.connect(apiKey);
         setError(null);
+        console.log('Successfully connected to Gemini Live API');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 
                            error instanceof Event ? 'Connection failed' : 
@@ -86,22 +94,47 @@ const useGeminiLive = (options = {}) => {
         setError(errorMessage);
         console.error('Failed to connect to Gemini Live API:', error);
       }
+    } else if (isConnected) {
+      console.log('Already connected to Gemini Live API');
     }
   }, [apiKey, isConnected]);
 
   // Start session
   const startSession = useCallback(async () => {
-    if (serviceRef.current && isConnected) {
+    if (serviceRef.current) {
+      // Check the actual service connection status instead of hook state
+      const actualConnectionStatus = serviceRef.current.getConnectionStatus();
+      
+      if (!actualConnectionStatus) {
+        console.warn('Service not connected, attempting to connect first...');
+        try {
+          await serviceRef.current.connect(apiKey);
+          // Wait a bit for connection to stabilize
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+          console.error('Failed to connect before starting session:', error);
+          throw error;
+        }
+      }
+      
+      // Check if session is already active
+      if (serviceRef.current.isSessionActive()) {
+        console.log('Session already active, skipping start session');
+        return;
+      }
+      
       try {
+        console.log('Starting new session...');
         const sessionOptions = {
           model,
-          response_modality: responseModality,
-          input_transcription: inputTranscriptionEnabled,
-          output_transcription: outputTranscriptionEnabled
+          responseModality,
+          inputTranscription: inputTranscriptionEnabled,
+          outputTranscription: outputTranscriptionEnabled
         };
         
-        serviceRef.current.startSession(sessionOptions);
+        await serviceRef.current.startSession(sessionOptions);
         setError(null);
+        console.log('Session started successfully');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 
                            error instanceof Event ? 'Failed to start session' : 
@@ -111,7 +144,7 @@ const useGeminiLive = (options = {}) => {
         console.error('Failed to start session:', error);
       }
     }
-  }, [isConnected, model, responseModality, inputTranscriptionEnabled, outputTranscriptionEnabled]);
+  }, [apiKey, model, responseModality, inputTranscriptionEnabled, outputTranscriptionEnabled]);
 
   // End session
   const endSession = useCallback(() => {
