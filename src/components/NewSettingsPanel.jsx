@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import TetrisGame from './TetrisGame';
 
 const SettingsOverlay = styled.div`
   position: fixed;
@@ -929,6 +930,7 @@ const LogoContainer = styled.div`
 
 const LogoIcon = styled.div`
   margin-right: 15px;
+  cursor: pointer;
   img {
     width: 60px;
     height: 60px;
@@ -939,6 +941,11 @@ const LogoTitle = styled.h2`
   margin: 0;
   font-size: 2.5rem;
   font-weight: 600;
+  cursor: pointer;
+  
+  &:hover {
+    opacity: 0.8;
+  }
 `;
 
 const RadioGroup = styled.div`
@@ -1019,6 +1026,7 @@ const SettingDescription = styled.p`
 const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
   const [activeSection, setActiveSection] = useState('general');
   const [localSettings, setLocalSettings] = useState(settings || {});
+  const [showTetris, setShowTetris] = useState(false);
   
   // Add a helper function to determine if in dark mode
   const isDarkMode = () => {
@@ -1045,6 +1053,14 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
     // Save settings when closing to maintain current UX behavior
     updateSettings(localSettings);
     closeModal();
+  };
+
+  const handleEasterEgg = () => {
+    setShowTetris(true);
+  };
+
+  const handleExitTetris = () => {
+    setShowTetris(false);
   };
 
   return (
@@ -1532,7 +1548,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
               <SectionTitle>About</SectionTitle>
               
               <LogoContainer>
-                <LogoIcon>
+                <LogoIcon onClick={handleEasterEgg}>
                   <img 
                     src={localSettings.theme === 'lakeside' ? 'https://demo-andromeda.me/static/favicon.png' : '/sculptor.svg'} 
                     alt={localSettings.theme === 'lakeside' ? 'Andromeda Logo' : 'Sculptor Logo'} 
@@ -1541,7 +1557,12 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                     } : {}}
                   />
                 </LogoIcon>
-                <LogoTitle style={localSettings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}>{localSettings.theme === 'lakeside' ? 'Andromeda' : 'Sculptor'}</LogoTitle>
+                <LogoTitle 
+                  onClick={handleEasterEgg}
+                  style={localSettings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}
+                >
+                  {localSettings.theme === 'lakeside' ? 'Andromeda' : 'Sculptor'}
+                </LogoTitle>
               </LogoContainer>
               
               <AboutTitle>Made with <RainbowText>Pride</RainbowText></AboutTitle>
@@ -1555,6 +1576,10 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           <SaveButton onClick={handleSave}>Save</SaveButton>
         </MainContent>
       </SettingsContainer>
+      
+      {showTetris && (
+        <TetrisGame onExit={handleExitTetris} />
+      )}
     </SettingsOverlay>
   );
 };

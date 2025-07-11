@@ -11,6 +11,7 @@ import EquationEditorModal from './components/EquationEditorModal';
 import GraphingModal from './components/GraphingModal';
 import FlowchartModal from './components/FlowchartModal';
 import Sandbox3DModal from './components/Sandbox3DModal';
+import OnboardingFlow from './components/OnboardingFlow';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -419,6 +420,7 @@ const AppContent = () => {
   const [pendingScene, setPendingScene] = useState(null);
   const [isToolbarOpen, setIsToolbarOpen] = useState(false);
   const [flowchartData, setFlowchartData] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const chatWindowRef = useRef(null);
 
   // Update settings when user changes
@@ -427,6 +429,22 @@ const AppContent = () => {
       setSettings(user.settings);
     }
   }, [user]);
+
+  // Check if onboarding is needed for new users
+  useEffect(() => {
+    if (user && !loading) {
+      // Check if user has completed onboarding
+      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+      
+      // Show onboarding if:
+      // 1. User hasn't completed onboarding AND
+      // 2. User is not pending (they've been activated) AND
+      // 3. User is not an admin (to avoid disrupting admin workflow)
+      if (!hasCompletedOnboarding && user.status !== 'pending' && user.status !== 'admin') {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user, loading]);
 
   // Handle custom event to open flowchart modal with AI-generated data
   useEffect(() => {
@@ -641,6 +659,21 @@ const AppContent = () => {
     // If logged in, also update user settings
     if (user) {
       updateUserSettings(newSettings);
+    }
+  };
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = (onboardingSettings) => {
+    if (user) {
+      // Mark onboarding as completed
+      localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+      
+      // Apply the selected settings
+      const newSettings = { ...settings, ...onboardingSettings };
+      updateSettings(newSettings);
+      
+      // Hide onboarding
+      setShowOnboarding(false);
     }
   };
 
@@ -980,6 +1013,10 @@ ${JSON.stringify(objects, null, 2)}
           
           {isProfileOpen && (
             <ProfileModal closeModal={() => setIsProfileOpen(false)} />
+          )}
+          
+          {showOnboarding && (
+            <OnboardingFlow onComplete={handleOnboardingComplete} />
           )}
         </AppContainer>
       </GlobalStylesProvider>

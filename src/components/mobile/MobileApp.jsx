@@ -11,6 +11,7 @@ import MobileSettingsPanel from './MobileSettingsPanel';
 import LoginModal from '../LoginModal';
 import ProfileModal from '../ProfileModal';
 import ModelIcon from '../ModelIcon';
+import OnboardingFlow from '../OnboardingFlow';
 
 const MobileAppContainer = styled.div`
   display: flex;
@@ -210,7 +211,7 @@ const SectionHeaderStyled = styled.div`
 `;
 
 const MobileAppContent = () => {
-  const { user, updateSettings: updateUserSettings } = useAuth();
+  const { user, updateSettings: updateUserSettings, loading } = useAuth();
   
   // State management
   const [chats, setChats] = useState(() => {
@@ -272,6 +273,7 @@ const MobileAppContent = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Fetch models from backend
   useEffect(() => {
@@ -317,6 +319,22 @@ const MobileAppContent = () => {
       localStorage.setItem('settings', JSON.stringify(settings));
     }
   }, [settings, user]);
+
+  // Check if onboarding is needed for new users
+  useEffect(() => {
+    if (user && !loading) {
+      // Check if user has completed onboarding
+      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+      
+      // Show onboarding if:
+      // 1. User hasn't completed onboarding AND
+      // 2. User is not pending (they've been activated) AND
+      // 3. User is not an admin (to avoid disrupting admin workflow)
+      if (!hasCompletedOnboarding && user.status !== 'pending' && user.status !== 'admin') {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user, loading]);
 
   // Functions for model selector (moved from MobileChatWindow.jsx)
   const getModelDisplay = (modelId) => {
@@ -473,6 +491,21 @@ const MobileAppContent = () => {
     setSelectedModel(modelId);
   };
 
+  // Handle onboarding completion
+  const handleOnboardingComplete = (onboardingSettings) => {
+    if (user) {
+      // Mark onboarding as completed
+      localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+      
+      // Apply the selected settings
+      const newSettings = { ...settings, ...onboardingSettings };
+      updateSettings(newSettings);
+      
+      // Hide onboarding
+      setShowOnboarding(false);
+    }
+  };
+
   const currentChat = getCurrentChat();
   const currentTheme = getTheme(settings.theme);
 
@@ -576,6 +609,10 @@ const MobileAppContent = () => {
             </ModelMenuItem>
           ))}
         </ModelMenuContainer>
+        
+        {showOnboarding && (
+          <OnboardingFlow onComplete={handleOnboardingComplete} />
+        )}
       </MobileAppContainer>
     </ThemeProvider>
   );
