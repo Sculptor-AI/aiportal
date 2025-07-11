@@ -38,6 +38,12 @@ const GameCell = styled.div`
     width: 24px;
     height: 24px;
     object-fit: contain;
+    opacity: ${props => props.ghost ? 0.3 : 1};
+  }
+  
+  &.ghost {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
 `;
 
@@ -242,8 +248,56 @@ const TetrisGame = ({ onExit }) => {
     }
   }, [currentPiece, board, gameOver, isPaused, level]);
 
+  const getGhostPosition = useCallback((piece) => {
+    if (!piece) return null;
+    
+    let dropDistance = 0;
+    while (canMove(piece, 0, dropDistance + 1)) {
+      dropDistance++;
+    }
+    
+    return { ...piece, y: piece.y + dropDistance };
+  }, [canMove]);
+
+  const hardDrop = useCallback(() => {
+    if (!currentPiece) return;
+    
+    let dropDistance = 0;
+    while (canMove(currentPiece, 0, dropDistance + 1)) {
+      dropDistance++;
+    }
+    
+    // Create the piece at its final position
+    const finalPiece = { ...currentPiece, y: currentPiece.y + dropDistance };
+    
+    // Place the piece immediately
+    const newBoard = placePiece(finalPiece);
+    const { board: clearedBoard, linesCleared } = clearLines(newBoard);
+    
+    setBoard(clearedBoard);
+    setLines(prev => prev + linesCleared);
+    setScore(prev => prev + linesCleared * 100 * level);
+    
+    // Spawn new piece
+    const newPiece = getRandomPiece();
+    if (canMove(newPiece, 0, 0)) {
+      setCurrentPiece(newPiece);
+    } else {
+      setGameOver(true);
+    }
+  }, [currentPiece, canMove, board, level]);
+
   const handleKeyPress = useCallback((e) => {
-    if (gameOver || isPaused) return;
+    if (gameOver) return;
+
+    // Handle pause/unpause first - this should work even when paused
+    if (e.key === 'p' || e.key === 'P') {
+      setPaused(prev => !prev);
+      return;
+    }
+
+    // Don't handle other keys when paused
+    if (isPaused) return;
 
     switch (e.key) {
       case 'ArrowLeft':
@@ -268,16 +322,10 @@ const TetrisGame = ({ onExit }) => {
         }
         break;
       case ' ':
-        while (currentPiece && canMove(currentPiece, 0, 1)) {
-          setCurrentPiece(prev => ({ ...prev, y: prev.y + 1 }));
-        }
-        break;
-      case 'p':
-      case 'P':
-        setPaused(prev => !prev);
+        hardDrop();
         break;
     }
-  }, [currentPiece, canMove, dropPiece, gameOver, isPaused]);
+  }, [currentPiece, canMove, dropPiece, hardDrop, gameOver, isPaused]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyPress);
@@ -293,7 +341,7 @@ const TetrisGame = ({ onExit }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       dropPiece();
-    }, Math.max(50, 1000 - (level - 1) * 50));
+    }, Math.max(100, 500 - (level - 1) * 30));
 
     return () => clearInterval(interval);
   }, [dropPiece, level]);
@@ -304,6 +352,26 @@ const TetrisGame = ({ onExit }) => {
 
   const renderBoard = () => {
     const displayBoard = board.map(row => [...row]);
+    const ghostBoard = Array(20).fill().map(() => Array(10).fill(null));
+    
+    // Add ghost piece to display
+    if (currentPiece) {
+      const ghostPiece = getGhostPosition(currentPiece);
+      if (ghostPiece && ghostPiece.y !== currentPiece.y) {
+        const shape = TETRIS_SHAPES[ghostPiece.shape][ghostPiece.rotation];
+        for (let row = 0; row < shape.length; row++) {
+          for (let col = 0; col < shape[row].length; col++) {
+            if (shape[row][col]) {
+              const x = ghostPiece.x + col;
+              const y = ghostPiece.y + row;
+              if (y >= 0 && y < 20 && x >= 0 && x < 10) {
+                ghostBoard[y][x] = ghostPiece.shape;
+              }
+            }
+          }
+        }
+      }
+    }
     
     // Add current piece to display
     if (currentPiece) {
@@ -322,17 +390,33 @@ const TetrisGame = ({ onExit }) => {
     }
     
     return displayBoard.map((row, rowIndex) =>
-      row.map((cell, colIndex) => (
-        <GameCell key={`${rowIndex}-${colIndex}`} empty={!cell}>
-          {cell && (
-            <img 
-              src={BLOCK_LOGOS[cell]} 
-              alt={cell}
-              draggable={false}
-            />
-          )}
-        </GameCell>
-      ))
+      row.map((cell, colIndex) => {
+        const isGhost = ghostBoard[rowIndex][colIndex] && !cell;
+        return (
+          <GameCell 
+            key={`${rowIndex}-${colIndex}`} 
+            empty={!cell && !isGhost}
+            ghost={isGhost}
+            className={isGhost ? 'ghost' : ''}
+          >
+            {cell && (
+              <img 
+                src={BLOCK_LOGOS[cell]} 
+                alt={cell}
+                draggable={false}
+              />
+            )}
+            {isGhost && (
+              <img 
+                src={BLOCK_LOGOS[ghostBoard[rowIndex][colIndex]]} 
+                alt={ghostBoard[rowIndex][colIndex]}
+                draggable={false}
+                ghost={true}
+              />
+            )}
+          </GameCell>
+        );
+      })
     );
   };
 
