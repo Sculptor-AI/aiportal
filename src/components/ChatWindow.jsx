@@ -85,7 +85,7 @@ const ChatWindow = forwardRef(({
     onAttachmentChange,
   });
 
-  const chatIsEmpty = !chat || chat.messages.length === 0;
+  const chatIsEmpty = !chat || !chat.messages || chat.messages.length === 0;
   const prevIsEmptyRef = useRef(chatIsEmpty);
   const [animateDown, setAnimateDown] = useState(false);
   const shouldStartAnimationThisRender = prevIsEmptyRef.current && !chatIsEmpty;
@@ -131,7 +131,7 @@ const ChatWindow = forwardRef(({
   }, [chat?.id, initialSelectedModel, $sidebarCollapsed]);
 
   useEffect(() => {
-    if (chat.messages.length > 0) {
+    if (chat && chat.messages && chat.messages.length > 0) {
       const lastMsg = chat.messages[chat.messages.length - 1];
       if (lastMsg.role === 'assistant' && lastMsg.content && !lastMsg.isLoading) {
         const htmlMatch = lastMsg.content.match(/```html\n([\s\S]*?)\n```/);
@@ -147,7 +147,7 @@ const ChatWindow = forwardRef(({
     } else {
       setArtifactHTML(null);
     }
-  }, [chat.messages]);
+  }, [chat?.messages]);
 
   const handleFileSelected = async (files) => {
     if (!files) {
@@ -287,7 +287,7 @@ const ChatWindow = forwardRef(({
   };
 
   const handleTitleSave = () => {
-    if (editedTitle.trim()) {
+    if (editedTitle.trim() && chat) {
       updateChatTitle(chat.id, editedTitle.trim());
     }
     setIsEditingTitle(false);
@@ -419,7 +419,7 @@ const ChatWindow = forwardRef(({
         </EmptyState>
       )}
       
-      {!chatIsEmpty && !isLiveModeOpen && (
+      {!chatIsEmpty && !isLiveModeOpen && chat && (
           <MessageList>
             {Array.isArray(chat.messages) && chat.messages.map(message => (
               <ChatMessage 
