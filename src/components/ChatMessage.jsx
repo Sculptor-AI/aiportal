@@ -317,7 +317,14 @@ const Pre = styled.pre`
 
 const Message = styled.div`
   display: flex;
-  flex-direction: ${props => props.$alignment === 'right' ? 'column' : 'row'};
+  flex-direction: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? 'column' : 'row';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? 'column' : 'row';
+  }};
   margin-bottom: ${props => {
     // Apply message spacing settings
     const spacing = props.theme.messageSpacing || 'comfortable';
@@ -327,12 +334,33 @@ const Message = styled.div`
       default: return '24px'; // comfortable
     }
   }};
-  align-items: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
+  align-items: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? 'flex-end' : 'flex-start';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? 'flex-end' : 'flex-start';
+  }};
   max-width: 100%;
   width: 100%;
-  justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
+  justify-content: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? 'flex-end' : 'flex-start';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? 'flex-end' : 'flex-start';
+  }};
   padding: 0;
-  padding-right: ${props => props.$alignment === 'right' ? '20px' : '0'};
+  padding-right: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? '20px' : '0';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? '20px' : '0';
+  }};
 `;
 
 const Avatar = styled.div`
@@ -355,7 +383,14 @@ const Avatar = styled.div`
   color: ${props => props.role === 'user' ? props.theme.text : 'white'};
   transition: all 0.2s ease;
   box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
-  order: ${props => props.role === 'user' ? '2' : '1'};
+  order: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? '2' : '1';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? '2' : '1';
+  }};
   opacity: ${props => props.role === 'user' ? '0.6' : '1'};
   
   &:hover {
@@ -373,13 +408,48 @@ const Avatar = styled.div`
 const MessageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  max-width: ${props => props.role === 'user' ? '70%' : 'calc(100% - 60px)'};
-  flex: ${props => props.role === 'user' ? '0 1 auto' : '1'};
-  order: ${props => props.role === 'user' ? '1' : '2'};
-  align-items: ${props => props.role === 'user' ? 'flex-end' : 'flex-start'};
+  max-width: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? '70%' : 'calc(100% - 60px)';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? '70%' : 'calc(100% - 60px)';
+  }};
+  flex: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? '0 1 auto' : '1';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? '0 1 auto' : '1';
+  }};
+  order: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? '1' : '2';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? '1' : '2';
+  }};
+  align-items: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? 'flex-end' : 'flex-start';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? 'flex-end' : 'flex-start';
+  }};
   
   @media (max-width: 768px) {
-    max-width: ${props => props.role === 'user' ? '85%' : 'calc(100% - 60px)'};
+    max-width: ${props => {
+      // For user messages, use right alignment if specified, otherwise left
+      if (props.role === 'user') {
+        return props.$alignment === 'right' ? '85%' : 'calc(100% - 60px)';
+      }
+      // For AI messages, use the alignment setting
+      return props.$alignment === 'right' ? '85%' : 'calc(100% - 60px)';
+    }};
   }
 `;
 
@@ -416,8 +486,22 @@ const Content = styled.div`
   backdrop-filter: ${props => props.role === 'user' ? 'blur(5px)' : 'none'};
   -webkit-backdrop-filter: ${props => props.role === 'user' ? 'blur(5px)' : 'none'};
   border: ${props => props.role === 'user' ? `1px solid ${props.theme.border}` : 'none'};
-  margin-left: ${props => props.role === 'user' ? 'auto' : '0'};
-  margin-right: ${props => props.role === 'user' ? '0' : '0'};
+  margin-left: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? 'auto' : '0';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? 'auto' : '0';
+  }};
+  margin-right: ${props => {
+    // For user messages, use right alignment if specified, otherwise left
+    if (props.role === 'user') {
+      return props.$alignment === 'right' ? '0' : '0';
+    }
+    // For AI messages, use the alignment setting
+    return props.$alignment === 'right' ? '0' : '0';
+  }};
   position: relative;
   
   /* Bubble pointer for user messages */
@@ -1089,8 +1173,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Determine if we should use a model icon (for AI messages with a modelId)
   const useModelIcon = role === 'assistant' && showModelIcons && modelId;
 
-  // Get message alignment from settings, but default user messages to right
-  const messageAlignment = role === 'user' ? 'right' : (settings.messageAlignment || 'left');
+  // Get message alignment from settings
+  const messageAlignment = settings.messageAlignment || 'left';
 
   // Get bubble style from settings
   const bubbleStyle = settings.bubbleStyle || 'modern';
@@ -1216,9 +1300,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     }
 
     return (
-      <Message $alignment={messageAlignment}>
+      <Message $alignment={messageAlignment} role={role}>
         {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <MessageWrapper role={role}>
+        <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content role={role} $bubbleStyle={bubbleStyle}>
             {generatedFlowchartContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
@@ -1338,9 +1422,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     }
 
     return (
-      <Message $alignment={messageAlignment}>
-        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <MessageWrapper role={role}>
+      <Message $alignment={messageAlignment} role={role}>
+        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon} $alignment={messageAlignment}>{getAvatar()}</Avatar>}
+        <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content role={role} $bubbleStyle={bubbleStyle}>
             {deepResearchContent}
             {/* Show sources if available */}
@@ -1423,9 +1507,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     }
 
     return (
-      <Message $alignment={messageAlignment}>
-        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <MessageWrapper role={role}>
+      <Message $alignment={messageAlignment} role={role}>
+        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon} $alignment={messageAlignment}>{getAvatar()}</Avatar>}
+        <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
             {generatedImageContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
@@ -1452,15 +1536,15 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   }
 
   return (
-    <Message $alignment={messageAlignment}>
-      {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+    <Message $alignment={messageAlignment} role={role}>
+      {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon} $alignment={messageAlignment}>{getAvatar()}</Avatar>}
       {isError ? (
         <ErrorMessage role={role} $bubbleStyle={bubbleStyle}>
           {content}
           {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
         </ErrorMessage>
       ) : (
-        <MessageWrapper role={role}>
+        <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
             {image && (
               <MessageImage src={image} alt="Uploaded image" />
