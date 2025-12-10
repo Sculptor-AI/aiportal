@@ -142,6 +142,33 @@ app.get('/api/models', (c) => {
       context_length: 8000
     },
     {
+      id: 'gemini-2.0-flash-exp',
+      name: 'Gemini 2.0 Flash',
+      provider: 'google',
+      description: 'Google\'s latest multimodal model',
+      source: 'gemini',
+      capabilities: ['chat', 'vision', 'search'],
+      context_length: 1000000
+    },
+    {
+      id: 'gemini-1.5-pro',
+      name: 'Gemini 1.5 Pro',
+      provider: 'google',
+      description: 'Mid-size multimodal model for complex tasks',
+      source: 'gemini',
+      capabilities: ['chat', 'vision', 'search'],
+      context_length: 2000000
+    },
+    {
+      id: 'gemini-1.5-flash',
+      name: 'Gemini 1.5 Flash',
+      provider: 'google',
+      description: 'Fast and versatile multimodal model',
+      source: 'gemini',
+      capabilities: ['chat', 'vision', 'search'],
+      context_length: 1000000
+    },
+    {
       id: 'custom/fast-responder',
       name: 'Fast Responder',
       provider: 'demo',
@@ -523,38 +550,52 @@ app.get('/api/rss/article-content', async (c) => {
 app.post('/api/v1/chat/completions', async (c) => {
   const env = c.env;
   const apiKey = env.OPENROUTER_API_KEY;
-  
-  if (!apiKey) {
-    const encoder = new TextEncoder();
-    const demoStream = new ReadableStream({
-      start(controller) {
-        const send = (payload) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
-        send({ choices: [{ delta: { content: 'OpenRouter API key is not configured. ' } }] });
-        send({ choices: [{ delta: { content: 'Add OPENROUTER_API_KEY in wrangler.toml to enable live responses. ' } }] });
-        send({ choices: [{ delta: { content: 'This is a demo fallback response from the worker.' } }] });
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
-      }
-    });
-
-    return new Response(demoStream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
-    });
-  }
+  const geminiKey = env.GEMINI_API_KEY;
 
   try {
     const body = await c.req.json();
+    const modelId = body.model;
+
+    // Route Gemini models to Google's API directly
+    if (modelId && (modelId.includes('gemini') || modelId.includes('google/'))) {
+      if (!geminiKey) {
+        return c.json({ error: 'GEMINI_API_KEY is not configured in the backend.' }, 500);
+      }
+      return handleGeminiChat(c, body, geminiKey);
+    }
+
+    // Default to OpenRouter for other models
+    if (!apiKey) {
+      const encoder = new TextEncoder();
+      const demoStream = new ReadableStream({
+        start(controller) {
+          const send = (payload) => controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+          send({ choices: [{ delta: { content: 'OpenRouter API key is not configured. ' } }] });
+          send({ choices: [{ delta: { content: 'Add OPENROUTER_API_KEY in wrangler.toml to enable live responses. ' } }] });
+          send({ choices: [{ delta: { content: 'This is a demo fallback response from the worker.' } }] });
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        }
+      });
+
+      return new Response(demoStream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        }
+      });
+    }
+
     const payload = { ...body, stream: true };
 
     const upstreamResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://sculptorai.org', // Required by OpenRouter
+        'X-Title': 'Sculptor AI'
       },
       body: JSON.stringify(payload)
     });
@@ -579,12 +620,229 @@ app.post('/api/v1/chat/completions', async (c) => {
 });
 
 // ============================================
+// Gemini API Helper
+// ============================================
+async function handleGeminiChat(c, body, apiKey) {
+  const modelMap = {
+    'gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
+    'gemini-1.5-pro': 'gemini-1.5-pro-latest',
+    'gemini-1.5-flash': 'gemini-1.5-flash-latest',
+    'google/gemini-2.0-flash-exp': 'gemini-2.0-flash-exp',
+    // Fallback mapping
+    'default': 'gemini-1.5-flash'
+  };
+
+  const targetModel = modelMap[body.model] || modelMap['default'];
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:streamGenerateContent?key=${apiKey}`;
+
+  // Convert OpenAI messages to Gemini format
+  const contents = [];
+  let systemInstruction = null;
+
+  // Handle system prompt if present in body or messages
+  if (body.system) {
+    systemInstruction = { parts: [{ text: body.system }] };
+  }
+
+  for (const msg of body.messages) {
+    if (msg.role === 'system') {
+      systemInstruction = { parts: [{ text: msg.content }] };
+      continue;
+    }
+
+    const parts = [];
+    if (typeof msg.content === 'string') {
+      parts.push({ text: msg.content });
+    } else if (Array.isArray(msg.content)) {
+      for (const part of msg.content) {
+        if (part.type === 'text') {
+          parts.push({ text: part.text });
+        } else if (part.type === 'image_url') {
+          // Extract base64 from data URL
+          const matches = part.image_url.url.match(/^data:([^;]+);base64,(.+)$/);
+          if (matches) {
+            parts.push({
+              inlineData: {
+                mimeType: matches[1],
+                data: matches[2]
+              }
+            });
+          }
+        }
+      }
+    }
+
+    contents.push({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: parts
+    });
+  }
+
+  const geminiBody = {
+    contents,
+    generationConfig: {
+      temperature: body.temperature || 0.7,
+      maxOutputTokens: body.max_tokens || 8192
+    }
+  };
+
+  if (systemInstruction) {
+    geminiBody.systemInstruction = systemInstruction;
+  }
+
+  // Add search grounding if requested
+  if (body.web_search) {
+    geminiBody.tools = [{
+      googleSearch: {}
+    }];
+  }
+
+  console.log('Sending request to Gemini:', JSON.stringify(geminiBody, null, 2));
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API Error:', errorText);
+      return c.json({ error: `Gemini API Error: ${errorText}` }, response.status);
+    }
+
+    // Set up streaming response compatible with OpenAI client
+    const encoder = new TextEncoder();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        let buffer = '';
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // Gemini stream returns a JSON array, one object at a time or bracketed
+            // We need to parse valid JSON objects from the buffer
+            // Simple heuristic: look for object boundaries since Gemini API returns a list of JSON objects
+            // Actually, REST stream format for Gemini is `[{...},\r\n{...}]`
+
+            // Clean up the buffer to parse JSON objects
+            // This is a naive parser for the Gemini stream array
+            let bracketLevel = 0;
+            let inString = false;
+            let start = 0;
+
+            for (let i = 0; i < buffer.length; i++) {
+              const char = buffer[i];
+
+              if (char === '"' && buffer[i - 1] !== '\\') {
+                inString = !inString;
+              }
+
+              if (!inString) {
+                if (char === '{') {
+                  if (bracketLevel === 0) start = i;
+                  bracketLevel++;
+                } else if (char === '}') {
+                  bracketLevel--;
+                  if (bracketLevel === 0) {
+                    const jsonStr = buffer.substring(start, i + 1);
+                    try {
+                      const data = JSON.parse(jsonStr);
+                      // Process Gemini chunk to OpenAI format
+                      const chunkText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                      const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
+
+                      // Send text content
+                      if (chunkText) {
+                        const openAIChunk = {
+                          choices: [{
+                            delta: { content: chunkText },
+                            finish_reason: null
+                          }]
+                        };
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify(openAIChunk)}\n\n`));
+                      }
+
+                      // Handle grounding sources (send as a special chunk or append to text)
+                      if (groundingMetadata?.groundingChunks) {
+                        // We can construct a sources block similar to what the frontend expects
+                        const sources = groundingMetadata.groundingChunks
+                          .map((chunk, idx) => chunk.web ? {
+                            title: chunk.web.title || `Source ${idx + 1}`,
+                            url: chunk.web.uri
+                          } : null)
+                          .filter(Boolean);
+
+                        if (sources.length > 0) {
+                          // Send sources in a format the frontend parser might understand
+                          // or just append them as text if the frontend doesn't utilize specific event types yet.
+                          // For now, let's inject a special "sources" event
+                          const sourceEvent = {
+                            type: 'sources',
+                            sources: sources
+                          };
+                          controller.enqueue(encoder.encode(`data: ${JSON.stringify(sourceEvent)}\n\n`));
+                        }
+                      }
+
+                      // Handle search entry point (HTML for Google Search results)
+                      if (groundingMetadata?.searchEntryPoint?.renderedContent) {
+                        // This is usually HTML that Google requires you to display
+                        // We can send it as a separate debug chunk or similar
+                      }
+
+                    } catch (e) {
+                      // Ignore parse errors for partial chunks
+                    }
+                    // Advance buffer
+                    buffer = buffer.substring(i + 1);
+                    i = -1; // Reset loop for new buffer
+                    start = 0;
+                  }
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Stream processing error:', err);
+          const errorChunk = { error: { message: 'Stream processing failed' } };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`));
+        } finally {
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
+    });
+
+  } catch (error) {
+    console.error('Gemini handler error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+}
+
+// ============================================
 // Image Generation Routes (Gemini)
 // ============================================
 app.post('/api/image/generate', async (c) => {
   const env = c.env;
   const apiKey = env.GEMINI_API_KEY;
-  
+
   if (!apiKey) {
     const placeholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6XBrZkAAAAASUVORK5CYII=';
     return c.json({
@@ -595,7 +853,7 @@ app.post('/api/image/generate', async (c) => {
 
   try {
     const { prompt } = await c.req.json();
-    
+
     if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
       return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
     }
@@ -639,7 +897,7 @@ app.post('/api/image/generate', async (c) => {
     }
 
     const result = await response.json();
-    
+
     if (!result.candidates?.[0]?.content?.parts) {
       return c.json({ error: 'Unexpected API response structure' }, 500);
     }
@@ -671,11 +929,11 @@ app.post('/api/image/generate', async (c) => {
 app.get('*', async (c) => {
   const url = new URL(c.req.url);
   const env = c.env;
-  
+
   // Check if this is a request for a static asset
-  if (url.pathname.startsWith('/assets/') || 
-      url.pathname.startsWith('/images/') ||
-      url.pathname.includes('.')) {
+  if (url.pathname.startsWith('/assets/') ||
+    url.pathname.startsWith('/images/') ||
+    url.pathname.includes('.')) {
     return env.ASSETS.fetch(c.req.raw);
   }
 

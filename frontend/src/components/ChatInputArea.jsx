@@ -20,6 +20,7 @@ import {
   FilePreviewIcon,
   FilePreviewName,
   FilePreviewRemove,
+  FileTypeIcon,
   OverflowChipButton,
   OverflowDropdown
 } from './ChatWindow.styled';
@@ -99,8 +100,8 @@ const ChatInputArea = forwardRef(({
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showToolbar &&
-          toolbarRef.current && !toolbarRef.current.contains(event.target) &&
-          toolbarContainerRef.current && !toolbarContainerRef.current.contains(event.target)) {
+        toolbarRef.current && !toolbarRef.current.contains(event.target) &&
+        toolbarContainerRef.current && !toolbarContainerRef.current.contains(event.target)) {
         setShowToolbar(false);
       }
     };
@@ -120,28 +121,28 @@ const ChatInputArea = forwardRef(({
   useEffect(() => {
     const handleResize = () => {
       if (!chipsContainerRef.current) return;
-      
+
       const containerWidth = chipsContainerRef.current.offsetWidth;
       const hammerButtonWidth = 44; // HammerButton width + gap
       const overflowButtonWidth = 50; // Width for "..." button
       let availableWidth = containerWidth - hammerButtonWidth;
-      
+
       // Define all chips
       const allChips = ['mode', 'search', 'deep-research', 'create'];
-      
+
       let currentWidth = 0;
       const visible = [];
       const hidden = [];
-      
+
       for (let i = 0; i < allChips.length; i++) {
         const chipRef = chipRefs.current[i];
         if (chipRef) {
           const chipWidth = chipRef.offsetWidth + 8; // Include gap
-          
+
           // Check if we need to show overflow button
           const needsOverflow = i < allChips.length - 1 && currentWidth + chipWidth > availableWidth - overflowButtonWidth;
           const isLastAndFits = i === allChips.length - 1 && currentWidth + chipWidth <= availableWidth;
-          
+
           if (needsOverflow) {
             // This chip and remaining chips go to hidden
             hidden.push(...allChips.slice(i));
@@ -160,20 +161,20 @@ const ChatInputArea = forwardRef(({
           visible.push(allChips[i]);
         }
       }
-      
+
       // Only update state if there's actually a change
-      if (JSON.stringify(visible) !== JSON.stringify(visibleChips) || 
-          JSON.stringify(hidden) !== JSON.stringify(hiddenChips)) {
+      if (JSON.stringify(visible) !== JSON.stringify(visibleChips) ||
+        JSON.stringify(hidden) !== JSON.stringify(hiddenChips)) {
         setVisibleChips(visible);
         setHiddenChips(hidden);
       }
     };
-    
+
     // Use a timeout to ensure DOM is updated
     const timeoutId = setTimeout(handleResize, 100);
-    
+
     window.addEventListener('resize', handleResize);
-    
+
     return () => {
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
@@ -183,13 +184,13 @@ const ChatInputArea = forwardRef(({
   // Close overflow dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showOverflowDropdown && 
-          overflowButtonRef.current && 
-          !overflowButtonRef.current.contains(event.target)) {
+      if (showOverflowDropdown &&
+        overflowButtonRef.current &&
+        !overflowButtonRef.current.contains(event.target)) {
         setShowOverflowDropdown(false);
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -198,7 +199,7 @@ const ChatInputArea = forwardRef(({
 
   const handleInternalSubmit = () => {
     if (isLoading || isProcessingFile) return;
-    
+
     // Handle image generation mode
     if (isImagePromptMode) {
       if (inputMessage.trim()) {
@@ -210,12 +211,12 @@ const ChatInputArea = forwardRef(({
       }
       return;
     }
-    
+
     // Handle flowchart creation mode
     if (isFlowchartPromptMode) {
       if (inputMessage.trim()) {
-        onSubmitMessage({ 
-          type: 'create-flowchart', 
+        onSubmitMessage({
+          type: 'create-flowchart',
           text: inputMessage.trim(),
           createType: 'flowchart'
         });
@@ -226,7 +227,7 @@ const ChatInputArea = forwardRef(({
       }
       return;
     }
-    
+
     // Handle regular messages
     onSubmitMessage({
       text: inputMessage,
@@ -254,7 +255,7 @@ const ChatInputArea = forwardRef(({
   const handlePaste = (event) => {
     const items = event.clipboardData?.items;
     if (!items) return;
-    
+
     // Check for file first (existing behavior)
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -267,7 +268,7 @@ const ChatInputArea = forwardRef(({
         return;
       }
     }
-    
+
     // Check for text content - need to prevent default before async operation
     const textItem = Array.from(items).find(item => item.kind === 'string' && item.type === 'text/plain');
     if (textItem) {
@@ -275,13 +276,13 @@ const ChatInputArea = forwardRef(({
       const text = event.clipboardData.getData('text/plain');
       if (text && text.length > 1000) {
         event.preventDefault();
-        
+
         // Create a virtual file object for the pasted text
         const blob = new Blob([text], { type: 'text/plain' });
         const file = new File([blob], 'pasted-text.txt', { type: 'text/plain' });
         file.isPastedText = true;
         file.pastedContent = text;
-        
+
         onFileSelected(file);
       }
     }
@@ -339,7 +340,7 @@ const ChatInputArea = forwardRef(({
       onLiveModeToggle(true);
     }
   };
-  
+
   // Update live mode state when it changes externally
   useEffect(() => {
     // If live mode is closed externally, update local state
@@ -354,12 +355,12 @@ const ChatInputArea = forwardRef(({
   const renderChip = (chipData, index, isHidden = false) => {
     const { type } = chipData;
     const ref = isHidden ? null : (el) => { chipRefs.current[index] = el; };
-    
+
     if (type === 'mode') {
       return (
         <ActionChip
           key="mode"
-          ref={isHidden ? null : (el) => { 
+          ref={isHidden ? null : (el) => {
             if (el) {
               modeAnchorRef.current = el;
               if (!isHidden) chipRefs.current[index] = el;
@@ -471,7 +472,7 @@ const ChatInputArea = forwardRef(({
       return (
         <ActionChip
           key="create"
-          ref={isHidden ? null : (el) => { 
+          ref={isHidden ? null : (el) => {
             if (el) {
               createAnchorRef.current = el;
               if (!isHidden) chipRefs.current[index] = el;
@@ -539,9 +540,9 @@ const ChatInputArea = forwardRef(({
   }));
 
   return (
-    <InputContainer 
-      $isEmpty={chatIsEmpty} 
-      $animateDown={animateDown} 
+    <InputContainer
+      $isEmpty={chatIsEmpty}
+      $animateDown={animateDown}
       $sidebarCollapsed={$sidebarCollapsed}
       $isWhiteboardOpen={isWhiteboardOpen}
       $isEquationEditorOpen={isEquationEditorOpen}
@@ -551,32 +552,299 @@ const ChatInputArea = forwardRef(({
     >
       <MessageInputWrapper $isEmpty={chatIsEmpty}>
         <FilesPreviewContainer $show={uploadedFile && (Array.isArray(uploadedFile) ? uploadedFile.length > 0 : true)} theme={theme}>
-          {uploadedFile && (Array.isArray(uploadedFile) ? uploadedFile : [uploadedFile]).map((file, index) => (
-            <FilePreviewChip key={index} theme={theme}>
-              <FilePreviewIcon theme={theme}>
-                {file.type?.startsWith('image/') ? (
-                  <img src={file.dataUrl || URL.createObjectURL(file)} alt="Preview" />
-                ) : file.isPastedText ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          {uploadedFile && (Array.isArray(uploadedFile) ? uploadedFile : [uploadedFile]).map((file, index) => {
+            // Helper to get file extension
+            const getFileExtension = (filename) => {
+              if (!filename) return '';
+              const parts = filename.split('.');
+              return parts.length > 1 ? parts.pop().toLowerCase() : '';
+            };
+
+            const ext = getFileExtension(file.name);
+            const isImage = file.type?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext);
+            const isPDF = file.type === 'application/pdf' || ext === 'pdf';
+            const hasVisualPreview = isImage || (isPDF && file.pdfThumbnail);
+
+            // Get preview URL for images
+            const getPreviewUrl = () => {
+              if (isImage) {
+                return file.dataUrl || (file instanceof File ? URL.createObjectURL(file) : null);
+              }
+              if (isPDF && file.pdfThumbnail) {
+                return file.pdfThumbnail;
+              }
+              return null;
+            };
+
+            const previewUrl = getPreviewUrl();
+
+            // Render file type icon based on extension
+            const renderFileTypeIcon = () => {
+              // Pasted text icon
+              if (file.isPastedText) {
+                return (
+                  <FileTypeIcon $fileType="txt" theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // PDF icon
+              if (isPDF) {
+                return (
+                  <FileTypeIcon $fileType="pdf" theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <path d="M10 12h4"></path>
+                      <path d="M10 16h4"></path>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Word documents
+              if (['doc', 'docx'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="8" y1="13" x2="16" y2="13"></line>
+                      <line x1="8" y1="17" x2="16" y2="17"></line>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Excel files
+              if (['xls', 'xlsx', 'csv'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <rect x="8" y="12" width="8" height="6" rx="1"></rect>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // PowerPoint files
+              if (['ppt', 'pptx'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <rect x="8" y="12" width="8" height="6" rx="1"></rect>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Archive files
+              if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType="zip" theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <path d="M12 11v6"></path>
+                      <path d="M9 14h6"></path>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Shell scripts
+              if (['sh', 'bash', 'zsh', 'fish'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="4 17 10 11 4 5"></polyline>
+                      <line x1="12" y1="19" x2="20" y2="19"></line>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // PowerShell
+              if (['ps1', 'psm1', 'psd1'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="4 17 10 11 4 5"></polyline>
+                      <line x1="12" y1="19" x2="20" y2="19"></line>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Code files (comprehensive list)
+              const codeExts = [
+                'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs',  // JavaScript/TypeScript
+                'py', 'pyw', 'pyi',                       // Python
+                'java', 'kt', 'kts', 'scala',             // JVM languages
+                'c', 'cpp', 'cc', 'cxx', 'h', 'hpp', 'hxx', // C/C++
+                'cs',                                      // C#
+                'go',                                      // Go
+                'rs',                                      // Rust
+                'rb', 'erb',                               // Ruby
+                'php', 'phtml',                            // PHP
+                'swift',                                   // Swift
+                'sql',                                     // SQL
+                'r',                                       // R
+                'lua',                                     // Lua
+                'pl', 'pm',                                // Perl
+                'ex', 'exs',                               // Elixir
+                'erl', 'hrl',                              // Erlang
+                'hs', 'lhs',                               // Haskell
+                'clj', 'cljs', 'cljc', 'edn',             // Clojure
+                'ml', 'mli',                               // OCaml
+                'fs', 'fsi', 'fsx',                        // F#
+                'dart',                                    // Dart
+                'vue', 'svelte'                            // Frontend frameworks
+              ];
+              if (codeExts.includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="16 18 22 12 16 6"></polyline>
+                      <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // JSON/YAML/TOML files
+              if (['json', 'yaml', 'yml', 'toml'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M8 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h1"></path>
+                      <path d="M16 3h1a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-1"></path>
+                      <circle cx="12" cy="12" r="1"></circle>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // HTML/XML files
+              if (['html', 'htm', 'xml', 'xhtml'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="16 18 22 12 16 6"></polyline>
+                      <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // CSS/Style files
+              if (['css', 'scss', 'sass', 'less', 'styl'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <path d="M2 15h10"></path>
+                      <path d="M9 18l3-3-3-3"></path>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Markdown files
+              if (['md', 'markdown', 'rst'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType={ext === 'rst' ? 'rst' : 'md'} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <path d="M9 15l2-2 2 2"></path>
+                      <path d="M11 13v4"></path>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Config files
+              if (['ini', 'cfg', 'conf', 'config', 'env'].includes(ext) ||
+                  file.name.toLowerCase().startsWith('.env')) {
+                return (
+                  <FileTypeIcon $fileType={ext || 'env'} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Build files (Dockerfile, Makefile)
+              if (['dockerfile', 'makefile', 'cmake'].includes(ext) ||
+                  file.name.toLowerCase() === 'dockerfile' ||
+                  file.name.toLowerCase() === 'makefile') {
+                const buildType = file.name.toLowerCase() === 'dockerfile' ? 'dockerfile' :
+                                  file.name.toLowerCase() === 'makefile' ? 'makefile' : ext;
+                return (
+                  <FileTypeIcon $fileType={buildType} theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Text files
+              if (['txt', 'log', 'rtf'].includes(ext)) {
+                return (
+                  <FileTypeIcon $fileType="txt" theme={theme}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="8" y1="13" x2="16" y2="13"></line>
+                      <line x1="8" y1="17" x2="12" y2="17"></line>
+                    </svg>
+                  </FileTypeIcon>
+                );
+              }
+
+              // Default file icon
+              return (
+                <FileTypeIcon $fileType="default" theme={theme}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
                     <polyline points="14 2 14 8 20 8"></polyline>
                   </svg>
-                )}
-              </FilePreviewIcon>
-              <FilePreviewName>{file.name}</FilePreviewName>
-              <FilePreviewRemove onClick={() => onRemoveFile && onRemoveFile(index)}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </FilePreviewRemove>
-            </FilePreviewChip>
-          ))}
+                </FileTypeIcon>
+              );
+            };
+
+            return (
+              <FilePreviewChip key={index} theme={theme}>
+                <FilePreviewIcon theme={theme} $hasPreview={hasVisualPreview || !isImage}>
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Preview" />
+                  ) : (
+                    renderFileTypeIcon()
+                  )}
+                </FilePreviewIcon>
+                <FilePreviewName>{file.name}</FilePreviewName>
+                <FilePreviewRemove onClick={() => onRemoveFile && onRemoveFile(index)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </FilePreviewRemove>
+              </FilePreviewChip>
+            );
+          })}
         </FilesPreviewContainer>
         <InputRow>
           <FileUploadButton
@@ -651,16 +919,16 @@ const ChatInputArea = forwardRef(({
               <img src="/images/retroTheme/hammerIcon.png" alt="Tools" style={{ width: '18px', height: '18px' }} />
             ) : (
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
               </svg>
             )}
           </HammerButton>
-          
+
           {/* Render visible chips */}
           {visibleChips.map((chip, index) => renderChip({
             type: chip
           }, index))}
-          
+
           {/* Render overflow button if there are hidden chips */}
           {hiddenChips.length > 0 && (
             <div style={{ position: 'relative' }}>
@@ -671,7 +939,7 @@ const ChatInputArea = forwardRef(({
               >
                 •••
               </OverflowChipButton>
-              
+
               {showOverflowDropdown && (
                 <OverflowDropdown theme={theme}>
                   {hiddenChips.map((chip) => renderChip({
@@ -685,7 +953,9 @@ const ChatInputArea = forwardRef(({
 
         <ToolbarContainer $isOpen={showToolbar} ref={toolbarContainerRef}>
           <ToolbarItem title="Equation Editor" onClick={onToggleEquationEditor}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M15 4H9l6 8-6 8h6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 4H6L12 12L6 20H18" />
+            </svg>
           </ToolbarItem>
           <ToolbarItem title="Whiteboard" onClick={onToggleWhiteboard}>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"></path><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"></path></svg>
@@ -714,8 +984,8 @@ const ChatInputArea = forwardRef(({
           </ToolbarItem>
         </ToolbarContainer>
       </MessageInputWrapper>
-      
-      <PopupMenu 
+
+      <PopupMenu
         isOpen={showModeModal}
         onClose={() => setShowModeModal(false)}
         menuType="mode"
@@ -724,7 +994,7 @@ const ChatInputArea = forwardRef(({
         theme={theme}
         rect={modeMenuRect}
       />
-      
+
       <PopupMenu
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}

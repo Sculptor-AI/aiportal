@@ -8,12 +8,11 @@ bucket = "./dist"
 
 # Set environment variables (replace with actual API keys in Cloudflare dashboard)
 [vars]
-OPENROUTER_API_KEY = ""
-GEMINI_API_KEY = ""
+# Keys are now loaded securely from .dev.vars (local) or Cloudflare Secrets (production)
 
 # Configure deployment to Workers
 [build]
-command = "cd ../frontend && npm install && npm run build && xcopy /E /I /Y dist ..\\backend\\dist"
+# command = "cd ../frontend && npm install && npm run build && rm -rf ../backend/dist && cp -r dist ../backend/dist"
 
 # Enable static asset hosting for your React app - this handles SPA routing
 [site.static]

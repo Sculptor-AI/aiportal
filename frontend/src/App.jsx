@@ -47,15 +47,7 @@ const MainContentArea = styled.div`
   display: flex;
   height: 100%;
   margin-left: 0;
-  margin-right: ${props => {
-    // Handle multiple panels being open (whiteboard is now a full-screen modal)
-    let totalMargin = 0;
-    if (props.$equationEditorOpen) totalMargin += 450;
-    if (props.$graphingOpen) totalMargin += 600; // Graphing panel is wider
-    if (props.$flowchartOpen) totalMargin += 450;
-    if (props.$sandbox3DOpen) totalMargin += 450;
-    return `${totalMargin}px`;
-  }};
+  margin-right: 0;
   transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1), margin-right 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   
   @media (max-width: 768px) {
@@ -96,13 +88,7 @@ const MainGreeting = styled.div`
   top: ${props => props.$toolbarOpen ? '25%' : '28%'}; /* Moved up from 32%/35% */
   left: ${props => {
     const sidebarOffset = props.$sidebarCollapsed ? 0 : 160; // Increased from 140px to 160px to account for sidebar's 20px left margin
-    let rightPanelOffset = 0;
-    if (props.$whiteboardOpen) rightPanelOffset -= 225;
-    if (props.$equationEditorOpen) rightPanelOffset -= 225;
-    if (props.$graphingOpen) rightPanelOffset -= 300; // Half of 600px
-    if (props.$flowchartOpen) rightPanelOffset -= 225;
-    if (props.$sandbox3DOpen) rightPanelOffset -= 225;
-    return `calc(50% + ${sidebarOffset}px + ${rightPanelOffset}px)`;
+    return `calc(50% + ${sidebarOffset}px)`;
   }};
   transform: translateX(-50%);
   max-width: 800px; /* Keep a max width */
@@ -211,7 +197,7 @@ const useIsMobile = () => {
         const isMobileUA = mobileRegex.test(userAgent);
         const isSmallScreen = window.innerWidth <= 768;
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        
+
         const shouldUseMobile = isMobileUA || (isSmallScreen && isTouchDevice);
         console.log('Mobile detection:', { userAgent, isMobileUA, isSmallScreen, isTouchDevice, shouldUseMobile });
         setIsMobile(shouldUseMobile);
@@ -240,7 +226,7 @@ const AppContent = () => {
 
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
   const [hasAttachment, setHasAttachment] = useState(false);
-  
+
   // Chat state
   const [chats, setChats] = useState(() => {
     try {
@@ -261,7 +247,7 @@ const AppContent = () => {
     console.log("Using default chat:", defaultChat);
     return [defaultChat];
   });
-  
+
   const [activeChat, setActiveChat] = useState(() => {
     try {
       const savedActiveChat = localStorage.getItem('activeChat');
@@ -298,7 +284,7 @@ const AppContent = () => {
 
   // Models will be loaded exclusively from the backend.
   const [availableModels, setAvailableModels] = useState([]);
-  
+
   const [selectedModel, setSelectedModel] = useState(() => {
     const savedModel = localStorage.getItem('selectedModel');
     return savedModel || null; // Will be set when models are loaded
@@ -310,7 +296,7 @@ const AppContent = () => {
       try {
         console.log('Fetching models from backend...');
         const backendModels = await fetchModelsFromBackend();
-        
+
         // Get enabled custom models from localStorage
         const customModelsJson = localStorage.getItem('customModels');
         let enabledCustomModels = [];
@@ -335,14 +321,14 @@ const AppContent = () => {
             console.error('Error parsing custom models:', err);
           }
         }
-        
+
         // Combine backend models with enabled custom models
         const allModels = [...(backendModels || []), ...enabledCustomModels];
-        
+
         if (allModels.length > 0) {
           setAvailableModels(allModels);
           console.log(`Loaded ${allModels.length} models (${backendModels?.length || 0} backend, ${enabledCustomModels.length} custom):`, allModels.map(m => m.id));
-          
+
           // Set default model if none is selected or the selected one is no longer available
           const currentSelectedModelIsValid = allModels.some(m => m.id === selectedModel);
           if (!currentSelectedModelIsValid && allModels.length > 0) {
@@ -359,7 +345,7 @@ const AppContent = () => {
         }
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
-        
+
         // Even if backend fails, still try to load custom models
         const customModelsJson = localStorage.getItem('customModels');
         let enabledCustomModels = [];
@@ -383,7 +369,7 @@ const AppContent = () => {
             console.error('Error parsing custom models:', err);
           }
         }
-        
+
         setAvailableModels(enabledCustomModels);
         if (enabledCustomModels.length > 0 && !enabledCustomModels.some(m => m.id === selectedModel)) {
           setSelectedModel(enabledCustomModels[0].id);
@@ -391,13 +377,13 @@ const AppContent = () => {
         }
       }
     };
-    
+
     // Initial load
     getBackendModels();
-    
+
     // Refresh models every 5 minutes to catch newly added models
     const refreshInterval = setInterval(getBackendModels, 5 * 60 * 1000);
-    
+
     // Also refresh when custom models change (listen for storage events)
     const handleStorageChange = (e) => {
       if (e.key === 'customModels') {
@@ -405,20 +391,20 @@ const AppContent = () => {
       }
     };
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       clearInterval(refreshInterval);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
-  
+
   // Settings - from user account or localStorage
   const [settings, setSettings] = useState(() => {
     // If logged in, use user settings
     if (user && user.settings) {
       return user.settings;
     }
-    
+
     // Otherwise, use localStorage
     const savedSettings = localStorage.getItem('settings');
     return savedSettings ? JSON.parse(savedSettings) : {
@@ -440,7 +426,7 @@ const AppContent = () => {
       showGreeting: true
     };
   });
-  
+
   // Modal states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -469,7 +455,7 @@ const AppContent = () => {
     if (user && !loading) {
       // Check if user has completed onboarding
       const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
-      
+
       // Show onboarding if:
       // 1. User hasn't completed onboarding AND
       // 2. User is not pending (they've been activated) AND
@@ -489,7 +475,7 @@ const AppContent = () => {
     };
 
     window.addEventListener('openFlowchartModal', handleOpenFlowchartModal);
-    
+
     return () => {
       window.removeEventListener('openFlowchartModal', handleOpenFlowchartModal);
     };
@@ -540,7 +526,7 @@ const AppContent = () => {
   useEffect(() => {
     localStorage.setItem('selectedModel', selectedModel);
   }, [selectedModel]);
-  
+
   // Only save settings to localStorage if not logged in
   useEffect(() => {
     if (!user) {
@@ -565,12 +551,12 @@ const AppContent = () => {
       return updatedChats;
     });
     setActiveChat(newChat.id);
-    
+
     // Navigate to chat tab if not already there
     if (location.pathname !== '/') {
       navigate('/');
     }
-    
+
     return newChat;
   };
 
@@ -596,7 +582,7 @@ const AppContent = () => {
 
   const deleteChat = (chatId) => {
     const updatedChats = chats.filter(chat => chat.id !== chatId);
-    
+
     // If this would delete the last chat, create a new one first
     if (updatedChats.length === 0) {
       const newChat = {
@@ -618,7 +604,7 @@ const AppContent = () => {
       } catch (error) {
         console.error("Error saving chats to localStorage:", error);
       }
-      
+
       // If the deleted chat was the active one, set a new active chat
       if (chatId === activeChat) {
         setActiveChat(updatedChats.length > 0 ? updatedChats[0].id : null);
@@ -630,7 +616,7 @@ const AppContent = () => {
     const updatedProjects = projects.filter(project => project.id !== projectId);
     setProjects(updatedProjects);
   };
-  
+
   const updateChatTitle = (chatId, newTitle) => {
     setChats(prevChats => {
       const updatedChats = prevChats.map(chat => {
@@ -647,7 +633,7 @@ const AppContent = () => {
       return updatedChats;
     });
   };
-  
+
   const addMessage = (chatId, message) => {
     setChats(prevChats => {
       const updatedChats = prevChats.map(chat => {
@@ -655,7 +641,7 @@ const AppContent = () => {
           const updatedChat = {
             ...chat,
             messages: [...chat.messages, message],
-            title: chat.title === 'New Chat' && message.role === 'user' 
+            title: chat.title === 'New Chat' && message.role === 'user'
               ? message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
               : chat.title
           };
@@ -676,7 +662,7 @@ const AppContent = () => {
         if (chat.id === chatId) {
           return {
             ...chat,
-            messages: chat.messages.map(msg => 
+            messages: chat.messages.map(msg =>
               msg.id === messageId ? { ...msg, ...updates } : msg
             )
           };
@@ -695,15 +681,15 @@ const AppContent = () => {
   const toggleSettings = () => {
     setIsSettingsOpen(!isSettingsOpen);
   };
-  
+
   const toggleProfile = () => {
     setIsProfileOpen(!isProfileOpen);
   };
-  
+
   // Update settings
   const updateSettings = (newSettings) => {
     setSettings(newSettings);
-    
+
     // If logged in, also update user settings
     if (user) {
       updateUserSettings(newSettings);
@@ -715,11 +701,11 @@ const AppContent = () => {
     if (user) {
       // Mark onboarding as completed
       localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
-      
+
       // Apply the selected settings
       const newSettings = { ...settings, ...onboardingSettings };
       updateSettings(newSettings);
-      
+
       // Hide onboarding
       setShowOnboarding(false);
     }
@@ -730,7 +716,7 @@ const AppContent = () => {
     if (user) {
       // Remove the onboarding completion marker
       localStorage.removeItem(`onboarding_completed_${user.id}`);
-      
+
       // Show onboarding again
       setShowOnboarding(true);
     }
@@ -761,7 +747,7 @@ const AppContent = () => {
   const handleExitGame = () => {
     setShowDinosaurGame(false);
   };
-  
+
   // Chrome Demo Toast
   const showChromeToast = () => {
     // Detect if the user is using Chrome (and not Edge)
@@ -822,7 +808,7 @@ const AppContent = () => {
         }
         seen.add(value);
       }
-      
+
       // Remove non-serializable values
       if (typeof value === 'function') {
         return undefined;
@@ -836,7 +822,7 @@ const AppContent = () => {
       if (value instanceof HTMLElement) {
         return undefined;
       }
-      
+
       return value;
     });
   };
@@ -849,10 +835,10 @@ const AppContent = () => {
   // Show loading spinner while checking authentication
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         height: '100vh',
         background: '#f8f9fa'
       }}>
@@ -897,7 +883,7 @@ const AppContent = () => {
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
         <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
-          <MainContentArea 
+          <MainContentArea
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}
             $flowchartOpen={isFlowchartOpen}
@@ -914,7 +900,7 @@ const AppContent = () => {
                 </svg>
               </FloatingMenuButton>
             )}
-            
+
             {/* Main greeting that appears at the top of the page */}
             {getCurrentChat()?.messages.length === 0 && settings.showGreeting && !isMobile && location.pathname === '/' && !showDinosaurGame && (
               <MainGreeting
@@ -929,8 +915,8 @@ const AppContent = () => {
                 <h1 onDoubleClick={handleSculptorDoubleClick}>Sculptor</h1>
               </MainGreeting>
             )}
-            
-            <Sidebar 
+
+            <Sidebar
               chats={chats}
               activeChat={activeChat}
               setActiveChat={setActiveChat}
@@ -945,14 +931,14 @@ const AppContent = () => {
               username={user?.username}
               isAdmin={!!adminUser}
               onModelChange={handleModelChange}
-              collapsed={collapsed} 
-              setCollapsed={setCollapsed} 
+              collapsed={collapsed}
+              setCollapsed={setCollapsed}
               settings={settings}
             />
             {console.log('Available models for ChatWindow:', availableModels)}
             <Routes>
               <Route path="/" element={
-                <ChatWindow 
+                <ChatWindow
                   ref={chatWindowRef}
                   chat={currentChat}
                   addMessage={addMessage}
@@ -989,8 +975,8 @@ const AppContent = () => {
               <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} collapsed={collapsed} />} />
               <Route path="/workspace" element={<WorkspacePage collapsed={collapsed} />} />
               <Route path="/projects/:projectId" element={
-                <ProjectDetailPage 
-                  projects={projects} 
+                <ProjectDetailPage
+                  projects={projects}
                   chats={chats}
                   addMessage={addMessage}
                   updateMessage={updateMessage}
@@ -1016,7 +1002,7 @@ const AppContent = () => {
               } />
             </Routes>
           </MainContentArea>
-          
+
           {/* Render panels in order: whiteboard, equation editor, graphing */}
           <WhiteboardModal
             isOpen={isWhiteboardOpen}
@@ -1030,7 +1016,7 @@ const AppContent = () => {
             }}
             theme={currentTheme}
           />
-          
+
           <EquationEditorModal
             isOpen={isEquationEditorOpen}
             onClose={() => setIsEquationEditorOpen(false)}
@@ -1044,7 +1030,7 @@ const AppContent = () => {
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
           />
-          
+
           <GraphingModal
             isOpen={isGraphingOpen}
             onClose={() => setIsGraphingOpen(false)}
@@ -1085,26 +1071,26 @@ ${JSON.stringify(objects, null, 2)}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0)}
             initialScene={pendingScene}
           />
-        
+
           {isSettingsOpen && (
-            <NewSettingsPanel 
+            <NewSettingsPanel
               settings={settings}
               updateSettings={updateSettings}
               closeModal={() => setIsSettingsOpen(false)}
               onRestartOnboarding={handleRestartOnboarding}
             />
           )}
-          
+
           {isProfileOpen && (
             <ProfileModal closeModal={() => setIsProfileOpen(false)} />
           )}
-          
+
           {showOnboarding && (
             <OnboardingFlow onComplete={handleOnboardingComplete} />
           )}
 
           {showDinosaurGame && (
-            <DinosaurRunGame 
+            <DinosaurRunGame
               onExit={handleExitGame}
               $toolbarOpen={isToolbarOpen}
               $sidebarCollapsed={collapsed}

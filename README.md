@@ -1,311 +1,171 @@
-# <img src="https://ai.explodingcb.com/images/sculptor.svg" width="32" height="32" alt="Sculptor Logo" style="vertical-align: middle; margin-right: 10px;"> Sculptor AI
-
 <div align="center">
-  <img src="https://ai.explodingcb.com/images/sculptor.svg" width="120" height="120" alt="Sculptor Logo">
-  <h3>Your All-in-One AI Portal</h3>
-  <p>A powerful, feature-rich interface for interacting with multiple AI models, creating content, and exploring ideas</p>
+  <img src="https://ai.explodingcb.com/images/sculptor.svg" width="120" height="120" alt="Sculptor AI Logo" />
+  <h1>Sculptor AI</h1>
+  <p><strong>Your All-in-One AI Portal</strong></p>
+  <p>A powerful, feature-rich interface for interacting with multiple AI models, creating content, and exploring ideas.</p>
 
-  <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 20px 0;">
-    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#ReactJS</span>
-    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#AI</span>
-    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#PWA</span>
-    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#CloudflarePages</span>
-    <span style="background: #f0f2f5; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">#StyledComponents</span>
-  </div>
+  <p>
+    <a href="https://reactjs.org/"><img src="https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React" /></a>
+    <a href="https://pages.cloudflare.com/"><img src="https://img.shields.io/badge/Cloudflare_Pages-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Pages" /></a>
+    <a href="https://styled-components.com/"><img src="https://img.shields.io/badge/Styled_Components-DB7093?style=flat-square&logo=styled-components&logoColor=white" alt="Styled Components" /></a>
+    <img src="https://img.shields.io/badge/PWA-Ready-success?style=flat-square" alt="PWA Ready" />
+    <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License" />
+  </p>
 </div>
 
-## ✨ Features
+<br />
 
-### 🤖 AI Models & Capabilities
+## ✨ Features Overview
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin: 20px 0;">
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🧠 Multiple AI Models</h3>
-    <p>Access cutting-edge models from Anthropic (Claude), OpenAI (ChatGPT), Google (Gemini), Meta, NVIDIA, and custom backend models</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>💭 Thinking Mode</h3>
-    <p>Deep analysis mode with chain-of-thought reasoning for complex problem solving</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🔍 Web Search</h3>
-    <p>Real-time web search integration powered by Brave Search API for current information</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🔬 Deep Research</h3>
-    <p>Enhanced research mode that combines multiple sources for comprehensive answers</p>
-  </div>
-</div>
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🤖 AI Models & Capabilities</h3>
+      <ul>
+        <li><strong>Multiple AI Models</strong>: Access cutting-edge models from Anthropic (Claude), OpenAI (ChatGPT), Google (Gemini), Meta, NVIDIA, and custom backend models.</li>
+        <li><strong>Thinking Mode</strong>: Deep analysis mode with chain-of-thought reasoning for complex problem solving.</li>
+        <li><strong>Web Search</strong>: Real-time web search integration powered by Brave Search API.</li>
+        <li><strong>Deep Research</strong>: Enhanced research mode combining multiple sources for comprehensive answers.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🎨 Creative Tools</h3>
+      <ul>
+        <li><strong>AI Image Generation</strong>: Create stunning images from text prompts.</li>
+        <li><strong>Whiteboard</strong>: Digital drawing canvas for sketching ideas.</li>
+        <li><strong>Graphing Calculator</strong>: Advanced mathematical graphing and visualization.</li>
+        <li><strong>Equation Editor</strong>: LaTeX-based equation editor.</li>
+        <li><strong>Flowchart Builder</strong>: Interactive diagram creation tool.</li>
+        <li><strong>3D Sandbox</strong>: 3D visualization environment powered by Three.js.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>📱 Platform Features</h3>
+      <ul>
+        <li><strong>Progressive Web App</strong>: Install as a native app on any device with offline support.</li>
+        <li><strong>File Support</strong>: Process images, PDFs, and text files directly in chat.</li>
+        <li><strong>News & Media Hub</strong>: Built-in RSS reader with AI-powered summaries.</li>
+        <li><strong>Privacy First</strong>: Optional login, encrypted local storage by default.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🛠 Customization</h3>
+      <ul>
+        <li><strong>15+ Beautiful Themes</strong>: Including Light, Dark, OLED, Ocean, Cyberpunk, and more.</li>
+        <li><strong>Chat Sharing</strong>: Share conversations via secure links.</li>
+        <li><strong>Mobile Experience</strong>: Touch-optimized interface for iOS/Android.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-### 🎨 Creative Tools
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin: 20px 0;">
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🖼️ AI Image Generation</h3>
-    <p>Create stunning images from text prompts using advanced AI models</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>✏️ Whiteboard</h3>
-    <p>Digital drawing canvas for sketching ideas and creating visual content</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>📊 Graphing Calculator</h3>
-    <p>Advanced mathematical graphing and visualization tool</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🔧 Equation Editor</h3>
-    <p>LaTeX-based equation editor for mathematical expressions</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>📐 Flowchart Builder</h3>
-    <p>Interactive flowchart and diagram creation tool</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🎮 3D Sandbox</h3>
-    <p>3D visualization and modeling environment powered by Three.js</p>
-  </div>
-</div>
-
-### 📱 Platform Features
-
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin: 20px 0;">
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>📱 Progressive Web App</h3>
-    <p>Install as a native app on any device with offline support and push notifications</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🎨 15+ Beautiful Themes</h3>
-    <p>Light, Dark, OLED, Ocean, Forest, Pride, Trans, Bisexual, Lakeside, Retro, Galaxy, Sunset, Cyberpunk, Bubblegum, Desert</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>📤 File Support</h3>
-    <p>Upload and process images, PDFs, and text files directly in chat</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🔒 Privacy First</h3>
-    <p>Optional login with secure authentication, all data encrypted and stored locally by default</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>📰 News & Media Hub</h3>
-    <p>Built-in RSS reader and news aggregator with AI-powered summaries</p>
-  </div>
-  <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
-    <h3>🔗 Chat Sharing</h3>
-    <p>Share your AI conversations with others via secure links</p>
-  </div>
-</div>
+<br />
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js (v16+)
-- npm or yarn
+*   Node.js (v16+)
+*   npm or yarn
 
 ### Installation
 
-1. Clone the repository
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/yourusername/sculptor-ai.git
+    cd sculptor-ai
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
+
+3.  **Configure Environment** (Optional)
+    ```bash
+    cp .env.example .env
+    ```
+
+4.  **Start Development Server**
+    ```bash
+    npm run dev
+    ```
+
+5.  **Access the App**
+    *   Local: `http://localhost:3009`
+    *   Production: `https://ai.explodingcb.com`
+
+---
+
+## ☁️ Deployment
+
+### Cloudflare Pages
+
+This application is optimized for **Cloudflare Pages**, offering edge deployment, automatic HTTPS, and zero-configuration builds.
+
+<details>
+<summary><strong>Click to view Deployment Steps</strong></summary>
+
+1.  Fork this repository to your GitHub account.
+2.  Log in to [Cloudflare Pages](https://pages.cloudflare.com).
+3.  Create a new project and connect your GitHub repository.
+4.  Configure build settings:
+    *   **Build command:** `npm run build`
+    *   **Build output directory:** `dist`
+5.  Deploy!
+</details>
+
+<details>
+<summary><strong>Environment Variables</strong></summary>
+
+Set these in your Cloudflare Pages dashboard or `.env` file:
+
 ```bash
-git clone https://github.com/yourusername/sculptor-ai.git
-cd sculptor-ai
-```
-
-2. Install dependencies
-```bash
-npm install
-# or
-yarn install
-```
-
-3. Create a `.env` file with your API keys (optional)
-```bash
-cp .env.example .env
-```
-
-4. Start the development server
-```bash
-npm run dev
-# or
-yarn dev
-```
-
-5. Open your browser and navigate to:
-   - Local development: `http://localhost:3009`
-   - Production deployment: `https://ai.explodingcb.com`
-
-## 🚀 Deployment
-
-### Cloudflare Pages Deployment
-
-The application is optimized for deployment on Cloudflare Pages with the following features:
-
-- **Edge Deployment**: Served from Cloudflare's global CDN for ultra-fast loading
-- **Automatic HTTPS**: Secure connections with free SSL certificates
-- **Workers Integration**: Backend API can be deployed as Cloudflare Workers
-- **Zero Configuration**: Deploy directly from GitHub with automatic builds
-
-#### Quick Deploy to Cloudflare Pages
-
-1. Fork this repository to your GitHub account
-
-2. Log in to [Cloudflare Pages](https://pages.cloudflare.com)
-
-3. Create a new project and connect your GitHub repository
-
-4. Configure build settings:
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-   - Environment variables: Add your API keys in the Cloudflare dashboard
-
-5. Deploy! Your site will be live at `https://your-project.pages.dev`
-
-#### Environment Variables
-
-Set these in your Cloudflare Pages dashboard:
-
-```
 VITE_BACKEND_API_URL=https://your-backend-api.com
 VITE_OPENAI_API_KEY=sk-...
 VITE_ANTHROPIC_API_KEY=sk-ant-...
 VITE_GOOGLE_API_KEY=AIzaSy...
 VITE_CUSTOM_GGUF_API_URL=http://localhost:8000
 ```
+</details>
 
-### Backend Deployment
+### Backend Setup
 
-The backend can be deployed on any server or as a Cloudflare Worker:
+The backend handles unified API requests, web search, and custom models.
 
-- **Cloudflare Workers**: Serverless deployment with global edge computing
-- **Traditional Server**: Deploy on any VPS or dedicated server with Node.js
-- **Docker**: Containerized deployment for easy scaling
-
-## 🔧 Configuration
-
-### Backend Integration
-
-Sculptor AI includes a powerful backend server that provides:
-
-- **Unified AI Gateway**: Single endpoint for all AI providers
-- **Web Search Integration**: Real-time search with Brave Search API
-- **Custom Model Support**: Define and deploy your own AI models
-- **Rate Limiting**: Protect against abuse with configurable limits
-- **API Key Management**: Secure API key storage and rotation
-
-### Supported AI Providers
-
-<div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0;">
-  <span style="background: linear-gradient(135deg, #1B72E8, #EA4335); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">Google Gemini</span>
-  <span style="background: linear-gradient(135deg, #732BEB, #A480EB); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">Anthropic Claude</span>
-  <span style="background: linear-gradient(135deg, #10A37F, #1A7F64); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">OpenAI ChatGPT</span>
-  <span style="background: linear-gradient(135deg, #0066FF, #0052CC); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">Meta Llama</span>
-  <span style="background: linear-gradient(135deg, #76B900, #588600); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">NVIDIA Nemotron</span>
-  <span style="background: linear-gradient(135deg, #FF5722, #FF9800); color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: 500;">Custom Models</span>
-</div>
-
-### Quick Backend Setup
-
-1. Navigate to the backend directory:
-   ```bash
-   cd aiportal/backend
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Create a `.env` file with your configuration:
-   ```bash
-   # Server
-   PORT=3000
-   NODE_ENV=production
-   
-   # Authentication
-   JWT_SECRET=your-super-secret-jwt-key
-   
-   # Database
-   DATABASE_PATH=./database/aiportal.db
-   
-   # Provider API Keys
-   OPENROUTER_API_KEY=sk-or-v1-your-key
-   ANTHROPIC_API_KEY=sk-ant-your-key
-   OPENAI_API_KEY=sk-your-key
-   GOOGLE_API_KEY=your-google-key
-   
-   # Web Search
-   BRAVE_API_KEY=your-brave-search-key
-   ```
-
-4. Start the backend server:
-   ```bash
-   npm start
-   ```
-
-## 🎨 Customization
-
-### Theme System
-
-Sculptor offers an advanced theming system with:
-
-- **15 Pre-built Themes**: Professional and playful options
-- **Custom Theme Creator**: Build your own themes
-- **Accessibility Options**: High contrast, reduced motion, font adjustments
-- **Dynamic Theme Switching**: Change themes without page reload
-
-### Mobile Experience
-
-- **Native-like Mobile App**: iOS/Android optimized interface
-- **Touch Gestures**: Swipe navigation and touch-optimized controls
-- **Offline Support**: Continue conversations without internet
-- **Push Notifications**: Get notified of important updates
-
-## 🛠️ Advanced Features
-
-### Developer Tools
-
-- **API Access**: RESTful API for programmatic access
-- **Webhook Support**: Integrate with external services
-- **Custom Plugins**: Extend functionality with plugins
-- **Export Options**: Export chats in multiple formats (JSON, Markdown, PDF)
-
-### Security Features
-
-- **End-to-End Encryption**: Optional E2E encryption for chats
-- **Two-Factor Authentication**: Enhanced account security
-- **API Rate Limiting**: Prevent abuse and ensure fair usage
-- **CORS Configuration**: Secure cross-origin requests
-
-## 📚 Documentation
-
-For detailed documentation, please visit:
-
-- [API Documentation](API_DOCS.md)
-- [Mobile Development Guide](MOBILE_REDESIGN.md)
-- [Backend Integration](BACKEND_INTEGRATION.md)
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Built with React, Vite, and Styled Components
-- AI integrations powered by official provider APIs
-- Icons from Lucide React
-- PWA capabilities with Service Workers
-- Deployed on Cloudflare's global edge network
+1.  Navigate to `aiportal/backend`
+2.  Install dependencies: `npm install`
+3.  Configure `.env` (see `backend/.env.example`)
+4.  Start server: `npm start`
 
 ---
 
+## 📚 Documentation
+
+Detailed documentation is available in the `documentation/docs` directory:
+
+*   [📖 API Documentation](documentation/docs/API_DOCUMENTATION.md)
+*   [💻 Development Guide](documentation/docs/DEVELOPMENT_GUIDE.md)
+*   [🏗 Backend Architecture](documentation/docs/BACKEND_ARCHITECTURE.md)
+
+---
+
+## 🤝 Contributing & License
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+This project is licensed under the **MIT License**.
+
 <div align="center">
+  <br />
   <p>Made with ❤️ by Team Sculptor</p>
   <p>
-    <a href="https://ai.explodingcb.com">🌐 Live Demo</a> •
-    <a href="https://github.com/yourusername/sculptor-ai">📦 GitHub</a> •
-    <a href="https://discord.gg/sculptor">💬 Discord</a>
+    <a href="https://ai.explodingcb.com">Live Demo</a> •
+    <a href="https://github.com/yourusername/sculptor-ai">GitHub</a> •
+    <a href="https://discord.gg/sculptor">Discord</a>
   </p>
 </div>

@@ -10,7 +10,7 @@ export const ChatWindowContainer = styled.div`
   transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   background: ${props => props.theme.sidebar};
   font-size: ${props => {
-    switch(props.fontSize) {
+    switch (props.fontSize) {
       case 'small': return '0.9rem';
       case 'large': return '1.1rem';
       default: return '1rem';
@@ -96,12 +96,12 @@ export const MessageList = styled.div`
   &::-webkit-scrollbar-thumb {
     background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.border};
     border-radius: ${props => props.theme.name === 'retro' ? '0' : '10px'};
-    border: ${props => props.theme.name === 'retro' ? 
-      `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
-      'none'};
-    box-shadow: ${props => props.theme.name === 'retro' ? 
-      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-      'none'};
+    border: ${props => props.theme.name === 'retro' ?
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
+    'none'};
+    box-shadow: ${props => props.theme.name === 'retro' ?
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    'none'};
   }
 `;
 
@@ -117,12 +117,12 @@ export const fadeIn = keyframes`
 `;
 
 export const moveInputToBottom = keyframes`
-  from {
+  0% {
     top: 50%;
     transform: translate(-50%, -50%);
     bottom: auto;
   }
-  to {
+  100% {
     top: auto;
     bottom: 30px;
     transform: translateX(-50%);
@@ -130,12 +130,12 @@ export const moveInputToBottom = keyframes`
 `;
 
 export const moveInputToBottomMobile = keyframes`
-  from {
+  0% {
     top: 50%;
     transform: translate(-50%, -50%);
     bottom: auto;
   }
-  to {
+  100% {
     top: auto;
     bottom: 20px;
     transform: translateX(-50%);
@@ -170,28 +170,21 @@ export const InputContainer = styled.div`
   ${({ $isEmpty, $animateDown, theme, $sidebarCollapsed, $isWhiteboardOpen, $isEquationEditorOpen, $isGraphingOpen, $isFlowchartOpen, $isSandbox3DOpen }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
-    
-    let rightPanelOffset = 0;
-    if ($isWhiteboardOpen) rightPanelOffset -= 225; // Half of 450px
-    if ($isEquationEditorOpen) rightPanelOffset -= 225; // Half of 450px
-    if ($isGraphingOpen) rightPanelOffset -= 300; // Half of 600px
-    if ($isFlowchartOpen) rightPanelOffset -= 225; // Half of 450px
-    if ($isSandbox3DOpen) rightPanelOffset -= 225; // Half of 450px
 
-    const centerPosition = $sidebarCollapsed 
-      ? `calc(50% + ${rightPanelOffset}px)` 
-      : `calc(50% + 160px + ${rightPanelOffset}px)`; // Increased from 140px to 160px to account for sidebar's 20px left margin // 140px is half of sidebar width 280px
-    
+    const centerPosition = $sidebarCollapsed
+      ? `calc(50%)`
+      : `calc(50% + 160px)`; // Increased from 140px to 160px to account for sidebar's 20px left margin // 140px is half of sidebar width 280px
+
     if ($animateDown) {
       return css`
         top: 50%;
         transform: translate(-50%, -50%);
         bottom: auto;
         left: ${centerPosition} !important;
-        
+
         animation-name: ${moveInputToBottom};
-        animation-duration: 0.5s;
-        animation-timing-function: ease-out;
+        animation-duration: 0.6s;
+        animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
         animation-fill-mode: forwards;
 
         @media (max-width: 768px) {
@@ -228,67 +221,252 @@ export const InputContainer = styled.div`
 
 export const MessageInputWrapper = styled.div`
   position: relative;
-  width: 100%; /* Takes full width of InputContainer */
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   pointer-events: auto;
-  box-shadow: ${props => props.theme.name === 'retro' ? 
-    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` : 
-    '0 2px 10px rgba(0, 0, 0, 0.1)'} !important;
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px'} !important;
+  box-shadow: ${props => props.theme.name === 'retro' ?
+    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
+    '0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06)'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px'};
   background: ${props => props.theme.inputBackground};
-  border: ${props => props.theme.name === 'retro' ? 
-    `2px solid ${props.theme.buttonFace}` : 
+  border: ${props => props.theme.name === 'retro' ?
+    `2px solid ${props.theme.buttonFace}` :
     `1px solid ${props.theme.border}`};
   padding-bottom: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible;
+
+  &:focus-within {
+    box-shadow: ${props => props.theme.name === 'retro' ?
+    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
+    '0 6px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)'};
+    border-color: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'rgba(0, 0, 0, 0.15)'};
+  }
 `;
 
 export const FilesPreviewContainer = styled.div`
-  display: ${props => props.$show ? 'flex' : 'none'};
+  display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 12px 16px 8px 16px;
+  padding: ${props => props.$show ? '12px 16px 8px 16px' : '0 16px'};
+  max-height: ${props => props.$show ? '120px' : '0'};
+  opacity: ${props => props.$show ? '1' : '0'};
   width: 100%;
   box-sizing: border-box;
   border-bottom: ${props => props.$show ? `1px solid ${props.theme.border}` : 'none'};
   background: ${props => props.theme.background};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px 24px 0 0'};
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 `;
 
 export const FilePreviewChip = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 10px;
   background: ${props => props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '16px'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
   font-size: 12px;
   color: ${props => props.theme.text};
   position: relative;
-  max-width: 200px;
+  max-width: 180px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background: ${props => props.theme.name === 'retro' ? props.theme.inputBackground : 'rgba(0, 0, 0, 0.03)'};
+    border-color: ${props => props.theme.name === 'retro' ? props.theme.border : 'rgba(0, 0, 0, 0.12)'};
+  }
 `;
 
 export const FilePreviewIcon = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: ${props => props.$hasPreview ? '40px' : '24px'};
+  height: ${props => props.$hasPreview ? '40px' : '24px'};
   flex-shrink: 0;
-  
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
+  overflow: hidden;
+  background: ${props => props.$hasPreview ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
+
   img {
-    width: 16px;
-    height: 16px;
-    border-radius: ${props => props.theme.name === 'retro' ? '0' : '4px'};
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
   }
-  
+
   svg {
-    width: 16px;
-    height: 16px;
-    color: ${props => props.theme.text};
-    opacity: 0.7;
+    width: ${props => props.$hasPreview ? '24px' : '18px'};
+    height: ${props => props.$hasPreview ? '24px' : '18px'};
+    flex-shrink: 0;
+  }
+`;
+
+export const FileTypeIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: ${props => {
+    const colors = {
+      // Documents
+      pdf: 'linear-gradient(135deg, #FF6B6B 0%, #EE5A5A 100%)',
+      doc: 'linear-gradient(135deg, #4A90D9 0%, #3A7BC8 100%)',
+      docx: 'linear-gradient(135deg, #4A90D9 0%, #3A7BC8 100%)',
+      txt: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
+      // Spreadsheets
+      xls: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+      xlsx: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+      csv: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+      // Presentations
+      ppt: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+      pptx: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+      // Archives
+      zip: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+      rar: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+      '7z': 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+      tar: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+      gz: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)',
+      // JavaScript/TypeScript
+      js: 'linear-gradient(135deg, #F7DF1E 0%, #E5CD00 100%)',
+      jsx: 'linear-gradient(135deg, #61DAFB 0%, #4FA8C7 100%)',
+      ts: 'linear-gradient(135deg, #3178C6 0%, #235A97 100%)',
+      tsx: 'linear-gradient(135deg, #3178C6 0%, #235A97 100%)',
+      mjs: 'linear-gradient(135deg, #F7DF1E 0%, #E5CD00 100%)',
+      cjs: 'linear-gradient(135deg, #F7DF1E 0%, #E5CD00 100%)',
+      // Python
+      py: 'linear-gradient(135deg, #3776AB 0%, #FFD43B 100%)',
+      pyw: 'linear-gradient(135deg, #3776AB 0%, #FFD43B 100%)',
+      pyi: 'linear-gradient(135deg, #3776AB 0%, #FFD43B 100%)',
+      // Java/JVM
+      java: 'linear-gradient(135deg, #ED8B00 0%, #B07219 100%)',
+      kt: 'linear-gradient(135deg, #A97BFF 0%, #7F52FF 100%)',
+      kts: 'linear-gradient(135deg, #A97BFF 0%, #7F52FF 100%)',
+      scala: 'linear-gradient(135deg, #DC322F 0%, #B71C1C 100%)',
+      // C/C++
+      c: 'linear-gradient(135deg, #A8B9CC 0%, #555555 100%)',
+      cpp: 'linear-gradient(135deg, #00599C 0%, #004482 100%)',
+      cc: 'linear-gradient(135deg, #00599C 0%, #004482 100%)',
+      cxx: 'linear-gradient(135deg, #00599C 0%, #004482 100%)',
+      h: 'linear-gradient(135deg, #A8B9CC 0%, #555555 100%)',
+      hpp: 'linear-gradient(135deg, #00599C 0%, #004482 100%)',
+      hxx: 'linear-gradient(135deg, #00599C 0%, #004482 100%)',
+      // C#
+      cs: 'linear-gradient(135deg, #9B4F96 0%, #68217A 100%)',
+      // Go
+      go: 'linear-gradient(135deg, #00ADD8 0%, #007D9C 100%)',
+      // Rust
+      rs: 'linear-gradient(135deg, #DEA584 0%, #B7410E 100%)',
+      // Ruby
+      rb: 'linear-gradient(135deg, #CC342D 0%, #A91D1D 100%)',
+      erb: 'linear-gradient(135deg, #CC342D 0%, #A91D1D 100%)',
+      // PHP
+      php: 'linear-gradient(135deg, #777BB4 0%, #4F5B93 100%)',
+      phtml: 'linear-gradient(135deg, #777BB4 0%, #4F5B93 100%)',
+      // Swift
+      swift: 'linear-gradient(135deg, #F05138 0%, #C93D2C 100%)',
+      // Shell
+      sh: 'linear-gradient(135deg, #4EAA25 0%, #3D8B1F 100%)',
+      bash: 'linear-gradient(135deg, #4EAA25 0%, #3D8B1F 100%)',
+      zsh: 'linear-gradient(135deg, #4EAA25 0%, #3D8B1F 100%)',
+      fish: 'linear-gradient(135deg, #4EAA25 0%, #3D8B1F 100%)',
+      // PowerShell
+      ps1: 'linear-gradient(135deg, #012456 0%, #001833 100%)',
+      psm1: 'linear-gradient(135deg, #012456 0%, #001833 100%)',
+      psd1: 'linear-gradient(135deg, #012456 0%, #001833 100%)',
+      // SQL
+      sql: 'linear-gradient(135deg, #E38C00 0%, #CC7A00 100%)',
+      // R
+      r: 'linear-gradient(135deg, #276DC3 0%, #1E5AA8 100%)',
+      // Lua
+      lua: 'linear-gradient(135deg, #000080 0%, #00007F 100%)',
+      // Perl
+      pl: 'linear-gradient(135deg, #39457E 0%, #2A3560 100%)',
+      pm: 'linear-gradient(135deg, #39457E 0%, #2A3560 100%)',
+      // Elixir
+      ex: 'linear-gradient(135deg, #6E4A7E 0%, #4E2A5E 100%)',
+      exs: 'linear-gradient(135deg, #6E4A7E 0%, #4E2A5E 100%)',
+      // Erlang
+      erl: 'linear-gradient(135deg, #A90533 0%, #8B042A 100%)',
+      hrl: 'linear-gradient(135deg, #A90533 0%, #8B042A 100%)',
+      // Haskell
+      hs: 'linear-gradient(135deg, #5E5086 0%, #453A65 100%)',
+      lhs: 'linear-gradient(135deg, #5E5086 0%, #453A65 100%)',
+      // Clojure
+      clj: 'linear-gradient(135deg, #63B132 0%, #4D8A27 100%)',
+      cljs: 'linear-gradient(135deg, #63B132 0%, #4D8A27 100%)',
+      cljc: 'linear-gradient(135deg, #63B132 0%, #4D8A27 100%)',
+      edn: 'linear-gradient(135deg, #63B132 0%, #4D8A27 100%)',
+      // OCaml
+      ml: 'linear-gradient(135deg, #EC6813 0%, #C75510 100%)',
+      mli: 'linear-gradient(135deg, #EC6813 0%, #C75510 100%)',
+      // F#
+      fs: 'linear-gradient(135deg, #378BBA 0%, #2B6D92 100%)',
+      fsi: 'linear-gradient(135deg, #378BBA 0%, #2B6D92 100%)',
+      fsx: 'linear-gradient(135deg, #378BBA 0%, #2B6D92 100%)',
+      // Dart
+      dart: 'linear-gradient(135deg, #00B4AB 0%, #009688 100%)',
+      // Frontend frameworks
+      vue: 'linear-gradient(135deg, #42B883 0%, #35495E 100%)',
+      svelte: 'linear-gradient(135deg, #FF3E00 0%, #CC3200 100%)',
+      // Web
+      html: 'linear-gradient(135deg, #E34F26 0%, #C7421F 100%)',
+      htm: 'linear-gradient(135deg, #E34F26 0%, #C7421F 100%)',
+      xml: 'linear-gradient(135deg, #E34F26 0%, #C7421F 100%)',
+      xhtml: 'linear-gradient(135deg, #E34F26 0%, #C7421F 100%)',
+      css: 'linear-gradient(135deg, #1572B6 0%, #0F5A8C 100%)',
+      scss: 'linear-gradient(135deg, #CC6699 0%, #A65280 100%)',
+      sass: 'linear-gradient(135deg, #CC6699 0%, #A65280 100%)',
+      less: 'linear-gradient(135deg, #1D365D 0%, #16294A 100%)',
+      styl: 'linear-gradient(135deg, #FF6347 0%, #CC4F39 100%)',
+      // Data/Config
+      json: 'linear-gradient(135deg, #CBCB41 0%, #A8A835 100%)',
+      yaml: 'linear-gradient(135deg, #CB171E 0%, #A81216 100%)',
+      yml: 'linear-gradient(135deg, #CB171E 0%, #A81216 100%)',
+      toml: 'linear-gradient(135deg, #9C4121 0%, #7D351A 100%)',
+      // Documentation
+      md: 'linear-gradient(135deg, #083FA1 0%, #062D73 100%)',
+      markdown: 'linear-gradient(135deg, #083FA1 0%, #062D73 100%)',
+      rst: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
+      // Config
+      ini: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
+      cfg: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
+      conf: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
+      config: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
+      env: 'linear-gradient(135deg, #ECD53F 0%, #CDB835 100%)',
+      // Build
+      dockerfile: 'linear-gradient(135deg, #2496ED 0%, #1D7AC0 100%)',
+      makefile: 'linear-gradient(135deg, #6D8086 0%, #555F64 100%)',
+      cmake: 'linear-gradient(135deg, #064F8C 0%, #053D6B 100%)',
+      // Default
+      default: 'linear-gradient(135deg, #9CA3AF 0%, #6B7280 100%)'
+    };
+    return colors[props.$fileType] || colors.default;
+  }};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
+
+  svg {
+    width: 20px;
+    height: 20px;
+    color: white;
+  }
+
+  span {
+    font-size: 9px;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 `;
 
@@ -304,7 +482,7 @@ export const FilePreviewRemove = styled.button`
   background: none;
   border: none;
   color: ${props => props.theme.text};
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: pointer;
   padding: 2px;
   display: flex;
@@ -314,12 +492,16 @@ export const FilePreviewRemove = styled.button`
   height: 16px;
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
   flex-shrink: 0;
-  
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
   &:hover {
     opacity: 1;
-    background: ${props => props.theme.border};
+    background: rgba(255, 80, 80, 0.15);
+    color: #ff5050;
   }
-  
+
   svg {
     width: 10px;
     height: 10px;
@@ -415,11 +597,11 @@ export const WaveformButton = styled.button`
     if (props.$isActive) {
       return '#ff4444';
     }
-    return props.disabled ? '#ccc' : props.theme.buttonGradient;
+    return props.disabled ? 'rgba(0, 0, 0, 0.1)' : props.theme.buttonGradient;
   }};
   color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'white'};
-  border: ${props => props.theme.name === 'retro' ? 
-    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+  border: ${props => props.theme.name === 'retro' ?
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
     'none'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
   width: 38px;
@@ -431,27 +613,27 @@ export const WaveformButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  box-shadow: ${props => props.theme.name === 'retro' ? 
-    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-    props.$isActive ? '0 0 0 2px rgba(255, 68, 68, 0.3)' : '0 2px 8px rgba(0,0,0,0.1)'};
-  
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: ${props => props.theme.name === 'retro' ?
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    props.$isActive ? '0 0 0 3px rgba(255, 68, 68, 0.25)' : '0 2px 8px rgba(0,0,0,0.1)'};
+
   &:hover:not(:disabled) {
     background: ${props => {
-      if (props.theme.name === 'retro') {
-        return props.theme.buttonFace;
-      }
-      if (props.$isActive) {
-        return '#ff6666';
-      }
-      return props.theme.buttonHoverGradient;
-    }};
-    transform: translateY(-50%) ${props => props.theme.name === 'retro' ? '' : 'scale(1.05)'};
-    box-shadow: ${props => props.theme.name === 'retro' ? 
-      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-      props.$isActive ? '0 0 0 2px rgba(255, 68, 68, 0.5)' : '0 4px 12px rgba(0,0,0,0.15)'};
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    if (props.$isActive) {
+      return '#ff5555';
+    }
+    return props.theme.buttonHoverGradient;
+  }};
+    box-shadow: ${props => props.theme.name === 'retro' ?
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    props.$isActive ? '0 0 0 4px rgba(255, 68, 68, 0.35)' : '0 4px 14px rgba(0,0,0,0.18)'};
   }
-  
+
   &:active:not(:disabled) {
     ${props => props.theme.name === 'retro' && `
       border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
@@ -459,23 +641,10 @@ export const WaveformButton = styled.button`
       padding: 1px 0 0 1px;
     `}
   }
-  
+
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
-  }
-  
-  // Add keyframes for pulse animation
-  @keyframes pulse {
-    0% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
-    100% {
-      opacity: 1;
-    }
+    opacity: 0.4;
   }
 `;
 
@@ -484,11 +653,11 @@ export const SendButton = styled.button`
     if (props.theme.name === 'retro') {
       return props.theme.buttonFace;
     }
-    return props.disabled ? '#ccc' : props.theme.buttonGradient;
+    return props.disabled ? 'rgba(0, 0, 0, 0.1)' : props.theme.buttonGradient;
   }};
   color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'white'};
-  border: ${props => props.theme.name === 'retro' ? 
-    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
+  border: ${props => props.theme.name === 'retro' ?
+    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
     'none'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
   width: 38px;
@@ -500,21 +669,22 @@ export const SendButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  box-shadow: ${props => props.theme.name === 'retro' ? 
-    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-    '0 2px 8px rgba(0,0,0,0.1)'};
-  
+  transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: ${props => props.theme.name === 'retro' ?
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    props.disabled ? 'none' : '0 2px 8px rgba(0,0,0,0.12)'};
+
   &:hover:not(:disabled) {
-    background: ${props => props.theme.name === 'retro' ? 
-      props.theme.buttonFace : 
-      props.theme.buttonHoverGradient};
-    transform: translateY(-50%) ${props => props.theme.name === 'retro' ? '' : 'scale(1.05)'};
-    box-shadow: ${props => props.theme.name === 'retro' ? 
-      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-      '0 4px 12px rgba(0,0,0,0.15)'};
+    background: ${props => props.theme.name === 'retro' ?
+    props.theme.buttonFace :
+    props.theme.buttonHoverGradient};
+    box-shadow: ${props => props.theme.name === 'retro' ?
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    '0 4px 14px rgba(0,0,0,0.18)'};
   }
-  
+
   &:active:not(:disabled) {
     ${props => props.theme.name === 'retro' && `
       border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
@@ -522,15 +692,15 @@ export const SendButton = styled.button`
       padding: 1px 0 0 1px;
     `}
   }
-  
+
   &:disabled {
     cursor: not-allowed;
+    opacity: ${props => props.theme.name === 'retro' ? '0.5' : '0.4'};
     ${props => props.theme.name === 'retro' && `
       background: ${props.theme.buttonFace};
-      opacity: 0.5;
     `}
   }
-  
+
   svg {
     width: 18px;
     height: 18px;
@@ -600,31 +770,36 @@ export const ActionChip = styled.button`
   }};
   border: ${props => {
     if (props.theme.name === 'retro') {
-      return props.selected ? 
-        `1px solid ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark}` : 
+      return props.selected ?
+        `1px solid ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark}` :
         `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
     }
-    return props.selected ? '1px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(0, 0, 0, 0.05)';
+    return props.selected ? '1px solid rgba(0, 0, 0, 0.15)' : '1px solid rgba(0, 0, 0, 0.06)';
   }};
   color: ${props => props.selected ? props.theme.text : props.theme.text + '99'};
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  box-shadow: ${props => props.theme.name === 'retro' ? 
+  box-shadow: ${props => props.theme.name === 'retro' ?
     props.selected ?
       `-1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset` :
-      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-    'none'};
-  
+      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    props.selected ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none'};
+
   &:hover {
     background-color: ${props => {
-      if (props.theme.name === 'retro') {
-        return props.theme.buttonFace;
-      }
-      return props.selected ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.06)';
-    }};
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    return props.selected ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.07)';
+  }};
     color: ${props => props.theme.text};
+    box-shadow: ${props => props.theme.name === 'retro' ? 'none' : '0 2px 6px rgba(0, 0, 0, 0.1)'};
   }
 
   &:active:not(:disabled) {
@@ -638,7 +813,12 @@ export const ActionChip = styled.button`
   svg {
     width: 15px;
     height: 15px;
-    opacity: 0.7;
+    opacity: 0.75;
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover svg {
+    opacity: 1;
   }
 `;
 
@@ -685,28 +865,29 @@ export const HammerButton = styled.button`
   }};
   border: ${props => {
     if (props.theme.name === 'retro') {
-      return props.$isOpen ? 
-        `1px solid ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark}` : 
+      return props.$isOpen ?
+        `1px solid ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark}` :
         `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
     }
-    return props.$isOpen ? '1px solid rgba(0, 0, 0, 0.2)' : '1px solid rgba(0, 0, 0, 0.05)';
+    return props.$isOpen ? '1px solid rgba(0, 0, 0, 0.15)' : '1px solid rgba(0, 0, 0, 0.06)';
   }};
   cursor: pointer;
-  transition: all 0.2s ease;
-  // margin-right: ${props => props.theme.name === 'retro' ? '12px' : '8px'}; // Removed for uniform gap spacing
-  box-shadow: ${props => props.theme.name === 'retro' ? 
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: ${props => props.theme.name === 'retro' ?
     props.$isOpen ?
       `-1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset` :
-      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
-    'none'};
-  
+      `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    props.$isOpen ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none'};
+
   &:hover {
     background-color: ${props => {
-      if (props.theme.name === 'retro') {
-        return props.theme.buttonFace;
-      }
-      return props.$isOpen ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.06)';
-    }};
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    return props.$isOpen ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.07)';
+  }};
   }
 
   &:active:not(:disabled) {
@@ -722,27 +903,46 @@ export const HammerButton = styled.button`
     height: 20px;
     color: ${props => props.theme.text};
     opacity: 0.8;
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover svg {
+    opacity: 1;
   }
 `;
 
 export const ToolbarContainer = styled.div`
-  display: ${props => props.$isOpen ? 'flex' : 'none'};
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(${props => props.$isOpen ? '100%' : '80%'});
+  display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start; // Ensure items start from the left
-  gap: ${props => props.theme.name === 'retro' ? '12px' : '10px'};
-  padding: ${props => props.theme.name === 'retro' ? '12px' : '8px'} 0;
-  margin-top: ${props => props.theme.name === 'retro' ? '8px' : '4px'};
-  width: ${props => props.theme.name === 'retro' ? '90%' : '95%'}; // Match ActionChipsContainer width
-  border-top: 1px solid ${props => props.theme.border};
-  animation: ${fadeIn} 0.2s ease-out;
+  justify-content: center;
+  gap: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
+  padding: ${props => props.theme.name === 'retro' ? '10px 16px' : '8px 14px'};
+  width: auto;
+  min-width: 200px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-top: none;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '0 0 16px 16px'};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  opacity: ${props => props.$isOpen ? '1' : '0'};
+  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              visibility 0.2s;
+  pointer-events: ${props => props.$isOpen ? 'auto' : 'none'};
+  z-index: 99;
 `;
 
 export const ToolbarItem = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px; // Uniform width
-  height: 36px; // Uniform height
+  width: 36px;
+  height: 36px;
   background: ${props => {
     if (props.theme.name === 'retro') {
       return props.theme.buttonFace;
@@ -753,26 +953,27 @@ export const ToolbarItem = styled.button`
     if (props.theme.name === 'retro') {
       return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
     }
-    return '1px solid rgba(0, 0, 0, 0.05)';
+    return '1px solid rgba(0, 0, 0, 0.06)';
   }};
-  border-radius: 50%; // Always a circle
+  border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  overflow: hidden; 
-  
-  box-shadow: ${props => props.theme.name === 'retro' ? 
-    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+
+  box-shadow: ${props => props.theme.name === 'retro' ?
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
     'none'};
-  
+
   &:hover {
     background: ${props => {
-      if (props.theme.name === 'retro') {
-        return props.theme.buttonFace;
-      }
-      return 'rgba(0, 0, 0, 0.06)';
-    }};
-    transform: scale(1.05); // Uniform hover scale
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    return 'rgba(0, 0, 0, 0.08)';
+  }};
+    box-shadow: ${props => props.theme.name === 'retro' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.12)'};
   }
 
   &:active:not(:disabled) {
@@ -780,14 +981,18 @@ export const ToolbarItem = styled.button`
       border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
       box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
     `}
-    transform: scale(0.95); // Uniform active scale
   }
 
   svg {
     width: 18px;
     height: 18px;
     color: ${props => props.theme.text};
-    opacity: 0.8;
+    opacity: 0.75;
+    transition: opacity 0.15s ease;
+  }
+
+  &:hover svg {
+    opacity: 1;
   }
 `;
 
@@ -808,24 +1013,28 @@ export const OverflowChipButton = styled.button`
     if (props.theme.name === 'retro') {
       return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
     }
-    return '1px solid rgba(0, 0, 0, 0.05)';
+    return '1px solid rgba(0, 0, 0, 0.06)';
   }};
   color: ${props => props.theme.text + '99'};
   font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: ${props => props.theme.name === 'retro' ? 
-    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` : 
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: ${props => props.theme.name === 'retro' ?
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
     'none'};
   min-width: 44px;
-  
+
   &:hover {
     background-color: ${props => {
-      if (props.theme.name === 'retro') {
-        return props.theme.buttonFace;
-      }
-      return 'rgba(0, 0, 0, 0.06)';
-    }};
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonFace;
+    }
+    return 'rgba(0, 0, 0, 0.07)';
+  }};
     color: ${props => props.theme.text};
   }
 
@@ -838,35 +1047,34 @@ export const OverflowChipButton = styled.button`
   }
 `;
 
+const dropdownSlideIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+`;
+
 export const OverflowDropdown = styled.div`
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
+  margin-top: 6px;
   background: ${props => props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '8px'};
-  box-shadow: ${props => props.theme.name === 'retro' ? 
-    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` : 
-    '0 4px 12px rgba(0, 0, 0, 0.15)'};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
+  box-shadow: ${props => props.theme.name === 'retro' ?
+    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
+    '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08)'};
   padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 150px;
   z-index: 1000;
-  
-  // Animate in
-  animation: fadeIn 0.2s ease-out;
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+  animation: ${dropdownSlideIn} 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: top right;
 `; 

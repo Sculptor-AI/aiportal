@@ -316,34 +316,76 @@ const FileUploadButton = ({ onFileSelected, disabled, resetFile, externalFile })
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    
+
     // The limit check is handled by the parent component
-    
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain'];
+
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain'];
+
+    // Code file extensions that should be accepted
+    const codeExtensions = [
+      'js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs',  // JavaScript/TypeScript
+      'py', 'pyw', 'pyi',                       // Python
+      'java', 'kt', 'kts', 'scala',             // JVM languages
+      'c', 'cpp', 'cc', 'cxx', 'h', 'hpp', 'hxx', // C/C++
+      'cs',                                      // C#
+      'go',                                      // Go
+      'rs',                                      // Rust
+      'rb', 'erb',                               // Ruby
+      'php', 'phtml',                            // PHP
+      'swift',                                   // Swift
+      'sh', 'bash', 'zsh', 'fish',              // Shell scripts
+      'ps1', 'psm1', 'psd1',                    // PowerShell
+      'sql',                                     // SQL
+      'r',                                       // R
+      'lua',                                     // Lua
+      'pl', 'pm',                                // Perl
+      'ex', 'exs',                               // Elixir
+      'erl', 'hrl',                              // Erlang
+      'hs', 'lhs',                               // Haskell
+      'clj', 'cljs', 'cljc', 'edn',             // Clojure
+      'ml', 'mli',                               // OCaml
+      'fs', 'fsi', 'fsx',                        // F#
+      'dart',                                    // Dart
+      'vue', 'svelte',                           // Frontend frameworks
+      'html', 'htm', 'xml', 'xhtml',            // Markup
+      'css', 'scss', 'sass', 'less', 'styl',   // Stylesheets
+      'json', 'yaml', 'yml', 'toml',            // Config/data
+      'md', 'markdown', 'rst', 'txt',           // Documentation
+      'dockerfile', 'makefile', 'cmake',        // Build files
+      'ini', 'cfg', 'conf', 'config',           // Config files
+      'env', 'gitignore', 'editorconfig'        // Dotfiles
+    ];
+
     const validFiles = [];
-    
+
     for (const file of files) {
-      if (!allowedTypes.includes(file.type)) {
-        alert(`Unsupported file type for ${file.name}. Please select an image (JPEG, PNG, GIF, WEBP), PDF, or TXT file.`);
+      const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+      const isCodeFile = codeExtensions.includes(fileExtension) ||
+                        file.name.toLowerCase() === 'dockerfile' ||
+                        file.name.toLowerCase() === 'makefile' ||
+                        file.name.toLowerCase().startsWith('.env');
+
+      if (!allowedMimeTypes.includes(file.type) && !isCodeFile) {
+        alert(`Unsupported file type for ${file.name}. Please select an image, PDF, text, or code file.`);
         continue;
       }
-      
+
       // Check file size (limit to 10MB for now)
       if (file.size > 10 * 1024 * 1024) {
         alert(`File size for ${file.name} should be less than 10MB.`);
         continue;
       }
-      
+
       validFiles.push(file);
     }
-    
+
     if (validFiles.length === 0) {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
       return;
     }
-    
+
     // Send all files to parent for processing
     onFileSelected(validFiles);
   };
@@ -401,10 +443,10 @@ const FileUploadButton = ({ onFileSelected, disabled, resetFile, externalFile })
           )}
         </UploadIcon>
       </UploadButton>
-      <HiddenInput 
-        type="file" 
+      <HiddenInput
+        type="file"
         ref={fileInputRef}
-        accept="image/jpeg, image/png, image/gif, image/webp, application/pdf, text/plain"
+        accept="image/jpeg, image/png, image/gif, image/webp, application/pdf, text/plain, text/*, .js, .jsx, .ts, .tsx, .py, .java, .c, .cpp, .h, .hpp, .cs, .go, .rs, .rb, .php, .swift, .sh, .bash, .sql, .r, .lua, .pl, .ex, .hs, .dart, .vue, .svelte, .html, .css, .scss, .json, .yaml, .yml, .toml, .md, .xml, .kt, .scala, .ini, .cfg, .conf"
         onChange={handleFileChange}
         multiple
       />

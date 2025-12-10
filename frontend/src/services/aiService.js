@@ -427,10 +427,10 @@ export const fetchModelsFromBackend = async () => {
       apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
     }
 
-    if (!apiKey) {
-      console.log('No backend API key available, skipping backend models');
-      return [];
-    }
+    // if (!apiKey) {
+    //   console.log('No backend API key available, skipping backend models');
+    //   return [];
+    // }
 
     // Use the main models endpoint that returns all available models
     const endpointUrl = buildApiUrl('/models');

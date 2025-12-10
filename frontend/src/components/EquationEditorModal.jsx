@@ -1,383 +1,621 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import styled from 'styled-components';
+import React, { useState, useRef, useEffect } from 'react';
+import styled, { keyframes, css } from 'styled-components';
 import ReactKatex from '@pkasila/react-katex';
-import 'katex/dist/katex.min.css'; // Required for KaTeX styling
+import 'katex/dist/katex.min.css';
 
-// Import a LaTeX rendering library, now using @pkasila/react-katex
-// We'll assume KaTeX is installed or @pkasila/react-katex handles it.
-// import ReactKatex from '@pkasila/react-katex';
-// import 'katex/dist/katex.min.css'; // Required for KaTeX
+// Animations
+const fadeIn = keyframes`
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+`;
 
-const EquationContainer = styled.div`
+// Styled Components (mimicking SettingsModal for consistency)
+const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
-  right: ${props => props.$otherPanelsOpen * 450}px; /* Shift right based on other panels */
-  width: 450px; /* Same width as whiteboard */
-  height: 100vh;
-  background: ${props => props.theme.background};
-  z-index: 1001; /* Slightly higher than whiteboard (1000) */
-  display: flex;
-  flex-direction: column;
-  box-shadow: -3px 0 10px rgba(0, 0, 0, 0.15);
-  border-left: 1px solid ${props => props.theme.border};
-  transform: ${props => props.$isOpen ? 'translateX(0%)' : 'translateX(100%)'};
-  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
-  transition: transform 0.3s ease-in-out, visibility 0.3s ease-in-out;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'transparent'};
-`;
-
-const Title = styled.h2`
-  margin: 0;
-  font-size: 18px;
-  color: ${props => props.theme.text};
-  font-family: ${props => props.theme.name === 'retro' ? 'MS Sans Serif, sans-serif' : 'inherit'};
-`;
-
-const CloseButton = styled.button`
-  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'transparent'};
-  border: ${props => props.theme.name === 'retro' ? 
-    `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` : 
-    'none'};
-  color: ${props => props.theme.text};
-  padding: ${props => props.theme.name === 'retro' ? '4px 12px' : '8px'};
-  cursor: pointer;
-  font-size: ${props => props.theme.name === 'retro' ? '12px' : '24px'};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '4px'};
-  
-  &:hover {
-    background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'rgba(0, 0, 0, 0.1)'};
-  }
-  
-  &:active {
-    ${props => props.theme.name === 'retro' && `
-      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
-      padding: 5px 11px 3px 13px;
-    `}
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-`;
-
-const TextArea = styled.textarea`
-  width: 100%;
-  min-height: 100px;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid ${props => props.theme.border};
-  background-color: ${props => props.theme.chat};
-  color: ${props => props.theme.text};
-  font-family: monospace; // Good for LaTeX
-  resize: vertical;
-`;
-
-const PreviewArea = styled.div`
-  width: 100%;
-  min-height: 50px;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid ${props => props.theme.border};
-  background-color: ${props => props.theme.chat};
-  color: ${props => props.theme.text};
-  overflow-y: auto; // Add scroll for long equations
-  // KaTeX specific styling might be needed here if default is not sufficient
-  .katex-display {
-    margin: 0; // Override default KaTeX display margins if any
-    overflow-x: auto; // Allow horizontal scroll for very wide equations
-    padding-bottom: 5px; // Space for scrollbar if it appears
-  }
-  .katex {
-    font-size: 1em; // Adjust KaTeX font size to match surrounding text if needed
-    color: ${props => props.theme.text}; // Ensure KaTeX text color matches theme
-  }
-  // Handle potential errors from KaTeX
-  .katex-error {
-    color: red; // Style KaTeX errors
-  }
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
-  border-top: 1px solid ${props => props.theme.border};
-`;
-
-const Button = styled.button`
-  padding: 8px 20px;
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  
-  ${props => props.theme.name === 'retro' ? `
-    background: ${props.theme.buttonFace};
-    border: 1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight};
-    color: ${props.theme.buttonText};
-    box-shadow: 1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset;
-    
-    &:active {
-      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
-      box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
-      padding: 9px 19px 7px 21px;
-    }
-  ` : `
-    background: ${props.$primary ? props.theme.primary : 'transparent'};
-    color: ${props.$primary ? 'white' : props.theme.text};
-    border: 1px solid ${props.$primary ? props.theme.primary : props.theme.border};
-    
-    &:hover {
-      background: ${props.$primary ? props.theme.primaryDark : props.theme.border};
-      ${!props.$primary && `color: ${props.theme.text};`}
-    }
-  `}
-`;
-
-const SymbolPanel = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
-  gap: 8px;
-  padding: 10px;
-  background-color: ${props => props.theme.chat || '#f0f0f0'}; // A slightly different background
-  border-radius: 4px;
-  border: 1px solid ${props => props.theme.border};
-`;
-
-const SymbolButton = styled.button`
-  padding: 10px 5px;
-  font-size: 1rem; // Increased font size for symbols
-  background-color: ${props => props.theme.inputBackground || '#fff'};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 4px;
-  cursor: pointer;
-  color: ${props => props.theme.text};
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease;
+  z-index: 1100;
+  animation: ${fadeIn} 0.25s ease-out;
+`;
 
-  &:hover {
-    background-color: ${props => props.theme.border || '#e0e0e0'};
-  }
+const ModalContent = styled.div`
+  background-color: ${props => props.theme.sidebar || '#1e1e1e'};
+  color: ${props => props.theme.text || '#fff'};
+  border-radius: 16px;
+  width: 900px;
+  max-width: 95vw;
+  height: 85vh;
+  max-height: 800px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  border: 1px solid ${props => props.theme.border || 'rgba(255,255,255,0.1)'};
+  overflow: hidden;
+`;
 
-  // For KaTeX rendered labels if we use them later
-  .katex {
-    font-size: 1.1em !important; // Ensure KaTeX in button is legible
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background-color: ${props => props.theme.header || 'rgba(0,0,0,0.2)'};
+  border-bottom: 1px solid ${props => props.theme.border || 'rgba(255,255,255,0.1)'};
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  
+  svg {
+    opacity: 0.8;
   }
 `;
 
-const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme, otherPanelsOpen = 0 }) => {
+const CloseButton = styled.button`
+  background: transparent;
+  border: none;
+  color: ${props => props.theme.text};
+  opacity: 0.6;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+
+  &:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+`;
+
+const MainLayout = styled.div`
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const Sidebar = styled.div`
+  width: 260px;
+  background-color: ${props => props.theme.cardBackground || 'rgba(0,0,0,0.05)'};
+  border-right: 1px solid ${props => props.theme.border || 'rgba(255,255,255,0.1)'};
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+    height: 150px;
+    border-right: none;
+    border-bottom: 1px solid ${props => props.theme.border};
+  }
+`;
+
+const EditorArea = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+`;
+
+const PreviewSection = styled.div`
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: ${props => props.theme.background || '#121212'};
+  overflow-y: auto;
+  min-height: 150px;
+  position: relative;
+  
+  /* Grid pattern background */
+  background-image: radial-gradient(${props => props.theme.border || '#333'} 1px, transparent 1px);
+  background-size: 20px 20px;
+`;
+
+const PreviewContainer = styled.div`
+  font-size: 2rem;
+  color: ${props => props.theme.text};
+  text-align: center;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 20px;
+  
+  .katex-display {
+    margin: 0;
+  }
+  
+  .katex-error {
+    color: #ff6b6b;
+    font-size: 1rem;
+    font-family: monospace;
+    background: rgba(255, 0, 0, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+  }
+`;
+
+const InputSection = styled.div`
+  height: 200px;
+  padding: 20px;
+  background-color: ${props => props.theme.sidebar || '#1e1e1e'};
+  border-top: 1px solid ${props => props.theme.border || 'rgba(255,255,255,0.1)'};
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const TextArea = styled.textarea`
+  flex: 1;
+  background-color: ${props => props.theme.inputBackground || 'rgba(0,0,0,0.2)'};
+  border: 1px solid ${props => props.theme.border || 'rgba(255,255,255,0.1)'};
+  color: ${props => props.theme.text};
+  border-radius: 8px;
+  padding: 15px;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 1rem;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: ${props => props.theme.primary || '#0078d7'};
+  }
+  
+  &::placeholder {
+    opacity: 0.4;
+  }
+`;
+
+const CategoryTabs = styled.div`
+  display: flex;
+  gap: 5px;
+  padding: 10px;
+  overflow-x: auto;
+  border-bottom: 1px solid ${props => props.theme.border};
+  
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border};
+    border-radius: 2px;
+  }
+`;
+
+const CategoryTab = styled.button`
+  background: ${props => props.$active ? props.theme.primary + '20' : 'transparent'};
+  border: 1px solid ${props => props.$active ? props.theme.primary : 'transparent'};
+  color: ${props => props.$active ? props.theme.primary : props.theme.text};
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: ${props => props.theme.primary + '10'};
+  }
+`;
+
+const SymbolGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+  gap: 8px;
+  padding: 15px;
+`;
+
+const SymbolBtn = styled.button`
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${props => props.theme.buttonFace || 'rgba(255,255,255,0.05)'};
+  border: 1px solid ${props => props.theme.border || 'transparent'};
+  border-radius: 8px;
+  color: ${props => props.theme.text};
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+
+  &:hover {
+    background: ${props => props.theme.primary + '20'};
+    border-color: ${props => props.theme.primary};
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+  
+  /* Tooltip logic could go here */
+`;
+
+const Footer = styled.div`
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid ${props => props.theme.border || 'rgba(255,255,255,0.1)'};
+  background-color: ${props => props.theme.header};
+`;
+
+const ActionButton = styled.button`
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+  
+  ${props => props.$primary ? css`
+    background-color: ${props.theme.primary || '#0078d7'};
+    color: white;
+    border: none;
+    
+    &:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 4px 12px ${props.theme.primary}40;
+    }
+  ` : css`
+    background-color: transparent;
+    color: ${props.theme.text};
+    border: 1px solid ${props.theme.border};
+    
+    &:hover {
+      background-color: rgba(255,255,255,0.05);
+    }
+  `}
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: none;
+  }
+`;
+
+// Categories and Symbols Configuration
+const SYMBOL_CATEGORIES = {
+  basic: {
+    label: "Basic",
+    symbols: [
+      { label: "+", insert: "+" },
+      { label: "-", insert: "-" },
+      { label: "×", insert: "\\times" },
+      { label: "÷", insert: "\\div" },
+      { label: "=", insert: "=" },
+      { label: "≠", insert: "\\neq" },
+      { label: "±", insert: "\\pm" },
+      { label: "( )", insert: "($0)" },
+      { label: "[ ]", insert: "[$0]" },
+      { label: "{ }", insert: "\\{$0\\}" },
+      { label: "x/y", insert: "\\frac{$0}{}" },
+      { label: "x²", insert: "^{2}" },
+      { label: "√", insert: "\\sqrt{$0}" },
+      { label: "∞", insert: "\\infty" },
+    ]
+  },
+  greek: {
+    label: "Greek",
+    symbols: [
+      { label: "α", insert: "\\alpha" },
+      { label: "β", insert: "\\beta" },
+      { label: "γ", insert: "\\gamma" },
+      { label: "δ", insert: "\\delta" },
+      { label: "Δ", insert: "\\Delta" },
+      { label: "θ", insert: "\\theta" },
+      { label: "λ", insert: "\\lambda" },
+      { label: "μ", insert: "\\mu" },
+      { label: "π", insert: "\\pi" },
+      { label: "σ", insert: "\\sigma" },
+      { label: "Σ", insert: "\\Sigma" },
+      { label: "φ", insert: "\\phi" },
+      { label: "ω", insert: "\\omega" },
+      { label: "Ω", insert: "\\Omega" },
+    ]
+  },
+  relations: {
+    label: "Relations",
+    symbols: [
+      { label: "<", insert: "<" },
+      { label: ">", insert: ">" },
+      { label: "≤", insert: "\\leq" },
+      { label: "≥", insert: "\\geq" },
+      { label: "∈", insert: "\\in" },
+      { label: "∉", insert: "\\notin" },
+      { label: "⊂", insert: "\\subset" },
+      { label: "⊃", insert: "\\supset" },
+      { label: "≈", insert: "\\approx" },
+      { label: "≡", insert: "\\equiv" },
+      { label: "∀", insert: "\\forall" },
+      { label: "∃", insert: "\\exists" },
+    ]
+  },
+  calculus: {
+    label: "Calculus",
+    symbols: [
+      { label: "∫", insert: "\\int" },
+      { label: "∫ab", insert: "\\int_{a}^{b}" },
+      { label: "∑", insert: "\\sum" },
+      { label: "∂", insert: "\\partial" },
+      { label: "lim", insert: "\\lim_{x \\to 0}" },
+      { label: "dy/dx", insert: "\\frac{dy}{dx}" },
+      { label: "∇", insert: "\\nabla" },
+      { label: "→", insert: "\\to" },
+      { label: "sin", insert: "\\sin" },
+      { label: "cos", insert: "\\cos" },
+      { label: "tan", insert: "\\tan" },
+      { label: "log", insert: "\\log" },
+      { label: "ln", insert: "\\ln" },
+    ]
+  },
+  arrows: {
+    label: "Arrows",
+    symbols: [
+      { label: "←", insert: "\\leftarrow" },
+      { label: "→", insert: "\\rightarrow" },
+      { label: "↔", insert: "\\leftrightarrow" },
+      { label: "⇐", insert: "\\Leftarrow" },
+      { label: "⇒", insert: "\\Rightarrow" },
+      { label: "⇔", insert: "\\Leftrightarrow" },
+      { label: "↑", insert: "\\uparrow" },
+      { label: "↓", insert: "\\downarrow" },
+    ]
+  }
+};
+
+const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme }) => {
   const [userInput, setUserInput] = useState('');
   const [latexOutput, setLatexOutput] = useState('');
+  const [activeCategory, setActiveCategory] = useState('basic');
   const textAreaRef = useRef(null);
 
-  // Automatically focus the textarea when the modal opens
   useEffect(() => {
-    if (isOpen && textAreaRef.current) {
-      // Delay focus slightly to ensure the modal is fully rendered and transitions (if any) are complete
-      const timer = setTimeout(() => {
-        textAreaRef.current.focus();
-      }, 100); // Small delay, adjust if needed
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]); // Re-run when isOpen changes
-
-  // Close on Escape key
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (isOpen && e.key === 'Escape') {
-        onClose();
-      }
-    };
-    
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
+      setTimeout(() => {
+        textAreaRef.current?.focus();
+      }, 100);
     }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isOpen && e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const convertToLatex = useCallback((input) => {
-    if (!input.trim()) return '';
+  // Smart conversion logic (Natural Text -> LaTeX)
+  const convertToLatex = (input) => {
+    if (!input) return '';
     let latex = input;
 
-    // Fractions: number/number or variable/variable etc.
-    latex = latex.replace(/([a-zA-Z0-9]+(?:\.[0-9]+)?)\s*\/\s*([a-zA-Z0-9]+(?:\.[0-9]+)?)/g, '\\frac{$1}{$2}');
+    // 1. Fractions: (expr)/(expr) or val/val, handling optional spaces
+    // We handle parentheses groups first to allow (a+b)/(c+d)
+    latex = latex.replace(/(\([^)]+\))\s*\/\s*(\([^)]+\))/g, '\\frac{$1}{$2}'); // (a) / (b)
+    latex = latex.replace(/(\([^)]+\))\s*\/\s*([a-zA-Z0-9\.]+)/g, '\\frac{$1}{$2}'); // (a) / b
+    latex = latex.replace(/([a-zA-Z0-9\.]+)\s*\/\s*(\([^)]+\))/g, '\\frac{$1}{$2}'); // a / (b)
+    latex = latex.replace(/([a-zA-Z0-9\.]+)\s*\/\s*([a-zA-Z0-9\.]+)/g, '\\frac{$1}{$2}'); // a / b
 
-    // Exponents: x^2, x^{something}, x^2^2 -> x^{2^{2}}
-    latex = latex.replace(/([a-zA-Z0-9]+(?:\([^)]*\))?|\([^)]+\))\^([a-zA-Z0-9]+(?:\{[^}]*\})?|\([^)]+\)|[^{}()\s]+)\^([a-zA-Z0-9]+(?:\{[^}]*\})?|\([^)]+\)|[^{}()\s]+)/g, '$1^{$2^{$3}}');
-    latex = latex.replace(/([a-zA-Z0-9_]+(?:\([^)]*\))?|\([^)]+\))\^([a-zA-Z0-9_]+(?:\{[^}]*\})?|\([^)]+\)|[^{}()\s]+)/g, '$1^{$2}');
+    // Cleanup parens inside fractions if they were just wrappers for the division
+    // e.g. \frac{(a+b)}{(c)} -> \frac{a+b}{c} (optional, strictly speaking { (a) } is valid latex)
 
-    // Subscripts: x_1, x_{ab}
-    latex = latex.replace(/([a-zA-Z0-9]+)_([a-zA-Z0-9]+|\{[^}]*\})/g, '$1_{$2}');
+    // 2. Exponents: val^val
+    latex = latex.replace(/([a-zA-Z0-9]+)\s*\^\s*([a-zA-Z0-9]+)/g, '$1^{$2}');
 
-    // Common functions (sin, cos, sqrt, abs, etc.)
-    const functions = ['sin', 'cos', 'tan', 'log', 'ln', 'sqrt', 'abs'];
-    functions.forEach(func => {
-      // Handles func(expression) -> \func{expression}
-      const funcRegex = new RegExp(`\\b${func}\\s*\\(([^)]*)\\)`, 'g');
-      latex = latex.replace(funcRegex, `\\${func}{$1}`);
-      // Handles \funcName (already LaTeX) - keep it as is but ensure it displays
-      const alreadyLatexFuncRegex = new RegExp(`\\\\${func}`, 'g');
-      if (!alreadyLatexFuncRegex.test(latex)){
-         // Handles func without parens if it's a known keyword like pi, not for sqrt/abs that need args
-         if (func !== 'sqrt' && func !== 'abs') {
-            const keywordRegex = new RegExp(`(?<!\\\\)${func}(?!\\w)`, 'g');
-            latex = latex.replace(keywordRegex, `\\${func}`);
-         }
-      }
-    });
-    
-    // Pi
-    latex = latex.replace(/(?<!\\\\)\bpi\b/g, '\\pi');
-
-    // Common greek letters
-    const greekMap = {
-      alpha: '\\alpha',
-      beta: '\\beta',
-      gamma: '\\gamma',
-      delta: '\\delta',
-      theta: '\\theta',
-      lambda: '\\lambda',
-      mu: '\\mu',
-      sigma: '\\sigma',
-      omega: '\\omega'
+    // 3. Greek Letters & Constants
+    const map = {
+      'alpha': '\\alpha', 'beta': '\\beta', 'gamma': '\\gamma', 'delta': '\\delta',
+      'theta': '\\theta', 'pi': '\\pi', 'sigma': '\\sigma', 'omega': '\\omega',
+      'lambda': '\\lambda', 'mu': '\\mu', 'phi': '\\phi', 'infinity': '\\infty', 'inf': '\\infty'
     };
-    Object.entries(greekMap).forEach(([word, cmd]) => {
-      const regex = new RegExp(`(?<!\\\\)\\b${word}\\b`, 'gi');
-      latex = latex.replace(regex, cmd);
+
+    // Replace whole words only
+    Object.keys(map).forEach(key => {
+      const regex = new RegExp(`(?<!\\\\)\\b${key}\\b`, 'g'); // negative lookbehind to avoid replacing already latex'd cmds
+      latex = latex.replace(regex, map[key]);
     });
 
-    // Comparisons
-    latex = latex.replace(/\s*(>=|=>)\s*/g, ' \\geq ');
-    latex = latex.replace(/\s*(<=|=<)\s*/g, ' \\leq ');
-    // Ensure simple > and < are spaced, but don't convert to \gt or \lt unless necessary for complex HTML/XML contexts
-    latex = latex.replace(/\s*<\s*/g, ' < ');
-    latex = latex.replace(/\s*>\s*/g, ' > ');
+    // 4. Functions
+    // sqrt(x) -> \sqrt{x}, allowing space like sqrt (x)
+    latex = latex.replace(/sqrt\s*\(([^)]+)\)/g, '\\sqrt{$1}');
+    // sin(x) -> \sin(x), etc.
+    const funcs = ['sin', 'cos', 'tan', 'log', 'ln', 'lim'];
+    funcs.forEach(fn => {
+      // Look for function name followed by optional space and optional paren
+      // matching "sin " or "sin(" but not "sink"
+      const regex = new RegExp(`\\b${fn}(?![a-zA-Z])`, 'g');
+      latex = latex.replace(regex, `\\${fn}`);
+    });
 
-    // Multiplication
-    latex = latex.replace(/\s*\*\s*/g, ' \\cdot ');
+    // 5. Operators
+    latex = latex.replace(/<=\s*/g, '\\leq ');
+    latex = latex.replace(/>=\s*/g, '\\geq ');
+    latex = latex.replace(/!=\s*/g, '\\neq ');
+    // latex = latex.replace(/\*/g, '\\cdot'); // Optional: * to dot, might be annoying if user wants *
 
-    return latex.trim();
-  }, []);
+    return latex;
+  };
 
   useEffect(() => {
-    const converted = convertToLatex(userInput);
-    setLatexOutput(converted);
-  }, [userInput, convertToLatex]);
+    setLatexOutput(convertToLatex(userInput));
+  }, [userInput]);
 
-  const insertText = (textToInsert, moveCursor = 0) => {
-    if (textAreaRef.current) {
-      textAreaRef.current.focus(); // Ensure focus before reading selection properties
-      
-      const start = textAreaRef.current.selectionStart;
-      const end = textAreaRef.current.selectionEnd;
-      const currentText = textAreaRef.current.value; // Use current value from textarea
-      
-      const before = currentText.substring(0, start);
-      const after = currentText.substring(end, currentText.length);
-      
-      const newText = before + textToInsert + after;
-      setUserInput(newText);
+  const insertText = (text, cursorOffset = 0) => {
+    if (!textAreaRef.current) return;
 
-      const newCursorPos = start + textToInsert.length + moveCursor;
-      
-      setTimeout(() => {
-        if (textAreaRef.current) { // Re-check ref in case component unmounted quickly
-          textAreaRef.current.focus();
-          textAreaRef.current.setSelectionRange(newCursorPos, newCursorPos);
-        }
-      }, 0);
-    }
+    const input = textAreaRef.current;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const currentVal = input.value;
+
+    // Handle $0 placeholder
+    const hasPlaceholder = text.includes('$0');
+    const actualText = hasPlaceholder ? text.replace('$0', '') : text;
+
+    const newVal = currentVal.substring(0, start) + actualText + currentVal.substring(end);
+    setUserInput(newVal);
+
+    // Calculate cursor position
+    const newPos = hasPlaceholder
+      ? start + text.indexOf('$0')
+      : start + actualText.length + cursorOffset;
+
+    setTimeout(() => {
+      input.focus();
+      input.setSelectionRange(newPos, newPos);
+    }, 0);
   };
 
-  // Button configurations
-  const symbolButtons = [
-    { label: 'x', insert: 'x' }, { label: 'y', insert: 'y' }, 
-    { label: 'a²', insert: 'a^2', isLatexLabel: true }, { label: 'aᵇ', insert: 'a^b', isLatexLabel: true },
-    { label: '(', insert: '(' }, { label: ')', insert: ')' },
-    { label: '<', insert: ' < ' }, { label: '>', insert: ' > ' },
-    { label: '|a|', insert: 'abs()', moveCursor: -1 }, { label: ',', insert: ', ' }, // move cursor inside abs()
-    { label: '≤', insert: ' <= ' }, { label: '≥', insert: ' >= ' },
-    { label: '√', insert: 'sqrt()', moveCursor: -1 }, { label: 'π', insert: 'pi' }, // move cursor inside sqrt()
-    // Add more buttons as needed, for example:
-    // { label: '/', insert: '/' }, { label: '+', insert: '+' }, { label: '-', insert: '-' }, { label: '', insert: ''}
-  ];
-
-  const handleSubmit = () => {
-    onSubmit(latexOutput);
-    setUserInput(''); // Clear input for next use
-    setLatexOutput('');
-    onClose();
+  // Modified symbol maps for "Natural" typing
+  const insertMap = {
+    // Basic
+    '+': '+', '-': '-', '×': '*', '÷': '/', '=': '=', '≠': '!=', '±': '\\pm',
+    '( )': '($0)', '[ ]': '[$0]', '{ }': '{$0}',
+    'x/y': '($0)/()', // Encourages fraction format
+    'x²': '^2', '√': 'sqrt($0)', '∞': 'infinity',
+    // Greek
+    'α': 'alpha', 'β': 'beta', 'γ': 'gamma', 'δ': 'delta', 'Δ': '\\Delta',
+    'θ': 'theta', 'λ': 'lambda', 'μ': 'mu', 'π': 'pi', 'σ': 'sigma',
+    'Σ': '\\Sigma', 'φ': 'phi', 'ω': 'omega', 'Ω': '\\Omega',
+    // Relations
+    '<': '<', '>': '>', '≤': '<=', '≥': '>=', '∈': '\\in', '∉': '\\notin',
+    '⊂': '\\subset', '⊃': '\\supset', '≈': '\\approx', '≡': '\\equiv',
+    '∀': '\\forall', '∃': '\\exists',
+    // Calculus
+    '∫': '\\int', '∫ab': '\\int_{a}^{b}', '∑': '\\sum', '∂': '\\partial',
+    'lim': 'lim', 'dy/dx': '\\frac{dy}{dx}', '∇': '\\nabla', '→': '\\to',
+    'sin': 'sin($0)', 'cos': 'cos($0)', 'tan': 'tan($0)',
+    'log': 'log($0)', 'ln': 'ln($0)',
+    // Arrows
+    '←': '\\leftarrow', '↔': '\\leftrightarrow',
+    '⇐': '\\Leftarrow', '⇒': '\\Rightarrow', '⇔': '\\Leftrightarrow',
+    '↑': '\\uparrow', '↓': '\\downarrow'
   };
 
-  const handleCancel = () => {
-    setUserInput(''); // Clear input on cancel
-    setLatexOutput('');
-    onClose();
+  const getInsertValue = (symbolObj) => {
+    // Use the mapping if available, otherwise fallback to the label or existing insert
+    if (insertMap[symbolObj.label]) return insertMap[symbolObj.label];
+    // Some complex symbols might still need direct latex if natural parsing is too hard
+    return symbolObj.insert;
   };
+
+  if (!isOpen) return null;
 
   return (
-    <EquationContainer $isOpen={isOpen} $otherPanelsOpen={otherPanelsOpen}>
-      <Header>
-        <Title>Equation Editor</Title>
-        <CloseButton onClick={onClose}>
-          {theme?.name === 'retro' ? '✕' : '×'}
-        </CloseButton>
-      </Header>
-      
-      <ContentArea>
-        <SymbolPanel theme={theme}>
-          {symbolButtons.map((btn, index) => (
-            <SymbolButton 
-              theme={theme} 
-              key={index} 
-              onClick={() => insertText(btn.insert, btn.moveCursor)}
-              type="button" // Prevent form submission
-            >
-              {/* If we want to render LaTeX on buttons eventually: */}
-              {/* btn.isLatexLabel ? <Latex>{`$${btn.label}$`}</Latex> : btn.label */}
-              {btn.label} 
-            </SymbolButton>
-          ))}
-        </SymbolPanel>
-        <TextArea
-          ref={textAreaRef}
-          theme={theme}
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          placeholder="Type math or use buttons: 1/2 + x^2, sqrt(pi)"
-        />
-        <PreviewArea theme={theme}>
-          {latexOutput.trim() ? (
-            <ReactKatex displayMode={true}>{`$$${latexOutput}$$`}</ReactKatex>
-          ) : (
-            <p style={{ opacity: 0.6 }}>Preview will appear here...</p>
-          )}
-        </PreviewArea>
-      </ContentArea>
-      
-      <ButtonContainer>
-        <Button onClick={handleCancel}>Cancel</Button>
-        <Button $primary onClick={handleSubmit} disabled={!latexOutput.trim()}>Done</Button>
-      </ButtonContainer>
-    </EquationContainer>
+    <ModalOverlay onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <ModalContent theme={theme}>
+        <ModalHeader theme={theme}>
+          <ModalTitle>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 18h16M4 6h16M9 12h6" />
+            </svg>
+            Equation Editor
+          </ModalTitle>
+          <CloseButton onClick={onClose} theme={theme}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </CloseButton>
+        </ModalHeader>
+
+        <MainLayout>
+          <Sidebar theme={theme}>
+            <CategoryTabs theme={theme}>
+              {Object.entries(SYMBOL_CATEGORIES).map(([key, category]) => (
+                <CategoryTab
+                  key={key}
+                  theme={theme}
+                  $active={activeCategory === key}
+                  onClick={() => setActiveCategory(key)}
+                >
+                  {category.label}
+                </CategoryTab>
+              ))}
+            </CategoryTabs>
+            <SymbolGrid>
+              {SYMBOL_CATEGORIES[activeCategory].symbols.map((symbol, idx) => (
+                <SymbolBtn
+                  key={idx}
+                  theme={theme}
+                  onClick={() => insertText(getInsertValue(symbol))}
+                  title={symbol.label}
+                >
+                  {symbol.label}
+                </SymbolBtn>
+              ))}
+            </SymbolGrid>
+          </Sidebar>
+
+          <EditorArea>
+            <PreviewSection theme={theme}>
+              <PreviewContainer theme={theme}>
+                {latexOutput ? (
+                  <ReactKatex key={latexOutput} displayMode={true} errorColor={'#cc0000'}>{latexOutput}</ReactKatex>
+                ) : (
+                  <div style={{ opacity: 0.3, fontSize: '1rem', fontStyle: 'italic' }}>
+                    Type math naturally... (e.g. "1/2", "sqrt(x)", "alpha")
+                  </div>
+                )}
+              </PreviewContainer>
+            </PreviewSection>
+
+            <InputSection theme={theme}>
+              <TextArea
+                ref={textAreaRef}
+                theme={theme}
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                placeholder="Type math here... e.g. 'x^2 + y^2 = r^2' or '1/2'"
+                spellCheck={false}
+              />
+              <div style={{ fontSize: '0.8rem', opacity: 0.6, textAlign: 'right', marginTop: '5px' }}>
+                Typing: "{userInput}" → Renders as LaTeX
+              </div>
+            </InputSection>
+          </EditorArea>
+        </MainLayout>
+
+        <Footer theme={theme}>
+          <ActionButton theme={theme} onClick={onClose}>
+            Cancel
+          </ActionButton>
+          <ActionButton
+            theme={theme}
+            $primary
+            onClick={() => onSubmit(latexOutput)}
+            disabled={!latexOutput.trim()}
+          >
+            Insert Equation
+          </ActionButton>
+        </Footer>
+      </ModalContent>
+    </ModalOverlay>
   );
 };
 
-export default EquationEditorModal; 
+export default EquationEditorModal;

@@ -1,455 +1,465 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 
-const GraphingContainer = styled.div`
+const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
-  right: ${props => props.$otherPanelsOpen * 450}px;
-  width: 600px; /* Wider for graph */
-  height: 100vh;
-  background: ${props => props.theme.background};
-  z-index: 1002;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
-  flex-direction: column;
-  box-shadow: -3px 0 10px rgba(0, 0, 0, 0.15);
-  border-left: 1px solid ${props => props.theme.border};
-  transform: ${props => props.$isOpen ? 'translateX(0%)' : 'translateX(100%)'};
+  align-items: center;
+  justify-content: center;
+  z-index: 1050;
+  opacity: ${props => props.$isOpen ? 1 : 0};
   visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
-  transition: transform 0.3s ease-in-out, visibility 0.3s ease-in-out;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
 `;
 
-const Header = styled.div`
+const GraphingContainer = styled.div`
+  background: ${props => props.theme.background};
+  border-radius: 20px;
+  width: 95vw;
+  height: 90vh;
+  max-width: 1600px;
+  max-height: 1000px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  border: 1px solid ${props => props.theme.border};
+  overflow: hidden;
+  position: relative;
+  transform: ${props => props.$isOpen ? 'scale(1)' : 'scale(0.95)'};
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+`;
+
+const Sidebar = styled.div`
+  width: 350px;
+  background: ${props => props.theme.sidebar};
+  border-right: 1px solid ${props => props.theme.border};
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  backdrop-filter: blur(20px);
+  min-width: 300px;
+`;
+
+const SidebarHeader = styled.div`
+  padding: 20px 24px;
   border-bottom: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : '#f7f7f7'};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 `;
 
 const Title = styled.h2`
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
+  font-weight: 600;
+  background: linear-gradient(135deg, ${props => props.theme.primary}, ${props => props.theme.secondary});
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent; /* Use gradient text */
+  /* Fallback color if gradient fails or theme missing */
+  text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+`;
+
+const TitleText = styled.span`
   color: ${props => props.theme.text};
-  font-family: ${props => props.theme.name === 'retro' ? 'MS Sans Serif, sans-serif' : 'inherit'};
-`;
-
-const CloseButton = styled.button`
-  background: transparent;
-  border: none;
-  color: ${props => props.theme.text};
-  padding: 8px;
-  cursor: pointer;
-  font-size: 24px;
-  border-radius: 4px;
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const ContentArea = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  height: 100%;
-`;
-
-const GraphCanvas = styled.canvas`
-  flex: 1;
-  background: white;
-  cursor: crosshair;
-  min-height: 0; /* Important for flexbox to allow shrinking */
-`;
-
-const EquationPanel = styled.div`
-  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : '#f7f7f7'};
-  border-bottom: 1px solid ${props => props.theme.border};
-  display: flex;
-  flex-direction: column;
-  max-height: 40vh; /* Use viewport height instead of fixed pixels */
-  min-height: 120px; /* Ensure minimum space for at least 2-3 equations */
-  overflow: hidden; /* Hide overflow on the panel itself */
-  
-  @media (max-height: 700px) {
-    max-height: 35vh;
-    min-height: 100px;
-  }
-  
-  @media (max-height: 500px) {
-    max-height: 30vh;
-    min-height: 80px;
-  }
 `;
 
 const EquationList = styled.div`
   flex: 1;
-  padding: 8px;
   overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0; /* Important for flexbox */
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 `;
 
 const EquationItem = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: ${props => props.$active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
-  border-radius: 6px;
-  margin-bottom: 4px;
-  min-height: 36px; /* Ensure minimum height for each item */
-  flex-shrink: 0; /* Prevent items from shrinking */
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.05);
-  }
-  
-  &:last-child {
-    margin-bottom: 0;
+  gap: 12px;
+  padding: 12px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.$active ? props.theme.border : 'transparent'};
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  box-shadow: ${props => props.$active ? '0 4px 12px rgba(0,0,0,0.05)' : 'none'};
+
+  &:focus-within {
+    border-color: ${props => props.theme.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.primary}20;
   }
 `;
 
-const ColorDot = styled.div`
-  width: 20px;
-  height: 20px;
-  min-width: 20px; /* Prevent shrinking */
-  min-height: 20px; /* Prevent shrinking */
+const ColorIndicator = styled.button`
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: ${props => props.$color};
+  background: ${props => props.$visible ? props.$color : 'transparent'};
+  border: 2px solid ${props => props.$color};
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.1s ease;
-  
+  transition: all 0.2s ease;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60%;
+    height: 60%;
+    background: ${props => props.$visible ? 'white' : props.$color};
+    border-radius: 50%;
+    opacity: ${props => props.$visible ? 0.3 : 0};
+    transition: opacity 0.2s;
+  }
+
   &:hover {
     transform: scale(1.1);
   }
 `;
 
-const EquationInput = styled.input`
+const InputWrapper = styled.div`
   flex: 1;
-  background: white;
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
-  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const StyledInput = styled.input`
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 16px;
   color: ${props => props.theme.text};
-  width: 100%; /* Use full available width */
-  min-width: 0; /* Allow shrinking on small screens */
-  
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.primary};
-  }
+  outline: none;
   
   &::placeholder {
-    color: #999;
+    color: ${props => props.theme.text}40;
+  }
+`;
+
+const DeleteButton = styled.button`
+  background: transparent;
+  border: none;
+  color: ${props => props.theme.text}60;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+
+  ${EquationItem}:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
   }
 `;
 
 const AddButton = styled.button`
-  margin: 0;
-  padding: 8px 16px;
-  background: ${props => props.theme.primary};
-  color: white;
-  border: none;
-  border-radius: 6px;
+  margin-top: 8px;
+  padding: 12px;
+  background: transparent;
+  border: 1px dashed ${props => props.theme.border};
+  border-radius: 12px;
+  color: ${props => props.theme.text}80;
   cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  
+  font-weight: 500;
+  transition: all 0.2s;
+
   &:hover {
-    background: ${props => props.theme.primaryDark};
+    border-color: ${props => props.theme.primary};
+    color: ${props => props.theme.primary};
+    background: ${props => props.theme.primary}10;
   }
 `;
 
-const AxisLabel = styled.text`
-  font-size: 14px;
-  fill: #666;
-  font-family: Arial, sans-serif;
+const CanvasArea = styled.div`
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: white; /* Graph paper usually white */
+  cursor: crosshair;
 `;
 
-const GridLine = styled.line`
-  stroke: #e0e0e0;
-  stroke-width: 0.5;
-`;
-
-const AxisLine = styled.line`
-  stroke: #333;
-  stroke-width: 1.5;
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  gap: 8px;
-  padding: 8px;
-  border-top: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : '#f0f0f0'};
-`;
-
-const DeleteButton = styled.button`
-  background: none;
-  border: none;
-  color: #999;
-  cursor: pointer;
-  font-size: 18px;
-  padding: 4px 8px;
-  min-width: 30px;
-  height: 30px;
+const CloseButton = styled.button`
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  color: ${props => props.theme.text};
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  flex-shrink: 0;
-  
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s;
+  font-size: 24px;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
   &:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: #666;
+    background: ${props => props.theme.border};
+    transform: rotate(90deg);
   }
 `;
 
-const GraphingModal = ({ isOpen, onClose, theme, otherPanelsOpen = 0 }) => {
+const ControlsOverlay = styled.div`
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+`;
+
+const ControlButton = styled.button`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid #e0e0e0;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  }
+`;
+
+const GraphingModal = ({ isOpen, onClose, theme }) => {
   const canvasRef = useRef(null);
-  const equationListRef = useRef(null);
   const [items, setItems] = useState([
-    { id: 1, type: 'equation', expression: '', color: '#c74440', active: true }
-  ]); // Start with one empty equation input
-  const [scale, setScale] = useState(50); // pixels per unit
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+    { id: 1, type: 'equation', expression: 'y = sin(x)', color: '#c74440', visible: true },
+    { id: 2, type: 'equation', expression: 'y = x^2 / 10', color: '#2d70b3', visible: true }
+  ]);
+  const [scale, setScale] = useState(40); // pixels per scal unit
+  const [offset, setOffset] = useState({ x: 0, y: 0 }); // center offset
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [initialOffset, setInitialOffset] = useState({ x: 0, y: 0 }); // offset at start of drag
 
   const colors = ['#c74440', '#2d70b3', '#388c46', '#e68d39', '#9147b1', '#47a5a5'];
 
+  // Initialize Canvas Size
   useEffect(() => {
-    if (!isOpen || !canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = rect.height + 'px';
-      
-      const ctx = canvas.getContext('2d');
-      ctx.scale(dpr, dpr);
-      
-      setCanvasSize({ width: rect.width, height: rect.height });
-    };
-    
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+    if (isOpen && canvasRef.current) {
+      const resizeCanvas = () => {
+        const canvas = canvasRef.current;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+
+        canvas.style.width = `${rect.width}px`;
+        canvas.style.height = `${rect.height}px`;
+
+        requestAnimationFrame(drawGraph);
+      };
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      return () => window.removeEventListener('resize', resizeCanvas);
+    }
   }, [isOpen]);
 
+  // Redraw when dependencies change
   useEffect(() => {
-    if (!isOpen || !canvasRef.current || canvasSize.width === 0) return;
-    drawGraph();
-  }, [isOpen, items, scale, offset, canvasSize]);
+    requestAnimationFrame(drawGraph);
+  }, [items, scale, offset, isOpen]);
 
-  // Auto-scroll to bottom when new items are added
-  useEffect(() => {
-    if (equationListRef.current && items.length > 1) {
-      // Small delay to ensure DOM has updated
-      setTimeout(() => {
-        equationListRef.current.scrollTop = equationListRef.current.scrollHeight;
-      }, 100);
-    }
-  }, [items.length]);
 
   const drawGraph = () => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const { width, height } = canvasSize;
-    
-    // Clear canvas
+
+    // Use layout size for calculations to match CSS pixels
+    const width = parseFloat(canvas.style.width);
+    const height = parseFloat(canvas.style.height);
+
+    // Clear
     ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, width, height);
-    
-    // Calculate center
+
+    // Grid Settings
     const centerX = width / 2 + offset.x;
     const centerY = height / 2 + offset.y;
-    
-    // Draw grid
-    ctx.strokeStyle = '#e0e0e0';
+
+    // --- Draw Grid ---
     ctx.lineWidth = 0.5;
-    
-    // Vertical grid lines
-    for (let x = centerX % scale; x < width; x += scale) {
-      ctx.beginPath();
+    ctx.strokeStyle = '#e0e0e0';
+
+    const gridSize = scale;
+    const startX = centerX % gridSize;
+    const startY = centerY % gridSize;
+
+    // Vertical Lines
+    /*
+      We iterate from left edge (minus some buffer) to right edge.
+      Finding the first grid line: 
+      The center is at `centerX`. Lines are at `centerX + N * scale`.
+      So we find N such that `centerX + N * scale < 0`.
+    */
+
+    ctx.beginPath();
+    for (let x = startX - gridSize; x < width; x += gridSize) {
+      // Simple modulo based grid
+      if (x < 0) continue;
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
-      ctx.stroke();
     }
-    
-    // Horizontal grid lines
-    for (let y = centerY % scale; y < height; y += scale) {
-      ctx.beginPath();
+    // Better grid loop:
+    const minGridX = Math.floor(-centerX / gridSize) - 1;
+    const maxGridX = Math.ceil((width - centerX) / gridSize) + 1;
+
+    for (let i = minGridX; i <= maxGridX; i++) {
+      const x = centerX + i * gridSize;
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+    }
+
+    const minGridY = Math.floor(-centerY / gridSize) - 1;
+    const maxGridY = Math.ceil((height - centerY) / gridSize) + 1;
+
+    for (let i = minGridY; i <= maxGridY; i++) {
+      const y = centerY - i * gridSize;
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
-      ctx.stroke();
     }
-    
-    // Draw axes
+    ctx.stroke();
+
+    // --- Draw Axes ---
+    ctx.lineWidth = 2;
     ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1.5;
-    
-    // X-axis
     ctx.beginPath();
+    // X Axis
     ctx.moveTo(0, centerY);
     ctx.lineTo(width, centerY);
-    ctx.stroke();
-    
-    // Y-axis
-    ctx.beginPath();
+    // Y Axis
     ctx.moveTo(centerX, 0);
     ctx.lineTo(centerX, height);
     ctx.stroke();
-    
-    // Draw axis labels
-    ctx.fillStyle = '#666';
-    ctx.font = '12px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    
-    // X-axis labels
-    for (let i = Math.floor(-centerX / scale); i <= Math.floor((width - centerX) / scale); i++) {
-      if (i !== 0) {
-        const x = centerX + i * scale;
-        ctx.fillText(i.toString(), x, centerY + 5);
-      }
-    }
-    
-    // Y-axis labels
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    for (let i = Math.floor(-centerY / scale); i <= Math.floor((height - centerY) / scale); i++) {
-      if (i !== 0) {
-        const y = centerY - i * scale;
-        ctx.fillText(i.toString(), centerX - 5, y);
-      }
-    }
-    
-    // Draw items
+
+    // --- Draw Functions ---
     items.forEach(item => {
-      if (!item.active || !item.expression) return;
-      
-      if (item.type === 'equation') {
-        // Draw equation
-        ctx.strokeStyle = item.color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        
-        let firstPoint = true;
-        
-        for (let px = 0; px < width; px++) {
-          const x = (px - centerX) / scale;
-          
-          try {
-            const y = evaluateExpression(item.expression, x);
-            const py = centerY - y * scale;
-            
-            if (!isNaN(y) && isFinite(y) && py >= -100 && py <= height + 100) {
-              if (firstPoint) {
-                ctx.moveTo(px, py);
-                firstPoint = false;
-              } else {
-                ctx.lineTo(px, py);
-              }
-            } else {
-              firstPoint = true;
-            }
-          } catch (e) {
-            // Invalid expression
-            break;
-          }
+      if (!item.visible || !item.expression) return;
+
+      ctx.beginPath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = item.color;
+
+      let first = true;
+      // Optimization: Don't check every pixel if scale is large
+      // Use a step size. 1 pixel is fine for accuracy.
+      for (let px = 0; px < width; px += 1) {
+        const mathX = (px - centerX) / scale;
+        const mathY = evaluateExpression(item.expression, mathX);
+
+        if (isNaN(mathY) || !isFinite(mathY)) {
+          first = true;
+          continue;
         }
-        
-        ctx.stroke();
-      } else if (item.type === 'point') {
-        // Draw point
-        const pointMatch = item.expression.match(/\(\s*(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)\s*\)/);
-        if (pointMatch) {
-          const x = parseFloat(pointMatch[1]);
-          const y = parseFloat(pointMatch[2]);
-          const px = centerX + x * scale;
-          const py = centerY - y * scale;
-          
-          // Draw point circle
-          ctx.fillStyle = item.color;
-          ctx.beginPath();
-          ctx.arc(px, py, 5, 0, Math.PI * 2);
-          ctx.fill();
-          
-          // Draw point border
-          ctx.strokeStyle = 'white';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          
-          // Draw point label
-          ctx.fillStyle = item.color;
-          ctx.font = '12px Arial';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText(`(${x}, ${y})`, px + 8, py - 8);
+
+        const py = centerY - mathY * scale;
+
+        // Clip very large values to avoid bad rendering
+        if (py < -height || py > height * 2) {
+          first = true;
+          continue;
+        }
+
+        if (first) {
+          ctx.moveTo(px, py);
+          first = false;
+        } else {
+          ctx.lineTo(px, py);
         }
       }
+      ctx.stroke();
     });
   };
 
-  // Enhanced expression evaluator
   const evaluateExpression = (expr, x) => {
-    // Handle implicit multiplication (e.g., 2x -> 2*x)
-    let jsExpr = expr.replace(/(\d)([a-zA-Z])/g, '$1*$2');
-    
-    // Replace common functions and constants
-    jsExpr = jsExpr
-      .replace(/\^/g, '**')
-      .replace(/sin/g, 'Math.sin')
-      .replace(/cos/g, 'Math.cos')
-      .replace(/tan/g, 'Math.tan')
-      .replace(/log/g, 'Math.log10')
-      .replace(/ln/g, 'Math.log')
-      .replace(/sqrt/g, 'Math.sqrt')
-      .replace(/abs/g, 'Math.abs')
-      .replace(/pi/g, 'Math.PI')
-      .replace(/e(?![a-zA-Z])/g, 'Math.E');
-    
-    // Use Function constructor for evaluation
     try {
-      const func = new Function('x', `return ${jsExpr}`);
-      return func(x);
+      // Pre-process for convenience
+      // Support standard math notation like 2x instead of 2*x
+      // Replace 'x' with value, handle implicit multiplication
+      let cleanExpr = expr.toLowerCase();
+
+      // Handle common constants and functions
+      // Must perform replacements carefully to avoid sub-string matches
+      // Ideally use a math parser library, but we use a simple regex replacer for now
+
+      // 1. Insert * between a number and a variable (2x -> 2*x)
+      cleanExpr = cleanExpr.replace(/(\d)(x)/g, '$1*$2');
+      // 2. Insert * between number and function (2sin -> 2*sin)
+      cleanExpr = cleanExpr.replace(/(\d)([a-z])/g, '$1*$2');
+      // 3. Insert * between ) and (  ((a)(b) -> (a)*(b))
+      cleanExpr = cleanExpr.replace(/\)\(/g, ')*(');
+
+      // Replace math functions with Math.
+      cleanExpr = cleanExpr
+        .replace(/\^/g, '**')
+        .replace(/\bsin\b/g, 'Math.sin')
+        .replace(/\bcos\b/g, 'Math.cos')
+        .replace(/\btan\b/g, 'Math.tan')
+        .replace(/\blog\b/g, 'Math.log10')
+        .replace(/\bln\b/g, 'Math.log')
+        .replace(/\bsqrt\b/g, 'Math.sqrt')
+        .replace(/\bpi\b/g, 'Math.PI')
+        .replace(/\be\b/g, 'Math.E');
+
+      // Execute safely
+      // Note: Using Function constructor has security implications in general, 
+      // but here it's client-side only and confined to math.
+      const f = new Function('x', `return ${cleanExpr}`);
+      return f(x);
     } catch (e) {
       return NaN;
     }
   };
 
+  // Interactions
   const handleMouseDown = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
     setIsDragging(true);
-    setDragStart({
-      x: e.clientX - rect.left - offset.x,
-      y: e.clientY - rect.top - offset.y
-    });
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setInitialOffset({ ...offset });
   };
 
   const handleMouseMove = (e) => {
     if (!isDragging) return;
-    
-    const rect = canvasRef.current.getBoundingClientRect();
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
     setOffset({
-      x: e.clientX - rect.left - dragStart.x,
-      y: e.clientY - rect.top - dragStart.y
+      x: initialOffset.x + dx,
+      y: initialOffset.y + dy
     });
   };
 
@@ -458,123 +468,87 @@ const GraphingModal = ({ isOpen, onClose, theme, otherPanelsOpen = 0 }) => {
   };
 
   const handleWheel = (e) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setScale(prev => Math.max(10, Math.min(200, prev * delta)));
+    const zoomSensitivity = 0.001;
+    const newScale = Math.max(10, Math.min(1000, scale * (1 - e.deltaY * zoomSensitivity)));
+    setScale(newScale);
   };
 
-  const addEquation = () => {
-    const newId = Math.max(...items.map(item => item.id), 0) + 1;
-    const colorIndex = items.length % colors.length;
+  // Sidebar Actions
+  const addItem = () => {
     setItems([...items, {
-      id: newId,
+      id: Date.now(),
       type: 'equation',
       expression: '',
-      color: colors[colorIndex],
-      active: true
+      color: colors[items.length % colors.length],
+      visible: true
     }]);
   };
 
-  const addPoint = () => {
-    const newId = Math.max(...items.map(item => item.id), 0) + 1;
-    const colorIndex = items.length % colors.length;
-    setItems([...items, {
-      id: newId,
-      type: 'point',
-      expression: '(0, 0)',
-      color: colors[colorIndex],
-      active: true
-    }]);
+  const updateItem = (id, field, value) => {
+    setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
-  const updateItem = (id, expression) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, expression } : item
-    ));
-  };
-
-  const toggleItem = (id) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, active: !item.active } : item
-    ));
-  };
-
-  const deleteItem = (id) => {
+  const removeItem = (id) => {
     setItems(items.filter(item => item.id !== id));
   };
 
-  const getPlaceholder = (item, index) => {
-    if (item.type === 'equation') {
-      // Provide varied examples that cycle through
-      const examples = ['y = x^2', 'y = sin(x)', 'y = 2x + 1', 'y = cos(x)', 'y = 1/x', 'y = sqrt(x)'];
-      return examples[index % examples.length];
-    } else {
-      // Provide example points
-      const pointExamples = ['(0, 0)', '(2, 4)', '(-1, 3)', '(3, -2)'];
-      return pointExamples[index % pointExamples.length];
-    }
+  const centerGraph = () => {
+    setOffset({ x: 0, y: 0 });
+    setScale(40);
   };
 
   return (
-    <GraphingContainer $isOpen={isOpen} $otherPanelsOpen={otherPanelsOpen}>
-      <Header>
-        <Title>Graphing Calculator</Title>
-        <CloseButton onClick={onClose}>×</CloseButton>
-      </Header>
-      
-      <ContentArea>
-        <EquationPanel>
-          <EquationList ref={equationListRef}>
-            {items.map((item, index) => {
-              // Calculate proper index for placeholder based on item type
-              const equationIndex = items.filter((i, idx) => i.type === 'equation' && idx < index).length;
-              const pointIndex = items.filter((i, idx) => i.type === 'point' && idx < index).length;
-              const placeholderIndex = item.type === 'equation' ? equationIndex : pointIndex;
-              
-              return (
-                <EquationItem key={item.id} $active={item.active}>
-                  <ColorDot 
-                    $color={item.color}
-                    onClick={() => toggleItem(item.id)}
-                  />
-                  <EquationInput
-                    type="text"
+    <ModalOverlay $isOpen={isOpen} onClick={onClose}>
+      <GraphingContainer $isOpen={isOpen} onClick={e => e.stopPropagation()}>
+        <Sidebar>
+          <SidebarHeader>
+            <Title>SCULPTOR <TitleText>Graph</TitleText></Title>
+          </SidebarHeader>
+          <EquationList>
+            {items.map(item => (
+              <EquationItem key={item.id} $active={item.visible}>
+                <ColorIndicator
+                  $color={item.color}
+                  $visible={item.visible}
+                  onClick={() => updateItem(item.id, 'visible', !item.visible)}
+                />
+                <InputWrapper>
+                  <StyledInput
                     value={item.expression}
-                    onChange={(e) => updateItem(item.id, e.target.value)}
-                    placeholder={getPlaceholder(item, placeholderIndex)}
-                    autoFocus={index === items.length - 1 && item.expression === ''}
+                    onChange={e => updateItem(item.id, 'expression', e.target.value)}
+                    placeholder="Enter expression..."
                   />
-                  <DeleteButton
-                    onClick={() => deleteItem(item.id)}
-                  >
-                    ×
-                  </DeleteButton>
-                </EquationItem>
-              );
-            })}
+                </InputWrapper>
+                <DeleteButton onClick={() => removeItem(item.id)}>×</DeleteButton>
+              </EquationItem>
+            ))}
+            <AddButton onClick={addItem}>+ Add Expression</AddButton>
           </EquationList>
-          
-          <ButtonContainer>
-            <AddButton onClick={addEquation} style={{ flex: 1 }}>
-              <span>+</span> Equation
-            </AddButton>
-            <AddButton onClick={addPoint} style={{ flex: 1 }}>
-              <span>+</span> Point
-            </AddButton>
-          </ButtonContainer>
-        </EquationPanel>
-        
-        <GraphCanvas
-          ref={canvasRef}
+        </Sidebar>
+
+        <CanvasArea
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
           onWheel={handleWheel}
-        />
-      </ContentArea>
-    </GraphingContainer>
+        >
+          <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+
+          <CloseButton onClick={onClose}>×</CloseButton>
+
+          <ControlsOverlay>
+            <ControlButton onClick={centerGraph} title="Reset View">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M12 3v18M19 12a7 7 0 0 1-7 7 7 7 0 0 1 0-14 7 7 0 0 1 7 7z" /></svg>
+            </ControlButton>
+            <ControlButton onClick={() => setScale(s => s * 1.2)} title="Zoom In">+</ControlButton>
+            <ControlButton onClick={() => setScale(s => s / 1.2)} title="Zoom Out">-</ControlButton>
+          </ControlsOverlay>
+        </CanvasArea>
+
+      </GraphingContainer>
+    </ModalOverlay>
   );
 };
 
-export default GraphingModal; 
+export default GraphingModal;
