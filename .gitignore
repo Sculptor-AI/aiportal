@@ -1,0 +1,69 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Testing / coverage
+coverage
+.nyc_output
+
+# Build outputs
+dist
+dist-ssr
+frontend/dist
+backend/dist
+*.local
+.cache
+.parcel-cache
+.vite
+.turbo
+.next
+out
+.svelte-kit
+.serverless
+.vercel
+.netlify
+
+# Dependency directories
+node_modules
+.pnp
+.pnp.*
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+*.env
+*.env.*
+
+# Wrangler / Cloudflare
+.wrangler
+.wrangler-state
+.dev.vars
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Model artifacts
+APIService/models/ursa_minor-q8_0.gguf
+APIService/models/Ursa_Minor.Q2_K.gguf

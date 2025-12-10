@@ -1,0 +1,17 @@
+{
+  "name": "aiportal-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "cd ../frontend && npm run build && cp -r dist ../backend/"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.19.1"
+  }
+}
+
