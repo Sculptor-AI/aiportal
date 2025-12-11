@@ -254,6 +254,13 @@ const ChatInputArea = forwardRef(({
   };
 
   const handleKeyDown = (event) => {
+    // Always allow sending with Ctrl+Enter or Cmd+Enter
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      handleInternalSubmit();
+      return;
+    }
+
     if (settings.sendWithEnter && event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleInternalSubmit();
