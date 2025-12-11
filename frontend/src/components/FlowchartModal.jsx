@@ -262,14 +262,7 @@ const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, aiFlowchartData }) =
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
-  // Initialize
-  useEffect(() => {
-    if (nodes.length === 0) {
-      setNodes([
-        { id: '1', type: 'input', data: { label: 'Start Node' }, position: { x: 250, y: 50 } },
-      ]);
-    }
-  }, []);
+  // Initialize - removed auto-creation of Start Node
 
   // Update node helpers
   const onNodeLabelChange = useCallback((id, newLabel) => {
