@@ -21,33 +21,50 @@ const OnboardingContainer = styled.div`
   border-radius: 20px;
   width: 90%;
   max-width: 1200px;
-  height: 80vh;
-  max-height: 700px;
+  height: auto;
+  min-height: 60vh;
+  max-height: 90vh;
   display: flex;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     width: 95%;
     height: 90vh;
     border-radius: 16px;
     flex-direction: column;
+    overflow-y: auto;
   }
 `;
 
 const LeftPanel = styled.div`
   flex: 1;
-  padding: 20px 40px;
+  padding: 40px;
   background: ${props => props.theme.sidebar};
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
+  overflow-y: auto;
   
-  @media (max-width: 768px) {
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border};
+    border-radius: 4px;
+  }
+
+  @media (max-width: 900px) {
     flex: 1;
-    padding: 15px 20px;
-    min-height: 60vh;
+    padding: 20px;
+    min-height: auto;
+    width: 100%;
+    overflow-y: visible; /* Let container handle scroll on mobile if needed, or keep auto */
   }
 `;
 
@@ -61,9 +78,14 @@ const RightPanel = styled.div`
   position: relative;
   overflow: hidden;
   
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     padding: 20px;
-    min-height: 30vh;
+    min-height: 300px;
+    display: none; /* Hide preview on smaller screens to save space or make it toggleable? 
+                     User said "fits smaller screens like laptops", so maybe just stacking is enough.
+                     Let's keep it visible but allow stacking. */
+    display: flex;
+    flex: 0 0 300px; /* Fixed height for preview on mobile */
   }
 `;
 
@@ -75,7 +97,7 @@ const WelcomeTitle = styled.h1`
   text-align: center;
   color: ${props => props.theme.text};
   
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     font-size: 2rem;
     margin-bottom: 8px;
     margin-top: 8px;
@@ -135,7 +157,7 @@ const OptionGrid = styled.div`
   width: 100%;
   max-width: 600px;
   
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
     gap: 12px;
     max-width: 100%;
@@ -146,7 +168,7 @@ const OptionGrid = styled.div`
     gap: 12px;
     max-width: 400px;
     
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       max-width: 300px;
@@ -449,9 +471,9 @@ const PreviewMessage = styled.div`
   border-radius: 16px;
   background: ${props => props.theme.messageAi};
   color: ${props => props.theme.text};
-  font-size: ${props => 
-    props.$fontSize === 'small' ? '0.9rem' : 
-    props.$fontSize === 'large' ? '1.1rem' : '1rem'
+  font-size: ${props =>
+    props.$fontSize === 'small' ? '0.9rem' :
+      props.$fontSize === 'large' ? '1.1rem' : '1rem'
   };
   margin-bottom: 12px;
 `;
@@ -462,9 +484,9 @@ const PreviewInput = styled.div`
   background: ${props => props.theme.inputBackground || props.theme.background};
   border: 1px solid ${props => props.theme.border};
   color: ${props => props.theme.text}80;
-  font-size: ${props => 
-    props.$fontSize === 'small' ? '0.9rem' : 
-    props.$fontSize === 'large' ? '1.1rem' : '1rem'
+  font-size: ${props =>
+    props.$fontSize === 'small' ? '0.9rem' :
+      props.$fontSize === 'large' ? '1.1rem' : '1rem'
   };
 `;
 
@@ -556,17 +578,17 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
               <WelcomeTitle theme={currentTheme}>Welcome to Sculptor!</WelcomeTitle>
             </>
           )}
-          
+
           <StepIndicator>
             {steps.map((_, index) => (
-              <StepDot 
-                key={index} 
+              <StepDot
+                key={index}
                 $active={index <= currentStep}
                 theme={currentTheme}
               />
             ))}
           </StepIndicator>
-          
+
           <StepContent>
             <StepTitle theme={currentTheme}>
               {steps[currentStep].title}
@@ -574,7 +596,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
             <StepDescription theme={currentTheme}>
               {steps[currentStep].description}
             </StepDescription>
-            
+
             <OptionGrid className={currentStep === 0 ? 'theme-grid' : ''}>
               {steps[currentStep].options.map((option) => (
                 <OptionCard
@@ -591,7 +613,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
                   ) : option.indicator ? (
                     <SidebarIndicator>
                       <span>{option.label}</span>
-                      <IndicatorSquare 
+                      <IndicatorSquare
                         className={option.id}
                         theme={currentTheme}
                       />
@@ -608,10 +630,10 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
               ))}
             </OptionGrid>
           </StepContent>
-          
+
           <NavigationButtons>
-            <NavButton 
-              className="secondary" 
+            <NavButton
+              className="secondary"
               onClick={handleSkip}
               theme={currentTheme}
             >
@@ -619,8 +641,8 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
             </NavButton>
             <div>
               {currentStep > 0 && (
-                <NavButton 
-                  className="secondary" 
+                <NavButton
+                  className="secondary"
                   onClick={handleBack}
                   theme={currentTheme}
                   style={{ marginRight: '12px' }}
@@ -628,8 +650,8 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
                   Back
                 </NavButton>
               )}
-              <NavButton 
-                className="primary" 
+              <NavButton
+                className="primary"
                 onClick={handleNext}
                 theme={currentTheme}
               >
@@ -638,7 +660,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
             </div>
           </NavigationButtons>
         </LeftPanel>
-        
+
         <RightPanel theme={currentTheme}>
           <PreviewContainer theme={currentTheme} $sidebarStyle={selections.sidebarStyle}>
             <PreviewSidebar theme={currentTheme} $sidebarStyle={selections.sidebarStyle}>
@@ -646,7 +668,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
               <PreviewSidebarItem theme={currentTheme}>⚙️</PreviewSidebarItem>
               <PreviewSidebarItem theme={currentTheme}>📁</PreviewSidebarItem>
             </PreviewSidebar>
-            
+
             <PreviewMain theme={currentTheme} $sidebarStyle={selections.sidebarStyle}>
               <PreviewHeader theme={currentTheme}>
                 <PreviewAvatar theme={currentTheme}>AI</PreviewAvatar>
@@ -655,15 +677,15 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
                   <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Online</div>
                 </div>
               </PreviewHeader>
-              
-              <PreviewMessage 
+
+              <PreviewMessage
                 theme={currentTheme}
                 $fontSize={selections.fontSize}
               >
                 Hi! Welcome to SculptorAI!
               </PreviewMessage>
-              
-              <PreviewInput 
+
+              <PreviewInput
                 theme={currentTheme}
                 $fontSize={selections.fontSize}
               >

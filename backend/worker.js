@@ -633,6 +633,7 @@ async function handleGeminiChat(c, body, apiKey) {
   };
 
   const targetModel = modelMap[body.model] || modelMap['default'];
+  console.log(`Routing model ${body.model} to Google API (target: ${targetModel})`);
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:streamGenerateContent?key=${apiKey}`;
 
   // Convert OpenAI messages to Gemini format
@@ -938,7 +939,10 @@ app.get('*', async (c) => {
   }
 
   // For all other requests, serve index.html to handle client-side routing
-  return env.ASSETS.fetch(`${url.origin}/index.html`);
+  if (env.ASSETS) {
+    return env.ASSETS.fetch(`${url.origin}/index.html`);
+  }
+  return c.text('Backend is running. API endpoints are available at /api/*', 200);
 });
 
 // ============================================

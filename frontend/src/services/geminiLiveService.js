@@ -1,6 +1,6 @@
 class GeminiLiveService {
   constructor() {
-    this.baseUrl = 'https://api.sculptorai.org/api/v1/live-audio';
+    this.baseUrl = (import.meta.env.VITE_BACKEND_API_URL || 'https://api.sculptorai.org') + '/api/v1/live-audio';
     this.apiKey = null;
     this.sessionId = null;
     this.isConnected = false;
@@ -15,7 +15,7 @@ class GeminiLiveService {
   // Connect using REST API instead of WebSocket
   async connect(apiKey = null) {
     console.log('GeminiLiveService.connect() called');
-    
+
     if (this.isConnected) {
       console.log('Already connected, skipping connection attempt');
       return;
@@ -54,7 +54,7 @@ class GeminiLiveService {
     // Store the API key for future requests
     this.apiKey = apiKey;
     console.log('Using API key:', apiKey ? apiKey.substring(0, 10) + '...' : 'null');
-    
+
     if (!this.apiKey) {
       const error = 'API key is required for live audio service. Please log in to access this feature.';
       console.error('Connection failed:', error);
@@ -64,7 +64,7 @@ class GeminiLiveService {
 
     try {
       console.log('Testing connection to:', `${this.baseUrl}/sessions`);
-      
+
       // Test connection to the API
       const response = await fetch(`${this.baseUrl}/sessions`, {
         method: 'GET',
@@ -123,7 +123,7 @@ class GeminiLiveService {
     if (this.isConnected) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
-    
+
     if (!this.isConnected) {
       throw new Error('Not connected to live audio server');
     }
@@ -143,7 +143,7 @@ class GeminiLiveService {
 
     try {
       console.log('🚀 Starting live audio session with backend...', startMessage);
-      
+
       const response = await fetch(`${this.baseUrl}/session/start`, {
         method: 'POST',
         headers: {
@@ -175,7 +175,7 @@ class GeminiLiveService {
 
     try {
       console.log('Ending session with backend...');
-      
+
       const response = await fetch(`${this.baseUrl}/session/end`, {
         method: 'POST',
         headers: {
@@ -225,7 +225,7 @@ class GeminiLiveService {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         // Handle the response data
         if (data.transcript || data.inputTranscription) {
           this.onTranscriptionCallback?.(data.transcript || data.inputTranscription);
@@ -247,36 +247,36 @@ class GeminiLiveService {
   startRecording(onStopCallback) {
     if (this.isRecording) return;
     navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+      audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
     })
-    .then(stream => {
+      .then(stream => {
         this.isRecording = true;
         this.onStatusCallback?.('recording_started');
         this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        
+
         this.mediaRecorder.ondataavailable = event => {
-            if (event.data.size > 0) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    this.sendAudioChunk(reader.result.toString(), 'webm');
-                };
-                reader.readAsDataURL(event.data);
-            }
+          if (event.data.size > 0) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              this.sendAudioChunk(reader.result.toString(), 'webm');
+            };
+            reader.readAsDataURL(event.data);
+          }
         };
-        
+
         this.mediaRecorder.onstop = () => {
-            this.isRecording = false;
-            this.onStatusCallback?.('recording_stopped');
-            stream.getTracks().forEach(track => track.stop());
-            if (onStopCallback) onStopCallback();
+          this.isRecording = false;
+          this.onStatusCallback?.('recording_stopped');
+          stream.getTracks().forEach(track => track.stop());
+          if (onStopCallback) onStopCallback();
         };
-        
+
         this.mediaRecorder.start(1000);
-    })
-    .catch(error => {
+      })
+      .catch(error => {
         console.error('Error accessing microphone:', error);
         this.onErrorCallback?.('Microphone access denied. Please allow microphone access in your browser settings.');
-    });
+      });
   }
 
   // Stop recording
@@ -296,7 +296,7 @@ class GeminiLiveService {
     this.isConnected = false;
     this.sessionId = null;
     this.apiKey = null;
-    
+
     // Stop recording if active
     if (this.isRecording) {
       this.stopRecording();

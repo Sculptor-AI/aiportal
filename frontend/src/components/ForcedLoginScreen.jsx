@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider, keyframes } from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
-import { getTheme } from '../styles/themes';
+import { getTheme, lightTheme, darkTheme, oledTheme, oceanTheme, forestTheme, bisexualTheme, lakesideTheme, prideTheme, transTheme, galaxyTheme, sunsetTheme, cyberpunkTheme, bubblegumTheme, desertTheme, retroTheme } from '../styles/themes';
 
 // Animated background
 const floatingAnimation = keyframes`
@@ -18,15 +18,14 @@ const gradientShift = keyframes`
 
 const LoginScreenContainer = styled.div`
   min-height: 100vh;
-  background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #f5576c, #4facfe, #00f2fe);
-  background-size: 400% 400%;
-  animation: ${gradientShift} 40s linear infinite;
+  background: ${props => props.theme.background};
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   position: relative;
   overflow: hidden;
+  transition: all 0.3s ease;
 
   &::before {
     content: '';
@@ -35,7 +34,7 @@ const LoginScreenContainer = styled.div`
     left: 10%;
     width: 60px;
     height: 60px;
-    background: rgba(255, 255, 255, 0.1);
+    background: ${props => props.theme.accent ? `${props.theme.accent}20` : 'rgba(255, 255, 255, 0.1)'};
     border-radius: 50%;
     animation: ${floatingAnimation} 20s infinite linear;
   }
@@ -47,7 +46,7 @@ const LoginScreenContainer = styled.div`
     right: 15%;
     width: 40px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.08);
+    background: ${props => props.theme.accent ? `${props.theme.accent}15` : 'rgba(255, 255, 255, 0.08)'};
     border-radius: 50%;
     animation: ${floatingAnimation} 25s infinite linear reverse;
   }
@@ -55,7 +54,7 @@ const LoginScreenContainer = styled.div`
 
 const FloatingShape = styled.div`
   position: absolute;
-  background: rgba(255, 255, 255, 0.05);
+  background: ${props => props.theme.accent ? `${props.theme.accent}10` : 'rgba(255, 255, 255, 0.05)'};
   border-radius: 50%;
   animation: ${floatingAnimation} ${props => props.$duration}s infinite linear ${props => props.$reverse ? 'reverse' : 'normal'};
   
@@ -89,20 +88,27 @@ const DualPanelContainer = styled.div`
   width: 100%;
   max-width: 960px;
   min-height: 600px;
-  background: rgba(255, 255, 255, 0.95);
+  background: ${props => props.theme.sidebar};
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid ${props => props.theme.border};
   border-radius: 24px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   position: relative;
   z-index: 10;
+  color: ${props => props.theme.text};
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    height: auto;
+    min-height: auto;
+  }
 `;
 
 const InfoPanel = styled.div`
   flex: 1;
-  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  background: ${props => props.theme.primaryGradient};
   color: white;
   display: flex;
   flex-direction: column;
@@ -110,6 +116,11 @@ const InfoPanel = styled.div`
   justify-content: center;
   padding: 48px;
   text-align: center;
+  
+  @media (max-width: 768px) {
+    padding: 32px;
+    min-height: 200px;
+  }
 `;
 
 const InfoTitle = styled.h2`
@@ -149,7 +160,7 @@ const InfoButton = styled.button`
 
   &:hover {
     background: white;
-    color: #667eea;
+    color: ${props => props.theme.primary};
   }
 `;
 
@@ -170,7 +181,7 @@ const Logo = styled.div`
   font-size: 2.8rem;
   font-weight: 700;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: ${props => props.theme.logoGradient || props.theme.primaryGradient};
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -184,6 +195,11 @@ const FormPanel = styled.div`
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  background: ${props => props.theme.sidebar};
+  
+  @media (max-width: 768px) {
+    padding: 32px 24px;
+  }
 `;
 
 const FormInnerContainer = styled.div`
@@ -193,7 +209,7 @@ const FormInnerContainer = styled.div`
 `;
 
 const Subtitle = styled.p`
-  color: #6b7280;
+  color: ${props => props.theme.subText};
   margin-bottom: 32px;
   font-size: 1rem;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -210,10 +226,10 @@ const FormContainer = styled.form`
 
 const Input = styled.input`
   padding: 14px 18px;
-  border: 1px solid rgba(209, 213, 219, 0.6);
+  border: 1px solid ${props => props.theme.border};
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.8);
-  color: #374151;
+  background: ${props => props.theme.inputBackground};
+  color: ${props => props.theme.text};
   font-size: 1rem;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
   outline: none;
@@ -222,13 +238,13 @@ const Input = styled.input`
   -webkit-backdrop-filter: blur(10px);
 
   &:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    background: rgba(255, 255, 255, 0.95);
+    border-color: ${props => props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.primary}20;
+    background: ${props => props.theme.inputBackground};
   }
 
   &::placeholder {
-    color: #9ca3af;
+    color: ${props => props.theme.subText};
   }
 
   &:disabled {
@@ -249,7 +265,7 @@ const EmailInput = styled(Input)`
 
 const SubmitButton = styled.button`
   padding: 14px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: ${props => props.theme.buttonGradient || props.theme.primaryGradient};
   color: white;
   border: none;
   border-radius: 12px;
@@ -259,18 +275,18 @@ const SubmitButton = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: 8px;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 16px ${props => props.theme.primary}40;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 6px 20px ${props => props.theme.primary}50;
   }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 16px ${props => props.theme.primary}20;
   }
 `;
 
@@ -287,20 +303,18 @@ const OAuthButton = styled.button`
   justify-content: center;
   gap: 12px;
   padding: 12px 20px;
-  border: 1px solid rgba(209, 213, 219, 0.6);
+  border: 1px solid ${props => props.theme.border};
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #374151;
+  background: ${props => props.theme.card};
+  color: ${props => props.theme.text};
   font-size: 0.95rem;
   font-weight: 500;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 
   &:hover {
-    background: rgba(255, 255, 255, 1);
+    background: ${props => props.theme.hover};
     border-color: ${props => props.$provider === 'google' ? '#4285f4' : '#0078d4'};
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -330,33 +344,15 @@ const Divider = styled.div`
     left: 0;
     right: 0;
     height: 1px;
-    background: rgba(209, 213, 219, 0.4);
+    background: ${props => props.theme.border};
   }
   
   span {
-    background: rgba(255, 255, 255, 0.95);
+    background: ${props => props.theme.sidebar};
     padding: 0 16px;
-    color: #9ca3af;
+    color: ${props => props.theme.subText};
     font-size: 0.9rem;
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-`;
-
-const ToggleButton = styled.button`
-  background: none;
-  border: none;
-  color: #667eea;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-weight: 500;
-  margin-top: 16px;
-  text-decoration: underline;
-  transition: all 0.2s ease;
-
-  &:hover {
-    color: #764ba2;
-    text-decoration: none;
   }
 `;
 
@@ -411,6 +407,28 @@ const ForcedLoginScreen = () => {
   const [localError, setLocalError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState(getTheme('light'));
+
+  // Load theme from localStorage
+  useEffect(() => {
+    const savedThemeName = localStorage.getItem('ai_portal_theme') || 'light';
+    setCurrentTheme(getTheme(savedThemeName));
+
+    // Listen for theme changes from other components
+    const handleStorageChange = () => {
+      const newThemeName = localStorage.getItem('ai_portal_theme') || 'light';
+      setCurrentTheme(getTheme(newThemeName));
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Custom event for same-window updates
+    window.addEventListener('themeChange', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('themeChange', handleStorageChange);
+    };
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -459,14 +477,14 @@ const ForcedLoginScreen = () => {
 
   const toggleMode = () => {
     setIsAnimating(true);
-    
+
     // Start the transition
     setTimeout(() => {
       setIsLoginMode(!isLoginMode);
       setFormData({ username: '', password: '', email: '' });
       setLocalError('');
       setSuccessMessage('');
-      
+
       // End animation after content change
       setTimeout(() => {
         setIsAnimating(false);
@@ -490,17 +508,17 @@ const ForcedLoginScreen = () => {
   const handleMicrosoftLogin = async () => {
     setLocalError('');
     setLocalError('Microsoft login is not yet implemented. Please use email/password or Google sign-in.');
+    // In a real app, this would redirect to Microsoft OAuth
+    // window.location.href = 'https://login.microsoftonline.com/...'
   };
 
-  const theme = getTheme('light'); // Use light theme for login screen
-
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={currentTheme}>
       <LoginScreenContainer>
         <FloatingShape $duration={22} />
         <FloatingShape $duration={18} $reverse />
         <FloatingShape $duration={25} />
-        
+
         <DualPanelContainer>
           <InfoPanel>
             {isLoginMode ? (
@@ -528,32 +546,32 @@ const ForcedLoginScreen = () => {
               </Subtitle>
 
               <OAuthContainer>
-                <OAuthButton 
-                  type="button" 
+                <OAuthButton
+                  type="button"
                   $provider="google"
                   onClick={handleGoogleLogin}
                   disabled={isSubmitting}
                 >
                   <svg viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                   </svg>
                   Continue with Google
                 </OAuthButton>
-                
-                <OAuthButton 
-                  type="button" 
+
+                <OAuthButton
+                  type="button"
                   $provider="microsoft"
                   onClick={handleMicrosoftLogin}
                   disabled={isSubmitting}
                 >
                   <svg viewBox="0 0 24 24">
-                    <path fill="#f25022" d="M11.4 11.4H.6V.6h10.8v10.8z"/>
-                    <path fill="#00a4ef" d="M23.4 11.4H12.6V.6h10.8v10.8z"/>
-                    <path fill="#7fba00" d="M11.4 23.4H.6V12.6h10.8v10.8z"/>
-                    <path fill="#ffb900" d="M23.4 23.4H12.6V12.6h10.8v10.8z"/>
+                    <path fill="#f25022" d="M11.4 11.4H.6V.6h10.8v10.8z" />
+                    <path fill="#00a4ef" d="M23.4 11.4H12.6V.6h10.8v10.8z" />
+                    <path fill="#7fba00" d="M11.4 23.4H.6V12.6h10.8v10.8z" />
+                    <path fill="#ffb900" d="M23.4 23.4H12.6V12.6h10.8v10.8z" />
                   </svg>
                   Continue with Microsoft
                 </OAuthButton>
