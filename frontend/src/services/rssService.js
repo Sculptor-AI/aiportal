@@ -1,80 +1,49 @@
 // RSS feed sources for different categories
 const RSS_FEEDS = {
   top: [
-    'https://feeds.bbci.co.uk/news/rss.xml',
-    'https://rss.cnn.com/rss/edition.rss',
-    'https://feeds.reuters.com/reuters/topNews'
+    'http://feeds.bbci.co.uk/news/rss.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
+    'http://rss.cnn.com/rss/cnn_topstories.rss',
+    'https://feeds.npr.org/1001/rss.xml'
   ],
   tech: [
-    'https://feeds.feedburner.com/TechCrunch',
+    'https://www.theverge.com/rss/index.xml',
+    'https://techcrunch.com/feed/',
     'https://www.wired.com/feed/rss',
-    'https://feeds.arstechnica.com/arstechnica/index'
+    'https://arstechnica.com/feed/'
   ],
   sports: [
     'https://www.espn.com/espn/rss/news',
-    'https://feeds.bbci.co.uk/sport/rss.xml'
+    'http://feeds.bbci.co.uk/sport/rss.xml',
+    'https://sports.yahoo.com/rss/'
   ],
   finance: [
-    'https://feeds.finance.yahoo.com/rss/2.0/headline',
-    'https://feeds.reuters.com/news/wealth'
+    'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664',
+    'https://finance.yahoo.com/news/rssindex',
+    'https://feeds.bloomberg.com/markets/news.xml'
   ],
   art: [
     'https://hyperallergic.com/feed/',
-    'https://www.theartnewspaper.com/rss'
+    'https://www.thisiscolossal.com/feed/',
+    'https://news.artnet.com/feed'
   ],
   tv: [
-    'https://feeds.feedburner.com/variety/headlines',
-    'https://ew.com/feed/'
+    'https://tvline.com/feed/',
+    'https://variety.com/feed/',
+    'https://www.hollywoodreporter.com/c/arts/tv/feed/'
   ],
   politics: [
-    'https://feeds.reuters.com/reuters/politicsNews',
-    'https://feeds.bbci.co.uk/news/politics/rss.xml'
+    'https://www.politico.com/rss/politicopicks.xml',
+    'https://www.huffpost.com/section/politics/feed',
+    'https://thehill.com/feed/'
   ]
 };
 
-// Card size variants for layout
-const CARD_SIZES = ['featured', 'wide', 'tall', 'compact', 'standard'];
+// Card size variants for layout - Weighted towards standard sizes to prevent gaps
+const CARD_SIZES = ['standard', 'standard', 'standard', 'wide', 'tall'];
 
 /**
- * Generates a relevant image URL for an article using multiple free services.
- * This does not require an API key.
- * @param {string} query - The search query for the image (e.g., article title)
- * @returns {string|null} The URL of the image or null
- */
-const getImageForArticle = (query) => {
-  if (!query) return null;
-  
-  // Sanitize: lowercase, remove punctuation, split into words, keep first 3-4 words
-  const words = query
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 3);
-  
-  if (words.length === 0) return null;
-  
-  const searchTerm = words.join(' ');
-  console.log('Generating image for:', searchTerm);
-  
-  // Use Pollinations.ai - generates images based on text prompts
-  const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(searchTerm)}?width=800&height=600&nologo=true`;
-  console.log('Generated image URL:', imageUrl);
-  
-  return imageUrl;
-};
-
-/**
- * Extract content from XML tag
- */
-const extractXMLContent = (xml, tag) => {
-  const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
-  const match = xml.match(regex);
-  return match ? match[1].trim() : null;
-};
-
-/**
- * Clean text content by removing HTML tags and entities
+ * Clean text content by removing HTML tags, entities, and extra whitespace
  */
 const cleanText = (text) => {
   if (!text) return text;
@@ -92,12 +61,16 @@ const cleanText = (text) => {
     '&gt;': '>',
     '&quot;': '"',
     '&#39;': "'",
-    '&apos;': "'"
+    '&apos;': "'",
+    '&nbsp;': ' ',
+    '&copy;': '',
+    '&reg;': '',
+    '&trade;': ''
   };
   
   text = text.replace(/&[a-z0-9#]+;/gi, match => entityMap[match] || match);
   
-  return text.trim();
+  return text.trim().replace(/\s+/g, ' ');
 };
 
 /**
@@ -106,10 +79,37 @@ const cleanText = (text) => {
 const extractDomain = (url) => {
   try {
     const domain = new URL(url).hostname;
-    return domain.replace('www.', '').replace('feeds.', '');
+    return domain.replace('www.', '').replace('feeds.', '').replace('rss.', '');
   } catch {
-    return 'Unknown';
+    return 'News Source';
   }
+};
+
+/**
+ * Try to find a high-quality image from the RSS item
+ */
+const extractImageFromItem = (item) => {
+  // 1. Check enclosure (standard RSS)
+  if (item.enclosure && item.enclosure.link) {
+    return item.enclosure.link;
+  }
+  
+  // 2. Check thumbnail (common extension)
+  if (item.thumbnail) {
+    return item.thumbnail;
+  }
+  
+  // 3. Check for media:content or media:group (Yahoo/others)
+  // Note: rss2json often maps these to 'enclosure' or 'thumbnail' but sometimes leaves them in 'content'
+  
+  // 4. Try to extract first image from content/description HTML
+  const content = item.content || item.description || '';
+  const imgMatch = content.match(/<img[^>]+src="([^">]+)"/);
+  if (imgMatch) {
+    return imgMatch[1];
+  }
+  
+  return null;
 };
 
 /**
@@ -117,42 +117,58 @@ const extractDomain = (url) => {
  */
 const parseRSSFeed = async (feedUrl) => {
   try {
-    console.log(`Fetching RSS feed: ${feedUrl}`);
+    // console.log(`Fetching RSS feed: ${feedUrl}`);
     
     // Use RSS2JSON API which handles CORS and converts RSS to JSON
-    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+    // We request extended fields to get content
+    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=`; // Add API key if available, otherwise free tier
     
     const response = await fetch(apiUrl);
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}`);
     }
     
     const data = await response.json();
     
     if (data.status !== 'ok') {
-      throw new Error(`RSS2JSON API error: ${data.message || 'Unknown error'}`);
+      // console.warn(`RSS2JSON skipped ${feedUrl}: ${data.message}`);
+      return [];
     }
-    
-    console.log(`Got ${data.items?.length || 0} items from ${feedUrl}`);
     
     if (!data.items || data.items.length === 0) {
       return [];
     }
     
     // Convert to our format
-    const articles = data.items.map((item, index) => ({
-      id: item.guid || item.link || `${feedUrl}-${index}`,
-      title: cleanText(item.title) || 'No Title',
-      description: cleanText(item.description) || '',
-      url: item.link || '#',
-      pubDate: item.pubDate || new Date().toISOString(),
-      source: extractDomain(feedUrl),
-      image: getImageForArticle(item.title),
-      size: CARD_SIZES[Math.floor(Math.random() * CARD_SIZES.length)]
-    }));
+    const articles = data.items.map((item, index) => {
+      // Prioritize full content if available in the feed (often content:encoded mapped to content)
+      const fullContent = item.content || '';
+      const summary = cleanText(item.description);
+      
+      // Determine size - make the first item featured if it has an image
+      let size = 'standard';
+      if (index === 0 && extractImageFromItem(item)) {
+        size = 'featured';
+      } else {
+        // Randomly assign other sizes but mostly standard
+        size = CARD_SIZES[Math.floor(Math.random() * CARD_SIZES.length)];
+      }
+
+      return {
+        id: item.guid || item.link || `${feedUrl}-${index}`,
+        title: cleanText(item.title) || 'Untitled',
+        description: summary.substring(0, 300) + (summary.length > 300 ? '...' : ''),
+        url: item.link,
+        pubDate: item.pubDate || new Date().toISOString(),
+        source: extractDomain(feedUrl),
+        category: '', // filled by caller
+        image: extractImageFromItem(item),
+        size: size,
+        rawContent: fullContent // Store raw content for the detailed view
+      };
+    });
     
-    console.log(`Parsed ${articles.length} articles from ${feedUrl}`);
     return articles;
   } catch (error) {
     console.error('Error parsing RSS feed:', feedUrl, error);
@@ -169,44 +185,41 @@ const parseRSSFeed = async (feedUrl) => {
  */
 export const fetchArticlesByCategory = async (category, limit = 20) => {
   try {
-    const feeds = RSS_FEEDS[category.toLowerCase()] || RSS_FEEDS.top;
+    const feedKey = category.toLowerCase();
+    const feeds = RSS_FEEDS[feedKey] || RSS_FEEDS.top;
     const allArticles = [];
     
-    console.log(`Fetching articles for category: ${category}`);
+    // console.log(`Fetching articles for category: ${category}`);
     
-    // Fetch from all feeds in parallel with timeout
+    // Fetch from all feeds in parallel
     const promises = feeds.map(feed => 
       Promise.race([
         parseRSSFeed(feed),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 10000)
-        )
+        new Promise((resolve) => setTimeout(() => resolve([]), 5000)) // 5s timeout per feed
       ])
     );
     
-    const results = await Promise.allSettled(promises);
+    const results = await Promise.all(promises);
     
-    // Combine successful results
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value.length > 0) {
-        allArticles.push(...result.value);
+    results.forEach(feedArticles => {
+      if (Array.isArray(feedArticles)) {
+        allArticles.push(...feedArticles);
       }
-    }
-    
-    // If no articles were fetched, log warning but still try to return what we have
-    if (allArticles.length === 0) {
-      console.warn(`No RSS articles found for ${category}`);
-    }
-    
-    // Sort by publication date and limit
-    allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-    
-    // Add category to articles
-    allArticles.forEach(article => {
-      article.category = category.toLowerCase();
     });
     
-    return allArticles.slice(0, limit);
+    // Sort by publication date (newest first)
+    allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+    
+    // Assign category and filter bad data
+    const validArticles = allArticles.filter(a => a.title && a.url).map(article => {
+      article.category = feedKey;
+      return article;
+    });
+    
+    // Dedup by URL
+    const uniqueArticles = Array.from(new Map(validArticles.map(item => [item.url, item])).values());
+
+    return uniqueArticles.slice(0, limit);
   } catch (error) {
     console.error(`Error fetching articles for category ${category}:`, error);
     return [];
@@ -214,92 +227,61 @@ export const fetchArticlesByCategory = async (category, limit = 20) => {
 };
 
 /**
- * Fetch articles from all categories
- * @param {number} limit - Maximum number of articles to fetch
- * @returns {Promise<Array>} Array of articles
- */
-export const fetchAllArticles = async (limit = 50) => {
-  try {
-    const allArticles = [];
-    
-    // Fetch from all categories
-    for (const category of Object.keys(RSS_FEEDS)) {
-      const articles = await fetchArticlesByCategory(category, 10);
-      allArticles.push(...articles);
-    }
-    
-    // Sort and limit
-    allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-    
-    return allArticles.slice(0, limit);
-  } catch (error) {
-    console.error('Error fetching all articles:', error);
-    throw error;
-  }
-};
-
-/**
- * Fetch article content - tries to scrape full content but falls back to description
+ * Fetch article content
  * @param {string} url - The article URL to scrape
  * @param {string} fallbackDescription - RSS description to use as fallback
  * @returns {Promise<Object>} Article content and metadata
  */
 export const fetchArticleContent = async (url, fallbackDescription = '') => {
-  console.log(`Fetching article content from: ${url}`);
+  // console.log(`Fetching article content from: ${url}`);
   
-  // First try to scrape the full article content
+  // 1. Try to use a proxy to get the HTML content
   try {
     const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
     
     const response = await fetch(proxyUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsReader/1.0)' }
     });
     
     if (response.ok) {
       const html = await response.text();
       
-      // Simple content extraction
-      let content = html;
-      
-      // Remove script and style tags
-      content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-      content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-      
-      // Extract text from paragraphs
-      const paragraphRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
+      // Basic extraction logic
+      // Remove scripts, styles, navs, footers to reduce noise
+      let cleanHtml = html
+        .replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "")
+        .replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gim, "")
+        .replace(/<nav\b[^>]*>([\s\S]*?)<\/nav>/gim, "")
+        .replace(/<footer\b[^>]*>([\s\S]*?)<\/footer>/gim, "");
+
+      // Match all paragraphs
+      const pRegex = /<p\b[^>]*>([\s\S]*?)<\/p>/gim;
       const paragraphs = [];
       let match;
-      
-      while ((match = paragraphRegex.exec(content)) !== null) {
+      while ((match = pRegex.exec(cleanHtml)) !== null) {
         const text = cleanText(match[1]);
-        if (text && text.length > 50) {
+        // Filter out short snippets like "Advertisement" or "Read more"
+        if (text.length > 60 && !text.includes('Copyright') && !text.includes('Subscribe')) {
           paragraphs.push(text);
         }
       }
       
-      const extractedContent = paragraphs.join('\n\n');
-      
-      // If we got good content, return it
-      if (extractedContent && extractedContent.length > 200) {
-        console.log(`Successfully extracted ${extractedContent.length} chars of content`);
-        return {
-          content: extractedContent,
+      if (paragraphs.length > 2) {
+         return {
+          content: paragraphs.slice(0, 15).join('\n\n'), // Limit to first 15 paragraphs
           extracted: true,
-          title: null,
+          title: null, // We rely on the RSS title usually
           image: null
         };
       }
     }
-  } catch (error) {
-    console.warn('Content scraping failed, using fallback:', error);
+  } catch (e) {
+    console.warn('Scraping failed:', e);
   }
   
-  // Fallback to using the RSS description
-  console.log('Using RSS description as content');
+  // Fallback to description
   return {
-    content: fallbackDescription || 'No content available for this article.',
+    content: fallbackDescription || 'Full content unavailable. Please visit the source link to read more.',
     extracted: false,
     title: null,
     image: null

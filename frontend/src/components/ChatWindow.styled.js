@@ -551,7 +551,7 @@ export const InputRow = styled.div`
 
 export const MessageInput = styled.textarea`
   width: 100%;
-  padding: 15px 102px 15px ${props => props.theme.name === 'retro' ? '16px' : '16px'};
+  padding: 15px 96px 15px ${props => props.theme.name === 'retro' ? '16px' : '16px'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px'};
   border: none;
   background: transparent;
@@ -601,7 +601,7 @@ export const MessageInput = styled.textarea`
   }
   
   @media (max-width: 768px) {
-    padding: 13px 102px 13px ${props => props.theme.name === 'retro' ? '16px' : '16px'};
+    padding: 13px 96px 13px ${props => props.theme.name === 'retro' ? '16px' : '16px'};
     min-height: 45px;
   }
 `;
@@ -796,7 +796,7 @@ export const ActionChip = styled.button`
   color: ${props => props.selected ? props.theme.text : props.theme.text + '99'};
   font-size: 13px;
   font-weight: 500;
-  cursor: pointer;
+  cursor: default;
   transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               color 0.2s cubic-bezier(0.4, 0, 0.2, 1),

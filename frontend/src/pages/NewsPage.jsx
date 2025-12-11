@@ -108,6 +108,7 @@ const ArticlesGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-auto-rows: minmax(280px, auto);
+  grid-auto-flow: dense;
   gap: 20px;
   
   @media (max-width: 1200px) {
@@ -825,24 +826,7 @@ const ArticleDetailView = ({ article, onClose }) => {
                 alt={displayContent.title || article.title}
                 $size={article.size}
                 onError={(e) => {
-                  console.log('Image failed to load:', e.target.src);
-                  e.target.onerror = null; // Prevent infinite loop
-                  
-                  // Try multiple fallbacks
-                  if (e.target.src.includes('pollinations.ai')) {
-                    console.log('Trying LoremFlickr fallback...');
-                    const words = article.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(' ').filter(Boolean).slice(0, 3);
-                    e.target.src = `https://loremflickr.com/800/600/${words.join(',')}`;
-                  } else if (e.target.src.includes('loremflickr.com')) {
-                    console.log('Trying Picsum fallback...');
-                    e.target.src = `https://picsum.photos/seed/${encodeURIComponent(article.id || article.title)}/800/600`;
-                  } else {
-                    console.log('All fallbacks failed, hiding image');
-                    e.target.style.display = 'none';
-                  }
-                }}
-                onLoad={(e) => {
-                  console.log('Image loaded successfully:', e.target.src);
+                  e.target.style.display = 'none';
                 }}
               />
             }
@@ -1035,24 +1019,7 @@ const NewsPage = ({ collapsed }) => {
                     alt={article.title}
                     $size={article.size}
                     onError={(e) => {
-                      console.log('Image failed to load:', e.target.src);
-                      e.target.onerror = null; // Prevent infinite loop
-                      
-                      // Try multiple fallbacks
-                      if (e.target.src.includes('pollinations.ai')) {
-                        console.log('Trying LoremFlickr fallback...');
-                        const words = article.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(' ').filter(Boolean).slice(0, 3);
-                        e.target.src = `https://loremflickr.com/800/600/${words.join(',')}`;
-                      } else if (e.target.src.includes('loremflickr.com')) {
-                        console.log('Trying Picsum fallback...');
-                        e.target.src = `https://picsum.photos/seed/${encodeURIComponent(article.id || article.title)}/800/600`;
-                      } else {
-                        console.log('All fallbacks failed, hiding image');
-                        e.target.style.display = 'none';
-                      }
-                    }}
-                    onLoad={(e) => {
-                      console.log('Image loaded successfully:', e.target.src);
+                      e.target.style.display = 'none';
                     }}
                   />
                 )}

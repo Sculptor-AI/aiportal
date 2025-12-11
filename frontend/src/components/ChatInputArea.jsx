@@ -68,6 +68,7 @@ const ChatInputArea = forwardRef(({
   const [modeMenuRect, setModeMenuRect] = useState(null);
   const [createMenuRect, setCreateMenuRect] = useState(null);
   const [isImagePromptMode, setIsImagePromptMode] = useState(false);
+  const [isVideoPromptMode, setIsVideoPromptMode] = useState(false);
   const [isFlowchartPromptMode, setIsFlowchartPromptMode] = useState(false);
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
   const [visibleChips, setVisibleChips] = useState(['mode', 'search', 'deep-research', 'create']);
@@ -212,6 +213,18 @@ const ChatInputArea = forwardRef(({
       return;
     }
 
+    // Handle video generation mode
+    if (isVideoPromptMode) {
+      if (inputMessage.trim()) {
+        onSubmitMessage({ type: 'generate-video', prompt: inputMessage.trim() });
+        setInputMessage('');
+        setIsVideoPromptMode(false);
+        setCreateType(null);
+        setSelectedActionChip(null);
+      }
+      return;
+    }
+
     // Handle flowchart creation mode
     if (isFlowchartPromptMode) {
       if (inputMessage.trim()) {
@@ -290,6 +303,7 @@ const ChatInputArea = forwardRef(({
 
   const getPlaceholderText = () => {
     if (isImagePromptMode) return "Enter prompt for image generation...";
+    if (isVideoPromptMode) return "Enter prompt for video generation...";
     if (isFlowchartPromptMode) return "Describe the flowchart you want to create...";
     if (isLoading) return "Waiting for response...";
     if (isProcessingFile) return "Processing file...";
@@ -320,7 +334,8 @@ const ChatInputArea = forwardRef(({
       setInputMessage('');
     } else if (type === 'video') {
       setSelectedActionChip('create-video');
-      // Potentially call onOpenVideoGenerator here if that feature exists
+      setIsVideoPromptMode(true);
+      setInputMessage('');
     } else if (type === 'flowchart') {
       setSelectedActionChip('create-flowchart');
       setIsFlowchartPromptMode(true);

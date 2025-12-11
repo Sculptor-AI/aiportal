@@ -1105,6 +1105,15 @@ const MessageImage = styled.img`
   background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
 `;
 
+const MessageVideo = styled.video`
+  max-width: 100%;
+  max-height: 400px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  object-fit: contain;
+  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+`;
+
 // Flowchart components
 const FlowchartContainer = styled.div`
   margin: 12px 0;
@@ -1950,6 +1959,69 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   <>
                     <div style={{ flexGrow: 1 }}></div>
                     <ActionButton onClick={() => navigator.clipboard.writeText(imageUrl).then(() => console.log('Image URL copied'))}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                      Copy URL
+                    </ActionButton>
+                  </>
+                )}
+              </MessageActions>
+            )}
+          </Content>
+        </MessageWrapper>
+      </Message>
+    );
+  }
+
+  // Handle generated video message type
+  if (type === 'generated-video') {
+    const { videoUrl } = message;
+    let generatedVideoContent;
+    if (status === 'loading') {
+      generatedVideoContent = (
+        <ThinkingContainer>
+          <SpinnerIcon />
+          Generating video for: "{imagePrompt || 'your prompt'}"...
+        </ThinkingContainer>
+      );
+    } else if (status === 'completed' && videoUrl) {
+      generatedVideoContent = (
+        <>
+          {imagePrompt && (
+            <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
+              Prompt: "{imagePrompt}"
+            </p>
+          )}
+          <MessageVideo controls src={videoUrl} style={{ maxHeight: '400px' }} />
+        </>
+      );
+    } else if (status === 'error') {
+      generatedVideoContent = (
+        <div>
+          <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
+            Video Generation Failed
+          </p>
+          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Prompt: "{imagePrompt}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
+        </div>
+      );
+    }
+
+    return (
+      <Message $alignment={messageAlignment}>
+        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+        <MessageWrapper role={role}>
+          <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+            {generatedVideoContent}
+            {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
+              <MessageActions role={role}>
+                <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
+                {status === 'completed' && videoUrl && (
+                  <>
+                    <div style={{ flexGrow: 1 }}></div>
+                    <ActionButton onClick={() => navigator.clipboard.writeText(videoUrl).then(() => console.log('Video URL copied'))}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>

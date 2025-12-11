@@ -932,7 +932,7 @@ async function handleGeminiChat(c, body, apiKey) {
 }
 
 // ============================================
-// Image Generation Routes (Gemini)
+// Image Generation Routes (Imagen 4)
 // ============================================
 app.post('/api/image/generate', async (c) => {
   const env = c.env;
@@ -947,7 +947,7 @@ app.post('/api/image/generate', async (c) => {
   }
 
   try {
-    const { prompt } = await c.req.json();
+    const { prompt, model, aspectRatio, imageSize } = await c.req.json();
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
       return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
@@ -955,29 +955,159 @@ app.post('/api/image/generate', async (c) => {
 
     console.log(`Image generation request for: "${prompt}"`);
 
-    // Use Gemini REST API directly (Edge-compatible)
-    const MODEL_NAME = 'gemini-2.0-flash-preview-image-generation';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+    // Model priority: user-specified > Imagen 4 Fast > Imagen 3
+    const IMAGEN_MODELS = [
+      model || 'imagen-4.0-fast-generate-001',
+      'imagen-4.0-generate-001',
+      'imagen-3.0-generate-001'
+    ];
 
     const requestBody = {
-      contents: [{
-        role: 'user',
-        parts: [{ text: prompt }]
+      instances: [{
+        prompt: prompt
       }],
-      generationConfig: {
-        temperature: 0.8,
-        topK: 32,
-        topP: 1,
-        maxOutputTokens: 8192,
-        responseModalities: ['TEXT', 'IMAGE']
-      },
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' }
-      ]
+      parameters: {
+        sampleCount: 1,
+        aspectRatio: aspectRatio || '1:1',
+        // For fast model, disable enhanced prompts for complex prompts
+        ...(model === 'imagen-4.0-fast-generate-001' && { enhancePrompt: false })
+      }
     };
+
+    // Add imageSize if specified (1K or 2K)
+    if (imageSize) {
+      requestBody.parameters.imageSize = imageSize;
+    }
+
+    let response = null;
+    let lastError = null;
+
+    // Try each model in order until one succeeds
+    for (const modelName of IMAGEN_MODELS) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:predict?key=${apiKey}`;
+
+      console.log(`Trying Imagen model: ${modelName}`);
+
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        console.log(`Success with model: ${modelName}`);
+        break;
+      } else {
+        lastError = await response.text();
+        console.log(`Model ${modelName} failed: ${lastError}`);
+        response = null; // Reset for next iteration
+      }
+    }
+
+    if (!response || !response.ok) {
+      console.error('All Imagen models failed. Last error:', lastError);
+      return c.json({
+        error: 'Image generation failed with all available models',
+        details: lastError
+      }, 500);
+    }
+
+    const result = await response.json();
+
+    // Handle Imagen 3/4 response format
+    // Structure: { predictions: [ { bytesBase64Encoded: "...", mimeType: "..." } ] }
+    if (result.predictions && result.predictions[0]) {
+      const prediction = result.predictions[0];
+
+      if (prediction.bytesBase64Encoded) {
+        const mimeType = prediction.mimeType || 'image/png';
+        return c.json({
+          imageData: `data:${mimeType};base64,${prediction.bytesBase64Encoded}`
+        });
+      }
+    }
+
+    return c.json({
+      error: 'Unexpected API response structure',
+      details: result
+    }, 500);
+
+  } catch (error) {
+    console.error('Image generation error:', error);
+    return c.json({ error: error.message || 'Internal server error' }, 500);
+  }
+});
+
+// ============================================
+// Video Generation Routes (Veo 2)
+// Veo 2 uses long-running operations - requires polling
+// ============================================
+
+// Helper function to poll for operation completion
+async function pollVeoOperation(operationName, apiKey, maxAttempts = 60) {
+  const pollUrl = `https://generativelanguage.googleapis.com/v1beta/${operationName}?key=${apiKey}`;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`Polling Veo operation (attempt ${attempt + 1}/${maxAttempts}): ${operationName}`);
+
+    const response = await fetch(pollUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to poll operation: ${response.status} - ${errorText}`);
+    }
+
+    const operation = await response.json();
+
+    if (operation.done) {
+      console.log('Veo operation completed');
+      return operation;
+    }
+
+    // Wait 5 seconds before polling again (video generation takes time)
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+
+  throw new Error('Video generation timed out after maximum polling attempts');
+}
+
+app.post('/api/video/generate', async (c) => {
+  const env = c.env;
+  const apiKey = env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    return c.json({ error: 'GEMINI_API_KEY is not configured.' }, 500);
+  }
+
+  try {
+    const { prompt, aspectRatio, duration } = await c.req.json();
+
+    if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+      return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
+    }
+
+    console.log(`Video generation request for: "${prompt}"`);
+
+    // Veo 2 uses predictLongRunning endpoint for async video generation
+    const MODEL_NAME = 'veo-2.0-generate-001';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:predictLongRunning?key=${apiKey}`;
+
+    const requestBody = {
+      instances: [{
+        prompt: prompt
+      }],
+      parameters: {
+        // Veo 2 supports: 720p resolution, 5-8 second clips
+        aspectRatio: aspectRatio || '16:9',
+        // Duration in seconds (5-8 for Veo 2)
+        ...(duration && { durationSeconds: Math.min(Math.max(duration, 5), 8) })
+      }
+    };
+
+    console.log('Starting Veo 2 video generation...');
 
     const response = await fetch(url, {
       method: 'POST',
@@ -987,33 +1117,68 @@ app.post('/api/image/generate', async (c) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
-      return c.json({ error: `Gemini API error: ${response.status}` }, 500);
+      console.error('Veo API error:', errorText);
+      return c.json({ error: `Veo API error: ${response.status}`, details: errorText }, 500);
     }
 
-    const result = await response.json();
+    const operationResult = await response.json();
 
-    if (!result.candidates?.[0]?.content?.parts) {
-      return c.json({ error: 'Unexpected API response structure' }, 500);
-    }
-
-    const imagePart = result.candidates[0].content.parts.find(part => part.inlineData?.data);
-
-    if (imagePart?.inlineData) {
+    // Veo returns a long-running operation object with a name
+    if (!operationResult.name) {
+      console.error('No operation name in Veo response:', operationResult);
       return c.json({
-        imageData: `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`
-      });
+        error: 'Unexpected API response - no operation name',
+        details: operationResult
+      }, 500);
     }
 
-    // No image found, return text if available
-    const textPart = result.candidates[0].content.parts.find(p => p.text);
+    console.log(`Veo operation started: ${operationResult.name}`);
+
+    // Poll for completion
+    const completedOperation = await pollVeoOperation(operationResult.name, apiKey);
+
+    // Handle errors in the completed operation
+    if (completedOperation.error) {
+      console.error('Veo operation error:', completedOperation.error);
+      return c.json({
+        error: 'Video generation failed',
+        details: completedOperation.error
+      }, 500);
+    }
+
+    // Extract video from the response
+    // Response structure: { response: { generatedVideos: [ { video: { uri: "..." } } ] } }
+    const generatedVideos = completedOperation.response?.generatedVideos ||
+                           completedOperation.result?.generatedVideos ||
+                           completedOperation.response?.predictions;
+
+    if (generatedVideos && generatedVideos.length > 0) {
+      const video = generatedVideos[0];
+
+      // Check for video URI (GCS or HTTP URL)
+      if (video.video?.uri || video.videoUri) {
+        return c.json({
+          videoUrl: video.video?.uri || video.videoUri
+        });
+      }
+
+      // Check for base64 encoded video data
+      if (video.bytesBase64Encoded || video.video?.bytesBase64Encoded) {
+        const videoData = video.bytesBase64Encoded || video.video?.bytesBase64Encoded;
+        const mimeType = video.mimeType || video.video?.mimeType || 'video/mp4';
+        return c.json({
+          videoData: `data:${mimeType};base64,${videoData}`
+        });
+      }
+    }
+
     return c.json({
-      error: 'No image data found in response',
-      responseText: textPart?.text || null
+      error: 'No video data found in response',
+      details: completedOperation
     }, 500);
 
   } catch (error) {
-    console.error('Image generation error:', error);
+    console.error('Video generation error:', error);
     return c.json({ error: error.message || 'Internal server error' }, 500);
   }
 });

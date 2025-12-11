@@ -117,6 +117,152 @@ const useMessageSender = ({
       return;
     }
 
+    // Check if this is a video generation request
+    if (messagePayload.type === 'generate-video') {
+      const prompt = messagePayload.prompt;
+      
+      if (!prompt || !chat?.id) return;
+      
+      setIsLoading(true);
+      
+      // Add user message indicating the prompt
+      const userPromptMessage = {
+        id: generateId(),
+        role: 'user',
+        content: `Generate video: "${prompt}"`,
+        timestamp: new Date().toISOString(),
+      };
+      addMessage(chat.id, userPromptMessage);
+      
+      // Add placeholder message for the generated video
+      const videoPlaceholderId = generateId();
+      const videoPlaceholderMessage = {
+        id: videoPlaceholderId,
+        role: 'assistant',
+        type: 'generated-video',
+        prompt: prompt,
+        status: 'loading',
+        videoUrl: null,
+        content: '',
+        timestamp: new Date().toISOString(),
+        modelId: 'video-generator',
+      };
+      addMessage(chat.id, videoPlaceholderMessage);
+      
+      if (scrollToBottom) setTimeout(scrollToBottom, 100);
+      
+      try {
+        const response = await generateVideoApi(prompt);
+        const videoUrl = response.videoData || response.videoUrl;
+        
+        if (!videoUrl) {
+          throw new Error('No video URL returned from API');
+        }
+        
+        updateMessage(chat.id, videoPlaceholderId, { 
+          status: 'completed', 
+          videoUrl: videoUrl, 
+          isLoading: false 
+        });
+        
+        // Generate title for new chat if this is the first message
+        if (chat.messages.length === 0) {
+          const title = `Video: ${prompt.substring(0, 30)}${prompt.length > 30 ? '...' : ''}`;
+          if (updateChatTitle) updateChatTitle(chat.id, title);
+        }
+      } catch (error) {
+        console.error('[useMessageSender] Error generating video:', error);
+        updateMessage(chat.id, videoPlaceholderId, { 
+          status: 'error', 
+          content: error.message || 'Failed to generate video', 
+          isLoading: false, 
+          isError: true 
+        });
+        addAlert({
+          message: `Video generation failed: ${error.message || 'Unknown error'}`,
+          type: 'error',
+          autoHide: true
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      
+      return;
+    }
+
+    // Check if this is a video generation request
+    if (messagePayload.type === 'generate-video') {
+      const prompt = messagePayload.prompt;
+      
+      if (!prompt || !chat?.id) return;
+      
+      setIsLoading(true);
+      
+      // Add user message indicating the prompt
+      const userPromptMessage = {
+        id: generateId(),
+        role: 'user',
+        content: `Generate video: "${prompt}"`,
+        timestamp: new Date().toISOString(),
+      };
+      addMessage(chat.id, userPromptMessage);
+      
+      // Add placeholder message for the generated video
+      const videoPlaceholderId = generateId();
+      const videoPlaceholderMessage = {
+        id: videoPlaceholderId,
+        role: 'assistant',
+        type: 'generated-video',
+        prompt: prompt,
+        status: 'loading',
+        videoUrl: null,
+        content: '',
+        timestamp: new Date().toISOString(),
+        modelId: 'video-generator',
+      };
+      addMessage(chat.id, videoPlaceholderMessage);
+      
+      if (scrollToBottom) setTimeout(scrollToBottom, 100);
+      
+      try {
+        const response = await generateVideoApi(prompt);
+        const videoUrl = response.videoData || response.videoUrl;
+        
+        if (!videoUrl) {
+          throw new Error('No video URL returned from API');
+        }
+        
+        updateMessage(chat.id, videoPlaceholderId, { 
+          status: 'completed', 
+          videoUrl: videoUrl, 
+          isLoading: false 
+        });
+        
+        // Generate title for new chat if this is the first message
+        if (chat.messages.length === 0) {
+          const title = `Video: ${prompt.substring(0, 30)}${prompt.length > 30 ? '...' : ''}`;
+          if (updateChatTitle) updateChatTitle(chat.id, title);
+        }
+      } catch (error) {
+        console.error('[useMessageSender] Error generating video:', error);
+        updateMessage(chat.id, videoPlaceholderId, { 
+          status: 'error', 
+          content: error.message || 'Failed to generate video', 
+          isLoading: false, 
+          isError: true 
+        });
+        addAlert({
+          message: `Video generation failed: ${error.message || 'Unknown error'}`,
+          type: 'error',
+          autoHide: true
+        });
+      } finally {
+        setIsLoading(false);
+      }
+      
+      return;
+    }
+
     // Check if this is a flowchart creation request
     if (messagePayload.type === 'create-flowchart') {
       const prompt = messagePayload.text;
