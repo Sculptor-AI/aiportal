@@ -232,7 +232,7 @@ export const InputContainer = styled.div`
   }}
 `;
 
-export const MessageInputWrapper = styled.div`
+export const MessageInputWrapper = styled.div.attrs({ 'data-shadow': 'message-bar' })`
   position: relative;
   width: 100%;
   display: flex;

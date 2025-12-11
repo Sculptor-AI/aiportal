@@ -107,7 +107,7 @@ const LogoContainer = styled.div`
 const LogoIcon = styled.img`
   width: 56px;
   height: 56px;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+  filter: none;
 `;
 
 const Logo = styled.h1`

@@ -88,7 +88,7 @@ const ModelIconContainer = styled.div`
   font-size: ${props => sizeMap[props.size]?.fontSize || sizeMap.medium.fontSize}; // Added font-size from sizeMap
   color: white; // Ensure fallback text (like the letter) is white
   font-weight: bold; // Ensure fallback text is bold
-  box-shadow: ${props => props.$useImage && props.$inMessage ? 'none' : '0 2px 4px rgba(0, 0, 0, 0.1)'};
+  box-shadow: none;
   transition: all 0.2s ease-in-out;
   margin: ${props => props.$noMargin ? '0' : '0 0px'}; /* Adjusted default margin for alignment */
   flex-shrink: 0; /* Prevent shrinking in flex layouts */
@@ -210,7 +210,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
             width: '100%',
             height: '100%',
             objectFit: 'contain',
-            filter: $inMessage ? 'drop-shadow(0px 1px 2px rgba(0,0,0,0.2))' : 'none'
+            filter: 'none'
           }}
         />
       ) : (

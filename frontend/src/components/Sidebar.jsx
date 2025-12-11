@@ -4,7 +4,7 @@ import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { Link, useLocation } from 'react-router-dom';
 
 // Styled Components - Updated for Grok.com-inspired design
-const SidebarContainer = styled.div`
+const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
   display: flex;
   flex-direction: column;
   width: ${props => props.$collapsed ? '0' : '280px'};
@@ -26,7 +26,7 @@ const SidebarContainer = styled.div`
   }};
   z-index: 101;
   opacity: ${props => props.$collapsed ? '0' : '1'};
-  box-shadow: ${props => props.$sidebarStyle === 'traditional' ? 'none' : '0 4px 20px rgba(0, 0, 0, 0.1)'};
+  box-shadow: ${props => props.$sidebarStyle === 'traditional' ? 'none' : '0 8px 28px rgba(0, 0, 0, 0.16)'};
   
   @media (max-width: 768px) {
     left: ${props => (props.$collapsed ? '-100%' : '0')};
