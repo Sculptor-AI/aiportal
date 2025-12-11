@@ -583,11 +583,22 @@ export const generateChatTitle = async (userPrompt, assistantResponse) => {
     `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\nTitle:`;
   try {
     const result = await sendMessageToBackend(
-      'custom/fast-responder',
+      'gemini-2.5-flash-lite',
       titlePrompt
     );
     if (result && result.response) {
-      return result.response.trim().replace(/^"|"$/g, '');
+      // Clean up the response - remove quotes, extra whitespace, and limit length
+      let title = result.response.trim()
+        .replace(/^["']|["']$/g, '')  // Remove surrounding quotes
+        .replace(/\n/g, ' ')           // Replace newlines with spaces
+        .trim();
+
+      // Limit to reasonable length for a title
+      if (title.length > 50) {
+        title = title.substring(0, 47) + '...';
+      }
+
+      return title;
     }
   } catch (err) {
     console.error('Error generating chat title:', err);

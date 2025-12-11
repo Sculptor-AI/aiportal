@@ -20,20 +20,20 @@ const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
 // Format markdown text including bold, italic, bullet points and code blocks
 const robustFormatContent = (content, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
   if (!content) return '';
-  
+
   // Extract thinking content if present
   const thinkingRegex = /<think>([\s\S]*?)<\/think>/;
   const thinkingMatch = content.match(thinkingRegex);
-  
+
   let mainContent = content;
   let thinkingContent = null;
-  
+
   if (thinkingMatch) {
     thinkingContent = thinkingMatch[1];
     // Remove the thinking tags and their content from the main content
     mainContent = content.replace(thinkingRegex, '').trim();
   }
-  
+
   // If we have thinking content, return an object with both processed contents
   if (thinkingContent) {
     return {
@@ -41,7 +41,7 @@ const robustFormatContent = (content, isLanguageExecutable = null, supportedLang
       thinking: processText(thinkingContent, true, isLanguageExecutable, supportedLanguages, theme)
     };
   }
-  
+
   // Otherwise, just process the content normally
   return processText(mainContent, true, isLanguageExecutable, supportedLanguages, theme);
 };
@@ -66,7 +66,7 @@ const processText = (text, enableCodeExecution = true, isLanguageExecutable = nu
           />
         );
       }
-      
+
       // Fall back to regular code block for non-executable languages
       return (
         <CodeBlock key={key} theme={blockTheme || theme}>
@@ -149,11 +149,11 @@ const processMarkdownText = (text, theme = {}) => {
   let inNumberedList = false;
   let listItems = [];
   let numberedListItems = [];
-  
+
   // Process line by line
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
+
     // Headings
     if (line.startsWith('# ')) {
       if (inList) {
@@ -181,7 +181,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     if (line.startsWith('## ')) {
       if (inList) {
         result.push(
@@ -208,7 +208,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     if (line.startsWith('### ')) {
       if (inList) {
         result.push(
@@ -235,7 +235,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     if (line.startsWith('#### ')) {
       if (inList) {
         result.push(
@@ -262,7 +262,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     if (line.startsWith('##### ')) {
       if (inList) {
         result.push(
@@ -289,7 +289,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     if (line.startsWith('###### ')) {
       if (inList) {
         result.push(
@@ -316,7 +316,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     // Horizontal rule
     if (line === '---' || line === '***' || line === '___') {
       if (inList) {
@@ -340,7 +340,7 @@ const processMarkdownText = (text, theme = {}) => {
       result.push(<HorizontalRule key={`hr-${i}`} theme={theme} />);
       continue;
     }
-    
+
     // Blockquote
     if (line.startsWith('> ')) {
       if (inList) {
@@ -370,7 +370,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     // Bullet point
     if (line.startsWith('* ') || line.startsWith('- ')) {
       if (inNumberedList) {
@@ -389,7 +389,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     // Numbered list
     const numberedMatch = line.match(/^(\d+)\.\s/);
     if (numberedMatch) {
@@ -409,7 +409,7 @@ const processMarkdownText = (text, theme = {}) => {
       );
       continue;
     }
-    
+
     // End of lists
     if ((inList || inNumberedList) && line === '') {
       if (inList) {
@@ -432,7 +432,7 @@ const processMarkdownText = (text, theme = {}) => {
       }
       continue;
     }
-    
+
     // Regular text line
     if (!inList && !inNumberedList && line !== '') {
       result.push(
@@ -445,7 +445,7 @@ const processMarkdownText = (text, theme = {}) => {
       result.push(<br key={`br-${i}`} />);
     }
   }
-  
+
   // Add any remaining list items
   if (inList && listItems.length > 0) {
     result.push(
@@ -454,7 +454,7 @@ const processMarkdownText = (text, theme = {}) => {
       </BulletList>
     );
   }
-  
+
   if (inNumberedList && numberedListItems.length > 0) {
     result.push(
       <NumberedList key="nlist-end" theme={theme}>
@@ -462,7 +462,7 @@ const processMarkdownText = (text, theme = {}) => {
       </NumberedList>
     );
   }
-  
+
   return <>{result}</>;
 };
 
@@ -471,34 +471,34 @@ const processInlineFormatting = (text, theme = {}) => {
   const parts = [];
   let lastIndex = 0;
   let keyCounter = 0;
-  
+
   // Handle links first
   const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
   let match;
-  
+
   while ((match = linkPattern.exec(text)) !== null) {
     // Add text before the link
     if (match.index > lastIndex) {
       const beforeText = text.substring(lastIndex, match.index);
       parts.push(<span key={`text-${keyCounter++}`}>{processBoldItalic(beforeText, theme)}</span>);
     }
-    
+
     // Add the link
     parts.push(
       <Link key={`link-${keyCounter++}`} href={match[2]} target="_blank" rel="noopener noreferrer" theme={theme}>
         {processBoldItalic(match[1], theme)}
       </Link>
     );
-    
+
     lastIndex = match.index + match[0].length;
   }
-  
+
   // Add any remaining text
   if (lastIndex < text.length) {
     const remainingText = text.substring(lastIndex);
     parts.push(<span key={`text-${keyCounter++}`}>{processBoldItalic(remainingText, theme)}</span>);
   }
-  
+
   return parts.length > 0 ? <>{parts}</> : processBoldItalic(text, theme);
 };
 
@@ -510,54 +510,54 @@ const processBoldItalic = (text, theme = {}) => {
   let lastIndex = 0;
   let keyCounter = 0;
   let match;
-  
+
   while ((match = boldPattern.exec(text)) !== null) {
     // Add text before the bold part
     if (match.index > lastIndex) {
       parts.push(<span key={`text-${keyCounter++}`}>{processItalic(text.substring(lastIndex, match.index), theme)}</span>);
     }
-    
+
     // Add the bold text (also process any italic within it)
     parts.push(<Bold key={`bold-${keyCounter++}`} theme={theme}>{processItalic(match[1], theme)}</Bold>);
-    
+
     lastIndex = match.index + match[0].length;
   }
-  
+
   // Add any remaining text
   if (lastIndex < text.length) {
     parts.push(<span key={`text-${keyCounter++}`}>{processItalic(text.substring(lastIndex), theme)}</span>);
   }
-  
+
   return parts.length > 0 ? <>{parts}</> : processItalic(text, theme);
 };
 
 // Process italic text
 const processItalic = (text, theme = {}) => {
   if (!text) return null;
-  
+
   const italicPattern = /\*((?!\*).+?)\*/g;
   const parts = [];
   let lastIndex = 0;
   let keyCounter = 0;
   let match;
-  
+
   while ((match = italicPattern.exec(text)) !== null) {
     // Add text before the italic part
     if (match.index > lastIndex) {
       parts.push(<span key={`text-${keyCounter++}`}>{text.substring(lastIndex, match.index)}</span>);
     }
-    
+
     // Add the italic text
     parts.push(<Italic key={`italic-${keyCounter++}`} theme={theme}>{match[1]}</Italic>);
-    
+
     lastIndex = match.index + match[0].length;
   }
-  
+
   // Add any remaining text
   if (lastIndex < text.length) {
     parts.push(<span key={`text-${keyCounter++}`}>{text.substring(lastIndex)}</span>);
   }
-  
+
   return <>{parts.length > 0 ? parts : text}</>;
 };
 
@@ -652,7 +652,7 @@ const Message = styled.div`
 const Avatar = styled.div`
   width: ${props => props.role === 'user' ? '24px' : '36px'};
   height: ${props => props.role === 'user' ? '24px' : '36px'};
-  border-radius: ${props => props.$useModelIcon ? '0' : '50%'};
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -661,11 +661,11 @@ const Avatar = styled.div`
   margin-top: ${props => props.role === 'user' ? '8px' : '0'};
   font-weight: 600;
   flex-shrink: 0;
-  background: ${props => props.$useModelIcon 
-    ? 'transparent' 
-    : (props.role === 'user' 
-        ? props.theme.buttonGradient 
-        : props.theme.secondary)};
+  background: ${props => props.$useModelIcon
+    ? 'transparent'
+    : (props.role === 'user'
+      ? props.theme.buttonGradient
+      : props.theme.secondary)};
   color: ${props => props.role === 'user' ? props.theme.text : 'white'};
   transition: all 0.2s ease;
   box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
@@ -743,9 +743,9 @@ const Content = styled.div`
       right: -8px;
       width: 0;
       height: 0;
-      border-left: 8px solid ${props.theme.name === 'dark' || props.theme.name === 'oled' 
-        ? 'rgba(40, 40, 45, 0.95)' 
-        : props.theme.messageUser};
+      border-left: 8px solid ${props.theme.name === 'dark' || props.theme.name === 'oled'
+      ? 'rgba(40, 40, 45, 0.95)'
+      : props.theme.messageUser};
       border-top: 8px solid transparent;
       border-bottom: 8px solid transparent;
     }
@@ -1176,7 +1176,7 @@ const FileName = styled.span`
 
 const formatTimestamp = (timestamp) => {
   if (!timestamp) return '';
-  
+
   const date = new Date(timestamp);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
@@ -1428,24 +1428,24 @@ const ThinkingSectionHeader = styled.div`
 
 const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
   const [expanded, setExpanded] = useState(false);
-  
+
   const toggleExpanded = () => {
     setExpanded(!expanded);
   };
-  
+
   const hasThinking = thinkingContent && thinkingContent.toString().trim();
   const hasToolActivity = toolCalls && toolCalls.length > 0;
-  
+
   if (!hasThinking && !hasToolActivity) {
     return null;
   }
-  
+
   const getHeaderTitle = () => {
     if (hasThinking && hasToolActivity) return 'Thoughts & Tools';
     if (hasThinking) return 'Thoughts';
     return 'Tool Activity';
   };
-  
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'pending': return '⏳';
@@ -1455,7 +1455,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
       default: return '🔧';
     }
   };
-  
+
   return (
     <ThinkingDropdownContainer>
       <ThinkingHeader onClick={toggleExpanded}>
@@ -1479,7 +1479,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
                     {toolCall.status || 'pending'}
                   </ToolActivityStatus>
                 </ToolActivityItemHeader>
-                
+
                 {toolCall.parameters && Object.keys(toolCall.parameters).length > 0 && (
                   <ToolActivityDetail>
                     <ToolActivityLabel>Parameters:</ToolActivityLabel>
@@ -1488,7 +1488,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
                     </ToolActivityValue>
                   </ToolActivityDetail>
                 )}
-                
+
                 {toolCall.result && toolCall.status === 'completed' && (
                   <ToolActivityDetail>
                     <ToolActivityLabel>Result:</ToolActivityLabel>
@@ -1497,7 +1497,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
                     </ToolActivityValue>
                   </ToolActivityDetail>
                 )}
-                
+
                 {toolCall.error && toolCall.status === 'error' && (
                   <ToolActivityDetail>
                     <ToolActivityLabel>Error:</ToolActivityLabel>
@@ -1510,7 +1510,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
             ))}
           </ToolActivitySection>
         )}
-        
+
         {hasThinking && (
           <ThinkingSection hasToolActivity={hasToolActivity}>
             {hasToolActivity && <ThinkingSectionHeader>💭 Reasoning</ThinkingSectionHeader>}
@@ -1525,15 +1525,15 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
-  
+
   // Debug logging
   if (role === 'assistant' && sources) {
     console.log('[ChatMessage] Message has sources:', sources);
   }
-  
+
   // Get the prompt for both image and flowchart messages
   const prompt = message.prompt;
-  
+
   // Extract sources from content if this is an assistant message and not loading
   const { cleanedContent, sources: extractedSources } = useMemo(() => {
     if (role === 'assistant' && content && !isLoading) {
@@ -1543,24 +1543,24 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     }
     return { cleanedContent: content, sources: [] };
   }, [content, role, isLoading]);
-  
+
   // Use cleaned content if available, otherwise use original content
   const contentToProcess = cleanedContent || content;
-  
+
   const is3DScene = useMemo(() => {
     if (role !== 'assistant' || isLoading || !content) return false;
     const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
     if (!jsonMatch) return false;
     try {
       const parsed = JSON.parse(jsonMatch[1]);
-      return Array.isArray(parsed) && parsed.every(obj => 
+      return Array.isArray(parsed) && parsed.every(obj =>
         obj.id && obj.type && obj.position && obj.rotation && obj.scale
       );
     } catch (e) {
       return false;
     }
   }, [content, role, isLoading]);
-  
+
   const getAvatar = () => {
     if (role === 'user') {
       return (
@@ -1575,13 +1575,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         size: "small",
         $inMessage: true,
       };
-      
+
       return <ModelIcon {...modelIconProps} />;
     } else {
       return 'AI';
     }
   };
-  
+
   // Determine if we should use a model icon (for AI messages with a modelId)
   const useModelIcon = role === 'assistant' && showModelIcons && modelId;
 
@@ -1596,7 +1596,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Check if there's a PDF file attached to the message
   const hasPdfAttachment = file && file.type === 'pdf';
-  
+
   // Check if there's a text file attached to the message
   const hasTextAttachment = file && file.type === 'text';
 
@@ -1650,7 +1650,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Determine if the message has sources to display
   const displaySources = extractedSources.length > 0 ? extractedSources : (Array.isArray(sources) ? sources : []);
   const hasSources = role === 'assistant' && displaySources.length > 0;
-  
+
   console.log('[ChatMessage] Display sources:', {
     extractedSources,
     propsSources: sources,
@@ -1782,9 +1782,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   {message.progress}%
                 </span>
               </div>
-              <div style={{ 
-                width: '100%', 
-                height: '4px', 
+              <div style={{
+                width: '100%',
+                height: '4px',
                 backgroundColor: theme.border || '#e0e0e0',
                 borderRadius: '2px',
                 overflow: 'hidden'
@@ -1816,10 +1816,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 <div style={{ fontSize: '0.9em', fontWeight: '500', marginBottom: '6px', opacity: 0.8 }}>
                   Research Questions ({message.subQuestions.length}):
                 </div>
-                <ul style={{ 
-                  margin: '0', 
-                  paddingLeft: '20px', 
-                  fontSize: '0.85em', 
+                <ul style={{
+                  margin: '0',
+                  paddingLeft: '20px',
+                  fontSize: '0.85em',
                   opacity: 0.7,
                   lineHeight: '1.4'
                 }}>
@@ -1867,7 +1867,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                     onClick={() => window.open(source.url, '_blank')}
                     title={source.title}
                   >
-                    <SourceFavicon 
+                    <SourceFavicon
                       src={getFaviconUrl(source.url)}
                       alt=""
                       onError={(e) => {
@@ -1899,7 +1899,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               </MessageActions>
             )}
           </Content>
-          </MessageWrapper>
+        </MessageWrapper>
       </Message>
     );
   }
@@ -1961,7 +1961,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               </MessageActions>
             )}
           </Content>
-          </MessageWrapper>
+        </MessageWrapper>
       </Message>
     );
   }
@@ -2017,17 +2017,17 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </ThinkingContainer>
                 );
               }
-              
+
               // Process content and show main content + thinking dropdown if applicable
               const processedContent = robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme);
               const isMercury = modelId?.toLowerCase().includes('mercury');
-              
+
               if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
                 // If content has thinking tags, show thinking dropdown first, then main content
                 return (
                   <>
                     <ThinkingDropdown thinkingContent={processedContent.thinking} toolCalls={toolCalls} />
-                    <StreamingMarkdownRenderer 
+                    <StreamingMarkdownRenderer
                       text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
                       isStreaming={isLoading}
                       theme={theme}
@@ -2042,7 +2042,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   {hasToolActivity && (
                     <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
                   )}
-                  <StreamingMarkdownRenderer 
+                  <StreamingMarkdownRenderer
                     text={contentToProcess}
                     isStreaming={isLoading}
                     theme={theme}
@@ -2051,20 +2051,20 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               );
             })()}
           </Content>
-          
-          
+
+
           {/* Sources section */}
           {hasSources && !isLoading && (
             <SourcesContainer>
               {displaySources.map((source, index) => (
                 <SourceButton key={`source-${index}`} onClick={() => window.open(source.url, '_blank')}>
-                  <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src='https://www.google.com/s2/favicons?domain=' + source.url} />
+                  <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src = 'https://www.google.com/s2/favicons?domain=' + source.url} />
                   {source.domain || extractDomain(source.url)}
                 </SourceButton>
               ))}
             </SourcesContainer>
           )}
-          
+
           {/* Message action buttons - only show for completed AI messages (not loading) */}
           {!isLoading && contentToProcess && role === 'assistant' && (
             <MessageActions role={role}>
@@ -2119,9 +2119,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               <ActionButton onClick={handleReadAloud} title={isSpeaking ? 'Stop speaking' : 'Read aloud'}>
                 {isSpeaking ? (
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="6" y="6" width="12" height="12" rx="2"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <rect x="6" y="6" width="12" height="12" rx="2" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
                   </svg>
                 ) : (
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

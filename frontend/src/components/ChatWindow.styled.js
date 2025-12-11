@@ -119,13 +119,26 @@ export const fadeIn = keyframes`
 export const moveInputToBottom = keyframes`
   0% {
     top: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(1);
     bottom: auto;
+  }
+  20% {
+    transform: translate(-50%, -20%) scale(0.95, 1.05);
+  }
+  50% {
+    top: auto;
+    bottom: 35px; /* Overshoot slightly */
+    transform: translateX(-50%) scale(1.05, 0.95);
+  }
+  75% {
+    top: auto;
+    bottom: 28px;
+    transform: translateX(-50%) scale(0.98, 1.02);
   }
   100% {
     top: auto;
     bottom: 30px;
-    transform: translateX(-50%);
+    transform: translateX(-50%) scale(1);
   }
 `;
 
@@ -228,9 +241,14 @@ export const MessageInputWrapper = styled.div`
   pointer-events: auto;
   box-shadow: ${props => props.theme.name === 'retro' ?
     `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
-    '0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06)'};
+    '0 2px 12px rgba(0, 0, 0, 0.04)'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px'};
-  background: ${props => props.theme.inputBackground};
+  background: ${props => {
+    if (props.theme.name === 'retro') return props.theme.inputBackground;
+    if (props.theme.name === 'light') return 'rgba(255, 255, 255, 0.95)';
+    if (props.theme.name === 'dark' || props.theme.name === 'oled') return props.theme.inputBackground;
+    return props.theme.inputBackground;
+  }};
   border: ${props => props.theme.name === 'retro' ?
     `2px solid ${props.theme.buttonFace}` :
     `1px solid ${props.theme.border}`};
@@ -243,8 +261,7 @@ export const MessageInputWrapper = styled.div`
   &:focus-within {
     box-shadow: ${props => props.theme.name === 'retro' ?
     `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
-    '0 6px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)'};
-    border-color: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : 'rgba(0, 0, 0, 0.15)'};
+    '0 4px 20px rgba(0, 0, 0, 0.08)'};
   }
 `;
 
@@ -913,9 +930,9 @@ export const HammerButton = styled.button`
 
 export const ToolbarContainer = styled.div`
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 50%;
-  transform: translateX(-50%) translateY(${props => props.$isOpen ? '100%' : '80%'});
+  transform: translateX(-50%) translateY(${props => props.$isOpen ? '-100%' : '-80%'});
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -925,9 +942,9 @@ export const ToolbarContainer = styled.div`
   min-width: 200px;
   background: ${props => props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
-  border-top: none;
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '0 0 16px 16px'};
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-bottom: none;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '16px 16px 0 0'};
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
   opacity: ${props => props.$isOpen ? '1' : '0'};
   visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
