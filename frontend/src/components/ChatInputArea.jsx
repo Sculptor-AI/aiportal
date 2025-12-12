@@ -4,6 +4,9 @@ import FileUploadButton from './FileUploadButton';
 import PopupMenu from './ToolMenuModal';
 import {
   InputContainer,
+  ChipsDock,
+  ComposerRow,
+  ComposerPlusButton,
   MessageInputWrapper,
   InputRow,
   MessageInput,
@@ -74,8 +77,10 @@ const ChatInputArea = forwardRef(({
   const [visibleChips, setVisibleChips] = useState(['mode', 'search', 'deep-research', 'create']);
   const [hiddenChips, setHiddenChips] = useState([]);
   const [showOverflowDropdown, setShowOverflowDropdown] = useState(false);
+  const [chipsExpanded, setChipsExpanded] = useState(chatIsEmpty);
 
   const inputRef = useRef(null);
+  const prevChatIsEmptyRef = useRef(chatIsEmpty);
   const toolbarRef = useRef(null);
   const toolbarContainerRef = useRef(null);
   const modeAnchorRef = useRef(null);
@@ -117,6 +122,24 @@ const ChatInputArea = forwardRef(({
       onToolbarToggle(showToolbar);
     }
   }, [showToolbar, onToolbarToggle]);
+
+  useEffect(() => {
+    const wasEmpty = prevChatIsEmptyRef.current;
+    prevChatIsEmptyRef.current = chatIsEmpty;
+
+    if (chatIsEmpty) {
+      setChipsExpanded(true);
+      return;
+    }
+
+    if (wasEmpty) {
+      setChipsExpanded(false);
+      setShowToolbar(false);
+      setShowModeModal(false);
+      setShowCreateModal(false);
+      setShowOverflowDropdown(false);
+    }
+  }, [chatIsEmpty]);
 
   // Responsive chip management
   useEffect(() => {
@@ -180,7 +203,19 @@ const ChatInputArea = forwardRef(({
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [thinkingMode, selectedActionChip, createType]);
+  }, [thinkingMode, selectedActionChip, createType, chipsExpanded, chatIsEmpty]);
+
+  const handleToggleChips = () => {
+    if (chipsExpanded) {
+      setChipsExpanded(false);
+      setShowToolbar(false);
+      setShowModeModal(false);
+      setShowCreateModal(false);
+      setShowOverflowDropdown(false);
+    } else {
+      setChipsExpanded(true);
+    }
+  };
 
   // Close overflow dropdown when clicking outside
   useEffect(() => {
@@ -572,7 +607,66 @@ const ChatInputArea = forwardRef(({
       $isFlowchartOpen={isFlowchartOpen}
       $isSandbox3DOpen={isSandbox3DOpen}
     >
-      <MessageInputWrapper $isEmpty={chatIsEmpty}>
+      <ChipsDock $visible={chatIsEmpty || chipsExpanded} $indent={chatIsEmpty || chipsExpanded}>
+        <ActionChipsContainer ref={chipsContainerRef}>
+        <HammerButton
+          ref={toolbarRef}
+          $isOpen={showToolbar}
+          onClick={() => setShowToolbar(!showToolbar)}
+          title="Toggle Toolbar"
+        >
+          {theme.name === 'retro' ? (
+            <img src="/images/retroTheme/hammerIcon.png" alt="Tools" style={{ width: '18px', height: '18px' }} />
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+          )}
+        </HammerButton>
+
+        {/* Render visible chips */}
+        {visibleChips.map((chip, index) => renderChip({
+          type: chip
+        }, index))}
+
+        {/* Render overflow button if there are hidden chips */}
+        {hiddenChips.length > 0 && (
+          <div style={{ position: 'relative' }}>
+            <OverflowChipButton
+              ref={overflowButtonRef}
+              onClick={() => setShowOverflowDropdown(!showOverflowDropdown)}
+              theme={theme}
+              aria-label="More actions"
+            >
+              ...
+            </OverflowChipButton>
+
+            {showOverflowDropdown && (
+              <OverflowDropdown theme={theme}>
+                {hiddenChips.map((chip) => renderChip({
+                  type: chip
+                }, -1, true))}
+              </OverflowDropdown>
+            )}
+          </div>
+        )}
+        </ActionChipsContainer>
+      </ChipsDock>
+
+      <ComposerRow>
+        <ComposerPlusButton
+          type="button"
+          onClick={handleToggleChips}
+          $visible={!chatIsEmpty}
+          $expanded={chipsExpanded}
+          aria-label={chipsExpanded ? 'Hide actions' : 'Show actions'}
+          title={chipsExpanded ? 'Hide actions' : 'Show actions'}
+          disabled={chatIsEmpty || isLoading || isProcessingFile}
+        >
+          <span className="plus-icon" />
+        </ComposerPlusButton>
+
+        <MessageInputWrapper $isEmpty={chatIsEmpty}>
         <FilesPreviewContainer $show={uploadedFile && (Array.isArray(uploadedFile) ? uploadedFile.length > 0 : true)} theme={theme}>
           {uploadedFile && (Array.isArray(uploadedFile) ? uploadedFile : [uploadedFile]).map((file, index) => {
             // Helper to get file extension
@@ -930,49 +1024,6 @@ const ChatInputArea = forwardRef(({
           </SendButton>
         </InputRow>
 
-        <ActionChipsContainer ref={chipsContainerRef}>
-          <HammerButton
-            ref={toolbarRef}
-            $isOpen={showToolbar}
-            onClick={() => setShowToolbar(!showToolbar)}
-            title="Toggle Toolbar"
-          >
-            {theme.name === 'retro' ? (
-              <img src="/images/retroTheme/hammerIcon.png" alt="Tools" style={{ width: '18px', height: '18px' }} />
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-              </svg>
-            )}
-          </HammerButton>
-
-          {/* Render visible chips */}
-          {visibleChips.map((chip, index) => renderChip({
-            type: chip
-          }, index))}
-
-          {/* Render overflow button if there are hidden chips */}
-          {hiddenChips.length > 0 && (
-            <div style={{ position: 'relative' }}>
-              <OverflowChipButton
-                ref={overflowButtonRef}
-                onClick={() => setShowOverflowDropdown(!showOverflowDropdown)}
-                theme={theme}
-              >
-                •••
-              </OverflowChipButton>
-
-              {showOverflowDropdown && (
-                <OverflowDropdown theme={theme}>
-                  {hiddenChips.map((chip) => renderChip({
-                    type: chip
-                  }, -1, true))}
-                </OverflowDropdown>
-              )}
-            </div>
-          )}
-        </ActionChipsContainer>
-
         <ToolbarContainer $isOpen={showToolbar} ref={toolbarContainerRef}>
           <ToolbarItem title="Equation Editor" onClick={onToggleEquationEditor}>
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1006,6 +1057,7 @@ const ChatInputArea = forwardRef(({
           </ToolbarItem>
         </ToolbarContainer>
       </MessageInputWrapper>
+      </ComposerRow>
 
       <PopupMenu
         isOpen={showModeModal}

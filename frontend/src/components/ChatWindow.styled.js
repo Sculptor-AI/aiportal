@@ -155,6 +155,36 @@ export const moveInputToBottomMobile = keyframes`
   }
 `;
 
+const liquidToPlus = keyframes`
+  0% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) translateX(100px) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) translateX(30px) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(0) scale(0.2);
+  }
+`;
+
+const liquidFromPlus = keyframes`
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(0) scale(0.2);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) translateX(30px) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(100px) scale(1);
+  }
+`;
+
 export const emptyStateExitAnimation = keyframes`
   from {
     opacity: 1;
@@ -177,8 +207,16 @@ export const InputContainer = styled.div`
   z-index: 100 !important;
   pointer-events: ${props => props.$isWhiteboardOpen || props.$isEquationEditorOpen || props.$isGraphingOpen || props.$isFlowchartOpen || props.$isSandbox3DOpen ? 'auto' : 'none'};
   flex-direction: column;
+  --composer-plus-size: 44px;
+  --composer-plus-gap: 12px;
+  --composer-plus-offset: calc(var(--composer-plus-size) + var(--composer-plus-gap));
   /* margin-left will be handled by the left property based on $sidebarCollapsed */
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1) !important;
+
+  @media (max-width: 768px) {
+    --composer-plus-size: 42px;
+    --composer-plus-gap: 10px;
+  }
 
   ${({ $isEmpty, $animateDown, theme, $sidebarCollapsed, $isWhiteboardOpen, $isEquationEditorOpen, $isGraphingOpen, $isFlowchartOpen, $isSandbox3DOpen }) => {
     const bottomPosition = theme.name === 'retro' ? '40px' : '30px';
@@ -238,6 +276,8 @@ export const MessageInputWrapper = styled.div.attrs({ 'data-shadow': 'message-ba
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 1;
+  min-width: 0;
   pointer-events: auto;
   box-shadow: ${props => props.theme.name === 'retro' ?
     `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
@@ -252,10 +292,8 @@ export const MessageInputWrapper = styled.div.attrs({ 'data-shadow': 'message-ba
   border: ${props => props.theme.name === 'retro' ?
     `2px solid ${props.theme.buttonFace}` :
     `1px solid ${props.theme.border}`};
-  padding-bottom: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
-  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding-bottom: 0;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
   overflow: visible;
 
   &:focus-within {
@@ -263,6 +301,141 @@ export const MessageInputWrapper = styled.div.attrs({ 'data-shadow': 'message-ba
     `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
     '0 4px 20px rgba(0, 0, 0, 0.08)'};
   }
+`;
+
+export const ChipsDock = styled.div`
+  width: 100%;
+  overflow: hidden;
+  pointer-events: ${props => props.$visible ? 'auto' : 'none'};
+  max-height: ${props => props.$visible ? '60px' : '0'};
+  opacity: ${props => props.$visible ? '1' : '0'};
+  padding-left: ${props => props.$indent ? 'var(--composer-plus-offset)' : '0'};
+  padding-bottom: ${props => props.$visible ? '10px' : '0'};
+  transform: ${props => props.$visible ? 'translateY(0)' : 'translateY(10px)'};
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding-bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+`;
+
+export const ComposerRow = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: var(--composer-plus-gap);
+  align-items: flex-end;
+  pointer-events: auto;
+`;
+
+export const LiquidBlob = styled.span`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 40px;
+  height: 40px;
+  background: ${props => props.theme.buttonGradient || 'rgba(100, 100, 200, 0.3)'};
+  opacity: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(8px);
+  z-index: -1;
+
+  ${({ $direction }) => $direction === 'toPlus' && css`
+    animation: ${liquidToPlus} 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  `}
+
+  ${({ $direction }) => $direction === 'fromPlus' && css`
+    animation: ${liquidFromPlus} 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  `}
+`;
+
+export const ComposerPlusButton = styled.button`
+  width: 50px;
+  height: 50px;
+  flex-shrink: 0;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '24px'};
+  border: ${props => props.theme.name === 'retro' ?
+    `2px solid ${props.theme.buttonFace}` :
+    `1px solid ${props.theme.border}`};
+  background: ${props => {
+    if (props.theme.name === 'retro') return props.theme.inputBackground;
+    if (props.theme.name === 'light') return 'rgba(255, 255, 255, 0.95)';
+    if (props.theme.name === 'dark' || props.theme.name === 'oled') return props.theme.inputBackground;
+    return props.theme.inputBackground;
+  }};
+  color: ${props => props.theme.text};
+  box-shadow: ${props => props.theme.name === 'retro' ?
+    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
+    '0 2px 12px rgba(0, 0, 0, 0.04)'};
+  position: relative;
+  isolation: isolate;
+  display: ${props => props.$visible ? 'flex' : 'none'};
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s ease,
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: ${props => props.theme.name === 'retro' ?
+      `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
+      '0 4px 20px rgba(0, 0, 0, 0.08)'};
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+  }
+
+  /* Plus icon container */
+  .plus-icon {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    z-index: 2;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Horizontal bar */
+  .plus-icon::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 2px;
+    border-radius: 1px;
+    background: ${props => props.theme.text};
+    opacity: 0.6;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Vertical bar */
+  .plus-icon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    border-radius: 1px;
+    background: ${props => props.theme.text};
+    opacity: 0.6;
+    transform: translate(-50%, -50%);
+  }
+
+  ${({ $expanded }) => $expanded && css`
+    .plus-icon {
+      transform: rotate(45deg);
+    }
+  `}
 `;
 
 export const FilesPreviewContainer = styled.div`
@@ -764,11 +937,10 @@ export const EmptyState = styled.div`
 export const ActionChipsContainer = styled.div`
   display: flex;
   justify-content: flex-start;
-  margin-top: ${props => props.theme.name === 'retro' ? '8px' : '2px'};
-  margin-bottom: ${props => props.theme.name === 'retro' ? '8px' : '4px'};
+  margin: 0;
   gap: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
   pointer-events: auto;
-  width: ${props => props.theme.name === 'retro' ? '90%' : '95%'};
+  width: 100%;
   overflow: hidden;
   position: relative;
 `;
@@ -796,11 +968,12 @@ export const ActionChip = styled.button`
   color: ${props => props.selected ? props.theme.text : props.theme.text + '99'};
   font-size: 13px;
   font-weight: 500;
-  cursor: default;
-  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  transition: background-color 0.2s ease,
+              border-color 0.2s ease,
+              color 0.2s ease,
+              box-shadow 0.2s ease,
+              transform 0.15s ease;
   position: relative;
   box-shadow: ${props => props.theme.name === 'retro' ?
     props.selected ?
@@ -820,6 +993,7 @@ export const ActionChip = styled.button`
   }
 
   &:active:not(:disabled) {
+    transform: scale(0.97);
     ${props => props.theme.name === 'retro' && `
       border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
       box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
