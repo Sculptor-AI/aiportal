@@ -13,6 +13,7 @@ import { handleOpenRouterChat } from '../services/openrouter.js';
 import { handleGeminiChat, handleGeminiChatNonStreaming } from '../services/gemini.js';
 import { handleAnthropicChat } from '../services/anthropic.js';
 import { handleOpenAIChat } from '../services/openai.js';
+import { validateToolsForProvider, getProviderCapabilities } from '../config/index.js';
 
 const chat = new Hono();
 
@@ -47,6 +48,37 @@ function getProvider(modelId, body) {
 }
 
 /**
+ * Validate requested tools against provider capabilities
+ * Returns null if valid, or an error response if invalid
+ */
+function validateToolRequest(provider, body, c) {
+  const requestedTools = {
+    web_search: body.web_search === true,
+    code_execution: body.code_execution === true,
+    url_context: body.url_context === true
+  };
+  
+  // Check if any tools are requested
+  const hasRequestedTools = Object.values(requestedTools).some(v => v);
+  if (!hasRequestedTools) {
+    return null; // No tools requested, valid
+  }
+  
+  const validation = validateToolsForProvider(provider, requestedTools);
+  
+  if (!validation.valid) {
+    return c.json({
+      error: validation.errors.join(' '),
+      supported_features: validation.supported,
+      requested_features: validation.requested,
+      provider: provider
+    }, 400);
+  }
+  
+  return null; // Valid
+}
+
+/**
  * Chat completions endpoint (OpenAI compatible)
  * 
  * Supports all features across providers:
@@ -54,7 +86,7 @@ function getProvider(modelId, body) {
  * - Vision/multimodal (images, audio, video, PDFs)
  * - Tool/function calling (tools array)
  * - Web search (web_search: true)
- * - Code execution (code_execution: true, Gemini only)
+ * - Code execution (code_execution: true, Gemini and Anthropic)
  * - JSON mode (response_format: { type: 'json_object' })
  * - Structured outputs (response_format: { json_schema: {...} })
  * - Thinking/reasoning (thinking: true, reasoning: true)
@@ -68,7 +100,18 @@ chat.post('/chat/completions', async (c) => {
     const modelId = body.model;
     const provider = getProvider(modelId, body);
 
-    console.log(`Chat request: model=${modelId}, provider=${provider}`);
+    console.log(`Chat request: model=${modelId}, provider=${provider}, web_search=${body.web_search}, code_execution=${body.code_execution}`);
+
+    // Validate tool requests against provider capabilities
+    const validationError = validateToolRequest(provider, body, c);
+    if (validationError) {
+      return validationError;
+    }
+
+    // Auto-enable url_context when web_search is enabled for providers that support it
+    if ((provider === 'gemini' || provider === 'anthropic') && body.web_search && body.url_context === undefined) {
+      body.url_context = true;
+    }
 
     switch (provider) {
       case 'gemini': {

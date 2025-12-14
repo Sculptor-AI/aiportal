@@ -5,7 +5,9 @@
  * - Streaming chat completions
  * - Vision/multimodal (images, PDFs)
  * - Tool use/function calling
- * - Web search (via tools)
+ * - Web search (web_search_20250305)
+ * - Web fetch/URL context (web_fetch_20250910)
+ * - Code execution (code_execution_20250825)
  * - Computer use
  * - JSON mode/structured outputs
  * - Extended thinking
@@ -19,7 +21,7 @@ const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_VERSION = '2023-06-01';
 
 /**
- * Get Anthropic headers
+ * Get Anthropic headers with appropriate beta flags
  */
 function getAnthropicHeaders(apiKey, options = {}) {
   const headers = {
@@ -28,7 +30,7 @@ function getAnthropicHeaders(apiKey, options = {}) {
     'anthropic-version': options.version || ANTHROPIC_VERSION
   };
 
-  // Enable beta features
+  // Enable beta features - each requires its own beta header
   const betas = [];
   
   if (options.computer_use) {
@@ -46,8 +48,17 @@ function getAnthropicHeaders(apiKey, options = {}) {
   if (options.pdf_support) {
     betas.push('pdfs-2024-09-25');
   }
+  // Web search beta header
   if (options.web_search) {
     betas.push('web-search-2025-03-05');
+  }
+  // Web fetch (URL context) beta header
+  if (options.url_context || options.web_fetch) {
+    betas.push('web-fetch-2025-09-10');
+  }
+  // Code execution beta header
+  if (options.code_execution) {
+    betas.push('code-execution-2025-08-25');
   }
   if (options.mcp) {
     betas.push('mcp-client-2025-04-04');
@@ -133,6 +144,7 @@ function convertContentToAnthropic(content) {
 
 /**
  * Convert OpenAI tools format to Anthropic format
+ * Includes support for web_search, web_fetch, and code_execution tools
  */
 function convertToolsToAnthropic(tools, options = {}) {
   if (!tools || tools.length === 0) return null;
@@ -166,6 +178,7 @@ function convertToolsToAnthropic(tools, options = {}) {
         name: 'bash'
       });
     } else if (tool.type === 'web_search' || tool.name === 'web_search') {
+      // Web search tool - per docs: https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search
       anthropicTools.push({
         type: 'web_search_20250305',
         name: 'web_search',
@@ -174,6 +187,23 @@ function convertToolsToAnthropic(tools, options = {}) {
         ...(tool.blocked_domains && { blocked_domains: tool.blocked_domains }),
         ...(tool.user_location && { user_location: tool.user_location })
       });
+    } else if (tool.type === 'web_fetch' || tool.name === 'web_fetch') {
+      // Web fetch (URL context) tool - per docs: https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-fetch-tool
+      anthropicTools.push({
+        type: 'web_fetch_20250910',
+        name: 'web_fetch',
+        ...(tool.max_uses && { max_uses: tool.max_uses }),
+        ...(tool.allowed_domains && { allowed_domains: tool.allowed_domains }),
+        ...(tool.blocked_domains && { blocked_domains: tool.blocked_domains }),
+        ...(tool.citations && { citations: tool.citations }),
+        ...(tool.max_content_tokens && { max_content_tokens: tool.max_content_tokens })
+      });
+    } else if (tool.type === 'code_execution' || tool.name === 'code_execution') {
+      // Code execution tool - per docs: https://platform.claude.com/docs/en/agents-and-tools/tool-use/code-execution-tool
+      anthropicTools.push({
+        type: 'code_execution_20250825',
+        name: 'code_execution'
+      });
     }
   }
 
@@ -181,7 +211,7 @@ function convertToolsToAnthropic(tools, options = {}) {
 }
 
 /**
- * Build Anthropic request body
+ * Build Anthropic request body with all supported features
  */
 function buildAnthropicBody(body) {
   const modelId = body.model?.replace('anthropic/', '') || 'claude-sonnet-4';
@@ -258,22 +288,42 @@ function buildAnthropicBody(body) {
   // Streaming
   anthropicBody.stream = body.stream !== false;
 
-  // Tools
+  // Build options for headers (beta flags)
   const options = {
     computer_use: body.computer_use,
     web_search: body.web_search,
+    url_context: body.url_context,
+    code_execution: body.code_execution,
     citations: body.citations,
     pdf_support: body.messages?.some(m => 
       Array.isArray(m.content) && m.content.some(c => c.type === 'document' || c.type === 'file')
     )
   };
 
-  // Add web search tool if requested
+  // Build tools array
   let tools = body.tools ? [...body.tools] : [];
+  
+  // Add web search tool if requested
   if (body.web_search && !tools.some(t => t.type === 'web_search' || t.name === 'web_search')) {
     tools.push({
       type: 'web_search',
       max_uses: body.web_search_max_uses || 5
+    });
+  }
+  
+  // Add web fetch (URL context) tool if requested
+  if (body.url_context && !tools.some(t => t.type === 'web_fetch' || t.name === 'web_fetch')) {
+    tools.push({
+      type: 'web_fetch',
+      max_uses: body.url_context_max_uses || 5,
+      citations: { enabled: true }
+    });
+  }
+  
+  // Add code execution tool if requested
+  if (body.code_execution && !tools.some(t => t.type === 'code_execution' || t.name === 'code_execution')) {
+    tools.push({
+      type: 'code_execution'
     });
   }
 
@@ -304,6 +354,7 @@ function buildAnthropicBody(body) {
       type: 'enabled',
       budget_tokens: body.thinking_budget || body.reasoning_budget || 10000
     };
+    options.extended_thinking = true;
   }
 
   return { anthropicBody, options };
@@ -311,11 +362,13 @@ function buildAnthropicBody(body) {
 
 /**
  * Parse Anthropic SSE stream and convert to OpenAI format
+ * Handles text, tool calls, code execution results, and web fetch results
  */
 function createAnthropicStreamTransformer(encoder) {
   let buffer = '';
   let currentToolCall = null;
   let currentThinking = '';
+  let currentServerToolUse = null;
 
   return new TransformStream({
     transform(chunk, controller) {
@@ -345,6 +398,14 @@ function createAnthropicStreamTransformer(encoder) {
                     arguments: ''
                   };
                 }
+                if (event.content_block?.type === 'server_tool_use') {
+                  // Server-side tools like code_execution
+                  currentServerToolUse = {
+                    id: event.content_block.id,
+                    name: event.content_block.name,
+                    input: ''
+                  };
+                }
                 if (event.content_block?.type === 'thinking') {
                   currentThinking = '';
                 }
@@ -370,8 +431,13 @@ function createAnthropicStreamTransformer(encoder) {
                   };
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
                 }
-                if (event.delta?.type === 'input_json_delta' && currentToolCall) {
-                  currentToolCall.arguments += event.delta.partial_json || '';
+                if (event.delta?.type === 'input_json_delta') {
+                  if (currentToolCall) {
+                    currentToolCall.arguments += event.delta.partial_json || '';
+                  }
+                  if (currentServerToolUse) {
+                    currentServerToolUse.input += event.delta.partial_json || '';
+                  }
                 }
                 break;
 
@@ -394,6 +460,59 @@ function createAnthropicStreamTransformer(encoder) {
                   };
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify(toolChunk)}\n\n`));
                   currentToolCall = null;
+                }
+                if (currentServerToolUse) {
+                  // Emit code execution event for frontend
+                  if (currentServerToolUse.name === 'code_execution') {
+                    try {
+                      const input = JSON.parse(currentServerToolUse.input || '{}');
+                      const codeChunk = {
+                        type: 'code_execution',
+                        language: 'bash', // Anthropic uses bash
+                        code: input.code || input.command || ''
+                      };
+                      controller.enqueue(encoder.encode(`data: ${JSON.stringify(codeChunk)}\n\n`));
+                    } catch (e) {
+                      // Ignore parse errors
+                    }
+                  }
+                  currentServerToolUse = null;
+                }
+                break;
+
+              // Handle code execution results
+              case 'code_execution_tool_result':
+                const codeResult = {
+                  type: 'code_execution_result',
+                  outcome: event.content?.stdout ? 'OUTCOME_OK' : 'OUTCOME_ERROR',
+                  output: event.content?.stdout || event.content?.stderr || ''
+                };
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(codeResult)}\n\n`));
+                break;
+
+              // Handle bash/text editor code execution results (new format)
+              case 'bash_code_execution_result':
+              case 'text_editor_code_execution_result':
+                const bashResult = {
+                  type: 'code_execution_result',
+                  outcome: event.content?.exit_code === 0 ? 'OUTCOME_OK' : 'OUTCOME_ERROR',
+                  output: event.content?.stdout || event.content?.stderr || event.content?.output || ''
+                };
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(bashResult)}\n\n`));
+                break;
+
+              // Handle web fetch results
+              case 'web_fetch_tool_result':
+                if (event.content?.type === 'web_fetch_result') {
+                  // Extract sources from web fetch for citation
+                  const sourceEvent = {
+                    type: 'sources',
+                    sources: [{
+                      title: event.content.url,
+                      url: event.content.url
+                    }]
+                  };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(sourceEvent)}\n\n`));
                 }
                 break;
 
@@ -449,15 +568,12 @@ function createAnthropicStreamTransformer(encoder) {
 export async function handleAnthropicChat(c, body, apiKey) {
   const { anthropicBody, options } = buildAnthropicBody(body);
 
-  console.log(`Anthropic request for model: ${anthropicBody.model}`);
+  console.log(`Anthropic request for model: ${anthropicBody.model}, web_search: ${options.web_search}, code_execution: ${options.code_execution}, url_context: ${options.url_context}`);
 
   try {
     const response = await fetch(`${ANTHROPIC_BASE_URL}/messages`, {
       method: 'POST',
-      headers: getAnthropicHeaders(apiKey, {
-        ...options,
-        extended_thinking: body.thinking || body.extended_thinking
-      }),
+      headers: getAnthropicHeaders(apiKey, options),
       body: JSON.stringify(anthropicBody)
     });
 

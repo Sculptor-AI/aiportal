@@ -42,6 +42,8 @@ const ChatInputArea = forwardRef(({
   onRemoveFile,      // Prop for removing individual files
   resetFileUploadTrigger, // Renamed from resetFileUpload
   availableModels, // Needed for model-specific logic if any remains or for sub-components
+  currentModel, // Current selected model ID
+  modelCapabilities = {}, // Capabilities of the current model (web_search, code_execution, etc.)
   isWhiteboardOpen, // New prop
   onToggleWhiteboard, // New prop for toggling
   onCloseWhiteboard, // New prop for closing (can be same as onToggleWhiteboard if it's a pure toggle)
@@ -74,7 +76,7 @@ const ChatInputArea = forwardRef(({
   const [isVideoPromptMode, setIsVideoPromptMode] = useState(false);
   const [isFlowchartPromptMode, setIsFlowchartPromptMode] = useState(false);
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
-  const [visibleChips, setVisibleChips] = useState(['mode', 'search', 'deep-research', 'create']);
+  const [visibleChips, setVisibleChips] = useState(['mode', 'search', 'analysis-tool', 'create']);
   const [hiddenChips, setHiddenChips] = useState([]);
   const [showOverflowDropdown, setShowOverflowDropdown] = useState(false);
   const [chipsExpanded, setChipsExpanded] = useState(chatIsEmpty);
@@ -497,32 +499,42 @@ const ChatInputArea = forwardRef(({
           Search
         </ActionChip>
       );
-    } else if (type === 'deep-research') {
+    } else if (type === 'analysis-tool') {
+      // Only show analysis tool (code execution) if the current model supports it
+      const supportsCodeExecution = modelCapabilities?.code_execution === true;
+      
+      if (!supportsCodeExecution) {
+        // Don't render the chip if the model doesn't support code execution
+        return null;
+      }
+      
       return (
         <ActionChip
-          key="deep-research"
+          key="analysis-tool"
           ref={ref}
-          selected={selectedActionChip === 'deep-research'}
+          selected={selectedActionChip === 'analysis-tool'}
           onClick={() => {
             if (isHidden) setShowOverflowDropdown(false);
-            if (selectedActionChip === 'deep-research') {
+            if (selectedActionChip === 'analysis-tool') {
               setSelectedActionChip(null);
             } else {
-              setSelectedActionChip('deep-research');
+              setSelectedActionChip('analysis-tool');
               setThinkingMode(null);
             }
           }}
+          title="Code Execution - Run code to analyze data, generate charts, and more"
         >
           {theme.name === 'retro' ? (
             <RetroIconWrapper>
-              <img src="/images/retroTheme/deepResearch.png" alt="Deep Research" style={{ width: '16px', height: '16px' }} />
+              <img src="/images/retroTheme/deepResearch.png" alt="Analysis Tool" style={{ width: '16px', height: '16px' }} />
             </RetroIconWrapper>
           ) : (
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
             </svg>
           )}
-          Deep research
+          Analysis
         </ActionChip>
       );
     } else if (type === 'create') {

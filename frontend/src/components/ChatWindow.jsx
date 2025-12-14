@@ -569,6 +569,8 @@ const ChatWindow = forwardRef(({
           onRemoveFile={removeFileByIndex}
           resetFileUploadTrigger={resetFileUpload}
           availableModels={availableModels}
+          currentModel={selectedModel}
+          modelCapabilities={availableModels?.find(m => m.id === selectedModel)?.capabilities || {}}
           isWhiteboardOpen={isWhiteboardOpen}
           onToggleWhiteboard={onToggleWhiteboard}
           onCloseWhiteboard={onCloseWhiteboard}

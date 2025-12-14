@@ -159,17 +159,82 @@ export function listChatModels() {
   const globalDefault = modelsConfig.default;
   
   for (const [provider, config] of Object.entries(modelsConfig.chat || {})) {
+    const capabilities = config.capabilities || {};
+    
     for (const [name, apiId] of Object.entries(config.models || {})) {
       models.push({
         id: name,
         apiId: apiId,
         provider,
-        isDefault: name === globalDefault
+        isDefault: name === globalDefault,
+        capabilities: capabilities
       });
     }
   }
   
   return models;
+}
+
+/**
+ * Get capabilities for a specific provider
+ */
+export function getProviderCapabilities(provider) {
+  const config = modelsConfig.chat?.[provider];
+  if (!config) return {};
+  return config.capabilities || {};
+}
+
+/**
+ * Check if a provider supports a specific capability
+ */
+export function providerSupports(provider, capability) {
+  const capabilities = getProviderCapabilities(provider);
+  return capabilities[capability] === true;
+}
+
+/**
+ * Validate requested tools against provider capabilities
+ * Returns { valid: boolean, errors: string[], supported: string[] }
+ */
+export function validateToolsForProvider(provider, requestedTools) {
+  const capabilities = getProviderCapabilities(provider);
+  const errors = [];
+  const supported = [];
+  const requested = [];
+  
+  if (requestedTools.web_search) {
+    requested.push('web_search');
+    if (capabilities.web_search) {
+      supported.push('web_search');
+    } else {
+      errors.push(`Web search is not supported by ${provider} models.`);
+    }
+  }
+  
+  if (requestedTools.code_execution) {
+    requested.push('code_execution');
+    if (capabilities.code_execution) {
+      supported.push('code_execution');
+    } else {
+      errors.push(`Code execution is not supported by ${provider} models. This feature is available for Gemini and Anthropic models.`);
+    }
+  }
+  
+  if (requestedTools.url_context) {
+    requested.push('url_context');
+    if (capabilities.url_context) {
+      supported.push('url_context');
+    } else {
+      errors.push(`URL context is not supported by ${provider} models. This feature is available for Gemini and Anthropic models.`);
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    supported,
+    requested
+  };
 }
 
 export default modelsConfig;

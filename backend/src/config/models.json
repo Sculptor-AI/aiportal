@@ -11,6 +11,11 @@
         "gpt-5.2-pro": "gpt-5.2-pro-2025-12-11",
         "gpt-5.2-nano": "gpt-5-nano-2025-08-07",
         "gpt-4o": "chatgpt-4o-latest"
+      },
+      "capabilities": {
+        "web_search": true,
+        "code_execution": false,
+        "url_context": false
       }
     },
 
@@ -19,6 +24,11 @@
         "claude-opus-4.5": "claude-opus-4-5",
         "claude-sonnet-4.5": "claude-sonnet-4-5",
         "claude-haiku-4.5": "claude-haiku-4-5"
+      },
+      "capabilities": {
+        "web_search": true,
+        "code_execution": true,
+        "url_context": true
       }
     },
 
@@ -26,6 +36,11 @@
       "models": {
         "gemini-3-pro": "gemini-3-pro-preview",
         "gemini-2.5-flash": "gemini-flash-latest"
+      },
+      "capabilities": {
+        "web_search": true,
+        "code_execution": true,
+        "url_context": true
       }
     }
   },

@@ -20,16 +20,18 @@ health.get('/health', (c) => c.json({ ok: true, time: nowIso() }));
 /**
  * List available AI models across all providers
  * Uses centralized config from models.json
+ * Includes capabilities per model for frontend feature toggling
  */
 health.get('/models', (c) => {
   const chatModels = listChatModels();
   
-  // Format for API response
+  // Format for API response - include capabilities for frontend
   const models = chatModels.map(m => ({
     id: m.id,
     apiId: m.apiId,
     provider: m.provider,
-    isDefault: m.isDefault
+    isDefault: m.isDefault,
+    capabilities: m.capabilities || {}
   }));
 
   return c.json({ 
