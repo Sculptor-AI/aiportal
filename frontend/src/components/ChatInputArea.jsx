@@ -154,7 +154,7 @@ const ChatInputArea = forwardRef(({
       let availableWidth = containerWidth - hammerButtonWidth;
 
       // Define all chips
-      const allChips = ['mode', 'search', 'deep-research', 'create'];
+      const allChips = ['mode', 'search', 'analysis-tool', 'create'];
 
       let currentWidth = 0;
       const visible = [];
