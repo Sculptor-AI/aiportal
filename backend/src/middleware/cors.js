@@ -9,7 +9,7 @@ import { cors } from 'hono/cors';
  */
 export const apiCors = cors({
   origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'x-api-key']
 });
 

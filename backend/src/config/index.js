@@ -15,23 +15,41 @@ export function getModelsConfig() {
 }
 
 /**
- * Resolve a model name (e.g. "gpt-5.2") to its API identifier (e.g. "gpt-5.2-pro-2025-12-11")
+ * Get the global default model
+ */
+export function getGlobalDefault() {
+  return modelsConfig.default || 'gpt-5.2';
+}
+
+/**
+ * Resolve a model name to its API identifier
+ * Handles "latest" as an alias for the global default
  */
 export function resolveModel(provider, modelName) {
+  // Handle "latest" as global default
+  if (modelName === 'latest') {
+    const defaultModel = modelsConfig.default;
+    // Find which provider has this model and resolve it
+    for (const [p, config] of Object.entries(modelsConfig.chat || {})) {
+      if (config.models?.[defaultModel]) {
+        return config.models[defaultModel];
+      }
+    }
+    return defaultModel;
+  }
+
   const providerConfig = modelsConfig.chat?.[provider];
   if (!providerConfig) {
     return modelName; // Return as-is if provider not found
   }
 
-  // Look up in simple models map
+  // Look up in models map
   if (providerConfig.models?.[modelName]) {
     return providerConfig.models[modelName];
   }
 
-  // If not found, check if it was already an API ID (fallback)
-  // or return default if completely unknown
-  const defaultName = providerConfig.default;
-  return providerConfig.models?.[defaultName] || modelName;
+  // Return as-is if not found (might already be an API ID)
+  return modelName;
 }
 
 /**
@@ -40,7 +58,16 @@ export function resolveModel(provider, modelName) {
 export function getDefaultModel(provider) {
   const config = modelsConfig.chat?.[provider];
   if (!config) return null;
-  return config.models[config.default];
+  
+  // Use global default if it belongs to this provider
+  const globalDefault = modelsConfig.default;
+  if (config.models?.[globalDefault]) {
+    return config.models[globalDefault];
+  }
+  
+  // Otherwise return first model in the provider's list
+  const firstModel = Object.keys(config.models || {})[0];
+  return config.models?.[firstModel] || null;
 }
 
 /**
@@ -55,14 +82,17 @@ export function getImageModels(provider) {
  */
 export function listImageModels() {
   const models = [];
+  const imageDefault = modelsConfig.image?.default;
   
   for (const [provider, config] of Object.entries(modelsConfig.image || {})) {
+    if (provider === 'default') continue; // Skip the default key
+    
     for (const [name, apiId] of Object.entries(config.models || {})) {
       models.push({
-        id: name, // User facing name
-        apiId: apiId, // Backend API ID
+        id: name,
+        apiId: apiId,
         provider,
-        isDefault: name === config.default
+        isDefault: name === imageDefault
       });
     }
   }
@@ -74,9 +104,19 @@ export function listImageModels() {
  * Get default image model API ID for a provider
  */
 export function getDefaultImageModel(provider) {
+  const imageDefault = modelsConfig.image?.default;
   const config = modelsConfig.image?.[provider];
+  
   if (!config) return null;
-  return config.models[config.default];
+  
+  // Check if global image default is in this provider
+  if (config.models?.[imageDefault]) {
+    return config.models[imageDefault];
+  }
+  
+  // Otherwise return first model
+  const firstModel = Object.keys(config.models || {})[0];
+  return config.models?.[firstModel] || null;
 }
 
 /**
@@ -86,16 +126,18 @@ export function getImageModelFallbacks(provider, preferredModelName) {
   const config = modelsConfig.image?.[provider];
   if (!config) return [];
   
-  // Start with preferred model if valid
   const models = [];
+  
+  // Start with preferred model if valid
   if (preferredModelName && config.models[preferredModelName]) {
     models.push(config.models[preferredModelName]);
   }
 
   // Add default model
-  if (config.default && config.models[config.default]) {
-    if (!models.includes(config.models[config.default])) {
-      models.push(config.models[config.default]);
+  const imageDefault = modelsConfig.image?.default;
+  if (imageDefault && config.models[imageDefault]) {
+    if (!models.includes(config.models[imageDefault])) {
+      models.push(config.models[imageDefault]);
     }
   }
 
@@ -114,14 +156,15 @@ export function getImageModelFallbacks(provider, preferredModelName) {
  */
 export function listChatModels() {
   const models = [];
+  const globalDefault = modelsConfig.default;
   
   for (const [provider, config] of Object.entries(modelsConfig.chat || {})) {
     for (const [name, apiId] of Object.entries(config.models || {})) {
       models.push({
-        id: name,      // User-friendly name (e.g. "gpt-5.2")
-        apiId: apiId,  // Actual API ID (e.g. "gpt-5.2-pro-2025...")
+        id: name,
+        apiId: apiId,
         provider,
-        isDefault: name === config.default
+        isDefault: name === globalDefault
       });
     }
   }
