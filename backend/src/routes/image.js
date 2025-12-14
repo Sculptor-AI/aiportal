@@ -1,110 +1,113 @@
 /**
- * Image Generation Routes (Imagen 4)
+ * Image Generation Routes
+ * 
+ * Supports multiple providers:
+ * - Google Imagen (via Gemini API)
+ * - OpenAI DALL-E
+ * - Gemini native image generation
  */
 
 import { Hono } from 'hono';
+import { generateImageWithImagen } from '../services/gemini.js';
+import { generateImageWithDALLE, editImageWithDALLE } from '../services/openai.js';
+import { listImageModels, getDefaultImageModel } from '../config/index.js';
 
 const image = new Hono();
 
 /**
- * Generate image with Imagen
+ * Generate image
+ * 
+ * POST /api/image/generate
+ * Body:
+ * - prompt: string (required)
+ * - provider: 'imagen' | 'dalle' | 'gemini' (optional, auto-detects from model)
+ * - model: string (optional)
+ * - aspectRatio: string (optional, e.g., '1:1', '16:9')
+ * - size: string (optional, e.g., '1024x1024', for DALL-E)
+ * - quality: 'auto' | 'hd' | 'low' (optional, for DALL-E)
+ * - style: 'vivid' | 'natural' | 'auto' (optional, for DALL-E)
+ * - n: number (optional, number of images)
+ * - negativePrompt: string (optional, for Imagen)
  */
 image.post('/generate', async (c) => {
   const env = c.env;
-  const apiKey = env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    const placeholder = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6XBrZkAAAAASUVORK5CYII=';
-    return c.json({
-      imageData: placeholder,
-      note: 'GEMINI_API_KEY is not configured. Returning placeholder image.'
-    });
-  }
 
   try {
-    const { prompt, model, aspectRatio, imageSize } = await c.req.json();
+    const body = await c.req.json();
+    const { prompt, provider, model } = body;
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
       return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
     }
 
-    console.log(`Image generation request for: "${prompt}"`);
-
-    // Model priority: user-specified > Imagen 4 Fast > Imagen 3
-    const IMAGEN_MODELS = [
-      model || 'imagen-4.0-fast-generate-001',
-      'imagen-4.0-generate-001',
-      'imagen-3.0-generate-001'
-    ];
-
-    const requestBody = {
-      instances: [{
-        prompt: prompt
-      }],
-      parameters: {
-        sampleCount: 1,
-        aspectRatio: aspectRatio || '1:1',
-        // For fast model, disable enhanced prompts for complex prompts
-        ...(model === 'imagen-4.0-fast-generate-001' && { enhancePrompt: false })
+    // Determine provider
+    let selectedProvider = provider;
+    if (!selectedProvider) {
+      if (model?.includes('dall-e') || model?.includes('gpt-image')) {
+        selectedProvider = 'dalle';
+      } else {
+        selectedProvider = 'imagen'; // Default to Imagen
       }
-    };
-
-    // Add imageSize if specified (1K or 2K)
-    if (imageSize) {
-      requestBody.parameters.imageSize = imageSize;
     }
 
-    let response = null;
-    let lastError = null;
+    console.log(`Image generation: provider=${selectedProvider}, model=${model || 'default'}`);
 
-    // Try each model in order until one succeeds
-    for (const modelName of IMAGEN_MODELS) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:predict?key=${apiKey}`;
+    if (selectedProvider === 'dalle') {
+      const apiKey = env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return c.json({ error: 'OPENAI_API_KEY is not configured for DALL-E.' }, 500);
+      }
 
-      console.log(`Trying Imagen model: ${modelName}`);
-
-      response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+      const result = await generateImageWithDALLE(prompt, apiKey, {
+        model: model,
+        size: body.size || '1024x1024',
+        quality: body.quality || 'auto',
+        style: body.style || 'auto',
+        n: body.n || 1,
+        response_format: 'b64_json'
       });
 
-      if (response.ok) {
-        console.log(`Success with model: ${modelName}`);
-        break;
-      } else {
-        lastError = await response.text();
-        console.log(`Model ${modelName} failed: ${lastError}`);
-        response = null;
+      if (!result.success) {
+        return c.json({ error: result.error }, 500);
       }
-    }
 
-    if (!response || !response.ok) {
-      console.error('All Imagen models failed. Last error:', lastError);
       return c.json({
-        error: 'Image generation failed with all available models',
-        details: lastError
-      }, 500);
+        provider: 'dalle',
+        model: result.model,
+        images: result.images.map(img => ({
+          imageData: img.data ? `data:image/png;base64,${img.data}` : null,
+          imageUrl: img.url,
+          revisedPrompt: img.revised_prompt
+        }))
+      });
     }
 
-    const result = await response.json();
+    // Imagen (Google)
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return c.json({ error: 'GEMINI_API_KEY is not configured for Imagen.' }, 500);
+    }
 
-    // Handle Imagen 3/4 response format
-    if (result.predictions && result.predictions[0]) {
-      const prediction = result.predictions[0];
+    const result = await generateImageWithImagen(prompt, apiKey, {
+      model: model,
+      aspectRatio: body.aspectRatio || '1:1',
+      imageSize: body.imageSize,
+      count: body.n || 1,
+      negativePrompt: body.negativePrompt,
+      seed: body.seed
+    });
 
-      if (prediction.bytesBase64Encoded) {
-        const mimeType = prediction.mimeType || 'image/png';
-        return c.json({
-          imageData: `data:${mimeType};base64,${prediction.bytesBase64Encoded}`
-        });
-      }
+    if (!result.success) {
+      return c.json({ error: result.error }, 500);
     }
 
     return c.json({
-      error: 'Unexpected API response structure',
-      details: result
-    }, 500);
+      provider: 'imagen',
+      model: result.model,
+      images: result.images.map(img => ({
+        imageData: `data:${img.mimeType};base64,${img.data}`
+      }))
+    });
 
   } catch (error) {
     console.error('Image generation error:', error);
@@ -112,5 +115,70 @@ image.post('/generate', async (c) => {
   }
 });
 
-export default image;
+/**
+ * Edit image (DALL-E only)
+ * 
+ * POST /api/image/edit
+ * Body:
+ * - image: string (base64 data URL or URL)
+ * - prompt: string (required)
+ * - mask: string (optional, base64 data URL)
+ * - size: string (optional)
+ * - n: number (optional)
+ */
+image.post('/edit', async (c) => {
+  const env = c.env;
+  const apiKey = env.OPENAI_API_KEY;
 
+  if (!apiKey) {
+    return c.json({ error: 'OPENAI_API_KEY is not configured.' }, 500);
+  }
+
+  try {
+    const body = await c.req.json();
+    const { image: imageData, prompt, mask, size, n, model } = body;
+
+    if (!imageData) {
+      return c.json({ error: 'Image is required' }, 400);
+    }
+    if (!prompt) {
+      return c.json({ error: 'Prompt is required' }, 400);
+    }
+
+    const result = await editImageWithDALLE(imageData, prompt, apiKey, {
+      mask,
+      size: size || '1024x1024',
+      n: n || 1,
+      model: model || 'gpt-image-1'
+    });
+
+    if (!result.success) {
+      return c.json({ error: result.error }, 500);
+    }
+
+    return c.json({
+      images: result.images.map(img => ({
+        imageData: img.data ? `data:image/png;base64,${img.data}` : null,
+        imageUrl: img.url
+      }))
+    });
+
+  } catch (error) {
+    console.error('Image edit error:', error);
+    return c.json({ error: error.message || 'Internal server error' }, 500);
+  }
+});
+
+/**
+ * List available image models
+ * Uses centralized config
+ */
+image.get('/models', (c) => {
+  const models = listImageModels();
+  return c.json({ 
+    models,
+    _note: 'Model list is defined in src/config/models.json'
+  });
+});
+
+export default image;

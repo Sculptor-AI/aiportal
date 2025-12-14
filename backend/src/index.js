@@ -13,7 +13,6 @@ import adminRoutes from './routes/admin.js';
 import rssRoutes from './routes/rss.js';
 import chatRoutes from './routes/chat.js';
 import imageRoutes from './routes/image.js';
-import videoRoutes from './routes/video.js';
 import staticRoutes from './routes/static.js';
 
 // Initialize state (seeds demo users)
@@ -49,11 +48,7 @@ app.route('/api/v1', chatRoutes);
 // Image Generation
 app.route('/api/image', imageRoutes);
 
-// Video Generation
-app.route('/api/video', videoRoutes);
-
 // Static Assets & SPA Fallback (must be last)
 app.route('', staticRoutes);
 
 export default app;
-

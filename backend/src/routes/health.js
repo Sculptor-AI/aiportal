@@ -4,6 +4,11 @@
 
 import { Hono } from 'hono';
 import { nowIso } from '../state.js';
+import { 
+  getModelsConfig, 
+  listChatModels, 
+  listImageModels
+} from '../config/index.js';
 
 const health = new Hono();
 
@@ -13,151 +18,128 @@ const health = new Hono();
 health.get('/health', (c) => c.json({ ok: true, time: nowIso() }));
 
 /**
- * List available AI models
+ * List available AI models across all providers
+ * Uses centralized config from models.json
  */
 health.get('/models', (c) => {
-  const models = [
-    // === OpenAI Models (via OpenRouter) ===
-    {
-      id: 'openai/gpt-5.1',
-      name: 'GPT-5.1',
-      provider: 'openai',
-      description: 'OpenAI\'s most advanced model',
-      source: 'openrouter',
-      capabilities: ['chat', 'vision'],
-      context_length: 128000
-    },
-    {
-      id: 'openai/gpt-5',
-      name: 'GPT-5',
-      provider: 'openai',
-      description: 'OpenAI\'s flagship model',
-      source: 'openrouter',
-      capabilities: ['chat', 'vision'],
-      context_length: 128000
-    },
-    {
-      id: 'openai/gpt-5-mini',
-      name: 'GPT-5 Mini',
-      provider: 'openai',
-      description: 'Fast and efficient GPT-5 variant',
-      source: 'openrouter',
-      capabilities: ['chat', 'vision'],
-      context_length: 128000
-    },
-    {
-      id: 'openai/o4-mini',
-      name: 'o4 Mini',
-      provider: 'openai',
-      description: 'OpenAI reasoning model - fast',
-      source: 'openrouter',
-      capabilities: ['chat', 'reasoning'],
-      context_length: 128000
-    },
-    {
-      id: 'openai/o3',
-      name: 'o3',
-      provider: 'openai',
-      description: 'OpenAI advanced reasoning model',
-      source: 'openrouter',
-      capabilities: ['chat', 'reasoning'],
-      context_length: 200000
-    },
-    {
-      id: 'openai/o3-mini',
-      name: 'o3 Mini',
-      provider: 'openai',
-      description: 'Fast reasoning model',
-      source: 'openrouter',
-      capabilities: ['chat', 'reasoning'],
-      context_length: 200000
-    },
-    // === Anthropic Models (via OpenRouter) ===
-    {
-      id: 'anthropic/claude-opus-4.5',
-      name: 'Claude Opus 4.5',
-      provider: 'anthropic',
-      description: 'Anthropic\'s most intelligent model',
-      source: 'openrouter',
-      capabilities: ['chat', 'vision', 'reasoning'],
-      context_length: 200000
-    },
-    {
-      id: 'anthropic/claude-sonnet-4.5',
-      name: 'Claude Sonnet 4.5',
-      provider: 'anthropic',
-      description: 'Best balance of intelligence and speed',
-      source: 'openrouter',
-      capabilities: ['chat', 'vision'],
-      context_length: 200000
-    },
-    {
-      id: 'anthropic/claude-sonnet-4',
-      name: 'Claude Sonnet 4',
-      provider: 'anthropic',
-      description: 'Fast and capable Claude model',
-      source: 'openrouter',
-      capabilities: ['chat', 'vision'],
-      context_length: 200000
-    },
-    {
-      id: 'anthropic/claude-3.7-sonnet',
-      name: 'Claude 3.7 Sonnet',
-      provider: 'anthropic',
-      description: 'Previous gen high-performance model',
-      source: 'openrouter',
-      capabilities: ['chat', 'vision'],
-      context_length: 200000
-    },
-    // === Google Gemini Models (Direct API) ===
-    {
-      id: 'gemini-3-pro-preview',
-      name: 'Gemini 3 Pro',
-      provider: 'google',
-      description: 'Google\'s most intelligent model',
-      source: 'gemini',
-      capabilities: ['chat', 'vision', 'search', 'reasoning'],
-      context_length: 1000000
-    },
-    {
-      id: 'gemini-2.5-flash',
-      name: 'Gemini 2.5 Flash',
-      provider: 'google',
-      description: 'Best price-performance ratio',
-      source: 'gemini',
-      capabilities: ['chat', 'vision', 'search'],
-      context_length: 1000000
-    },
-    {
-      id: 'gemini-2.5-pro',
-      name: 'Gemini 2.5 Pro',
-      provider: 'google',
-      description: 'Advanced reasoning and coding',
-      source: 'gemini',
-      capabilities: ['chat', 'vision', 'search', 'reasoning'],
-      context_length: 1000000
-    },
-    {
-      id: 'gemini-2.5-flash-lite',
-      name: 'Gemini 2.5 Flash Lite',
-      provider: 'google',
-      description: 'Ultra-fast lightweight model',
-      source: 'gemini',
-      capabilities: ['chat', 'vision'],
-      context_length: 1000000
-    },
-    {
-      id: 'gemini-2.0-flash',
-      name: 'Gemini 2.0 Flash',
-      provider: 'google',
-      description: 'Fast multimodal model',
-      source: 'gemini',
-      capabilities: ['chat', 'vision', 'search'],
-      context_length: 1000000
+  const chatModels = listChatModels();
+  
+  // Format for API response
+  const models = chatModels.map(m => ({
+    id: m.id,
+    apiId: m.apiId,
+    provider: m.provider,
+    isDefault: m.isDefault
+  }));
+
+  return c.json({ 
+    models,
+    _note: 'Model mappings are defined in src/config/models.json. Update that file when providers release new models.'
+  });
+});
+
+/**
+ * Get raw models configuration
+ * Useful for debugging and frontend model selection
+ */
+health.get('/models/config', (c) => {
+  return c.json(getModelsConfig());
+});
+
+/**
+ * List all supported capabilities
+ */
+health.get('/capabilities', (c) => {
+  return c.json({
+    capabilities: {
+      // Chat features
+      chat: {
+        streaming: true,
+        non_streaming: true,
+        system_prompts: true
+      },
+
+      // Vision/Multimodal
+      vision: {
+        images: true,
+        image_urls: true,
+        base64_images: true,
+        pdfs: ['anthropic', 'gemini'],
+        audio_input: [],
+        video_input: []
+      },
+
+      // Tool use
+      tools: {
+        function_calling: true,
+        parallel_tool_calls: true,
+        tool_choice: ['auto', 'none', 'required', 'specific']
+      },
+
+      // Web search
+      web_search: {
+        google: ['gemini'],
+        anthropic: ['claude-sonnet-4.5'],
+        openai: ['gpt-5.2', 'gpt-4o'],
+        openrouter: true
+      },
+
+      // Code execution
+      code_execution: {
+        gemini: true
+      },
+
+      // Reasoning/Thinking
+      reasoning: {
+        display_thinking: ['gemini', 'anthropic'],
+        reasoning_effort: ['openai']
+      },
+
+      // Structured outputs
+      structured_outputs: {
+        json_mode: true,
+        json_schema: true
+      },
+
+      // Generation
+      image_generation: {
+        models: listImageModels()
+      },
+
+      // Provider-specific features
+      computer_use: ['anthropic'],
+      citations: ['anthropic'],
+      url_context: ['gemini']
     }
-  ];
-  return c.json({ models });
+  });
+});
+
+/**
+ * Get API key status (without exposing keys)
+ */
+health.get('/status', (c) => {
+  const env = c.env;
+
+  return c.json({
+    providers: {
+      openrouter: {
+        configured: !!env.OPENROUTER_API_KEY,
+        description: 'Access to 200+ models via unified API'
+      },
+      gemini: {
+        configured: !!env.GEMINI_API_KEY,
+        description: 'Direct Google Gemini, Imagen access'
+      },
+      anthropic: {
+        configured: !!env.ANTHROPIC_API_KEY,
+        description: 'Direct Claude API access'
+      },
+      openai: {
+        configured: !!env.OPENAI_API_KEY,
+        description: 'Direct OpenAI API access'
+      }
+    }
+  });
 });
 
 export default health;
-

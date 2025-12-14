@@ -1,0 +1,55 @@
+{
+  "_description": "Centralized model configuration. Update this file when models change.",
+  "_lastUpdated": "2025-12-14",
+
+  "chat": {
+    "openai": {
+      "models": {
+        "gpt-5.2": "gpt-5.2-2025-12-11",
+        "gpt-5.2-pro": "gpt-5.2-pro-2025-12-11",
+        "gpt-5.2-nano": "gpt-5-nano-2025-08-07",
+        "gpt-4o": "chatgpt-4o-latest",
+        "latest": "gpt-5.2-pro-2025-12-11"
+      },
+      "default": "gpt-5.2"
+    },
+
+    "anthropic": {
+      "models": {
+        "claude-opus-4.5": "claude-opus-4-5",
+        "claude-sonnet-4.5": "claude-sonnet-4-5",
+        "claude-haiku-4.5": "claude-haiku-4-5",
+        "latest": "claude-sonnet-4.5-20251115"
+      },
+      "default": "claude-sonnet-4.5"
+    },
+
+    "gemini": {
+      "models": {
+        "gemini-3-pro": "gemini-3-pro-preview",
+        "gemini-2.5-flash": "gemini-flash-latest",
+        "latest": "gemini-3-pro-preview"
+      },
+      "default": "gemini-3-pro"
+    }
+  },
+
+  "image": {
+    "google": {
+      "models": {
+        "imagen-4.0": "imagen-4.0-generate-001",
+        "imagen-4.0-fast": "imagen-4.0-fast-generate-001",
+        "imagen-4.0-ultra": "imagen-4.0-ultra-generate-001",
+        "nano-banana": "gemini-2.5-flash-image",
+        "nano-banana-pro": "gemini-3-pro-image-preview"
+      },
+      "default": "nano-banana"
+    },
+    "openai": {
+      "models": {
+        "gpt-image": "gpt-image-1"
+      },
+      "default": "gpt-image"
+    }
+  }
+}

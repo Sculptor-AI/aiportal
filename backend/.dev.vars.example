@@ -1,2 +1,19 @@
-OPENROUTER_API_KEY="your_openrouter_key_here"
-GEMINI_API_KEY="your_gemini_key_here"
+# API Keys for AI Portal Backend
+# Copy this file to .dev.vars and fill in your keys
+# These are loaded securely and never committed to git
+
+# OpenRouter - Unified access to 200+ models (GPT, Claude, Llama, etc.)
+# Get your key at: https://openrouter.ai/keys
+OPENROUTER_API_KEY="sk-or-v1-your-openrouter-key-here"
+
+# Google Gemini - Direct access to Gemini, Imagen, Veo
+# Get your key at: https://aistudio.google.com/apikey
+GEMINI_API_KEY="your-gemini-api-key-here"
+
+# Anthropic Claude - Direct access to Claude models
+# Get your key at: https://console.anthropic.com/settings/keys
+ANTHROPIC_API_KEY="sk-ant-your-anthropic-key-here"
+
+# OpenAI - Direct access to GPT, DALL-E, Whisper, TTS
+# Get your key at: https://platform.openai.com/api-keys
+OPENAI_API_KEY="sk-your-openai-key-here"
