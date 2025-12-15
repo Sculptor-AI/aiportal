@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { useTheme } from 'styled-components';
 import FileUploadButton from './FileUploadButton';
 import PopupMenu from './ToolMenuModal';
+import DragDropOverlay from './DragDropOverlay';
 import {
   InputContainer,
   ChipsDock,
@@ -80,6 +81,8 @@ const ChatInputArea = forwardRef(({
   const [hiddenChips, setHiddenChips] = useState([]);
   const [showOverflowDropdown, setShowOverflowDropdown] = useState(false);
   const [chipsExpanded, setChipsExpanded] = useState(chatIsEmpty);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const dragCounterRef = useRef(0);
 
   // Image generation model selection
   const [availableImageModels, setAvailableImageModels] = useState([]);
@@ -390,6 +393,98 @@ const ChatInputArea = forwardRef(({
       }
     }
   };
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+
+    // Check if the drag contains files
+    if (e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+      setIsDraggingOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+
+    if (dragCounterRef.current === 0) {
+      setIsDraggingOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDraggingOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      // Convert FileList to array and process each file
+      const fileArray = Array.from(files);
+      fileArray.forEach(file => {
+        onFileSelected(file);
+      });
+    }
+  }, [onFileSelected]);
+
+  // Set up global drag and drop listeners
+  useEffect(() => {
+    const handleWindowDragEnter = (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+        dragCounterRef.current++;
+        setIsDraggingOver(true);
+      }
+    };
+
+    const handleWindowDragLeave = (e) => {
+      e.preventDefault();
+      dragCounterRef.current--;
+      if (dragCounterRef.current === 0) {
+        setIsDraggingOver(false);
+      }
+    };
+
+    const handleWindowDragOver = (e) => {
+      e.preventDefault();
+    };
+
+    const handleWindowDrop = (e) => {
+      e.preventDefault();
+      dragCounterRef.current = 0;
+      setIsDraggingOver(false);
+
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0 && !isLoading && !isProcessingFile) {
+        const fileArray = Array.from(files);
+        fileArray.forEach(file => {
+          onFileSelected(file);
+        });
+      }
+    };
+
+    window.addEventListener('dragenter', handleWindowDragEnter);
+    window.addEventListener('dragleave', handleWindowDragLeave);
+    window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('drop', handleWindowDrop);
+
+    return () => {
+      window.removeEventListener('dragenter', handleWindowDragEnter);
+      window.removeEventListener('dragleave', handleWindowDragLeave);
+      window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('drop', handleWindowDrop);
+    };
+  }, [onFileSelected, isLoading, isProcessingFile]);
 
   const getPlaceholderText = () => {
     if (isImagePromptMode) return "Enter prompt for image generation...";
@@ -1272,6 +1367,8 @@ const ChatInputArea = forwardRef(({
         theme={theme}
         rect={createMenuRect}
       />
+
+      <DragDropOverlay isVisible={isDraggingOver} />
     </InputContainer>
   );
 });
