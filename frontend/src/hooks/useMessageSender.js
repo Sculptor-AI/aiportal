@@ -46,6 +46,7 @@ const useMessageSender = ({
     // Check if this is an image generation request
     if (messagePayload.type === 'generate-image') {
       const prompt = messagePayload.prompt;
+      const imageModel = messagePayload.imageModel;
       
       if (!prompt || !chat?.id) return;
       
@@ -71,15 +72,15 @@ const useMessageSender = ({
         imageUrl: null,
         content: '',
         timestamp: new Date().toISOString(),
-        modelId: 'image-generator',
+        modelId: imageModel || 'image-generator',
       };
       addMessage(chat.id, imagePlaceholderMessage);
       
       if (scrollToBottom) setTimeout(scrollToBottom, 100);
       
       try {
-        const response = await generateImageApi(prompt);
-        const imageUrl = response.imageData || response.imageUrl;
+        const response = await generateImageApi(prompt, imageModel);
+        const imageUrl = response.images?.[0]?.imageData || response.imageData || response.imageUrl;
         
         if (!imageUrl) {
           throw new Error('No image URL returned from API');
