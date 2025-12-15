@@ -47,6 +47,13 @@ export const ChatTitleSection = styled.div`
   transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 `;
 
+export const ModelSelectorsRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+`;
+
 export const ChatTitle = styled.h2`
   font-size: 1.2rem;
   font-weight: 500;

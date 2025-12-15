@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, us
 import { useTheme } from 'styled-components';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
+import ImageModelSelector from './ImageModelSelector';
 import HtmlArtifactModal from './HtmlArtifactModal';
 import { useToast } from '../contexts/ToastContext';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -14,6 +15,7 @@ import {
   ChatHeader,
   ChatTitleSection,
   ChatTitle,
+  ModelSelectorsRow,
   MessageList,
   EmptyState,
 } from './ChatWindow.styled';
@@ -61,6 +63,11 @@ const ChatWindow = forwardRef(({
   const [artifactHTML, setArtifactHTML] = useState(null);
   const [isArtifactModalOpen, setIsArtifactModalOpen] = useState(false);
   const [animateDown, setAnimateDown] = useState(false);
+
+  // Image generation model state
+  const [isImagePromptMode, setIsImagePromptMode] = useState(false);
+  const [availableImageModels, setAvailableImageModels] = useState([]);
+  const [selectedImageModel, setSelectedImageModel] = useState(null);
 
   const messagesEndRef = useRef(null);
   const chatInputAreaRef = useRef(null);
@@ -396,6 +403,28 @@ const ChatWindow = forwardRef(({
     }
   }, [shouldStartAnimationThisRender]);
 
+  // Fetch available image models from backend
+  useEffect(() => {
+    const fetchImageModels = async () => {
+      try {
+        const response = await fetch('/api/image/models');
+        if (response.ok) {
+          const data = await response.json();
+          const models = data.models || [];
+          setAvailableImageModels(models);
+          // Set default model
+          const defaultModel = models.find(m => m.isDefault) || models[0];
+          if (defaultModel && !selectedImageModel) {
+            setSelectedImageModel(defaultModel);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch image models:', error);
+      }
+    };
+    fetchImageModels();
+  }, []);
+
   useEffect(() => {
     prevIsEmptyRef.current = chatIsEmpty;
   }, [chatIsEmpty]);
@@ -511,15 +540,24 @@ const ChatWindow = forwardRef(({
         $sidebarCollapsed={$sidebarCollapsed}
       >
         <ChatTitleSection $sidebarCollapsed={$sidebarCollapsed}>
-          {selectedModel !== 'instant' && (
-            <ModelSelector
-              selectedModel={selectedModel}
-              models={availableModels}
-              onChange={handleModelChange}
-              key="model-selector"
+          <ModelSelectorsRow>
+            {selectedModel !== 'instant' && (
+              <ModelSelector
+                selectedModel={selectedModel}
+                models={availableModels}
+                onChange={handleModelChange}
+                key="model-selector"
+                theme={theme}
+              />
+            )}
+            <ImageModelSelector
+              availableModels={availableImageModels}
+              selectedModel={selectedImageModel}
+              onSelectModel={setSelectedImageModel}
+              isVisible={isImagePromptMode}
               theme={theme}
             />
-          )}
+          </ModelSelectorsRow>
         </ChatTitleSection>
       </ChatHeader>
 
@@ -588,6 +626,9 @@ const ChatWindow = forwardRef(({
           onCloseSandbox3D={onCloseSandbox3D}
           onToolbarToggle={onToolbarToggle}
           onLiveModeToggle={handleLiveModeToggle}
+          isImagePromptMode={isImagePromptMode}
+          onImageModeChange={setIsImagePromptMode}
+          selectedImageModel={selectedImageModel}
         />
       )}
 
