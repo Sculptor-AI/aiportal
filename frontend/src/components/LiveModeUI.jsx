@@ -26,16 +26,20 @@ const float = keyframes`
 // --- Styled Components ---
 
 const Container = styled.div`
-  position: fixed;
+  /* Changed from fixed to absolute/flex to fill the container */
+  position: absolute;
   inset: 0;
-  z-index: 2000;
-  background-color: #09090b; /* Deep dark background */
-  background-image: 
-    radial-gradient(circle at 50% 0%, rgba(66, 133, 244, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 100% 100%, rgba(219, 68, 55, 0.1) 0%, transparent 40%);
+  z-index: 10; /* Lower than modals but above standard chat content */
+  background-color: ${props => props.theme.background};
+  /* Subtle gradient overlay that respects theme */
+  background-image: ${props => props.theme.name === 'dark' ?
+    `radial-gradient(circle at 50% 0%, rgba(66, 133, 244, 0.15) 0%, transparent 50%),
+     radial-gradient(circle at 100% 100%, rgba(219, 68, 55, 0.1) 0%, transparent 40%)` :
+    'none'
+  };
   display: flex;
   flex-direction: column;
-  color: #fff;
+  color: ${props => props.theme.text};
   animation: ${fadeIn} 0.5s ease-out;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: hidden;
@@ -43,24 +47,36 @@ const Container = styled.div`
 
 const Header = styled.div`
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end; /* Only CloseButton remains here */
   align-items: center;
   padding: 24px 32px;
   z-index: 10;
+  pointer-events: none; /* Let clicks pass through to ChatWindow header elements if any */
 `;
 
 const StatusBadge = styled.div`
+  position: absolute;
+  top: 80px; /* Position below the main header area */
+  left: 32px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
   border-radius: 20px;
-  backdrop-filter: blur(10px);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.5px;
+  color: ${props => props.theme.text};
+  z-index: 20;
+  
+  /* Optimization for crispness */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  -webkit-font-smoothing: antialiased;
+  backface-visibility: hidden;
+  transform: translateZ(0);
   
   &::before {
     content: '';
@@ -80,9 +96,14 @@ const StatusBadge = styled.div`
   }
 `;
 
+/* Header removed as it is no longer used */
+
 const CloseButton = styled.button`
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
+  position: absolute;
+  top: 80px;
+  right: 32px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -90,17 +111,29 @@ const CloseButton = styled.button`
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #fff;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(5px);
+  color: ${props => props.theme.text};
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  pointer-events: auto;
+  z-index: 50;
+  
+  /* Ensure no transforms or filters are causing blur on the base state */
+  transform: none;
+  filter: none;
+  backdrop-filter: none;
   
   &:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: ${props => props.theme.border};
     transform: scale(1.05);
   }
   
   &:active {
     transform: scale(0.95);
+  }
+  
+  svg {
+    shape-rendering: geometricPrecision;
+    width: 24px;
+    height: 24px;
   }
 `;
 
@@ -129,19 +162,23 @@ const AvatarContainer = styled.div`
   width: 160px;
   height: 160px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 4px solid rgba(255, 255, 255, 0.1);
+  background: ${props => props.theme.inputBackground};
+  border: 4px solid ${props => props.theme.border};
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 40px;
-  box-shadow: 0 0 60px rgba(66, 133, 244, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   animation: ${float} 6s ease-in-out infinite;
+  
+  /* Optimization */
+  backface-visibility: hidden;
+  will-change: transform;
   
   img, svg {
     width: 80px;
     height: 80px;
-    opacity: 0.9;
+    /* Removed opacity: 0.9 to let icons be full color */
   }
 `;
 
@@ -150,7 +187,7 @@ const VideoSurface = styled.video`
   height: 100%;
   object-fit: contain;
   border-radius: 24px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
   background: #000;
   animation: ${fadeIn} 0.5s ease;
 `;
@@ -162,7 +199,8 @@ const TranscriptionOverlay = styled.div`
   right: 0;
   padding: 40px 20px 140px;
   text-align: center;
-  background: linear-gradient(to top, rgba(9, 9, 11, 1) 0%, rgba(9, 9, 11, 0) 100%);
+  /* Updated gradient to use theme background */
+  background: linear-gradient(to top, ${props => props.theme.background} 0%, rgba(0,0,0,0) 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -174,21 +212,21 @@ const TextBubble = styled.div`
   max-width: 800px;
   font-size: 24px;
   line-height: 1.4;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-  opacity: 0.9;
+  color: ${props => props.theme.text};
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
   margin-top: 16px;
   font-weight: 500;
   
   /* Highlight user vs AI text */
   ${props => props.$isUser && css`
-    color: rgba(255, 255, 255, 0.7);
+    color: ${props => props.theme.text};
+    opacity: 0.7;
     font-size: 20px;
   `}
 `;
 
 const ControlsBar = styled.div`
-  position: fixed;
+  position: absolute;
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
@@ -196,13 +234,19 @@ const ControlsBar = styled.div`
   align-items: center;
   gap: 16px;
   padding: 16px 24px;
-  background: rgba(28, 28, 30, 0.85);
+  background: ${props => props.theme.inputBackground};
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid ${props => props.theme.border};
   border-radius: 100px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   z-index: 100;
   animation: ${slideUp} 0.5s ease-out 0.2s backwards;
+  
+  /* Optimize rendering */
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  transform: translateX(-50%) translateZ(0); /* Add translateZ for GPU */
 `;
 
 const ControlButton = styled.button`
@@ -234,17 +278,18 @@ const ControlButton = styled.button`
         `;
       }
       return css`
-        background: #fff;
-        color: #000;
-        &:hover { background: #f0f0f0; transform: scale(1.1); }
+        background: ${props.theme.text};
+        color: ${props.theme.background};
+        &:hover { opacity: 0.9; transform: scale(1.1); }
       `;
     }
     // Inactive State
     else {
       return css`
-        background: rgba(255, 255, 255, 0.1);
-        color: #fff;
-        &:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.1); }
+        background: transparent;
+        color: ${props.theme.text};
+        border: 1px solid ${props.theme.border};
+        &:hover { background: ${props.theme.border}; transform: scale(1.1); }
       `;
     }
   }}
@@ -254,15 +299,21 @@ const ErrorBanner = styled.div`
   position: absolute;
   top: 80px;
   left: 50%;
-  transform: translateX(-50%);
-  background: rgba(234, 67, 53, 0.9);
+  transform: translateX(-50%) translateZ(0);
+  background: rgba(234, 67, 53, 0.95); /* Little more opaque */
   color: white;
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   animation: ${slideUp} 0.3s ease-out;
   z-index: 50;
+  
+  /* Crisp text */
+  -webkit-font-smoothing: antialiased;
 `;
 
 const LiveModeUI = ({ selectedModel, onClose }) => {
@@ -436,16 +487,18 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
 
   return (
     <Container>
-      <Header>
-        <StatusBadge $status={getStatusColor()}>
-          {getStatusText()}
-        </StatusBadge>
-        <CloseButton onClick={onClose} aria-label="Close Live Mode">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </CloseButton>
-      </Header>
+      {/* Header removed, buttons are absolute now */}
+
+      <StatusBadge $status={getStatusColor()}>
+        {getStatusText()}
+      </StatusBadge>
+
+      <CloseButton onClick={onClose} aria-label="Close Live Mode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </CloseButton>
 
       {/* Errors */}
       {(cameraError || screenError || geminiError) && (
@@ -500,7 +553,9 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
             </svg>
           ) : (
             <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z" />
+              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth="2" />
             </svg>
           )}
         </ControlButton>

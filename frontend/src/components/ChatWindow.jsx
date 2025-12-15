@@ -176,9 +176,9 @@ const ChatWindow = forwardRef(({
         ];
         const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
         const isCodeFile = codeExtensions.includes(fileExtension) ||
-                          file.name.toLowerCase() === 'dockerfile' ||
-                          file.name.toLowerCase() === 'makefile' ||
-                          file.name.toLowerCase().startsWith('.env');
+          file.name.toLowerCase() === 'dockerfile' ||
+          file.name.toLowerCase() === 'makefile' ||
+          file.name.toLowerCase().startsWith('.env');
 
         if (!isImage && !isText && !isPdf && !isCodeFile) {
           alert(`Unsupported file type: ${file.name}`);
@@ -567,28 +567,26 @@ const ChatWindow = forwardRef(({
         </EmptyState>
       )}
 
-      {!chatIsEmpty && !isLiveModeOpen && chat && (
-        <MessageList>
-          {Array.isArray(chat.messages) && chat.messages.map(message => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              showModelIcons={settings.showModelIcons}
-              settings={settings}
-              theme={theme}
-            />
-          ))}
-          <div ref={messagesEndRef} />
-        </MessageList>
-      )}
-
-      {isLiveModeOpen && (
-        <MessageList>
-          <LiveModeUI
-            selectedModel={selectedModel}
-            onClose={handleCloseLiveMode}
+      {/* Main Chat Content */}
+      <MessageList>
+        {!chatIsEmpty && !isLiveModeOpen && chat && Array.isArray(chat.messages) && chat.messages.map(message => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            showModelIcons={settings.showModelIcons}
+            settings={settings}
+            theme={theme}
           />
-        </MessageList>
+        ))}
+        <div ref={messagesEndRef} />
+      </MessageList>
+
+      {/* Live Mode Overlay - Now sibling to MessageList */}
+      {isLiveModeOpen && (
+        <LiveModeUI
+          selectedModel={selectedModel}
+          onClose={handleCloseLiveMode}
+        />
       )}
 
       {!isLiveModeOpen && (
