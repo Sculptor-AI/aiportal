@@ -2,16 +2,13 @@ name = "ai-portal"
 main = "./worker.js"
 compatibility_date = "2024-02-24"
 
-# Configure your Pages site
-[site]
-bucket = "./dist"
+# Static Assets Configuration
+# The frontend build is copied here by GitHub Actions before deploy
+[assets]
+directory = "./dist"
+binding = "ASSETS"
 
-# Set environment variables (replace with actual API keys in Cloudflare dashboard)
-[vars]
-# Keys are now loaded securely from .dev.vars (local) or Cloudflare Secrets (production)
-
-# Configure deployment to Workers
-[build]
-# command = "cd ../frontend && npm install && npm run build && rm -rf ../backend/dist && cp -r dist ../backend/dist"
-
-# Static asset hosting is handled by the worker itself
+# Custom domain routing
+routes = [
+	{ pattern = "ai.kaileh.dev/*", custom_domain = true }
+]

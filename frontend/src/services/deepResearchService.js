@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Helper function to get API base URL
 const getApiBaseUrl = () => {
-  const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://api.sculptorai.org';
+  const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
   let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
   
   if (cleanedBase.endsWith('/api')) {
