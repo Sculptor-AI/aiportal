@@ -1,6 +1,6 @@
 class GeminiLiveService {
   constructor() {
-    this.baseUrl = (import.meta.env.VITE_BACKEND_API_URL || 'https://api.sculptorai.org') + '/api/v1/live-audio';
+    this.baseUrl = (import.meta.env.VITE_BACKEND_API_URL || '') + '/api/v1/live-audio';
     this.apiKey = null;
     this.sessionId = null;
     this.isConnected = false;

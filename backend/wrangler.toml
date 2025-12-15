@@ -3,15 +3,18 @@ main = "./worker.js"
 compatibility_date = "2024-02-24"
 
 # Configure your Pages site
-[site]
-bucket = "./dist"
+# Configure Static Assets (Workers Assets)
+[assets]
+directory = "./dist"
+binding = "ASSETS"
 
-# Set environment variables (replace with actual API keys in Cloudflare dashboard)
-[vars]
-# Keys are now loaded securely from .dev.vars (local) or Cloudflare Secrets (production)
+# Configure routes
+routes = [
+	{ pattern = "ai.kaileh.dev/*", custom_domain = true }
+]
 
 # Configure deployment to Workers
 [build]
 # command = "cd ../frontend && npm install && npm run build && rm -rf ../backend/dist && cp -r dist ../backend/dist"
 
-# Static asset hosting is handled by the worker itself
+# Static asset hosting is handled by the worker itself via ASSETS binding

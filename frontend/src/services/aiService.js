@@ -398,7 +398,7 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 // In dev mode (Vite dev server), use empty string to leverage Vite's proxy
 // In production, default to the production backend API
 const isDev = import.meta.env.DEV;
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || (isDev ? '' : 'https://api.sculptorai.org');
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
 
 // Remove trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
