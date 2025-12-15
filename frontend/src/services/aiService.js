@@ -29,7 +29,7 @@ const isBackendModel = (modelId, availableModels = []) => {
 };
 
 // New backend streaming function
-export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false, systemPrompt = null) {
+export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null) {
   // Get user's assigned backend API key from session
   let apiKey = null;
   let user = null;
@@ -140,8 +140,13 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     }
 
     // Add web search if requested
-    if (search || deepResearch) {
+    if (search) {
       requestPayload.web_search = true;
+    }
+
+    // Add code execution if requested (Gemini only - backend will validate)
+    if (codeExecution) {
+      requestPayload.code_execution = true;
     }
 
     // Log the model and system prompt for debugging custom models
@@ -276,6 +281,25 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
               continue;
             }
             
+            // Handle code execution events (from Gemini)
+            if (parsed.type === 'code_execution') {
+              yield { 
+                type: 'code_execution', 
+                language: parsed.language,
+                code: parsed.code 
+              };
+              continue;
+            }
+            
+            if (parsed.type === 'code_execution_result') {
+              yield { 
+                type: 'code_execution_result', 
+                outcome: parsed.outcome,
+                output: parsed.output 
+              };
+              continue;
+            }
+            
             // Handle content chunks
             if (parsed.choices?.[0]?.delta?.content) {
               hasReceivedContent = true;
@@ -352,20 +376,20 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
 }
 
 // Updated main sendMessage function that routes everything to backend
-export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, deepResearch = false, imageGen = false, systemPrompt = null) { 
+export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null) { 
   console.log(`sendMessage (streaming) called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`, 
     imageData ? `imageData: Present` : '',
     fileTextContent ? `fileTextContent: Present` : '',
     `search: ${search}`,
-    `deepResearch: ${deepResearch}`,
+    `codeExecution: ${codeExecution}`,
     `imageGen: ${imageGen}`,
     systemPrompt ? `systemPrompt: Present` : ''
   );
 
   // All models now route to backend (backend acts as unified gateway)
   console.log(`Routing to backend for model: ${modelId}`);
-  yield* sendMessageToBackendStream(message, modelId, history, imageData, fileTextContent, search, deepResearch, imageGen, systemPrompt);
+  yield* sendMessageToBackendStream(message, modelId, history, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt);
 }
 
 // Legacy code removed - all models now go through backend API
@@ -535,7 +559,7 @@ const getCurrentUser = () => {
  * @param {string} modelId - The model ID to use
  * @param {string} message - The message content
  * @param {boolean} search - Whether to use search feature
- * @param {boolean} deepResearch - Whether to use deep research
+ * @param {boolean} codeExecution - Whether to use code execution (Gemini only)
  * @param {boolean} imageGen - Whether to generate images
  * @param {string} imageData - Optional base64 image data
  * @param {string} fileTextContent - Optional text content from PDF or text file
@@ -543,10 +567,10 @@ const getCurrentUser = () => {
  * @param {string} mode - Optional mode for the request
  * @returns {Promise<Object>} The response
  */
-export const sendMessageToBackend = async (modelId, message, search = false, deepResearch = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null, conversationHistory = []) => {
+export const sendMessageToBackend = async (modelId, message, search = false, codeExecution = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null, conversationHistory = []) => {
   const chunks = [];
   try {
-    for await (const chunk of sendMessageToBackendStream(message, modelId, conversationHistory, imageData, fileTextContent, search, deepResearch, imageGen, systemPrompt)) {
+    for await (const chunk of sendMessageToBackendStream(message, modelId, conversationHistory, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt)) {
       chunks.push(chunk);
     }
     return { response: chunks.join('') };

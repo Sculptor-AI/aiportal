@@ -491,11 +491,136 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
 }
 
 /**
- * Generate image using Imagen models
+ * Check if a model is a Gemini native image model (uses generateContent)
+ * vs an Imagen model (uses predict)
  */
-export async function generateImageWithImagen(prompt, apiKey, options = {}) {
-  const models = getImageModelFallbacks('google', options.model);
+function isGeminiImageModel(modelId) {
+  return modelId && modelId.startsWith('gemini-');
+}
 
+/**
+ * Build contents array for Gemini image generation with optional history
+ */
+function buildGeminiImageContents(prompt, history = []) {
+  const contents = [];
+  
+  // Add conversation history if provided
+  if (history && history.length > 0) {
+    for (const item of history) {
+      if (item.role === 'user' && item.text) {
+        contents.push({
+          role: 'user',
+          parts: [{ text: item.text }]
+        });
+      } else if (item.role === 'assistant' && item.imageUrl) {
+        // Extract base64 data from data URL
+        let imageData = item.imageUrl;
+        let mimeType = 'image/png';
+        
+        if (imageData.startsWith('data:')) {
+          const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            mimeType = match[1];
+            imageData = match[2];
+          }
+        }
+        
+        contents.push({
+          role: 'model',
+          parts: [{
+            inlineData: {
+              mimeType: mimeType,
+              data: imageData
+            }
+          }]
+        });
+      }
+    }
+  }
+  
+  // Add the current prompt
+  contents.push({
+    role: 'user',
+    parts: [{ text: prompt }]
+  });
+  
+  return contents;
+}
+
+/**
+ * Generate image using Gemini native image generation (generateContent endpoint)
+ */
+async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
+  const hasHistory = options.history && options.history.length > 0;
+  console.log(`[Gemini Image] Generating with model: ${model}, history: ${hasHistory ? options.history.length + ' items' : 'none'}`);
+  
+  // Build contents with conversation history for multi-turn editing
+  const contents = buildGeminiImageContents(prompt, options.history);
+  
+  const requestBody = {
+    contents: contents,
+    generationConfig: {
+      responseModalities: ["TEXT", "IMAGE"]
+    }
+  };
+
+  try {
+    const response = await fetch(
+      `${GEMINI_BASE_URL}/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      }
+    );
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log(`[Gemini Image] Response received`);
+      
+      // Extract images from the response
+      const images = [];
+      const candidates = result.candidates || [];
+      
+      for (const candidate of candidates) {
+        const parts = candidate.content?.parts || [];
+        for (const part of parts) {
+          if (part.inlineData?.mimeType?.startsWith('image/')) {
+            images.push({
+              data: part.inlineData.data,
+              mimeType: part.inlineData.mimeType
+            });
+          }
+        }
+      }
+      
+      if (images.length > 0) {
+        console.log(`[Gemini Image] Success with model: ${model}, got ${images.length} image(s)`);
+        return {
+          success: true,
+          model,
+          images
+        };
+      } else {
+        console.log(`[Gemini Image] No images in response from ${model}`);
+      }
+    } else {
+      const errorText = await response.text();
+      console.log(`[Gemini Image] Model ${model} returned status: ${response.status}`, errorText);
+    }
+  } catch (e) {
+    console.error(`[Gemini Image] Model ${model} failed:`, e.message);
+  }
+  
+  return null;
+}
+
+/**
+ * Generate image using Imagen models (predict endpoint)
+ */
+async function generateWithImagen(prompt, apiKey, model, options = {}) {
+  console.log(`[Imagen] Generating with model: ${model}`);
+  
   const requestBody = {
     instances: [{ prompt }],
     parameters: {
@@ -507,34 +632,70 @@ export async function generateImageWithImagen(prompt, apiKey, options = {}) {
     }
   };
 
-  for (const model of models) {
-    try {
-      const response = await fetch(
-        `${GEMINI_BASE_URL}/models/${model}:predict?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.predictions?.[0]?.bytesBase64Encoded) {
-          return {
-            success: true,
-            model,
-            images: result.predictions.map(p => ({
-              data: p.bytesBase64Encoded,
-              mimeType: p.mimeType || 'image/png'
-            }))
-          };
-        }
+  try {
+    const response = await fetch(
+      `${GEMINI_BASE_URL}/models/${model}:predict?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
       }
-    } catch (e) {
-      console.error(`Imagen model ${model} failed:`, e);
+    );
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.predictions?.[0]?.bytesBase64Encoded) {
+        console.log(`[Imagen] Success with model: ${model}`);
+        return {
+          success: true,
+          model,
+          images: result.predictions.map(p => ({
+            data: p.bytesBase64Encoded,
+            mimeType: p.mimeType || 'image/png'
+          }))
+        };
+      }
+    } else {
+      console.log(`[Imagen] Model ${model} returned status: ${response.status}`);
+    }
+  } catch (e) {
+    console.error(`[Imagen] Model ${model} failed:`, e.message);
+  }
+  
+  return null;
+}
+
+/**
+ * Generate image using Google's image models (Gemini native or Imagen)
+ */
+export async function generateImageWithImagen(prompt, apiKey, options = {}) {
+  // If a specific API ID is provided, use it directly; otherwise use fallbacks
+  let models;
+  if (options.apiId) {
+    // Use the specific API ID first, then fallbacks
+    const fallbacks = getImageModelFallbacks('google', options.model);
+    models = [options.apiId, ...fallbacks.filter(m => m !== options.apiId)];
+  } else {
+    models = getImageModelFallbacks('google', options.model);
+  }
+
+  console.log(`[Image Gen] Trying models in order:`, models);
+
+  for (const model of models) {
+    let result;
+    
+    if (isGeminiImageModel(model)) {
+      // Use Gemini native image generation (generateContent endpoint)
+      result = await generateWithGeminiNative(prompt, apiKey, model, options);
+    } else {
+      // Use Imagen (predict endpoint)
+      result = await generateWithImagen(prompt, apiKey, model, options);
+    }
+    
+    if (result?.success) {
+      return result;
     }
   }
 
-  return { success: false, error: 'All Imagen models failed' };
+  return { success: false, error: 'All image models failed' };
 }

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend, generateChatTitle } from '../services/aiService';
 import { generateImageApi } from '../services/imageService';
 import { getFlowchartSystemPrompt } from '../utils/flowchartTools';
-import { performDeepResearch } from '../services/deepResearchService';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
 import { hasIncompleteCodeBlock, validateCodeBlockSyntax } from '../utils/codeBlockProcessor';
@@ -47,10 +46,33 @@ const useMessageSender = ({
     // Check if this is an image generation request
     if (messagePayload.type === 'generate-image') {
       const prompt = messagePayload.prompt;
+      const imageModel = messagePayload.imageModel;
       
       if (!prompt || !chat?.id) return;
       
       setIsLoading(true);
+      
+      // Collect conversation history for multi-turn image generation
+      const imageHistory = [];
+      if (chat.messages && chat.messages.length > 0) {
+        for (const msg of chat.messages) {
+          if (msg.role === 'user' && msg.content) {
+            // Extract the prompt from "Generate image: "prompt"" format (handles multi-line)
+            const match = msg.content.match(/^Generate image: "([\s\S]+)"$/);
+            imageHistory.push({
+              role: 'user',
+              text: match ? match[1] : msg.content
+            });
+          } else if (msg.type === 'generated-image' && msg.status === 'completed' && msg.imageUrl) {
+            imageHistory.push({
+              role: 'assistant',
+              imageUrl: msg.imageUrl
+            });
+          }
+        }
+      }
+      
+      console.log(`[useMessageSender] Image generation with ${imageHistory.length} history items`);
       
       // Add user message indicating the prompt
       const userPromptMessage = {
@@ -72,15 +94,16 @@ const useMessageSender = ({
         imageUrl: null,
         content: '',
         timestamp: new Date().toISOString(),
-        modelId: 'image-generator',
+        modelId: imageModel || 'image-generator',
       };
       addMessage(chat.id, imagePlaceholderMessage);
       
       if (scrollToBottom) setTimeout(scrollToBottom, 100);
       
       try {
-        const response = await generateImageApi(prompt);
-        const imageUrl = response.imageData || response.imageUrl;
+        // Pass conversation history for multi-turn generation
+        const response = await generateImageApi(prompt, imageModel, imageHistory);
+        const imageUrl = response.images?.[0]?.imageData || response.imageData || response.imageUrl;
         
         if (!imageUrl) {
           throw new Error('No image URL returned from API');
@@ -369,108 +392,8 @@ const useMessageSender = ({
       return;
     }
 
-    // Check if this is a deep research request
-    if (messagePayload.actionChip === 'deep-research' && messagePayload.text) {
-      const query = messagePayload.text.trim();
-      
-      if (!query || !chat?.id) return;
-      
-      setIsLoading(true);
-      
-      // Add user message for deep research request
-      const userMessage = {
-        id: generateId(),
-        role: 'user',
-        content: query,
-        timestamp: new Date().toISOString(),
-      };
-      addMessage(chat.id, userMessage);
-      
-      // Add placeholder message for deep research results
-      const researchPlaceholderId = generateId();
-      const researchPlaceholderMessage = {
-        id: researchPlaceholderId,
-        role: 'assistant',
-        type: 'deep-research',
-        content: '',
-        status: 'loading',
-        progress: 0,
-        statusMessage: 'Initializing deep research...',
-        timestamp: new Date().toISOString(),
-        modelId: selectedModel,
-      };
-      addMessage(chat.id, researchPlaceholderMessage);
-      
-      if (scrollToBottom) setTimeout(scrollToBottom, 100);
-      
-      try {
-        await performDeepResearch(
-          query,
-          selectedModel,
-          8, // maxAgents
-          // onProgress
-          (progress, message) => {
-            updateMessage(chat.id, researchPlaceholderId, {
-              progress,
-              statusMessage: message,
-              status: 'loading'
-            });
-          },
-          // onComplete
-          (result) => {
-            updateMessage(chat.id, researchPlaceholderId, {
-              content: result.response,
-              status: 'completed',
-              progress: 100,
-              statusMessage: 'Research completed successfully!',
-              sources: result.sources || [],
-              subQuestions: result.subQuestions || [],
-              agentResults: result.agentResults || [],
-              isLoading: false
-            });
-            
-            // Generate title for new chat if this is the first message
-            if (chat.messages.length === 0) {
-              const title = `Research: ${query.substring(0, 30)}${query.length > 30 ? '...' : ''}`;
-              if (updateChatTitle) updateChatTitle(chat.id, title);
-            }
-          },
-          // onError
-          (errorMessage) => {
-            updateMessage(chat.id, researchPlaceholderId, {
-              status: 'error',
-              content: errorMessage,
-              isLoading: false,
-              isError: true
-            });
-            addAlert({
-              message: `Deep research failed: ${errorMessage}`,
-              type: 'error',
-              autoHide: true
-            });
-          }
-        );
-      } catch (error) {
-        console.error('[useMessageSender] Error during deep research:', error);
-        updateMessage(chat.id, researchPlaceholderId, {
-          status: 'error',
-          content: error.message || 'Failed to perform deep research',
-          isLoading: false,
-          isError: true
-        });
-        addAlert({
-          message: `Deep research failed: ${error.message || 'Unknown error'}`,
-          type: 'error',
-          autoHide: true
-        });
-      } finally {
-        setIsLoading(false);
-      }
-      
-      return;
-    }
-    
     // Extract values from messagePayload for regular messages
+    // Note: 'analysis-tool' (code execution) is handled through normal message flow
     const messageText = messagePayload.text;
     const attachedFile = messagePayload.file;
     const actionChip = messagePayload.actionChip;
@@ -621,9 +544,10 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
 
         // UNIFIED LOGIC: All models are sent through the sendMessage generator,
         // which handles routing to the backend. The isBackendModel check is removed.
+        // Action chips: 'search' = web_search, 'analysis-tool' = code_execution
         const messageGenerator = sendMessage(
           messageToSend, modelIdForApi, formattedHistory, imageDataToSend, fileTextToSend,
-          currentActionChip === 'search', currentActionChip === 'deep-research', currentActionChip === 'create-image',
+          currentActionChip === 'search', currentActionChip === 'analysis-tool', currentActionChip === 'create-image',
           systemPromptToUse
         );
         
@@ -667,6 +591,35 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
               content: streamedContent, 
               isLoading: true,
               availableTools: chunk.tools
+            });
+            continue;
+          }
+          
+          // Handle code execution events (from Gemini)
+          if (typeof chunk === 'object' && chunk.type === 'code_execution') {
+            // Store code execution for display
+            const codeExecution = {
+              language: chunk.language || 'python',
+              code: chunk.code
+            };
+            updateMessage(currentChatId, aiMessageId, { 
+              content: streamedContent, 
+              isLoading: true,
+              codeExecution: codeExecution
+            });
+            continue;
+          }
+          
+          if (typeof chunk === 'object' && chunk.type === 'code_execution_result') {
+            // Store code execution result for display
+            const codeExecutionResult = {
+              outcome: chunk.outcome,
+              output: chunk.output
+            };
+            updateMessage(currentChatId, aiMessageId, { 
+              content: streamedContent, 
+              isLoading: true,
+              codeExecutionResult: codeExecutionResult
             });
             continue;
           }
@@ -723,7 +676,7 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
         // Add sources if we received them
         if (messageSources.length > 0) {
           messageUpdates.sources = messageSources;
-        } else if (window.__lastSearchSources && Array.isArray(window.__lastSearchSources) && (currentActionChip === 'search' || currentActionChip === 'deep-research')) {
+        } else if (window.__lastSearchSources && Array.isArray(window.__lastSearchSources) && currentActionChip === 'search') {
           // Fallback to old method if needed
           messageUpdates.sources = window.__lastSearchSources;
           window.__lastSearchSources = null;

@@ -11,8 +11,36 @@ import { Hono } from 'hono';
 import { generateImageWithImagen } from '../services/gemini.js';
 import { generateImageWithDALLE, editImageWithDALLE } from '../services/openai.js';
 import { listImageModels, getDefaultImageModel } from '../config/index.js';
+import modelsConfig from '../config/models.json';
 
 const image = new Hono();
+
+/**
+ * Look up model info from models.json
+ */
+function resolveImageModel(modelName) {
+  if (!modelName) return { provider: 'google', apiId: null };
+  
+  // Check Google/Imagen models
+  const googleModels = modelsConfig.image?.google?.models || {};
+  if (googleModels[modelName]) {
+    return { provider: 'google', apiId: googleModels[modelName] };
+  }
+  
+  // Check OpenAI models
+  const openaiModels = modelsConfig.image?.openai?.models || {};
+  if (openaiModels[modelName]) {
+    return { provider: 'openai', apiId: openaiModels[modelName] };
+  }
+  
+  // If it's already an API ID, try to detect provider
+  if (modelName.includes('gpt-image') || modelName.includes('dall-e')) {
+    return { provider: 'openai', apiId: modelName };
+  }
+  
+  // Default to Google
+  return { provider: 'google', apiId: modelName };
+}
 
 /**
  * Generate image
@@ -40,26 +68,23 @@ image.post('/generate', async (c) => {
       return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
     }
 
-    // Determine provider
-    let selectedProvider = provider;
-    if (!selectedProvider) {
-      if (model?.includes('dall-e') || model?.includes('gpt-image')) {
-        selectedProvider = 'dalle';
-      } else {
-        selectedProvider = 'imagen'; // Default to Imagen
-      }
-    }
+    // Resolve model to get provider and API ID
+    const resolved = resolveImageModel(model);
+    
+    // Use explicit provider if given, otherwise use resolved provider
+    let selectedProvider = provider || resolved.provider;
+    const resolvedApiId = resolved.apiId;
 
-    console.log(`Image generation: provider=${selectedProvider}, model=${model || 'default'}`);
+    console.log(`Image generation: provider=${selectedProvider}, model=${model || 'default'}, apiId=${resolvedApiId}`);
 
-    if (selectedProvider === 'dalle') {
+    if (selectedProvider === 'openai' || selectedProvider === 'dalle') {
       const apiKey = env.OPENAI_API_KEY;
       if (!apiKey) {
         return c.json({ error: 'OPENAI_API_KEY is not configured for DALL-E.' }, 500);
       }
 
       const result = await generateImageWithDALLE(prompt, apiKey, {
-        model: model,
+        model: resolvedApiId || 'gpt-image-1',
         size: body.size || '1024x1024',
         quality: body.quality || 'auto',
         style: body.style || 'auto',
@@ -72,8 +97,8 @@ image.post('/generate', async (c) => {
       }
 
       return c.json({
-        provider: 'dalle',
-        model: result.model,
+        provider: 'openai',
+        model: model || result.model,
         images: result.images.map(img => ({
           imageData: img.data ? `data:image/png;base64,${img.data}` : null,
           imageUrl: img.url,
@@ -90,11 +115,13 @@ image.post('/generate', async (c) => {
 
     const result = await generateImageWithImagen(prompt, apiKey, {
       model: model,
+      apiId: resolvedApiId,
       aspectRatio: body.aspectRatio || '1:1',
       imageSize: body.imageSize,
       count: body.n || 1,
       negativePrompt: body.negativePrompt,
-      seed: body.seed
+      seed: body.seed,
+      history: body.history // Multi-turn conversation history
     });
 
     if (!result.success) {

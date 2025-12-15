@@ -42,6 +42,8 @@ const ChatInputArea = forwardRef(({
   onRemoveFile,      // Prop for removing individual files
   resetFileUploadTrigger, // Renamed from resetFileUpload
   availableModels, // Needed for model-specific logic if any remains or for sub-components
+  currentModel, // Current selected model ID
+  modelCapabilities = {}, // Capabilities of the current model (web_search, code_execution, etc.)
   isWhiteboardOpen, // New prop
   onToggleWhiteboard, // New prop for toggling
   onCloseWhiteboard, // New prop for closing (can be same as onToggleWhiteboard if it's a pure toggle)
@@ -74,10 +76,16 @@ const ChatInputArea = forwardRef(({
   const [isVideoPromptMode, setIsVideoPromptMode] = useState(false);
   const [isFlowchartPromptMode, setIsFlowchartPromptMode] = useState(false);
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
-  const [visibleChips, setVisibleChips] = useState(['mode', 'search', 'deep-research', 'create']);
+  const [visibleChips, setVisibleChips] = useState(['mode', 'search', 'analysis-tool', 'create']);
   const [hiddenChips, setHiddenChips] = useState([]);
   const [showOverflowDropdown, setShowOverflowDropdown] = useState(false);
   const [chipsExpanded, setChipsExpanded] = useState(chatIsEmpty);
+  
+  // Image generation model selection
+  const [availableImageModels, setAvailableImageModels] = useState([]);
+  const [selectedImageModel, setSelectedImageModel] = useState(null);
+  const [showImageModelSelector, setShowImageModelSelector] = useState(false);
+  const imageModelSelectorRef = useRef(null);
 
   const inputRef = useRef(null);
   const prevChatIsEmptyRef = useRef(chatIsEmpty);
@@ -141,6 +149,43 @@ const ChatInputArea = forwardRef(({
     }
   }, [chatIsEmpty]);
 
+  // Fetch available image models from backend
+  useEffect(() => {
+    const fetchImageModels = async () => {
+      try {
+        const response = await fetch('/api/image/models');
+        if (response.ok) {
+          const data = await response.json();
+          const models = data.models || [];
+          setAvailableImageModels(models);
+          // Set default model
+          const defaultModel = models.find(m => m.isDefault) || models[0];
+          if (defaultModel && !selectedImageModel) {
+            setSelectedImageModel(defaultModel);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch image models:', error);
+      }
+    };
+    fetchImageModels();
+  }, []);
+
+  // Close image model selector when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showImageModelSelector && 
+          imageModelSelectorRef.current && 
+          !imageModelSelectorRef.current.contains(event.target)) {
+        setShowImageModelSelector(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showImageModelSelector]);
+
   // Responsive chip management
   useEffect(() => {
     const handleResize = () => {
@@ -152,7 +197,7 @@ const ChatInputArea = forwardRef(({
       let availableWidth = containerWidth - hammerButtonWidth;
 
       // Define all chips
-      const allChips = ['mode', 'search', 'deep-research', 'create'];
+      const allChips = ['mode', 'search', 'analysis-tool', 'create'];
 
       let currentWidth = 0;
       const visible = [];
@@ -239,11 +284,14 @@ const ChatInputArea = forwardRef(({
     // Handle image generation mode
     if (isImagePromptMode) {
       if (inputMessage.trim()) {
-        onSubmitMessage({ type: 'generate-image', prompt: inputMessage.trim() });
+        onSubmitMessage({ 
+          type: 'generate-image', 
+          prompt: inputMessage.trim(),
+          imageModel: selectedImageModel?.id || selectedImageModel?.apiId
+        });
         setInputMessage('');
-        setIsImagePromptMode(false);
-        setCreateType(null);
-        setSelectedActionChip(null);
+        // Keep image mode active for multi-turn generation
+        // User can click "Default" in Create menu to exit
       }
       return;
     }
@@ -369,6 +417,12 @@ const ChatInputArea = forwardRef(({
   };
 
   const handleCreateSelect = (type) => {
+    // Clear all creation modes first
+    setIsImagePromptMode(false);
+    setIsVideoPromptMode(false);
+    setIsFlowchartPromptMode(false);
+    setShowImageModelSelector(false);
+    
     setCreateType(type);
     if (type === 'image') {
       setSelectedActionChip('create-image');
@@ -384,9 +438,12 @@ const ChatInputArea = forwardRef(({
       setInputMessage('');
     } else if (type === 'sandbox3d') {
       setSelectedActionChip(null);
+      setCreateType(null);
       onToggleSandbox3D();
     } else {
+      // Default or other - clear everything
       setSelectedActionChip(null);
+      setCreateType(null);
     }
     // The PopupMenu (ToolMenuModal) calls onClose itself after onSelect, so no need to setShowCreateModal(false) here.
   };
@@ -497,32 +554,42 @@ const ChatInputArea = forwardRef(({
           Search
         </ActionChip>
       );
-    } else if (type === 'deep-research') {
+    } else if (type === 'analysis-tool') {
+      // Only show analysis tool (code execution) if the current model supports it
+      const supportsCodeExecution = modelCapabilities?.code_execution === true;
+      
+      if (!supportsCodeExecution) {
+        // Don't render the chip if the model doesn't support code execution
+        return null;
+      }
+      
       return (
         <ActionChip
-          key="deep-research"
+          key="analysis-tool"
           ref={ref}
-          selected={selectedActionChip === 'deep-research'}
+          selected={selectedActionChip === 'analysis-tool'}
           onClick={() => {
             if (isHidden) setShowOverflowDropdown(false);
-            if (selectedActionChip === 'deep-research') {
+            if (selectedActionChip === 'analysis-tool') {
               setSelectedActionChip(null);
             } else {
-              setSelectedActionChip('deep-research');
+              setSelectedActionChip('analysis-tool');
               setThinkingMode(null);
             }
           }}
+          title="Code Execution - Run code to analyze data, generate charts, and more"
         >
           {theme.name === 'retro' ? (
             <RetroIconWrapper>
-              <img src="/images/retroTheme/deepResearch.png" alt="Deep Research" style={{ width: '16px', height: '16px' }} />
+              <img src="/images/retroTheme/deepResearch.png" alt="Analysis Tool" style={{ width: '16px', height: '16px' }} />
             </RetroIconWrapper>
           ) : (
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
             </svg>
           )}
-          Deep research
+          Analysis
         </ActionChip>
       );
     } else if (type === 'create') {
@@ -962,6 +1029,7 @@ const ChatInputArea = forwardRef(({
             );
           })}
         </FilesPreviewContainer>
+        
         <InputRow>
           <FileUploadButton
             onFileSelected={onFileSelected}
@@ -1058,6 +1126,149 @@ const ChatInputArea = forwardRef(({
         </ToolbarContainer>
       </MessageInputWrapper>
       </ComposerRow>
+
+      {/* Image generation mode indicator - fixed at very bottom of screen */}
+      {isImagePromptMode && (
+        <div 
+          ref={imageModelSelectorRef}
+          style={{
+            position: 'fixed',
+            bottom: '0px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            fontSize: '0.75rem',
+            color: theme.textSecondary || theme.text,
+            pointerEvents: 'auto',
+            whiteSpace: 'nowrap',
+            zIndex: 9999,
+            backgroundColor: theme.background || '#ffffff',
+            padding: '4px 12px',
+            borderRadius: '4px 4px 0 0'
+          }}
+        >
+          <span>creating image with</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowImageModelSelector(!showImageModelSelector);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px',
+              padding: '0',
+              background: 'none',
+              border: 'none',
+              color: theme.accent || theme.text,
+              fontSize: '0.75rem',
+              fontWeight: '500',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              textUnderlineOffset: '2px',
+              pointerEvents: 'auto'
+            }}
+          >
+            {selectedImageModel?.id || 'select model'}
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="10" 
+              height="10" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2.5" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+              style={{ 
+                transform: showImageModelSelector ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.15s ease'
+              }}
+            >
+              <polyline points="18 15 12 9 6 15"></polyline>
+            </svg>
+          </button>
+          
+          {/* Image model dropdown */}
+          {showImageModelSelector && (
+            <div 
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                marginBottom: '8px',
+                backgroundColor: theme.surface || theme.background || '#ffffff',
+                border: `1px solid ${theme.border || 'rgba(0, 0, 0, 0.1)'}`,
+                borderRadius: '8px',
+                boxShadow: theme.name === 'dark' || theme.name === 'retro' 
+                  ? '0 4px 20px rgba(0, 0, 0, 0.4)' 
+                  : '0 4px 20px rgba(0, 0, 0, 0.15)',
+                minWidth: '180px',
+                maxHeight: '250px',
+                overflowY: 'auto',
+                zIndex: 1001,
+                pointerEvents: 'auto'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {availableImageModels.map((model, index) => (
+                <div
+                  key={model.id || model.apiId}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedImageModel(model);
+                    setShowImageModelSelector(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '10px 12px',
+                    backgroundColor: selectedImageModel?.id === model.id 
+                      ? (theme.accent || '#6366f1') + '20' 
+                      : 'transparent',
+                    borderBottom: index < availableImageModels.length - 1 
+                      ? `1px solid ${theme.border || 'rgba(0, 0, 0, 0.08)'}` 
+                      : 'none',
+                    color: theme.text,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.15s ease',
+                    pointerEvents: 'auto'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedImageModel?.id !== model.id) {
+                      e.currentTarget.style.backgroundColor = theme.hoverBackground || theme.surface || 'rgba(0, 0, 0, 0.05)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = selectedImageModel?.id === model.id 
+                      ? (theme.accent || '#6366f1') + '20' 
+                      : 'transparent';
+                  }}
+                >
+                  <span style={{ fontWeight: selectedImageModel?.id === model.id ? '600' : '400' }}>
+                    {model.id}
+                  </span>
+                  <span style={{ 
+                    fontSize: '0.7rem', 
+                    opacity: 0.6,
+                    textTransform: 'capitalize',
+                    marginLeft: '12px'
+                  }}>
+                    {model.provider}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <PopupMenu
         isOpen={showModeModal}

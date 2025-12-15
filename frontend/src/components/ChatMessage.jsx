@@ -1421,6 +1421,117 @@ const ToolActivityError = styled.div`
   word-break: break-word;
 `;
 
+// Code Execution Components (for Gemini's code execution feature)
+const CodeExecutionSection = styled.div`
+  margin: 12px 0;
+  border: 1px solid ${props => props.theme.border || '#e1e5e9'}40;
+  border-radius: 8px;
+  overflow: hidden;
+  background: ${props => props.theme.background || '#f8f9fa'}20;
+`;
+
+const CodeExecutionHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: ${props => props.theme.background || '#f8f9fa'}40;
+  border-bottom: 1px solid ${props => props.theme.border || '#e1e5e9'}30;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: ${props => props.theme.text}dd;
+`;
+
+const CodeExecutionIcon = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 4px;
+  color: white;
+  font-size: 10px;
+`;
+
+const CodeExecutionBody = styled.div`
+  padding: 12px;
+`;
+
+const CodeExecutionCode = styled.pre`
+  background: ${props => props.theme.codeBackground || '#1e1e1e'};
+  color: ${props => props.theme.codeText || '#d4d4d4'};
+  padding: 12px;
+  border-radius: 6px;
+  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.85em;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  max-height: 300px;
+  
+  &::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border}60;
+    border-radius: 3px;
+  }
+`;
+
+const CodeExecutionResultSection = styled.div`
+  margin-top: 12px;
+`;
+
+const CodeExecutionResultHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: ${props => props.outcome === 'OUTCOME_OK' ? '#10b981' : '#ef4444'};
+  margin-bottom: 8px;
+`;
+
+const CodeExecutionOutput = styled.pre`
+  background: ${props => props.outcome === 'OUTCOME_OK' 
+    ? 'rgba(16, 185, 129, 0.1)' 
+    : 'rgba(239, 68, 68, 0.1)'};
+  border: 1px solid ${props => props.outcome === 'OUTCOME_OK' 
+    ? 'rgba(16, 185, 129, 0.3)' 
+    : 'rgba(239, 68, 68, 0.3)'};
+  color: ${props => props.theme.text};
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border}60;
+    border-radius: 2px;
+  }
+`;
+
 const ThinkingSection = styled.div`
   ${props => props.hasToolActivity ? 'border-top: 1px solid ' + (props.theme.border || '#e1e5e9') + '30; padding-top: 15px; margin-top: 5px;' : ''}
 `;
@@ -1532,7 +1643,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
 
   // Debug logging
@@ -2107,13 +2218,69 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </>
                 );
               }
-              // If content has no thinking tags, but may have tool activity
+              // If content has no thinking tags, but may have tool activity or code execution
               const hasToolActivity = toolCalls && toolCalls.length > 0;
+              const hasCodeExecution = codeExecution || codeExecutionResult;
+              
               return (
                 <>
                   {hasToolActivity && (
                     <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
                   )}
+                  
+                  {/* Code Execution Display (Gemini) */}
+                  {hasCodeExecution && (
+                    <CodeExecutionSection>
+                      <CodeExecutionHeader>
+                        <CodeExecutionIcon>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="16 18 22 12 16 6"></polyline>
+                            <polyline points="8 6 2 12 8 18"></polyline>
+                          </svg>
+                        </CodeExecutionIcon>
+                        Code Execution
+                      </CodeExecutionHeader>
+                      <CodeExecutionBody>
+                        {codeExecution && (
+                          <>
+                            <div style={{ fontSize: '0.75em', color: 'inherit', opacity: 0.7, marginBottom: '6px' }}>
+                              {codeExecution.language || 'python'}
+                            </div>
+                            <CodeExecutionCode>
+                              {codeExecution.code}
+                            </CodeExecutionCode>
+                          </>
+                        )}
+                        {codeExecutionResult && (
+                          <CodeExecutionResultSection>
+                            <CodeExecutionResultHeader outcome={codeExecutionResult.outcome}>
+                              {codeExecutionResult.outcome === 'OUTCOME_OK' ? (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                  </svg>
+                                  Output
+                                </>
+                              ) : (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                  </svg>
+                                  Error
+                                </>
+                              )}
+                            </CodeExecutionResultHeader>
+                            <CodeExecutionOutput outcome={codeExecutionResult.outcome}>
+                              {codeExecutionResult.output || 'No output'}
+                            </CodeExecutionOutput>
+                          </CodeExecutionResultSection>
+                        )}
+                      </CodeExecutionBody>
+                    </CodeExecutionSection>
+                  )}
+                  
                   <StreamingMarkdownRenderer
                     text={contentToProcess}
                     isStreaming={isLoading}
