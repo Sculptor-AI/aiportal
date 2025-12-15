@@ -499,15 +499,66 @@ function isGeminiImageModel(modelId) {
 }
 
 /**
+ * Build contents array for Gemini image generation with optional history
+ */
+function buildGeminiImageContents(prompt, history = []) {
+  const contents = [];
+  
+  // Add conversation history if provided
+  if (history && history.length > 0) {
+    for (const item of history) {
+      if (item.role === 'user' && item.text) {
+        contents.push({
+          role: 'user',
+          parts: [{ text: item.text }]
+        });
+      } else if (item.role === 'assistant' && item.imageUrl) {
+        // Extract base64 data from data URL
+        let imageData = item.imageUrl;
+        let mimeType = 'image/png';
+        
+        if (imageData.startsWith('data:')) {
+          const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            mimeType = match[1];
+            imageData = match[2];
+          }
+        }
+        
+        contents.push({
+          role: 'model',
+          parts: [{
+            inlineData: {
+              mimeType: mimeType,
+              data: imageData
+            }
+          }]
+        });
+      }
+    }
+  }
+  
+  // Add the current prompt
+  contents.push({
+    role: 'user',
+    parts: [{ text: prompt }]
+  });
+  
+  return contents;
+}
+
+/**
  * Generate image using Gemini native image generation (generateContent endpoint)
  */
 async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
-  console.log(`[Gemini Image] Generating with model: ${model}`);
+  const hasHistory = options.history && options.history.length > 0;
+  console.log(`[Gemini Image] Generating with model: ${model}, history: ${hasHistory ? options.history.length + ' items' : 'none'}`);
+  
+  // Build contents with conversation history for multi-turn editing
+  const contents = buildGeminiImageContents(prompt, options.history);
   
   const requestBody = {
-    contents: [{
-      parts: [{ text: prompt }]
-    }],
+    contents: contents,
     generationConfig: {
       responseModalities: ["TEXT", "IMAGE"]
     }

@@ -120,7 +120,8 @@ image.post('/generate', async (c) => {
       imageSize: body.imageSize,
       count: body.n || 1,
       negativePrompt: body.negativePrompt,
-      seed: body.seed
+      seed: body.seed,
+      history: body.history // Multi-turn conversation history
     });
 
     if (!result.success) {

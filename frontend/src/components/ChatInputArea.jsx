@@ -290,9 +290,8 @@ const ChatInputArea = forwardRef(({
           imageModel: selectedImageModel?.id || selectedImageModel?.apiId
         });
         setInputMessage('');
-        setIsImagePromptMode(false);
-        setCreateType(null);
-        setSelectedActionChip(null);
+        // Keep image mode active for multi-turn generation
+        // User can click "Default" in Create menu to exit
       }
       return;
     }

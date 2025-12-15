@@ -36,11 +36,12 @@ const VIDEO_API_URL = buildApiUrl('/video'); // Backend video generation endpoin
 /**
  * Calls the backend API to generate an image based on the provided prompt.
  * @param {string} prompt - The text prompt for image generation.
- * @param {string} [model] - Optional model ID (e.g., 'imagen-4.0-fast-generate-001').
+ * @param {string} [model] - Optional model ID (e.g., 'nano-banana', 'gpt-image').
+ * @param {Array} [history] - Optional conversation history for multi-turn generation.
  * @returns {Promise<object>} The API response data (e.g., { imageData: 'base64...' } or { imageUrl: '...' })
  * @throws {Error} If the API call fails or returns an error.
  */
-export const generateImageApi = async (prompt, model) => {
+export const generateImageApi = async (prompt, model, history = []) => {
   try {
     const config = {
       headers: {
@@ -50,6 +51,12 @@ export const generateImageApi = async (prompt, model) => {
 
     const body = { prompt };
     if (model) body.model = model;
+    
+    // Include conversation history for multi-turn image generation/editing
+    if (history && history.length > 0) {
+      body.history = history;
+      console.log('[imageService] Sending with history:', history.length, 'items');
+    }
 
     const response = await axios.post(`${API_URL}/generate`, body, config);
     return response.data; // Expects { imageData: "..." } or { imageUrl: "..." }

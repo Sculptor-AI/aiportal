@@ -52,6 +52,28 @@ const useMessageSender = ({
       
       setIsLoading(true);
       
+      // Collect conversation history for multi-turn image generation
+      const imageHistory = [];
+      if (chat.messages && chat.messages.length > 0) {
+        for (const msg of chat.messages) {
+          if (msg.role === 'user' && msg.content) {
+            // Extract the prompt from "Generate image: "prompt"" format
+            const match = msg.content.match(/^Generate image: "(.+)"$/);
+            imageHistory.push({
+              role: 'user',
+              text: match ? match[1] : msg.content
+            });
+          } else if (msg.type === 'generated-image' && msg.status === 'completed' && msg.imageUrl) {
+            imageHistory.push({
+              role: 'assistant',
+              imageUrl: msg.imageUrl
+            });
+          }
+        }
+      }
+      
+      console.log(`[useMessageSender] Image generation with ${imageHistory.length} history items`);
+      
       // Add user message indicating the prompt
       const userPromptMessage = {
         id: generateId(),
@@ -79,7 +101,8 @@ const useMessageSender = ({
       if (scrollToBottom) setTimeout(scrollToBottom, 100);
       
       try {
-        const response = await generateImageApi(prompt, imageModel);
+        // Pass conversation history for multi-turn generation
+        const response = await generateImageApi(prompt, imageModel, imageHistory);
         const imageUrl = response.images?.[0]?.imageData || response.imageData || response.imageUrl;
         
         if (!imageUrl) {
