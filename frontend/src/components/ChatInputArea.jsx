@@ -1134,7 +1134,7 @@ const ChatInputArea = forwardRef(({
           ref={imageModelSelectorRef}
           style={{
             position: 'fixed',
-            bottom: '2px',
+            bottom: '0px',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
@@ -1147,8 +1147,8 @@ const ChatInputArea = forwardRef(({
             whiteSpace: 'nowrap',
             zIndex: 9999,
             backgroundColor: theme.background || '#ffffff',
-            padding: '2px 8px',
-            borderRadius: '4px'
+            padding: '4px 12px',
+            borderRadius: '4px 4px 0 0'
           }}
         >
           <span>creating image with</span>
