@@ -1128,24 +1128,27 @@ const ChatInputArea = forwardRef(({
       </MessageInputWrapper>
       </ComposerRow>
 
-      {/* Image generation mode indicator - positioned absolutely below */}
+      {/* Image generation mode indicator - fixed at very bottom of screen */}
       {isImagePromptMode && (
         <div 
           ref={imageModelSelectorRef}
           style={{
-            position: 'absolute',
-            top: '100%',
+            position: 'fixed',
+            bottom: '2px',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '4px',
-            marginTop: '8px',
-            fontSize: '0.8rem',
-            color: theme.textSecondary || (theme.text + '99'),
+            fontSize: '0.75rem',
+            color: theme.textSecondary || theme.text,
             pointerEvents: 'auto',
-            whiteSpace: 'nowrap'
+            whiteSpace: 'nowrap',
+            zIndex: 9999,
+            backgroundColor: theme.background || '#ffffff',
+            padding: '2px 8px',
+            borderRadius: '4px'
           }}
         >
           <span>creating image with</span>
@@ -1162,7 +1165,7 @@ const ChatInputArea = forwardRef(({
               background: 'none',
               border: 'none',
               color: theme.accent || theme.text,
-              fontSize: '0.8rem',
+              fontSize: '0.75rem',
               fontWeight: '500',
               cursor: 'pointer',
               textDecoration: 'underline',
@@ -1199,10 +1202,12 @@ const ChatInputArea = forwardRef(({
                 left: '50%',
                 transform: 'translateX(-50%)',
                 marginBottom: '8px',
-                backgroundColor: '#1e1e2e',
-                border: `1px solid ${theme.border || 'rgba(255, 255, 255, 0.15)'}`,
+                backgroundColor: theme.surface || theme.background || '#ffffff',
+                border: `1px solid ${theme.border || 'rgba(0, 0, 0, 0.1)'}`,
                 borderRadius: '8px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+                boxShadow: theme.name === 'dark' || theme.name === 'retro' 
+                  ? '0 4px 20px rgba(0, 0, 0, 0.4)' 
+                  : '0 4px 20px rgba(0, 0, 0, 0.15)',
                 minWidth: '180px',
                 maxHeight: '250px',
                 overflowY: 'auto',
@@ -1211,7 +1216,7 @@ const ChatInputArea = forwardRef(({
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              {availableImageModels.map((model) => (
+              {availableImageModels.map((model, index) => (
                 <div
                   key={model.id || model.apiId}
                   onClick={(e) => {
@@ -1225,9 +1230,13 @@ const ChatInputArea = forwardRef(({
                     justifyContent: 'space-between',
                     width: '100%',
                     padding: '10px 12px',
-                    backgroundColor: selectedImageModel?.id === model.id ? (theme.accent || '#6366f1') + '30' : '#1e1e2e',
-                    borderBottom: `1px solid rgba(255, 255, 255, 0.08)`,
-                    color: theme.text || '#ffffff',
+                    backgroundColor: selectedImageModel?.id === model.id 
+                      ? (theme.accent || '#6366f1') + '20' 
+                      : 'transparent',
+                    borderBottom: index < availableImageModels.length - 1 
+                      ? `1px solid ${theme.border || 'rgba(0, 0, 0, 0.08)'}` 
+                      : 'none',
+                    color: theme.text,
                     fontSize: '0.85rem',
                     cursor: 'pointer',
                     transition: 'background-color 0.15s ease',
@@ -1235,11 +1244,13 @@ const ChatInputArea = forwardRef(({
                   }}
                   onMouseEnter={(e) => {
                     if (selectedImageModel?.id !== model.id) {
-                      e.currentTarget.style.backgroundColor = '#2a2a3e';
+                      e.currentTarget.style.backgroundColor = theme.hoverBackground || theme.surface || 'rgba(0, 0, 0, 0.05)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = selectedImageModel?.id === model.id ? (theme.accent || '#6366f1') + '30' : '#1e1e2e';
+                    e.currentTarget.style.backgroundColor = selectedImageModel?.id === model.id 
+                      ? (theme.accent || '#6366f1') + '20' 
+                      : 'transparent';
                   }}
                 >
                   <span style={{ fontWeight: selectedImageModel?.id === model.id ? '600' : '400' }}>
@@ -1247,7 +1258,7 @@ const ChatInputArea = forwardRef(({
                   </span>
                   <span style={{ 
                     fontSize: '0.7rem', 
-                    opacity: 0.5,
+                    opacity: 0.6,
                     textTransform: 'capitalize',
                     marginLeft: '12px'
                   }}>
