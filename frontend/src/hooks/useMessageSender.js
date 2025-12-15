@@ -57,8 +57,8 @@ const useMessageSender = ({
       if (chat.messages && chat.messages.length > 0) {
         for (const msg of chat.messages) {
           if (msg.role === 'user' && msg.content) {
-            // Extract the prompt from "Generate image: "prompt"" format
-            const match = msg.content.match(/^Generate image: "(.+)"$/);
+            // Extract the prompt from "Generate image: "prompt"" format (handles multi-line)
+            const match = msg.content.match(/^Generate image: "([\s\S]+)"$/);
             imageHistory.push({
               role: 'user',
               text: match ? match[1] : msg.content

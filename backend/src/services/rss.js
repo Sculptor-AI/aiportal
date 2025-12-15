@@ -48,12 +48,19 @@ function extractXMLContent(xml, tag) {
 }
 
 /**
- * Clean text content
+ * Clean text content - removes HTML tags robustly
  */
 function cleanText(text) {
   if (!text) return text;
   text = text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
-  text = text.replace(/<[^>]*>/g, '');
+  
+  // Remove HTML tags robustly by repeated replacement to catch nested/overlapping patterns
+  let prev;
+  do {
+    prev = text;
+    text = text.replace(/<[^>]*>/g, '');
+  } while (text !== prev);
+  
   const entityMap = {
     '&amp;': '&',
     '&lt;': '<',
@@ -140,8 +147,20 @@ export async function fetchArticleContent(url) {
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   let content = await response.text();
-  content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-  content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  
+  // Remove script tags robustly (loop until no more found)
+  let prev;
+  do {
+    prev = content;
+    content = content.replace(/<script[^>]*>[\s\S]*?<\/script\s*>/gi, '');
+  } while (content !== prev);
+  
+  // Remove style tags robustly (loop until no more found)
+  do {
+    prev = content;
+    content = content.replace(/<style[^>]*>[\s\S]*?<\/style\s*>/gi, '');
+  } while (content !== prev);
+  
   const paragraphRegex = /<p[^>]*>([\s\S]*?)<\/p>/gi;
   const paragraphs = [];
   let match;

@@ -13,7 +13,7 @@ import { handleOpenRouterChat } from '../services/openrouter.js';
 import { handleGeminiChat, handleGeminiChatNonStreaming } from '../services/gemini.js';
 import { handleAnthropicChat } from '../services/anthropic.js';
 import { handleOpenAIChat } from '../services/openai.js';
-import { validateToolsForProvider, getProviderCapabilities } from '../config/index.js';
+import { validateToolsForProvider } from '../config/index.js';
 
 const chat = new Hono();
 
