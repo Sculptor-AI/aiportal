@@ -1,28 +1,21 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Dependencies
+node_modules
+**/node_modules
+.pnp
+.pnp.js
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Testing / coverage
+# Testing
 coverage
 .nyc_output
 
-# Build outputs
+# Production / Build
 dist
 dist-ssr
 frontend/dist
 backend/dist
 *.local
+
+# Tooling / Cache
 .cache
 .parcel-cache
 .vite
@@ -33,37 +26,42 @@ out
 .serverless
 .vercel
 .netlify
+.eslintcache
 
-# Dependency directories
-node_modules
-.pnp
-.pnp.*
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Environment variables
+# Environment & Secrets
 .env
 .env.local
-.env.development
-.env.production
-.env.*.local
-*.env
-*.env.*
-
-# Wrangler / Cloudflare
-.wrangler
-.wrangler-state
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+!.dev.vars.example
 .dev.vars
 
-# Editor directories and files
+# Cloudflare Workers
+.wrangler
+.wrangler-state
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/launch.json
+!.vscode/settings.json
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-# Model artifacts
-APIService/models/ursa_minor-q8_0.gguf
-APIService/models/Ursa_Minor.Q2_K.gguf
