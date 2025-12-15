@@ -370,8 +370,11 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 
 // Legacy code removed - all models now go through backend API
 
-// Prefer environment variable, otherwise default to production backend API
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || 'https://api.sculptorai.org';
+// Prefer environment variable, otherwise check if we're in dev mode
+// In dev mode (Vite dev server), use empty string to leverage Vite's proxy
+// In production, default to the production backend API
+const isDev = import.meta.env.DEV;
+const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || (isDev ? '' : 'https://api.sculptorai.org');
 
 // Remove trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
@@ -583,7 +586,7 @@ export const generateChatTitle = async (userPrompt, assistantResponse) => {
     `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\nTitle:`;
   try {
     const result = await sendMessageToBackend(
-      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash', // Use available model from config
       titlePrompt
     );
     if (result && result.response) {
