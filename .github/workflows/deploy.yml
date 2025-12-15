@@ -21,16 +21,8 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install root dependencies
-        run: npm ci
-
-      - name: Install frontend dependencies
-        run: npm ci
-        working-directory: frontend
-
-      - name: Install backend dependencies
-        run: npm ci
-        working-directory: backend
+      - name: Install all dependencies
+        run: npm install
 
       - name: Build frontend
         run: npm run build
@@ -47,3 +39,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: backend
+
