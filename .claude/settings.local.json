@@ -31,7 +31,8 @@
       "Bash(tree:*)",
       "WebFetch(domain:openrouter.ai)",
       "Bash(jq:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(findstr:*)"
     ],
     "deny": []
   }

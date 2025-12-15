@@ -5,13 +5,13 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "build": "cd ../frontend && npm run build && cp -r dist ../backend/"
+    "build": "npm run build --prefix ../frontend && shx rm -rf dist && shx cp -r ../frontend/dist ./dist"
   },
   "dependencies": {
     "hono": "^4.6.0"
   },
   "devDependencies": {
+    "shx": "^0.4.0",
     "wrangler": "^4.19.1"
   }
 }
-

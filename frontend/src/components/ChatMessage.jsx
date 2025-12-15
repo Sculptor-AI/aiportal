@@ -1501,11 +1501,11 @@ const CodeExecutionResultHeader = styled.div`
 `;
 
 const CodeExecutionOutput = styled.pre`
-  background: ${props => props.outcome === 'OUTCOME_OK' 
-    ? 'rgba(16, 185, 129, 0.1)' 
+  background: ${props => props.outcome === 'OUTCOME_OK'
+    ? 'rgba(16, 185, 129, 0.1)'
     : 'rgba(239, 68, 68, 0.1)'};
-  border: 1px solid ${props => props.outcome === 'OUTCOME_OK' 
-    ? 'rgba(16, 185, 129, 0.3)' 
+  border: 1px solid ${props => props.outcome === 'OUTCOME_OK'
+    ? 'rgba(16, 185, 129, 0.3)'
     : 'rgba(239, 68, 68, 0.3)'};
   color: ${props => props.theme.text};
   padding: 10px 12px;
@@ -2221,13 +2221,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               // If content has no thinking tags, but may have tool activity or code execution
               const hasToolActivity = toolCalls && toolCalls.length > 0;
               const hasCodeExecution = codeExecution || codeExecutionResult;
-              
+
               return (
                 <>
                   {hasToolActivity && (
                     <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
                   )}
-                  
+
                   {/* Code Execution Display (Gemini) */}
                   {hasCodeExecution && (
                     <CodeExecutionSection>
@@ -2280,7 +2280,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                       </CodeExecutionBody>
                     </CodeExecutionSection>
                   )}
-                  
+
                   <StreamingMarkdownRenderer
                     text={contentToProcess}
                     isStreaming={isLoading}

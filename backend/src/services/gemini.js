@@ -238,7 +238,7 @@ function buildGeminiBody(body) {
  */
 function createGeminiStreamTransformer(encoder) {
   let buffer = '';
-  
+
   return new TransformStream({
     transform(chunk, controller) {
       buffer += new TextDecoder().decode(chunk, { stream: true });
@@ -266,7 +266,7 @@ function createGeminiStreamTransformer(encoder) {
               try {
                 const data = JSON.parse(jsonStr);
                 const candidate = data.candidates?.[0];
-                
+
                 if (candidate) {
                   // Extract text content
                   const textParts = candidate.content?.parts?.filter(p => p.text) || [];
@@ -398,7 +398,7 @@ function createGeminiStreamTransformer(encoder) {
 export async function handleGeminiChat(c, body, apiKey) {
   const modelId = body.model?.replace('google/', '') || 'gemini-3-pro';
   const targetModel = resolveModel('gemini', modelId);
-  
+
   console.log(`Gemini request: ${body.model} -> ${targetModel}`);
 
   const geminiBody = buildGeminiBody(body);
@@ -443,7 +443,7 @@ export async function handleGeminiChat(c, body, apiKey) {
 export async function handleGeminiChatNonStreaming(c, body, apiKey) {
   const modelId = body.model?.replace('google/', '') || 'gemini-3-pro';
   const targetModel = resolveModel('gemini', modelId);
-  
+
   const geminiBody = buildGeminiBody(body);
   const url = `${GEMINI_BASE_URL}/models/${targetModel}:generateContent?key=${apiKey}`;
 
@@ -460,11 +460,11 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
     }
 
     const result = await response.json();
-    
+
     // Convert to OpenAI format
     const candidate = result.candidates?.[0];
     const textContent = candidate?.content?.parts?.map(p => p.text || '').join('') || '';
-    
+
     return c.json({
       id: `chatcmpl-${Date.now()}`,
       object: 'chat.completion',
@@ -503,7 +503,7 @@ function isGeminiImageModel(modelId) {
  */
 function buildGeminiImageContents(prompt, history = []) {
   const contents = [];
-  
+
   // Add conversation history if provided
   if (history && history.length > 0) {
     for (const item of history) {
@@ -516,7 +516,7 @@ function buildGeminiImageContents(prompt, history = []) {
         // Extract base64 data from data URL
         let imageData = item.imageUrl;
         let mimeType = 'image/png';
-        
+
         if (imageData.startsWith('data:')) {
           const match = imageData.match(/^data:([^;]+);base64,(.+)$/);
           if (match) {
@@ -524,7 +524,7 @@ function buildGeminiImageContents(prompt, history = []) {
             imageData = match[2];
           }
         }
-        
+
         contents.push({
           role: 'model',
           parts: [{
@@ -537,13 +537,13 @@ function buildGeminiImageContents(prompt, history = []) {
       }
     }
   }
-  
+
   // Add the current prompt
   contents.push({
     role: 'user',
     parts: [{ text: prompt }]
   });
-  
+
   return contents;
 }
 
@@ -553,10 +553,10 @@ function buildGeminiImageContents(prompt, history = []) {
 async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
   const hasHistory = options.history && options.history.length > 0;
   console.log(`[Gemini Image] Generating with model: ${model}, history: ${hasHistory ? options.history.length + ' items' : 'none'}`);
-  
+
   // Build contents with conversation history for multi-turn editing
   const contents = buildGeminiImageContents(prompt, options.history);
-  
+
   const requestBody = {
     contents: contents,
     generationConfig: {
@@ -577,11 +577,11 @@ async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
     if (response.ok) {
       const result = await response.json();
       console.log(`[Gemini Image] Response received`);
-      
+
       // Extract images from the response
       const images = [];
       const candidates = result.candidates || [];
-      
+
       for (const candidate of candidates) {
         const parts = candidate.content?.parts || [];
         for (const part of parts) {
@@ -593,7 +593,7 @@ async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
           }
         }
       }
-      
+
       if (images.length > 0) {
         console.log(`[Gemini Image] Success with model: ${model}, got ${images.length} image(s)`);
         return {
@@ -607,12 +607,14 @@ async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
     } else {
       const errorText = await response.text();
       console.log(`[Gemini Image] Model ${model} returned status: ${response.status}`, errorText);
+      return { success: false, error: `Status ${response.status}: ${errorText}` };
     }
   } catch (e) {
     console.error(`[Gemini Image] Model ${model} failed:`, e.message);
+    return { success: false, error: e.message };
   }
-  
-  return null;
+
+  return { success: false, error: 'Unknown error' };
 }
 
 /**
@@ -620,7 +622,7 @@ async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
  */
 async function generateWithImagen(prompt, apiKey, model, options = {}) {
   console.log(`[Imagen] Generating with model: ${model}`);
-  
+
   const requestBody = {
     instances: [{ prompt }],
     parameters: {
@@ -657,12 +659,15 @@ async function generateWithImagen(prompt, apiKey, model, options = {}) {
       }
     } else {
       console.log(`[Imagen] Model ${model} returned status: ${response.status}`);
+      const errorText = await response.text();
+      return { success: false, error: `Status ${response.status}: ${errorText}` };
     }
   } catch (e) {
     console.error(`[Imagen] Model ${model} failed:`, e.message);
+    return { success: false, error: e.message };
   }
-  
-  return null;
+
+  return { success: false, error: 'Unknown error' };
 }
 
 /**
@@ -679,11 +684,12 @@ export async function generateImageWithImagen(prompt, apiKey, options = {}) {
     models = getImageModelFallbacks('google', options.model);
   }
 
+  const errors = [];
   console.log(`[Image Gen] Trying models in order:`, models);
 
   for (const model of models) {
     let result;
-    
+
     if (isGeminiImageModel(model)) {
       // Use Gemini native image generation (generateContent endpoint)
       result = await generateWithGeminiNative(prompt, apiKey, model, options);
@@ -691,11 +697,13 @@ export async function generateImageWithImagen(prompt, apiKey, options = {}) {
       // Use Imagen (predict endpoint)
       result = await generateWithImagen(prompt, apiKey, model, options);
     }
-    
+
     if (result?.success) {
       return result;
+    } else if (result?.error) {
+      errors.push(`${model}: ${result.error}`);
     }
   }
 
-  return { success: false, error: 'All image models failed' };
+  return { success: false, error: `All image models failed. Details: ${errors.join('; ')}` };
 }

@@ -1104,9 +1104,7 @@ export const HammerButton = styled.button`
 
 export const ToolbarContainer = styled.div`
   position: absolute;
-  top: 0;
   left: 50%;
-  transform: translateX(-50%) translateY(${props => props.$isOpen ? '-100%' : '-80%'});
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -1116,9 +1114,6 @@ export const ToolbarContainer = styled.div`
   min-width: 200px;
   background: ${props => props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
-  border-bottom: none;
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '16px 16px 0 0'};
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
   opacity: ${props => props.$isOpen ? '1' : '0'};
   visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -1126,6 +1121,23 @@ export const ToolbarContainer = styled.div`
               visibility 0.2s;
   pointer-events: ${props => props.$isOpen ? 'auto' : 'none'};
   z-index: 99;
+
+  /* Position below input when chat is empty (centered), above when at bottom */
+  ${props => props.$isEmpty ? css`
+    top: calc(100% - 1px);
+    bottom: auto;
+    transform: translateX(-50%) translateY(${props.$isOpen ? '0%' : '-20%'});
+    border-top: none;
+    border-radius: ${props.theme.name === 'retro' ? '0' : '0 0 16px 16px'};
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  ` : css`
+    top: 0;
+    bottom: auto;
+    transform: translateX(-50%) translateY(${props.$isOpen ? '-100%' : '-80%'});
+    border-bottom: none;
+    border-radius: ${props.theme.name === 'retro' ? '0' : '16px 16px 0 0'};
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+  `}
 `;
 
 export const ToolbarItem = styled.button`
