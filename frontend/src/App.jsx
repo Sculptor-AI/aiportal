@@ -218,7 +218,7 @@ const useIsMobile = () => {
 
 // Main app component
 const AppContent = () => {
-  const { user, adminUser, updateSettings: updateUserSettings, loading } = useAuth();
+  const { user, adminUser, updateSettings: updateUserSettings, loading, logout } = useAuth();
   const toast = useToast();
   const isMobile = useIsMobile();
   const location = useLocation();
@@ -934,6 +934,7 @@ const AppContent = () => {
               collapsed={collapsed}
               setCollapsed={setCollapsed}
               settings={settings}
+              onSignOut={logout}
             />
             {console.log('Available models for ChatWindow:', availableModels)}
             <Routes>

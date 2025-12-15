@@ -172,11 +172,11 @@ const NewChatButton = styled.button`
 
   &:hover {
     background: ${props => {
-      if (props.theme.name === 'retro') return props.theme.buttonFace;
-      if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
-      if (props.theme.name === 'dark') return 'rgba(255,255,255,0.1)';
-      return 'rgba(0,0,0,0.06)';
-    }};
+    if (props.theme.name === 'retro') return props.theme.buttonFace;
+    if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
+    if (props.theme.name === 'dark') return 'rgba(255,255,255,0.1)';
+    return 'rgba(0,0,0,0.06)';
+  }};
     cursor: pointer;
   }
 
@@ -275,16 +275,16 @@ const ChatItem = styled.div`
   
   &:hover {
     background: ${props => {
-      if (props.$active) {
-        if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
-        if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.12)';
-        return 'rgba(0, 0, 0, 0.06)';
-      } else {
-        if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.05)';
-        if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.04)';
-        return 'rgba(0, 0, 0, 0.02)';
-      }
-    }};
+    if (props.$active) {
+      if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
+      if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.12)';
+      return 'rgba(0, 0, 0, 0.06)';
+    } else {
+      if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.05)';
+      if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.04)';
+      return 'rgba(0, 0, 0, 0.02)';
+    }
+  }};
   }
 
   @media (max-width: 768px) {
@@ -684,9 +684,9 @@ const SearchInputWrapper = styled.div`
   position: relative;
   display: flex;
   align-items: center;
-  background: ${props => 
-    props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : 
-    props.theme.inputBackground};
+  background: ${props =>
+    props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' :
+      props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
   border-radius: 20px;
   overflow: hidden;
@@ -694,8 +694,8 @@ const SearchInputWrapper = styled.div`
   min-height: 32px;
 
   &:focus-within {
-    border-color: ${props => 
-      props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 
+    border-color: ${props =>
+    props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
       props.theme.text};
   }
 `;
@@ -706,15 +706,15 @@ const SearchInput = styled.input`
   background: transparent;
   border: none;
   outline: none;
-  color: ${props => 
-    props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 
-    props.theme.text};
+  color: ${props =>
+    props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
+      props.theme.text};
   font-size: 13px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   &::placeholder {
-    color: ${props => 
-      props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.5)' : 
+    color: ${props =>
+    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.5)' :
       `${props.theme.text}60`};
   }
 `;
@@ -724,17 +724,17 @@ const SearchCloseButton = styled.button`
   border: none;
   padding: 8px;
   cursor: pointer;
-  color: ${props => 
-    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : 
-    `${props.theme.text}60`};
+  color: ${props =>
+    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' :
+      `${props.theme.text}60`};
   transition: color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:hover {
-    color: ${props => 
-      props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 
+    color: ${props =>
+    props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
       props.theme.text};
   }
 
@@ -747,9 +747,9 @@ const SearchCloseButton = styled.button`
 const NoResultsMessage = styled.div`
   text-align: center;
   padding: 16px;
-  color: ${props => 
-    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : 
-    `${props.theme.text}60`};
+  color: ${props =>
+    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' :
+      `${props.theme.text}60`};
   font-size: 14px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 `;
@@ -763,9 +763,9 @@ const ProfileDropdown = styled.div`
   bottom: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: ${props => 
-    props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : 
-    props.theme.inputBackground};
+  background: ${props =>
+    props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' :
+      props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
   border-radius: 6px;
   z-index: 30;
@@ -845,7 +845,8 @@ const Sidebar = ({
   collapsed: $collapsed,
   setCollapsed,
   theme,
-  settings = {}
+  settings = {},
+  onSignOut
 }) => {
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
@@ -905,7 +906,7 @@ const Sidebar = ({
   const toggleCollapsed = () => {
     // Don't allow collapsing if retro theme
     if (theme && theme.name === 'retro') return;
-    
+
     const newState = !$collapsed;
     setCollapsed(newState);
     setIsModelDropdownOpen(false); // Close dropdown when collapsing/expanding
@@ -963,8 +964,9 @@ const Sidebar = ({
 
   const handleSignOutClick = () => {
     setIsProfileDropdownOpen(false);
-    // Add sign out logic here
-    console.log('Sign out clicked');
+    if (onSignOut) {
+      onSignOut();
+    }
   };
 
   // Filter chats based on search term
@@ -977,34 +979,34 @@ const Sidebar = ({
   return (
     <>
       {/* Main Sidebar container */}
-      <SidebarContainer 
-        $isExpanded={isMobileExpanded} 
+      <SidebarContainer
+        $isExpanded={isMobileExpanded}
         $collapsed={theme && theme.name === 'retro' ? false : $collapsed}
         $sidebarStyle={settings.sidebarStyle || 'floating'}
       >
         {/* Top Bar for Desktop */}
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
-           <LogoContainer>
-             <img 
-               src={'/images/sculptor.svg'} 
-               alt={'Sculptor AI'} 
-             />
-           </LogoContainer>
-           
-           {/* Left Collapse Button (now on the right) - hidden for retro theme */}
-           {!$collapsed && theme && theme.name !== 'retro' && (
-             <CollapseButton 
-               onClick={toggleCollapsed} 
-               $collapsed={$collapsed} 
-               title="Collapse Sidebar"
-               style={{ marginLeft: 'auto' }}>
-               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line>
-               </svg>
-             </CollapseButton>
-           )}
+          <LogoContainer>
+            <img
+              src={'/images/sculptor.svg'}
+              alt={'Sculptor AI'}
+            />
+          </LogoContainer>
+
+          {/* Left Collapse Button (now on the right) - hidden for retro theme */}
+          {!$collapsed && theme && theme.name !== 'retro' && (
+            <CollapseButton
+              onClick={toggleCollapsed}
+              $collapsed={$collapsed}
+              title="Collapse Sidebar"
+              style={{ marginLeft: 'auto' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line>
+              </svg>
+            </CollapseButton>
+          )}
         </TopBarContainer>
-        
+
         {/* New Chat Button Section */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
           <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }}>
@@ -1085,7 +1087,7 @@ const Sidebar = ({
             {location.pathname !== '/workspace' && (
               <NavLink to="/workspace">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
                 </svg>
                 <span>Workspace</span>
               </NavLink>
@@ -1104,24 +1106,24 @@ const Sidebar = ({
         {/* Top Bar for Mobile (Logo + Expander) */}
         <TopBarContainer className="mobile-top-bar" style={{ display: 'none' }}> {/* Managed by CSS */}
           <MobileLogoContainer>
-            <img 
-              src={'/images/sculptor.svg'} 
-              alt={'Sculptor AI'} 
+            <img
+              src={'/images/sculptor.svg'}
+              alt={'Sculptor AI'}
             />
           </MobileLogoContainer>
           {/* Toggle Button */}
           <MobileToggleButton
-              onClick={toggleMobileExpanded}
-              $isExpanded={isMobileExpanded}
-              title={isMobileExpanded ? "Collapse Menu" : "Expand Menu"}
-              style={{ marginLeft: 'auto' }}
+            onClick={toggleMobileExpanded}
+            $isExpanded={isMobileExpanded}
+            title={isMobileExpanded ? "Collapse Menu" : "Expand Menu"}
+            style={{ marginLeft: 'auto' }}
           >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                 {isMobileExpanded
-                   ? <polyline points="18 15 12 9 6 15"></polyline> // Up arrow
-                   : <polyline points="6 9 12 15 18 9"></polyline> // Down arrow
-                 }
-              </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {isMobileExpanded
+                ? <polyline points="18 15 12 9 6 15"></polyline> // Up arrow
+                : <polyline points="6 9 12 15 18 9"></polyline> // Down arrow
+              }
+            </svg>
           </MobileToggleButton>
         </TopBarContainer>
 
@@ -1132,7 +1134,7 @@ const Sidebar = ({
           <>
             {/* Scrollable Area (Models, Chats) */}
             <ScrollableContent $isExpanded={isMobileExpanded || (theme && theme.name === 'retro')}>
-              
+
               {/* New Chat Button for Mobile */}
               <div className="mobile-only" style={{ display: 'none' }}>
                 <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }}>
@@ -1238,55 +1240,55 @@ const Sidebar = ({
             {/* --- Bottom Buttons Section (Profile with Dropdown) --- */}
             {/* Rendered outside ScrollableContent to stick to bottom */}
             <SidebarSection style={{ borderTop: 'none' }}>
-                {/* Profile / Sign In Button with Dropdown */}
-                <ProfileDropdownContainer data-profile-dropdown>
-                  <ProfileButton
-                    onClick={handleProfileClick}
-                    title={isLoggedIn ? `View profile: ${username}` : "Sign In"}
-                  >
-                     {isLoggedIn ? (
-                       <ProfileAvatar $profilePicture={profilePicture}>
-                         {!profilePicture && username.charAt(0).toUpperCase()}
-                       </ProfileAvatar>
-                     ) : (
-                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
-                       </svg>
-                     )}
-                     <span>{isLoggedIn ? username : 'Sign In'}</span>
-                  </ProfileButton>
+              {/* Profile / Sign In Button with Dropdown */}
+              <ProfileDropdownContainer data-profile-dropdown>
+                <ProfileButton
+                  onClick={handleProfileClick}
+                  title={isLoggedIn ? `View profile: ${username}` : "Sign In"}
+                >
+                  {isLoggedIn ? (
+                    <ProfileAvatar $profilePicture={profilePicture}>
+                      {!profilePicture && username.charAt(0).toUpperCase()}
+                    </ProfileAvatar>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  )}
+                  <span>{isLoggedIn ? username : 'Sign In'}</span>
+                </ProfileButton>
 
-                  {/* Profile Dropdown Menu */}
-                  <ProfileDropdown $isOpen={isProfileDropdownOpen}>
-                    <ProfileDropdownItem onClick={handleSettingsClick}>
+                {/* Profile Dropdown Menu */}
+                <ProfileDropdown $isOpen={isProfileDropdownOpen}>
+                  <ProfileDropdownItem onClick={handleSettingsClick}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Settings</span>
+                  </ProfileDropdownItem>
+
+                  <ProfileDropdownItem onClick={handleInfoClick}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M12 16v-4"></path>
+                      <path d="M12 8h.01"></path>
+                    </svg>
+                    <span>Info</span>
+                  </ProfileDropdownItem>
+
+                  {isLoggedIn && (
+                    <ProfileDropdownItem onClick={handleSignOutClick}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
                       </svg>
-                      <span>Settings</span>
+                      <span>Sign Out</span>
                     </ProfileDropdownItem>
-                    
-                    <ProfileDropdownItem onClick={handleInfoClick}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 16v-4"></path>
-                        <path d="M12 8h.01"></path>
-                      </svg>
-                      <span>Info</span>
-                    </ProfileDropdownItem>
-                    
-                    {isLoggedIn && (
-                      <ProfileDropdownItem onClick={handleSignOutClick}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                          <polyline points="16 17 21 12 16 7"></polyline>
-                          <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                        <span>Sign Out</span>
-                      </ProfileDropdownItem>
-                    )}
-                  </ProfileDropdown>
-                </ProfileDropdownContainer>
+                  )}
+                </ProfileDropdown>
+              </ProfileDropdownContainer>
             </SidebarSection>
           </>
         )}
