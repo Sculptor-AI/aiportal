@@ -1,499 +1,392 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import styled from 'styled-components';
 
-const gameLoop = keyframes`
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-100px); }
-`;
-
-const jumpAnimation = keyframes`
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-60px); }
-  100% { transform: translateY(0); }
-`;
-
-const dropAnimation = keyframes`
-  0% { transform: translateY(-50px); }
-  100% { transform: translateY(0); }
-`;
-
+// Game container that matches MainGreeting positioning
 const GameContainer = styled.div`
   position: fixed;
-  top: ${props => props.$toolbarOpen ? '12%' : '14%'};
+  top: ${props => props.$toolbarOpen ? '18%' : '20%'};
   left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160;
-    let rightPanelOffset = 0;
-    if (props.$whiteboardOpen) rightPanelOffset -= 225;
-    if (props.$equationEditorOpen) rightPanelOffset -= 225;
-    if (props.$graphingOpen) rightPanelOffset -= 300;
-    if (props.$flowchartOpen) rightPanelOffset -= 225;
-    if (props.$sandbox3DOpen) rightPanelOffset -= 225;
-    return `calc(50% + ${sidebarOffset}px + ${rightPanelOffset}px)`;
-  }};
+        const sidebarOffset = props.$sidebarCollapsed ? 0 : 160;
+        return `calc(50% + ${sidebarOffset}px)`;
+    }};
   transform: translateX(-50%);
-  width: 800px;
-  height: 200px;
-  max-width: 90%;
-  background: transparent;
-  z-index: 9999;
-  overflow: hidden;
+  max-width: 800px;
+  width: 90%;
+  z-index: 102;
+  padding: 0 20px;
+  box-sizing: border-box;
+  transition: all 0.3s ease-out;
   display: flex;
   flex-direction: column;
-  user-select: none;
+  align-items: center;
+  gap: 12px;
   
   @media (max-width: 768px) {
     left: 50% !important;
-    top: ${props => props.$toolbarOpen ? '10%' : '12%'};
-    width: 90%;
-    height: 150px;
+    top: ${props => props.$toolbarOpen ? '15%' : '18%'};
+    max-width: 90%;
+    padding: 0 15px;
   }
   
   @media (max-width: 480px) {
-    width: 95%;
-    height: 120px;
+    left: 50% !important;
+    top: ${props => props.$toolbarOpen ? '15%' : '18%'};
+    max-width: 95%;
+    padding: 0 10px;
   }
 `;
 
-const GameHeader = styled.div`
-  position: absolute;
-  top: 15px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 30px;
-  z-index: 10000;
-`;
-
-const Score = styled.div`
-  font-family: 'Courier New', monospace;
-  font-size: 18px;
-  font-weight: bold;
-  color: #535353;
-  letter-spacing: 1px;
-`;
-
-const HighScore = styled.div`
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  color: #535353;
-  letter-spacing: 1px;
-`;
-
-const ExitButton = styled.button`
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: #535353;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  cursor: pointer;
-  font-size: 12px;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
-  
-  &:hover {
-    background: #404040;
-  }
-`;
-
-const GameArea = styled.div`
+const GameCanvas = styled.div`
   position: relative;
   width: 100%;
-  height: 100%;
+  max-width: 600px;
+  height: 150px;
+  background: ${props => props.theme.inputBackground || 'rgba(0,0,0,0.05)'};
+  border-radius: 16px;
+  border: 1px solid ${props => props.theme.border};
   overflow: hidden;
+  cursor: pointer;
+  user-select: none;
 `;
 
 const Ground = styled.div`
   position: absolute;
   bottom: 20px;
-  width: 100%;
-  height: 6px;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(83, 83, 83, 0.3) 0px,
-    rgba(83, 83, 83, 0.3) 2px,
-    transparent 2px,
-    transparent 16px
-  );
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: ${props => props.theme.text};
+  opacity: 0.3;
 `;
 
-const Character = styled.div`
+const Player = styled.div`
   position: absolute;
-  bottom: 28px;
-  left: 80px;
-  width: 35px;
-  height: 35px;
-  z-index: 100;
-  ${props => 
-    props.$isJumping ? css`animation: ${jumpAnimation} 0.6s ease-in-out;` : 
-    props.$isDropping ? css`animation: ${dropAnimation} 0.8s ease-out;` : css`animation: none;`
-  }
+  bottom: ${props => 22 + props.$y}px;
+  left: 60px;
+  width: 48px;
+  height: 48px;
+  transition: ${props => props.$isJumping ? 'none' : 'bottom 0.1s ease-out'};
   
   img {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    opacity: 0.9;
   }
-`;
-
-const ObstacleGroup = styled.div`
-  position: absolute;
-  bottom: 28px;
-  right: ${props => props.$position}px;
-  display: flex;
-  gap: 12px;
 `;
 
 const Obstacle = styled.div`
-  width: 18px;
-  height: 25px;
-  background: rgba(83, 83, 83, 0.7);
-  border-radius: 3px;
-`;
-
-const GameOverScreen = styled.div`
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  z-index: 10000;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 20px;
-  border-radius: 8px;
+  bottom: 22px;
+  left: ${props => props.$x}px;
+  width: ${props => props.$width}px;
+  height: ${props => props.$height}px;
+  background: ${props => props.theme.primary};
+  border-radius: 4px;
+  opacity: 0.8;
 `;
 
-const GameOverTitle = styled.h2`
-  font-family: 'Courier New', monospace;
+const ScoreDisplay = styled.div`
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: ${props => props.theme.text};
+  opacity: 0.8;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+`;
+
+const GameOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: ${props => props.theme.sidebar};
+  opacity: 0.95;
+  border-radius: 16px;
+`;
+
+const OverlayTitle = styled.div`
   font-size: 24px;
-  color: #535353;
-  margin: 0 0 15px 0;
-  letter-spacing: 1px;
+  font-weight: 600;
+  color: ${props => props.theme.text};
+  margin-bottom: 8px;
 `;
 
-const GameOverText = styled.p`
-  font-family: 'Courier New', monospace;
+const OverlayScore = styled.div`
+  font-size: 36px;
+  font-weight: 700;
+  color: ${props => props.theme.primary};
+  margin-bottom: 4px;
+`;
+
+const OverlayHint = styled.div`
   font-size: 14px;
-  color: #535353;
-  margin: 0 0 20px 0;
+  color: ${props => props.theme.text};
+  opacity: 0.6;
+  margin-top: 8px;
 `;
 
-const RestartButton = styled.button`
-  background: #535353;
-  color: white;
+const HighScoreLabel = styled.div`
+  font-size: 12px;
+  color: ${props => props.theme.text};
+  opacity: 0.5;
+`;
+
+const ExitButton = styled.button`
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  background: transparent;
   border: none;
-  padding: 10px 20px;
-  font-size: 14px;
-  border-radius: 6px;
+  color: ${props => props.theme.text};
+  opacity: 0.5;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
-  margin-right: 10px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: opacity 0.2s ease;
   
   &:hover {
-    background: #404040;
+    opacity: 0.8;
   }
 `;
 
-const StartScreen = styled.div`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  z-index: 10000;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 20px;
-  border-radius: 8px;
-`;
+// Game constants
+const GROUND_Y = 0;
+const JUMP_VELOCITY = 12;
+const GRAVITY = 0.6;
+const INITIAL_SPEED = 5;
+const MAX_SPEED = 12;
+const PLAYER_WIDTH = 40;
+const PLAYER_HEIGHT = 40;
 
-const StartTitle = styled.h2`
-  font-family: 'Courier New', monospace;
-  font-size: 24px;
-  color: #535353;
-  margin: 0 0 15px 0;
-  letter-spacing: 1px;
-`;
-
-const StartText = styled.p`
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  color: #535353;
-  margin: 0 0 20px 0;
-`;
-
-const StartButton = styled.button`
-  background: #535353;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  font-size: 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: 'Courier New', monospace;
-  
-  &:hover {
-    background: #404040;
-  }
-`;
-
-const DinosaurRunGame = ({ 
-  onExit,
-  $toolbarOpen,
-  $sidebarCollapsed,
-  $whiteboardOpen,
-  $equationEditorOpen,
-  $graphingOpen,
-  $flowchartOpen,
-  $sandbox3DOpen
+const DinosaurRunGame = ({
+    onExit,
+    $toolbarOpen,
+    $sidebarCollapsed
 }) => {
-  const [gameState, setGameState] = useState('start'); // 'start', 'playing', 'gameOver'
-  const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(() => {
-    return parseInt(localStorage.getItem('sculptorRunHighScore') || '0');
-  });
-  const [isJumping, setIsJumping] = useState(false);
-  const [isDropping, setIsDropping] = useState(false);
-  const [obstacles, setObstacles] = useState([]);
-  const [gameSpeed, setGameSpeed] = useState(3);
-  
-  const gameLoopRef = useRef();
-  const obstacleSpawnRef = useRef();
-  const scoreRef = useRef();
-  const jumpSoundRef = useRef();
-  const gameOverSoundRef = useRef();
+    const [gameState, setGameState] = useState('start'); // 'start', 'playing', 'gameover'
+    const [score, setScore] = useState(0);
+    const [highScore, setHighScore] = useState(() => {
+        const saved = localStorage.getItem('sculptorRunnerHighScore');
+        return saved ? parseInt(saved, 10) : 0;
+    });
+    const [playerY, setPlayerY] = useState(GROUND_Y);
+    const [obstacles, setObstacles] = useState([]);
 
-  // Initialize game
-  const initGame = useCallback(() => {
-    setGameState('playing');
-    setScore(0);
-    setObstacles([]);
-    setGameSpeed(3);
-    setIsJumping(false);
-    setIsDropping(true); // Character drops down at start
-    
-    // Stop dropping after animation
-    setTimeout(() => setIsDropping(false), 800);
-  }, []);
+    const gameLoopRef = useRef(null);
+    const playerVelocityRef = useRef(0);
+    const isJumpingRef = useRef(false);
+    const speedRef = useRef(INITIAL_SPEED);
+    const frameCountRef = useRef(0);
+    const obstaclesRef = useRef([]);
+    const playerYRef = useRef(GROUND_Y);
+    const scoreRef = useRef(0);
 
-  // Jump function
-  const jump = useCallback(() => {
-    if (gameState !== 'playing' || isJumping) return;
-    
-    setIsJumping(true);
-    setTimeout(() => setIsJumping(false), 600);
-  }, [gameState, isJumping]);
+    const resetGame = useCallback(() => {
+        playerVelocityRef.current = 0;
+        isJumpingRef.current = false;
+        speedRef.current = INITIAL_SPEED;
+        frameCountRef.current = 0;
+        obstaclesRef.current = [];
+        playerYRef.current = GROUND_Y;
+        scoreRef.current = 0;
+        setPlayerY(GROUND_Y);
+        setObstacles([]);
+        setScore(0);
+    }, []);
 
-  // Handle keyboard input
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault();
-        if (gameState === 'start') {
-          initGame();
-        } else if (gameState === 'playing') {
-          jump();
-        } else if (gameState === 'gameOver') {
-          initGame();
+    const jump = useCallback(() => {
+        if (!isJumpingRef.current && gameState === 'playing') {
+            isJumpingRef.current = true;
+            playerVelocityRef.current = JUMP_VELOCITY;
         }
-      } else if (e.code === 'Escape') {
-        onExit();
-      }
-    };
+    }, [gameState]);
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [gameState, jump, initGame, onExit]);
+    const startGame = useCallback(() => {
+        resetGame();
+        setGameState('playing');
+    }, [resetGame]);
 
-  // Handle touch/click input
-  useEffect(() => {
-    const handleClick = (e) => {
-      // Don't trigger on button clicks
-      if (e.target.tagName === 'BUTTON') return;
-      
-      if (gameState === 'start') {
-        initGame();
-      } else if (gameState === 'playing') {
-        jump();
-      } else if (gameState === 'gameOver') {
-        initGame();
-      }
-    };
+    const handleInteraction = useCallback(() => {
+        if (gameState === 'start' || gameState === 'gameover') {
+            startGame();
+        } else if (gameState === 'playing') {
+            jump();
+        }
+    }, [gameState, startGame, jump]);
 
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, [gameState, jump, initGame]);
+    // Main game loop
+    useEffect(() => {
+        if (gameState !== 'playing') {
+            if (gameLoopRef.current) {
+                cancelAnimationFrame(gameLoopRef.current);
+            }
+            return;
+        }
 
-  // Spawn obstacles
-  useEffect(() => {
-    if (gameState !== 'playing') return;
+        const gameLoop = () => {
+            frameCountRef.current++;
 
-    const spawnObstacle = () => {
-      const obstacleCount = Math.floor(Math.random() * 2) + 1; // 1-2 obstacles (reduced from 1-3)
-      const newObstacle = {
-        id: Date.now(),
-        position: -200, // Start further away
-        count: obstacleCount,
-        speed: 2 // Fixed slower speed
-      };
-      
-      setObstacles(prev => [...prev, newObstacle]);
-      
-      // Schedule next obstacle - much longer intervals
-      const nextInterval = Math.random() * 2000 + 3000; // 3-5 seconds (increased from 1.5-2.5)
-      obstacleSpawnRef.current = setTimeout(spawnObstacle, nextInterval);
-    };
+            // Update player position (physics)
+            if (isJumpingRef.current) {
+                playerVelocityRef.current -= GRAVITY;
+                playerYRef.current += playerVelocityRef.current;
 
-    // Start spawning obstacles after a longer delay
-    obstacleSpawnRef.current = setTimeout(spawnObstacle, 4000);
+                if (playerYRef.current <= GROUND_Y) {
+                    playerYRef.current = GROUND_Y;
+                    isJumpingRef.current = false;
+                    playerVelocityRef.current = 0;
+                }
 
-    return () => {
-      if (obstacleSpawnRef.current) {
-        clearTimeout(obstacleSpawnRef.current);
-      }
-    };
-  }, [gameState]); // Only depend on gameState, not obstacles
+                setPlayerY(playerYRef.current);
+            }
 
-  // Game loop
-  useEffect(() => {
-    if (gameState !== 'playing') return;
+            // Spawn obstacles
+            const spawnRate = Math.max(60, 120 - Math.floor(scoreRef.current / 50) * 10);
+            if (frameCountRef.current % spawnRate === 0) {
+                const lastObstacle = obstaclesRef.current[obstaclesRef.current.length - 1];
+                const minGap = 200;
 
-    gameLoopRef.current = setInterval(() => {
-      setObstacles(prev => {
-        const updated = prev.map(obstacle => ({
-          ...obstacle,
-          position: obstacle.position + (obstacle.speed * 3) // Reduced from 10 to 3
-        }));
+                if (!lastObstacle || lastObstacle.x < 600 - minGap) {
+                    const newObstacle = {
+                        id: Date.now(),
+                        x: 620,
+                        width: 15 + Math.random() * 15,
+                        height: 25 + Math.random() * 25,
+                    };
+                    obstaclesRef.current = [...obstaclesRef.current, newObstacle];
+                }
+            }
 
-        // Remove obstacles that are off screen
-        return updated.filter(obstacle => obstacle.position < 1200); // Increased buffer
-      });
+            // Update obstacles
+            obstaclesRef.current = obstaclesRef.current
+                .map(obs => ({ ...obs, x: obs.x - speedRef.current }))
+                .filter(obs => obs.x > -50);
 
-      // Check collision
-      const characterRect = {
-        left: 80,
-        right: 115,
-        top: isJumping ? -32 : -7, // When jumping, character is much higher
-        bottom: isJumping ? 3 : 28  // When jumping, character bottom is well above obstacles
-      };
+            setObstacles([...obstaclesRef.current]);
 
-      const collision = obstacles.some(obstacle => {
-        const containerWidth = 800; // Fixed container width
-        const obstacleRect = {
-          left: containerWidth - obstacle.position,
-          right: containerWidth - obstacle.position + (obstacle.count * 30), // 18px width + 12px gap
-          top: 3,  // Obstacle top
-          bottom: 28 // Obstacle bottom (ground level)
+            // Collision detection
+            const playerLeft = 60;
+            const playerRight = 60 + PLAYER_WIDTH - 10;
+            const playerBottom = 22 + playerYRef.current;
+            const playerTop = playerBottom + PLAYER_HEIGHT - 10;
+
+            for (const obs of obstaclesRef.current) {
+                const obsLeft = obs.x;
+                const obsRight = obs.x + obs.width;
+                const obsBottom = 22;
+                const obsTop = 22 + obs.height;
+
+                if (
+                    playerRight > obsLeft &&
+                    playerLeft < obsRight &&
+                    playerBottom < obsTop &&
+                    playerTop > obsBottom
+                ) {
+                    // Collision!
+                    if (scoreRef.current > highScore) {
+                        setHighScore(scoreRef.current);
+                        localStorage.setItem('sculptorRunnerHighScore', scoreRef.current.toString());
+                    }
+                    setGameState('gameover');
+                    return;
+                }
+            }
+
+            // Update score
+            if (frameCountRef.current % 6 === 0) {
+                scoreRef.current++;
+                setScore(scoreRef.current);
+            }
+
+            // Gradually increase speed
+            speedRef.current = Math.min(MAX_SPEED, INITIAL_SPEED + scoreRef.current * 0.01);
+
+            gameLoopRef.current = requestAnimationFrame(gameLoop);
         };
 
-        return characterRect.left < obstacleRect.right &&
-               characterRect.right > obstacleRect.left &&
-               characterRect.top < obstacleRect.bottom &&
-               characterRect.bottom > obstacleRect.top;
-      });
+        gameLoopRef.current = requestAnimationFrame(gameLoop);
 
-      if (collision) {
-        setGameState('gameOver');
-      }
-    }, 16); // 60 FPS
+        return () => {
+            if (gameLoopRef.current) {
+                cancelAnimationFrame(gameLoopRef.current);
+            }
+        };
+    }, [gameState, highScore]);
 
-    return () => clearInterval(gameLoopRef.current);
-  }, [gameState, obstacles, isJumping]);
+    // Keyboard controls
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                handleInteraction();
+            }
+            if (e.code === 'Escape' && onExit) {
+                onExit();
+            }
+        };
 
-  // Score counter
-  useEffect(() => {
-    if (gameState !== 'playing') return;
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleInteraction, onExit]);
 
-    scoreRef.current = setInterval(() => {
-      setScore(prev => prev + 1);
-    }, 100);
+    return (
+        <GameContainer
+            $toolbarOpen={$toolbarOpen}
+            $sidebarCollapsed={$sidebarCollapsed}
+        >
+            <GameCanvas onClick={handleInteraction}>
+                <ExitButton onClick={(e) => { e.stopPropagation(); onExit?.(); }}>
+                    ✕ Exit
+                </ExitButton>
 
-    return () => clearInterval(scoreRef.current);
-  }, [gameState]);
+                <ScoreDisplay>{score}</ScoreDisplay>
 
-  // Increase game speed (disabled for now to keep it manageable)
-  // useEffect(() => {
-  //   if (gameState !== 'playing') return;
+                <Ground />
 
-  //   const speedInterval = setInterval(() => {
-  //     setGameSpeed(prev => Math.min(prev + 0.1, 8));
-  //   }, 3000);
+                <Player $y={playerY} $isJumping={isJumpingRef.current}>
+                    <img src="/sculptor.svg" alt="Player" />
+                </Player>
 
-  //   return () => clearInterval(speedInterval);
-  // }, [gameState]);
+                {obstacles.map(obs => (
+                    <Obstacle
+                        key={obs.id}
+                        $x={obs.x}
+                        $width={obs.width}
+                        $height={obs.height}
+                    />
+                ))}
 
-  // Update high score
-  useEffect(() => {
-    if (gameState === 'gameOver' && score > highScore) {
-      setHighScore(score);
-      localStorage.setItem('sculptorRunHighScore', score.toString());
-    }
-  }, [gameState, score, highScore]);
+                {gameState === 'start' && (
+                    <GameOverlay>
+                        <OverlayTitle>Sculptor Run</OverlayTitle>
+                        <OverlayHint>Press SPACE or tap to play</OverlayHint>
+                        {highScore > 0 && (
+                            <HighScoreLabel>Best: {highScore}</HighScoreLabel>
+                        )}
+                    </GameOverlay>
+                )}
 
-  const formatScore = (score) => {
-    return score.toString().padStart(5, '0');
-  };
-
-  return (
-    <GameContainer
-      $toolbarOpen={$toolbarOpen}
-      $sidebarCollapsed={$sidebarCollapsed}
-      $whiteboardOpen={$whiteboardOpen}
-      $equationEditorOpen={$equationEditorOpen}
-      $graphingOpen={$graphingOpen}
-      $flowchartOpen={$flowchartOpen}
-      $sandbox3DOpen={$sandbox3DOpen}
-    >
-      <ExitButton onClick={onExit}>
-        ESC
-      </ExitButton>
-      
-      <GameHeader>
-        <Score>SCORE: {formatScore(score)}</Score>
-        <HighScore>HI: {formatScore(highScore)}</HighScore>
-      </GameHeader>
-
-      <GameArea>
-        <Ground />
-        
-        <Character $isJumping={isJumping} $isDropping={isDropping}>
-          <img src="/images/sculptor.svg" alt="Sculptor Runner" />
-        </Character>
-
-        {obstacles.map(obstacle => (
-          <ObstacleGroup 
-            key={obstacle.id} 
-            $position={obstacle.position}
-            $speed={obstacle.speed}
-          >
-            {Array.from({ length: obstacle.count }).map((_, index) => (
-              <Obstacle key={index} />
-            ))}
-          </ObstacleGroup>
-        ))}
-      </GameArea>
-
-      {gameState === 'start' && (
-        <StartScreen>
-          <StartButton onClick={initGame}>START</StartButton>
-        </StartScreen>
-      )}
-
-      {gameState === 'gameOver' && (
-        <GameOverScreen>
-          <GameOverTitle>GAME OVER</GameOverTitle>
-          <GameOverText>
-            Final Score: {formatScore(score)}<br />
-            High Score: {formatScore(highScore)}
-          </GameOverText>
-          <RestartButton onClick={initGame}>RESTART</RestartButton>
-          <RestartButton onClick={onExit}>EXIT</RestartButton>
-        </GameOverScreen>
-      )}
-    </GameContainer>
-  );
+                {gameState === 'gameover' && (
+                    <GameOverlay>
+                        <OverlayTitle>Game Over</OverlayTitle>
+                        <OverlayScore>{score}</OverlayScore>
+                        {score >= highScore && score > 0 && (
+                            <HighScoreLabel>🎉 New Best!</HighScoreLabel>
+                        )}
+                        {score < highScore && (
+                            <HighScoreLabel>Best: {highScore}</HighScoreLabel>
+                        )}
+                        <OverlayHint>Press SPACE or tap to retry</OverlayHint>
+                    </GameOverlay>
+                )}
+            </GameCanvas>
+        </GameContainer>
+    );
 };
 
-export default DinosaurRunGame; 
+export default DinosaurRunGame;
