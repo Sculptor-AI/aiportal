@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://ai.explodingcb.com/images/sculptor.svg" width="120" height="120" alt="Sculptor AI Logo" />
   <h1>Sculptor AI</h1>
-  <p><strong>Your All-in-One AI Portal</strong></p>
+  <p><strong>Your All in One AI Portal</strong></p>
   <p>A powerful, feature-rich interface for interacting with multiple AI models, creating content, and exploring ideas.</p>
 
   <p>

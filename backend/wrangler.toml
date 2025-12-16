@@ -1,6 +1,7 @@
 name = "ai-portal"
 main = "./worker.js"
-compatibility_date = "2024-02-24"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
 
 # Static Assets Configuration
 # The frontend build is copied here by GitHub Actions before deploy

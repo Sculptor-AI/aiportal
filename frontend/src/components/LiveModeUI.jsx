@@ -330,7 +330,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   const cameraVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
 
-  // Gemini Live Hook
+  // Gemini Live Hook (connects via backend proxy - no API key needed in frontend)
   const {
     isConnected,
     isRecording,
@@ -347,9 +347,10 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
     startRecording,
     stopRecording,
   } = useGeminiLive({
-    apiKey: import.meta.env.VITE_GOOGLE_API_KEY || localStorage.getItem('google_api_key'),
-    model: selectedModel?.includes('gemini') ? selectedModel : 'gemini-2.0-flash-exp',
-    responseModality: 'text',
+    model: selectedModel?.includes('gemini') ? selectedModel : 'gemini-2.5-flash-preview-native-audio',
+    responseModality: 'audio', // Use audio for voice responses
+    voiceName: 'Aoede', // Default voice
+    systemInstruction: 'You are a helpful AI assistant having a voice conversation. Be concise, friendly, and conversational.',
     inputTranscriptionEnabled: true,
     outputTranscriptionEnabled: true,
     autoConnect: false

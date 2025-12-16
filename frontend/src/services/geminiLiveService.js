@@ -1,324 +1,590 @@
+/**
+ * Gemini Live WebSocket Service
+ * Connects to backend WebSocket proxy which forwards to Google's Gemini Live API
+ * This keeps API keys secure on the backend
+ *
+ * Backend endpoint: /api/v1/live
+ */
+
 class GeminiLiveService {
   constructor() {
-    this.baseUrl = (import.meta.env.VITE_BACKEND_API_URL || '') + '/api/v1/live-audio';
-    this.apiKey = null;
-    this.sessionId = null;
+    this.ws = null;
     this.isConnected = false;
+    this.sessionActive = false;
+    this.isRecording = false;
+
+    // Callbacks
     this.onResponseCallback = null;
     this.onTranscriptionCallback = null;
     this.onErrorCallback = null;
     this.onStatusCallback = null;
-    this.mediaRecorder = null;
-    this.isRecording = false;
+    this.onAudioCallback = null;
+
+    // Audio handling
+    this.audioContext = null;
+    this.audioWorklet = null;
+    this.mediaStream = null;
+
+    // Audio playback
+    this.audioQueue = [];
+    this.isPlaying = false;
+    this.playbackAudioContext = null;
+
+    // Configuration
+    this.config = {
+      model: 'models/gemini-2.5-flash-preview-native-audio',
+      responseModalities: ['AUDIO'],
+      voiceName: 'Aoede',
+      systemInstruction: 'You are a helpful AI assistant. Be concise and friendly.'
+    };
   }
 
-  // Connect using REST API instead of WebSocket
-  async connect(apiKey = null) {
+  /**
+   * Get WebSocket URL for backend proxy
+   */
+  _getWebSocketUrl() {
+    const backendUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+
+    // Convert HTTP URL to WebSocket URL
+    let wsUrl;
+    if (backendUrl.startsWith('https://')) {
+      wsUrl = backendUrl.replace('https://', 'wss://');
+    } else if (backendUrl.startsWith('http://')) {
+      wsUrl = backendUrl.replace('http://', 'ws://');
+    } else {
+      // Default to current host
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      wsUrl = `${protocol}//${window.location.host}`;
+    }
+
+    return `${wsUrl}/api/v1/live`;
+  }
+
+  /**
+   * Connect to backend WebSocket proxy
+   */
+  async connect() {
     console.log('GeminiLiveService.connect() called');
 
-    if (this.isConnected) {
+    if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
       console.log('Already connected, skipping connection attempt');
       return;
     }
 
-    // Get API key using the same pattern as aiService
-    if (!apiKey) {
-      console.log('No API key provided, attempting to get from session storage...');
-      // Get user's assigned backend API key from session
+    const wsUrl = this._getWebSocketUrl();
+    console.log('Connecting to backend WebSocket:', wsUrl);
+
+    return new Promise((resolve, reject) => {
       try {
-        const userJSON = sessionStorage.getItem('ai_portal_current_user');
-        if (userJSON) {
-          const user = JSON.parse(userJSON);
-          console.log('Found user in session storage:', user.username);
-          // User's assigned backend API key should be stored as their accessToken
-          if (user.accessToken && user.accessToken.startsWith('ak_')) {
-            apiKey = user.accessToken;
-            console.log('Using user API key from session storage');
-          } else {
-            console.log('User accessToken does not start with ak_:', user.accessToken ? user.accessToken.substring(0, 10) + '...' : 'null');
+        this.ws = new WebSocket(wsUrl);
+
+        this.ws.onopen = () => {
+          console.log('✅ WebSocket connected to backend');
+          this.isConnected = true;
+          this.onStatusCallback?.('connected');
+          resolve();
+        };
+
+        this.ws.onmessage = (event) => {
+          this._handleMessage(event);
+        };
+
+        this.ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          this.onErrorCallback?.('WebSocket connection error');
+          reject(new Error('WebSocket connection error'));
+        };
+
+        this.ws.onclose = (event) => {
+          console.log('WebSocket closed:', event.code, event.reason);
+          this.isConnected = false;
+          this.sessionActive = false;
+          this.onStatusCallback?.('disconnected');
+
+          if (event.code !== 1000) {
+            this.onErrorCallback?.(`Connection closed: ${event.reason || 'Unknown reason'}`);
           }
-        } else {
-          console.log('No user found in session storage');
+        };
+
+      } catch (error) {
+        console.error('Error creating WebSocket:', error);
+        this.onErrorCallback?.(error.message);
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Handle incoming WebSocket messages
+   */
+  _handleMessage(event) {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('Received message:', Object.keys(data));
+
+      // Handle connection closed from backend
+      if (data.connectionClosed) {
+        console.warn('Backend reported connection closed:', data.connectionClosed);
+        this.sessionActive = false;
+        this.onStatusCallback?.('session_ended');
+        return;
+      }
+
+      // Handle errors from backend
+      if (data.error) {
+        console.error('Backend error:', data.error);
+        this.onErrorCallback?.(data.error.message || 'Backend error');
+        return;
+      }
+
+      // Setup complete acknowledgment
+      if (data.setupComplete) {
+        console.log('✅ Session setup complete');
+        this.sessionActive = true;
+        this.onStatusCallback?.('session_started');
+        return;
+      }
+
+      // Server content (model responses)
+      if (data.serverContent) {
+        this._handleServerContent(data.serverContent);
+        return;
+      }
+
+      // Tool calls (if using function calling)
+      if (data.toolCall) {
+        console.log('Tool call received:', data.toolCall);
+        return;
+      }
+
+      // Go away message (server requesting disconnect)
+      if (data.goAway) {
+        console.warn('Server requesting disconnect, time left:', data.goAway.timeLeft);
+        this.onErrorCallback?.('Server is closing connection');
+        return;
+      }
+
+    } catch (error) {
+      console.error('Error parsing message:', error);
+    }
+  }
+
+  /**
+   * Handle server content responses
+   */
+  _handleServerContent(content) {
+    // Handle model turn (generated content)
+    if (content.modelTurn) {
+      const parts = content.modelTurn.parts || [];
+
+      for (const part of parts) {
+        // Text response
+        if (part.text) {
+          console.log('Text response:', part.text);
+          this.onResponseCallback?.(part.text);
         }
-      } catch (e) {
-        console.error('Error getting user session:', e);
-      }
 
-      // Fallback API key for development/testing (same as aiService)
-      if (!apiKey) {
-        console.log('Using fallback API key for development');
-        apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+        // Audio response
+        if (part.inlineData) {
+          const { mimeType, data } = part.inlineData;
+          if (mimeType?.startsWith('audio/')) {
+            console.log('Audio response received');
+            this._handleAudioResponse(data, mimeType);
+          }
+        }
       }
     }
 
-    // Store the API key for future requests
-    this.apiKey = apiKey;
-    console.log('Using API key:', apiKey ? apiKey.substring(0, 10) + '...' : 'null');
-
-    if (!this.apiKey) {
-      const error = 'API key is required for live audio service. Please log in to access this feature.';
-      console.error('Connection failed:', error);
-      this.onErrorCallback?.(error);
-      throw new Error(error);
+    // Handle transcription of user input
+    if (content.inputTranscription) {
+      console.log('Input transcription:', content.inputTranscription.text);
+      this.onTranscriptionCallback?.(content.inputTranscription.text);
     }
 
-    try {
-      console.log('Testing connection to:', `${this.baseUrl}/sessions`);
+    // Handle transcription of model output
+    if (content.outputTranscription) {
+      console.log('Output transcription:', content.outputTranscription.text);
+      this.onResponseCallback?.(content.outputTranscription.text);
+    }
 
-      // Test connection to the API
-      const response = await fetch(`${this.baseUrl}/sessions`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey,
-        },
-      });
+    // Handle interruption
+    if (content.interrupted) {
+      console.log('Response was interrupted');
+      this._stopAudioPlayback();
+    }
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    // Handle turn complete
+    if (content.turnComplete) {
+      console.log('Turn complete');
+      this.onStatusCallback?.('turn_complete');
+    }
 
-      if (response.ok) {
-        this.isConnected = true;
-        this.onStatusCallback?.('connected');
-        console.log('✅ Connected to live audio backend via REST API');
-      } else {
-        const errorText = await response.text().catch(() => '');
-        console.error('Connection failed with status:', response.status, response.statusText);
-        console.error('Error response body:', errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}${errorText ? ` - ${errorText}` : ''}`);
-      }
-    } catch (error) {
-      console.error('Error connecting to live audio server:', error);
-      const errorMessage = `Failed to connect to live audio server: ${error.message}`;
-      this.onErrorCallback?.(errorMessage);
-      throw new Error(errorMessage);
+    // Handle generation complete
+    if (content.generationComplete) {
+      console.log('Generation complete');
     }
   }
 
-  // Handle polling for responses (since we're using REST instead of WebSocket)
-  async pollForResponse() {
-    if (!this.sessionId || !this.apiKey) return;
-
+  /**
+   * Handle audio response from server
+   */
+  _handleAudioResponse(base64Data, mimeType) {
     try {
-      const response = await fetch(`${this.baseUrl}/session/${this.sessionId}/status`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey,
-        },
+      // Decode base64 to array buffer
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Queue for playback
+      this.audioQueue.push({
+        data: bytes.buffer,
+        sampleRate: 24000 // Gemini outputs 24kHz audio
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        // Handle any response data if needed
+      // Start playback if not already playing
+      if (!this.isPlaying) {
+        this._playNextAudio();
       }
+
+      // Notify callback
+      this.onAudioCallback?.(bytes.buffer);
+
     } catch (error) {
-      console.error('Error polling for response:', error);
+      console.error('Error handling audio response:', error);
     }
   }
 
-  // Start a new session using REST API
+  /**
+   * Play queued audio responses
+   */
+  async _playNextAudio() {
+    if (this.audioQueue.length === 0) {
+      this.isPlaying = false;
+      return;
+    }
+
+    this.isPlaying = true;
+    const { data, sampleRate } = this.audioQueue.shift();
+
+    try {
+      if (!this.playbackAudioContext) {
+        this.playbackAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+
+      // Convert Int16 PCM to Float32
+      const int16Array = new Int16Array(data);
+      const float32Array = new Float32Array(int16Array.length);
+      for (let i = 0; i < int16Array.length; i++) {
+        float32Array[i] = int16Array[i] / 32768.0;
+      }
+
+      // Create audio buffer
+      const audioBuffer = this.playbackAudioContext.createBuffer(1, float32Array.length, sampleRate);
+      audioBuffer.copyToChannel(float32Array, 0);
+
+      // Play
+      const source = this.playbackAudioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(this.playbackAudioContext.destination);
+      source.onended = () => this._playNextAudio();
+      source.start();
+
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      this._playNextAudio(); // Try next in queue
+    }
+  }
+
+  /**
+   * Stop audio playback
+   */
+  _stopAudioPlayback() {
+    this.audioQueue = [];
+    this.isPlaying = false;
+  }
+
+  /**
+   * Start a new session with configuration
+   */
   async startSession(options = {}) {
-    // Wait a bit if we just connected to ensure connection is stable
-    if (this.isConnected) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    if (!this.isConnected || this.ws?.readyState !== WebSocket.OPEN) {
+      throw new Error('Not connected to server');
     }
 
-    if (!this.isConnected) {
-      throw new Error('Not connected to live audio server');
+    if (this.sessionActive) {
+      console.log('Session already active');
+      return;
     }
 
-    if (!this.apiKey) {
-      throw new Error('API key is required');
-    }
+    // Merge options with defaults
+    const model = options.model || this.config.model;
+    const responseModalities = options.responseModality === 'text' ? ['TEXT'] : ['AUDIO'];
 
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const startMessage = {
-      session_id: sessionId,
-      model: options.model || 'gemini-live-2.5-flash-preview',
-      response_modality: 'text',
-      input_transcription: true,
-      output_transcription: true,
+    // Build setup message
+    const setupMessage = {
+      setup: {
+        model: model.startsWith('models/') ? model : `models/${model}`,
+        generationConfig: {
+          responseModalities: responseModalities
+        }
+      }
     };
 
+    // Add speech config for audio responses
+    if (responseModalities.includes('AUDIO')) {
+      setupMessage.setup.generationConfig.speechConfig = {
+        voiceConfig: {
+          prebuiltVoiceConfig: {
+            voiceName: options.voiceName || this.config.voiceName
+          }
+        }
+      };
+    }
+
+    // Add system instruction if provided
+    if (options.systemInstruction || this.config.systemInstruction) {
+      setupMessage.setup.systemInstruction = {
+        parts: [{ text: options.systemInstruction || this.config.systemInstruction }]
+      };
+    }
+
+    // Enable transcription if requested
+    if (options.inputTranscription !== false) {
+      setupMessage.setup.inputAudioTranscription = {};
+    }
+    if (options.outputTranscription !== false) {
+      setupMessage.setup.outputAudioTranscription = {};
+    }
+
+    console.log('🚀 Sending session setup:', setupMessage);
+
     try {
-      console.log('🚀 Starting live audio session with backend...', startMessage);
-
-      const response = await fetch(`${this.baseUrl}/session/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey,
-        },
-        body: JSON.stringify(startMessage),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        this.sessionId = sessionId;
-        this.onStatusCallback?.('session_started');
-        console.log('Backend confirmed session started:', sessionId);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
+      this.ws.send(JSON.stringify(setupMessage));
+      // Session will be marked active when we receive setupComplete
     } catch (error) {
-      console.error('Error starting session:', error);
+      console.error('Error sending setup message:', error);
       this.onErrorCallback?.(error.message);
       throw error;
     }
   }
 
-  // End current session using REST API
+  /**
+   * End current session
+   */
   async endSession() {
-    if (!this.sessionId || !this.apiKey) return;
+    console.log('Ending session...');
+    this.sessionActive = false;
+    this._stopAudioPlayback();
+    this.stopRecording();
+    this.onStatusCallback?.('session_ended');
+  }
+
+  /**
+   * Send audio chunk to Gemini
+   */
+  sendAudioChunk(base64AudioData, format = 'pcm') {
+    if (!this.sessionActive || this.ws?.readyState !== WebSocket.OPEN) {
+      console.warn('Cannot send audio: session not active');
+      return;
+    }
+
+    // Remove data URL prefix if present
+    const audioData = base64AudioData.includes(',')
+      ? base64AudioData.split(',')[1]
+      : base64AudioData;
+
+    const message = {
+      realtimeInput: {
+        mediaChunks: [{
+          mimeType: 'audio/pcm;rate=16000',
+          data: audioData
+        }]
+      }
+    };
 
     try {
-      console.log('Ending session with backend...');
-
-      const response = await fetch(`${this.baseUrl}/session/end`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey,
-        },
-        body: JSON.stringify({
-          session_id: this.sessionId,
-        }),
-      });
-
-      if (response.ok) {
-        this.sessionId = null;
-        this.onStatusCallback?.('session_ended');
-        console.log('Backend confirmed session ended');
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      this.ws.send(JSON.stringify(message));
     } catch (error) {
-      console.error('Error ending session:', error);
+      console.error('Error sending audio chunk:', error);
+    }
+  }
+
+  /**
+   * Send text message to Gemini
+   */
+  sendText(text) {
+    if (!this.sessionActive || this.ws?.readyState !== WebSocket.OPEN) {
+      console.warn('Cannot send text: session not active');
+      return;
+    }
+
+    const message = {
+      clientContent: {
+        turns: [{
+          role: 'user',
+          parts: [{ text }]
+        }],
+        turnComplete: true
+      }
+    };
+
+    console.log('Sending text:', text);
+
+    try {
+      this.ws.send(JSON.stringify(message));
+    } catch (error) {
+      console.error('Error sending text:', error);
       this.onErrorCallback?.(error.message);
     }
   }
 
-  // Send audio chunk using REST API
-  async sendAudioChunk(audioData, format = 'webm') {
-    if (!this.sessionId || !this.apiKey) return;
+  /**
+   * Start recording from microphone with PCM conversion
+   */
+  async startRecording(onStopCallback) {
+    if (this.isRecording) {
+      console.log('Already recording');
+      return;
+    }
 
     try {
-      const base64Audio = audioData.startsWith('data:') ? audioData.split(',')[1] : audioData;
-      const audioMessage = {
-        session_id: this.sessionId,
-        audio_data: base64Audio,
-        format: format,
-        sample_rate: 16000,
-        channels: 1,
+      // Request microphone access
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      // Create audio context for processing
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 16000
+      });
+
+      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+
+      // Use ScriptProcessorNode for PCM capture
+      const bufferSize = 4096;
+      const processor = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+      processor.onaudioprocess = (event) => {
+        if (!this.isRecording) return;
+
+        const inputData = event.inputBuffer.getChannelData(0);
+
+        // Convert Float32 to Int16 PCM
+        const pcmData = new Int16Array(inputData.length);
+        for (let i = 0; i < inputData.length; i++) {
+          const sample = Math.max(-1, Math.min(1, inputData[i]));
+          pcmData[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        }
+
+        // Convert to base64
+        const base64 = this._arrayBufferToBase64(pcmData.buffer);
+
+        // Send to backend (which forwards to Gemini)
+        this.sendAudioChunk(base64);
       };
 
-      const response = await fetch(`${this.baseUrl}/transcribe`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': this.apiKey,
-        },
-        body: JSON.stringify(audioMessage),
-      });
+      source.connect(processor);
+      processor.connect(this.audioContext.destination);
 
-      if (response.ok) {
-        const data = await response.json();
+      this.audioWorklet = processor;
+      this.isRecording = true;
+      this.onStatusCallback?.('recording_started');
 
-        // Handle the response data
-        if (data.transcript || data.inputTranscription) {
-          this.onTranscriptionCallback?.(data.transcript || data.inputTranscription);
-        }
-        if (data.response) {
-          this.onResponseCallback?.(data.response);
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
+      console.log('🎤 Recording started');
+
     } catch (error) {
-      console.error('Error sending audio chunk:', error);
-      this.onErrorCallback?.(`Failed to send audio: ${error.message}`);
+      console.error('Error starting recording:', error);
+      this.onErrorCallback?.('Microphone access denied. Please allow microphone access in your browser settings.');
+      throw error;
     }
   }
 
-  // Start recording from microphone
-  startRecording(onStopCallback) {
-    if (this.isRecording) return;
-    navigator.mediaDevices.getUserMedia({
-      audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
-    })
-      .then(stream => {
-        this.isRecording = true;
-        this.onStatusCallback?.('recording_started');
-        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-
-        this.mediaRecorder.ondataavailable = event => {
-          if (event.data.size > 0) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              this.sendAudioChunk(reader.result.toString(), 'webm');
-            };
-            reader.readAsDataURL(event.data);
-          }
-        };
-
-        this.mediaRecorder.onstop = () => {
-          this.isRecording = false;
-          this.onStatusCallback?.('recording_stopped');
-          stream.getTracks().forEach(track => track.stop());
-          if (onStopCallback) onStopCallback();
-        };
-
-        this.mediaRecorder.start(1000);
-      })
-      .catch(error => {
-        console.error('Error accessing microphone:', error);
-        this.onErrorCallback?.('Microphone access denied. Please allow microphone access in your browser settings.');
-      });
-  }
-
-  // Stop recording
+  /**
+   * Stop recording
+   */
   stopRecording() {
-    if (this.mediaRecorder && this.isRecording) {
-      this.mediaRecorder.stop();
+    if (!this.isRecording) return;
+
+    console.log('🛑 Stopping recording');
+
+    this.isRecording = false;
+
+    // Disconnect audio processor
+    if (this.audioWorklet) {
+      this.audioWorklet.disconnect();
+      this.audioWorklet = null;
     }
+
+    // Close audio context
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+
+    // Stop media stream
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach(track => track.stop());
+      this.mediaStream = null;
+    }
+
+    this.onStatusCallback?.('recording_stopped');
   }
 
+  /**
+   * Convert ArrayBuffer to base64
+   */
+  _arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  /**
+   * Disconnect from server
+   */
+  disconnect() {
+    console.log('Disconnecting from Gemini Live...');
+
+    this.stopRecording();
+    this._stopAudioPlayback();
+
+    if (this.ws) {
+      this.ws.close(1000, 'Client disconnect');
+      this.ws = null;
+    }
+
+    if (this.playbackAudioContext) {
+      this.playbackAudioContext.close();
+      this.playbackAudioContext = null;
+    }
+
+    this.isConnected = false;
+    this.sessionActive = false;
+  }
+
+  // Callback setters
   onResponse(callback) { this.onResponseCallback = callback; }
   onTranscription(callback) { this.onTranscriptionCallback = callback; }
   onError(callback) { this.onErrorCallback = callback; }
   onStatus(callback) { this.onStatusCallback = callback; }
+  onAudio(callback) { this.onAudioCallback = callback; }
 
-  // Disconnect and cleanup
-  disconnect() {
-    this.isConnected = false;
-    this.sessionId = null;
-    this.apiKey = null;
-
-    // Stop recording if active
-    if (this.isRecording) {
-      this.stopRecording();
-    }
-  }
-
-  // Utility methods for compatibility
-  isSessionActive() {
-    return this.sessionId !== null;
-  }
-
-  getSessionId() {
-    return this.sessionId;
-  }
-
-  getConnectionStatus() {
-    return this.isConnected;
-  }
-
-  getRecordingStatus() {
-    return this.isRecording;
-  }
+  // Status getters
+  isSessionActive() { return this.sessionActive; }
+  getSessionId() { return this.sessionActive ? 'active' : null; }
+  getConnectionStatus() { return this.isConnected; }
+  getRecordingStatus() { return this.isRecording; }
 }
 
 export default GeminiLiveService;

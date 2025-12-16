@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import GeminiLiveService from '../services/geminiLiveService';
 
+/**
+ * React hook for Gemini Live WebSocket API
+ * Provides real-time audio/text communication with Gemini
+ */
 const useGeminiLive = (options = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -14,9 +18,10 @@ const useGeminiLive = (options = {}) => {
 
   const serviceRef = useRef(null);
   const {
-    apiKey = null,
-    model = 'gemini-2.0-flash-exp',
-    responseModality = 'text',
+    model = 'gemini-2.5-flash-preview-native-audio',
+    responseModality = 'audio',
+    voiceName = 'Aoede',
+    systemInstruction = null,
     inputTranscriptionEnabled = true,
     outputTranscriptionEnabled = true,
     autoConnect = false
@@ -26,7 +31,7 @@ const useGeminiLive = (options = {}) => {
   useEffect(() => {
     if (!serviceRef.current) {
       serviceRef.current = new GeminiLiveService();
-      
+
       // Set up callbacks
       serviceRef.current.onTranscription((transcriptionText) => {
         setTranscription(transcriptionText || '');
@@ -34,33 +39,56 @@ const useGeminiLive = (options = {}) => {
       });
 
       serviceRef.current.onResponse((responseText) => {
-        setResponse(responseText || '');
+        setResponse(prev => {
+          // Append or replace based on whether it's streaming
+          if (responseText && responseText.length > 0) {
+            return responseText;
+          }
+          return prev;
+        });
+        setOutputTranscription(responseText || '');
       });
 
-      serviceRef.current.onError((error) => {
-        const errorMessage = error instanceof Error ? error.message : 
-                           error instanceof Event ? 'Connection failed' : 
-                           typeof error === 'string' ? error : 
+      serviceRef.current.onError((errorMsg) => {
+        const errorMessage = errorMsg instanceof Error ? errorMsg.message :
+                           errorMsg instanceof Event ? 'Connection failed' :
+                           typeof errorMsg === 'string' ? errorMsg :
                            'Unknown error occurred';
         setError(errorMessage);
-        console.error('Gemini Live Error:', error);
+        console.error('Gemini Live Error:', errorMsg);
       });
 
       serviceRef.current.onStatus((newStatus) => {
         console.log('Status callback received:', newStatus);
         setStatus(newStatus);
-        const newIsConnected = newStatus === 'connected' || newStatus === 'session_started';
-        console.log('Setting isConnected to:', newIsConnected);
-        setIsConnected(newIsConnected);
-        setSessionActive(newStatus === 'session_started');
-        setIsRecording(newStatus === 'recording_started');
-        
-        if (newStatus === 'recording_stopped') {
-          setIsRecording(false);
-        }
-        
-        if (newStatus === 'session_ended') {
-          setSessionActive(false);
+
+        switch (newStatus) {
+          case 'connected':
+            setIsConnected(true);
+            break;
+          case 'disconnected':
+            setIsConnected(false);
+            setSessionActive(false);
+            setIsRecording(false);
+            break;
+          case 'session_started':
+            setSessionActive(true);
+            break;
+          case 'session_ended':
+            setSessionActive(false);
+            setIsRecording(false);
+            break;
+          case 'recording_started':
+            setIsRecording(true);
+            break;
+          case 'recording_stopped':
+            setIsRecording(false);
+            break;
+          case 'turn_complete':
+            // Response finished
+            break;
+          default:
+            break;
         }
       });
     }
@@ -70,104 +98,118 @@ const useGeminiLive = (options = {}) => {
       connect();
     }
 
-    // Cleanup
+    // Cleanup on unmount
     return () => {
       if (serviceRef.current) {
         serviceRef.current.disconnect();
       }
     };
-  }, [autoConnect, isConnected]);
+  }, []);
 
-  // Connect to Gemini Live API
+  // Connect to Gemini Live API (via backend proxy)
   const connect = useCallback(async () => {
-    if (serviceRef.current && !isConnected) {
-      try {
-        console.log('Attempting to connect to Gemini Live API...');
-        await serviceRef.current.connect(apiKey);
-        setError(null);
-        console.log('Successfully connected to Gemini Live API');
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 
-                           error instanceof Event ? 'Connection failed' : 
-                           typeof error === 'string' ? error : 
-                           'Failed to connect';
-        setError(errorMessage);
-        console.error('Failed to connect to Gemini Live API:', error);
-      }
-    } else if (isConnected) {
-      console.log('Already connected to Gemini Live API');
+    if (!serviceRef.current) return;
+
+    if (isConnected) {
+      console.log('Already connected to Gemini Live');
+      return;
     }
-  }, [apiKey, isConnected]);
+
+    try {
+      console.log('Attempting to connect to Gemini Live via backend...');
+      await serviceRef.current.connect();
+      setError(null);
+      console.log('Successfully connected to Gemini Live');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message :
+                         err instanceof Event ? 'Connection failed' :
+                         typeof err === 'string' ? err :
+                         'Failed to connect';
+      setError(errorMessage);
+      console.error('Failed to connect to Gemini Live:', err);
+    }
+  }, [isConnected]);
 
   // Start session
   const startSession = useCallback(async () => {
-    if (serviceRef.current) {
-      // Check the actual service connection status instead of hook state
-      const actualConnectionStatus = serviceRef.current.getConnectionStatus();
-      
-      if (!actualConnectionStatus) {
-        console.warn('Service not connected, attempting to connect first...');
-        try {
-          await serviceRef.current.connect(apiKey);
-          // Wait a bit for connection to stabilize
-          await new Promise(resolve => setTimeout(resolve, 200));
-        } catch (error) {
-          console.error('Failed to connect before starting session:', error);
-          throw error;
-        }
-      }
-      
-      // Check if session is already active
-      if (serviceRef.current.isSessionActive()) {
-        console.log('Session already active, skipping start session');
-        return;
-      }
-      
+    if (!serviceRef.current) return;
+
+    // Connect first if not connected
+    if (!serviceRef.current.getConnectionStatus()) {
+      console.warn('Service not connected, attempting to connect first...');
       try {
-        console.log('Starting new session...');
-        const sessionOptions = {
-          model,
-          responseModality,
-          inputTranscription: inputTranscriptionEnabled,
-          outputTranscription: outputTranscriptionEnabled
-        };
-        
-        await serviceRef.current.startSession(sessionOptions);
-        setError(null);
-        console.log('Session started successfully');
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 
-                           error instanceof Event ? 'Failed to start session' : 
-                           typeof error === 'string' ? error : 
-                           'Failed to start session';
-        setError(errorMessage);
-        console.error('Failed to start session:', error);
+        await serviceRef.current.connect();
+        // Wait a bit for connection to stabilize
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } catch (err) {
+        console.error('Failed to connect before starting session:', err);
+        throw err;
       }
     }
-  }, [apiKey, model, responseModality, inputTranscriptionEnabled, outputTranscriptionEnabled]);
+
+    // Check if session is already active
+    if (serviceRef.current.isSessionActive()) {
+      console.log('Session already active, skipping start session');
+      return;
+    }
+
+    try {
+      console.log('Starting new session...');
+      const sessionOptions = {
+        model,
+        responseModality,
+        voiceName,
+        systemInstruction,
+        inputTranscription: inputTranscriptionEnabled,
+        outputTranscription: outputTranscriptionEnabled
+      };
+
+      await serviceRef.current.startSession(sessionOptions);
+      setError(null);
+      console.log('Session started successfully');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message :
+                         err instanceof Event ? 'Failed to start session' :
+                         typeof err === 'string' ? err :
+                         'Failed to start session';
+      setError(errorMessage);
+      console.error('Failed to start session:', err);
+    }
+  }, [model, responseModality, voiceName, systemInstruction, inputTranscriptionEnabled, outputTranscriptionEnabled]);
 
   // End session
-  const endSession = useCallback(() => {
+  const endSession = useCallback(async () => {
     if (serviceRef.current && sessionActive) {
-      serviceRef.current.endSession();
+      await serviceRef.current.endSession();
       setSessionActive(false);
     }
   }, [sessionActive]);
 
   // Start recording
   const startRecording = useCallback(async () => {
-    if (serviceRef.current && sessionActive && !isRecording) {
-      try {
-        await serviceRef.current.startRecording();
-        setError(null);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 
-                           error instanceof Event ? 'Failed to start recording' : 
-                           typeof error === 'string' ? error : 
-                           'Failed to start recording';
-        setError(errorMessage);
-        console.error('Failed to start recording:', error);
-      }
+    if (!serviceRef.current) return;
+
+    if (!sessionActive) {
+      console.warn('Session not active, cannot start recording');
+      setError('Please wait for session to start');
+      return;
+    }
+
+    if (isRecording) {
+      console.log('Already recording');
+      return;
+    }
+
+    try {
+      await serviceRef.current.startRecording();
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message :
+                         err instanceof Event ? 'Failed to start recording' :
+                         typeof err === 'string' ? err :
+                         'Failed to start recording';
+      setError(errorMessage);
+      console.error('Failed to start recording:', err);
     }
   }, [sessionActive, isRecording]);
 
@@ -187,19 +229,29 @@ const useGeminiLive = (options = {}) => {
     }
   }, [isRecording, startRecording, stopRecording]);
 
+  // Send text message
+  const sendText = useCallback((text) => {
+    if (serviceRef.current && sessionActive) {
+      serviceRef.current.sendText(text);
+      setError(null);
+    } else {
+      console.warn('Cannot send text: session not active');
+    }
+  }, [sessionActive]);
+
   // Send audio chunk manually
-  const sendAudioChunk = useCallback((audioData, format = 'webm', sampleRate = 16000, channels = 1) => {
+  const sendAudioChunk = useCallback((audioData, format = 'pcm') => {
     if (serviceRef.current && sessionActive) {
       try {
-        serviceRef.current.sendAudioChunk(audioData, format, sampleRate, channels);
+        serviceRef.current.sendAudioChunk(audioData, format);
         setError(null);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 
-                           error instanceof Event ? 'Failed to send audio chunk' : 
-                           typeof error === 'string' ? error : 
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message :
+                           err instanceof Event ? 'Failed to send audio chunk' :
+                           typeof err === 'string' ? err :
                            'Failed to send audio chunk';
         setError(errorMessage);
-        console.error('Failed to send audio chunk:', error);
+        console.error('Failed to send audio chunk:', err);
       }
     }
   }, [sessionActive]);
@@ -264,6 +316,7 @@ const useGeminiLive = (options = {}) => {
     startRecording,
     stopRecording,
     toggleRecording,
+    sendText,
     sendAudioChunk,
     clearTranscription,
     clearResponse,
