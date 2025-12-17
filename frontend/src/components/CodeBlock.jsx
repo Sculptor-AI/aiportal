@@ -57,9 +57,9 @@ const customStyleOverrides = {
 const getHighContrastStyles = (isHighContrast) => {
   if (isHighContrast) {
     return {
-      backgroundColor: '#000000',
-      color: '#ffffff',
-      border: '2px solid #ffffff',
+      backgroundColor: '#800080',
+      color: '#ffff00',
+      border: '2px solid #ffff00',
     };
   }
   return {};

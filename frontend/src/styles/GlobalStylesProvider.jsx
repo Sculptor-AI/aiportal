@@ -70,23 +70,40 @@ const GlobalStyle = createGlobalStyle`
   
   ${props => props.highContrast && `
     * {
-      --high-contrast-text: #ffffff;
-      --high-contrast-bg: #000000;
-      --high-contrast-border: #ffffff;
+      --high-contrast-text: #ffff00 !important;
+      --high-contrast-bg: #800080 !important;
+      --high-contrast-border: #ffff00 !important;
     }
     
-    body, .message-content, .chat-window {
-      color: var(--high-contrast-text) !important;
+    /* Force all text to be yellow */
+    * {
+      color: #ffff00 !important;
     }
     
-    button, input, textarea, select {
-      border: 2px solid var(--high-contrast-border) !important;
-      color: var(--high-contrast-text) !important;
+    /* Force all backgrounds to be purple */
+    *, *::before, *::after {
+      background: #800080 !important;
+      background-color: #800080 !important;
     }
     
-    .message-bubble {
-      background: var(--high-contrast-bg) !important;
-      border: 2px solid var(--high-contrast-border) !important;
+    /* Ensure inputs and textareas are properly styled */
+    input, textarea, select {
+      background: #800080 !important;
+      color: #ffff00 !important;
+      border: 2px solid #ffff00 !important;
+    }
+    
+    /* Ensure placeholders are visible */
+    ::placeholder {
+      color: #ffff00 !important;
+      opacity: 0.7 !important;
+    }
+    
+    /* Special handling for message bubbles */
+    .message-bubble, .high-contrast {
+      background: #800080 !important;
+      color: #ffff00 !important;
+      border: 2px solid #ffff00 !important;
     }
   `}
   

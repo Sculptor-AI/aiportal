@@ -773,7 +773,8 @@ export const MessageInput = styled.textarea`
   transition: all 0.2s ease;
   
   &::placeholder {
-    color: #888;
+    color: #ffff00 !important;
+    opacity: 0.7 !important;
   }
   
   &:focus {
