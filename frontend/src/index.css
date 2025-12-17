@@ -86,6 +86,6 @@ a {
 /* High contrast mode */
 .high-contrast {
   color: #ffffff !important;
-  background-color: #000000 !important;
+  background: #000000 !important;
   border: 2px solid #ffffff !important;
 }
