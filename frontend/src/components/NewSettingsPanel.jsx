@@ -143,7 +143,7 @@ const SettingsSidebar = styled.div`
     height: auto;
     border-right: none;
     border-bottom: 1px solid ${props => props.theme.border};
-    padding: 10px 0;
+    // padding: 10px 0;
     
     /* Specific styling for the retro theme */
     ${props => props.theme.name === 'retro' && `
@@ -180,6 +180,9 @@ const Title = styled.h2`
 `;
 
 const CloseButton = styled.button`
+  position: absolute;
+  top: 26px;
+  right: 36px;
   background: none;
   border: none;
   cursor: pointer;
@@ -194,7 +197,6 @@ const CloseButton = styled.button`
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  position: relative;
   text-align: center;
 
   svg {
@@ -216,6 +218,8 @@ const CloseButton = styled.button`
     padding: 0;
     width: 16px;
     height: 16px;
+    top: 0;
+    right: 0;
     opacity: 1;
     transition: none;
     margin-right: 2px;
@@ -241,6 +245,14 @@ const CloseButton = styled.button`
     ${props => props.theme.name === 'retro' && `
       background-color: ${props.theme.buttonFace};
       opacity: 1;
+    `}
+  }
+  @media (max-width: 768px) {
+    top: 24px;
+    right: 16px;
+    ${props => props.theme.name === 'retro' && `
+      top: 3px;
+      right: 0;
     `}
   }
 `;
@@ -1048,11 +1060,16 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
   return (
     <SettingsOverlay>
       <SettingsContainer>
+        <CloseButton onClick={handleClose} aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </CloseButton>
         <SettingsSidebar>
           <Header>
             <Title>Settings</Title>
           </Header>
-          
           <NavItem 
             onClick={() => setActiveSection('general')} 
             $active={activeSection === 'general'}
@@ -1135,13 +1152,6 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
         </SettingsSidebar>
         
         <MainContent>
-          <CloseButton onClick={handleClose} aria-label="Close">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </CloseButton>
-          
           {activeSection === 'general' && (
             <div>
               <SectionTitle>General</SectionTitle>
