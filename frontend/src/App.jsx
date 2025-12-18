@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
@@ -738,6 +738,12 @@ const AppContent = () => {
     // Any other actions needed when model changes, like saving to storage
   };
 
+  const handleUserTyping = useCallback(() => {
+    if (settings.sidebarAutoCollapse && !collapsed) {
+      setCollapsed(true);
+    }
+  }, [settings.sidebarAutoCollapse, collapsed]);
+
   // Function to reset chats and start fresh
   const resetChats = () => {
     const newChat = { id: uuidv4(), title: 'New Chat', messages: [] };
@@ -979,6 +985,7 @@ const AppContent = () => {
                   onToggleSandbox3D={() => setIsSandbox3DOpen(prev => !prev)}
                   onCloseSandbox3D={() => setIsSandbox3DOpen(false)}
                   onToolbarToggle={setIsToolbarOpen}
+                  onUserTyping={handleUserTyping}
                 />
               } />
               <Route path="/media" element={<MediaPage />} />

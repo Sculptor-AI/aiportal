@@ -50,6 +50,7 @@ const ChatWindow = forwardRef(({
   onToggleSandbox3D,
   onCloseSandbox3D,
   onToolbarToggle,
+  onUserTyping,
 }, ref) => {
   // All hooks at the top level - no conditional returns before this
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
@@ -627,6 +628,7 @@ const ChatWindow = forwardRef(({
           isImagePromptMode={isImagePromptMode}
           onImageModeChange={setIsImagePromptMode}
           selectedImageModel={selectedImageModel}
+          onUserTyping={onUserTyping}
         />
       )}
 
@@ -642,5 +644,4 @@ const ChatWindow = forwardRef(({
 ChatWindow.displayName = 'ChatWindow';
 
 export default ChatWindow;
-
 

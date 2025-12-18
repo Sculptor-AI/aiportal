@@ -66,6 +66,7 @@ const ChatInputArea = forwardRef(({
   isImagePromptMode: isImagePromptModeProp,
   onImageModeChange,
   selectedImageModel,
+  onUserTyping,
 }, ref) => {
   const theme = useTheme();
   const [inputMessage, setInputMessage] = useState('');
@@ -1081,7 +1082,13 @@ const ChatInputArea = forwardRef(({
             <MessageInput
               ref={inputRef}
               value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setInputMessage(value);
+                if (onUserTyping && value.length > 0) {
+                  onUserTyping();
+                }
+              }}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={getPlaceholderText()}
