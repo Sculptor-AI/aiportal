@@ -3,6 +3,7 @@ import { createGlobalStyle } from 'styled-components';
 // Apple-inspired themes with glassmorphism and gradients
 export const lightTheme = {
   name: 'light',
+  isDark: false,
   background: 'linear-gradient(145deg, #f0f2f5, #e6e9ee)',
   sidebar: 'rgba(255, 255, 255, 1)',
   chat: 'rgba(255, 255, 255, 1)',
@@ -24,6 +25,7 @@ export const lightTheme = {
 
 export const darkTheme = {
   name: 'dark',
+  isDark: true,
   background: 'linear-gradient(145deg, #141414, #1e1e1e)',
   sidebar: 'rgba(30, 30, 30, 1)',
   chat: 'rgba(30, 30, 30, 1)',
@@ -46,6 +48,7 @@ export const darkTheme = {
 // Add a new OLED theme definition after the darkTheme
 export const oledTheme = {
   name: 'oled',
+  isDark: true,
   background: '#000000', // True black background
   sidebar: 'rgba(10, 10, 10, 1)',
   chat: 'rgba(10, 10, 10, 1)',
@@ -68,6 +71,7 @@ export const oledTheme = {
 // Update the oceanTheme sidebar style
 export const oceanTheme = {
   name: 'ocean',
+  isDark: true,
   background: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1484291470158-b8f8d608850d?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")',
   backgroundAttachment: 'fixed',
   backgroundSize: 'cover',
@@ -93,6 +97,7 @@ export const oceanTheme = {
 // Update the forestTheme sidebar style
 export const forestTheme = {
   name: 'forest',
+  isDark: true,
   background: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1558022103-603c34ab10ce?q=80&w=3542&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")',
   backgroundAttachment: 'fixed',
   backgroundSize: 'cover',
@@ -119,6 +124,7 @@ export const forestTheme = {
 // Pink: #D60270, Purple: #9B4F96, Blue: #0038A8
 export const bisexualTheme = {
   name: 'bisexual',
+  isDark: true,
   // Background with all three colors from bi flag in a gradient
   background: 'linear-gradient(145deg, rgba(20, 20, 30, 0.9), rgba(25, 25, 35, 0.95)), linear-gradient(to bottom right, #D60270, #9B4F96, #0038A8)',
   // Solid dark color for sidebar with slight transparency
@@ -152,6 +158,7 @@ export const bisexualTheme = {
 // Lakeside theme - dark theme with maroon sidebar and gold accents
 export const lakesideTheme = {
   name: 'lakeside',
+  isDark: true,
   background: 'rgba(23, 23, 23)',
   sidebar: 'rgba(120, 47, 64, 1)', // Maroon sidebar as specified
   chat: 'rgba(120, 47, 64, 1)',
@@ -174,6 +181,7 @@ export const lakesideTheme = {
 
 export const prideTheme = {
   name: 'pride',
+  isDark: true,
   // Vibrant rainbow background with a dark overlay for readability - making overlay even less opaque
   background: 'linear-gradient(rgba(10, 10, 10, 0.7), rgba(0, 0, 0, 0.75)), linear-gradient(135deg, #E40303 0%, #FF8C00 16.67%, #FFED00 33.33%, #008026 50%, #004DFF 66.67%, #750787 83.33%, #E40303 100%)',
   backgroundAttachment: 'fixed', // Make background fixed for a cooler effect with scrolling
@@ -203,6 +211,7 @@ export const prideTheme = {
 
 export const transTheme = {
   name: 'trans',
+  isDark: true,
   // Dynamic background using trans flag colors - significantly reduced dark overlay for intensity
   background: 'linear-gradient(rgba(10, 5, 10, 0.5), rgba(0, 0, 0, 0.6)), linear-gradient(135deg, #5BCEFA 0%, #F5A9B8 50%, #FFFFFF 100%)',
   backgroundAttachment: 'fixed',
@@ -230,6 +239,7 @@ export const transTheme = {
 // Galaxy-inspired deep space theme
 export const galaxyTheme = {
   name: 'galaxy',
+  isDark: true,
   background: 'linear-gradient(135deg, #0f052b, #12063b, #1b0a4a)',
   backgroundAttachment: 'fixed',
   sidebar: 'rgba(15, 10, 40, 1)',
@@ -253,6 +263,7 @@ export const galaxyTheme = {
 // Warm sunset oranges and pinks
 export const sunsetTheme = {
   name: 'sunset',
+  isDark: false,
   background: 'linear-gradient(145deg, #ff7e5f, #feb47b)',
   sidebar: 'rgba(255, 126, 95, 1)',
   chat: 'rgba(255, 126, 95, 1)',
@@ -275,6 +286,7 @@ export const sunsetTheme = {
 // Neon cyberpunk aesthetic
 export const cyberpunkTheme = {
   name: 'cyberpunk',
+  isDark: true,
   background: 'linear-gradient(145deg, #0f0c29, #302b63, #24243e)',
   backgroundAttachment: 'fixed',
   sidebar: 'rgba(0, 0, 0, 1)',
@@ -298,6 +310,7 @@ export const cyberpunkTheme = {
 // Sweet bubblegum pinks
 export const bubblegumTheme = {
   name: 'bubblegum',
+  isDark: false,
   background: 'linear-gradient(145deg, #ff9a9e, #fad0c4)',
   sidebar: 'rgba(255, 150, 180, 1)',
   chat: 'rgba(255, 150, 180, 1)',
@@ -320,6 +333,7 @@ export const bubblegumTheme = {
 // Sandy desert browns
 export const desertTheme = {
   name: 'desert',
+  isDark: false,
   background: 'linear-gradient(145deg, #c79081, #dfa579)',
   sidebar: 'rgba(199, 144, 129, 1)',
   chat: 'rgba(199, 144, 129, 1)',
@@ -342,6 +356,7 @@ export const desertTheme = {
 // Windows 98 "Retro" Theme
 export const retroTheme = {
   name: 'retro',
+  isDark: false,
   background: '#008080', // Teal desktop background
   sidebar: '#C0C0C0',    // Classic gray for UI elements
   chat: '#C0C0C0',        // White for chat area (like a document)
