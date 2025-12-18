@@ -210,7 +210,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
             width: '100%',
             height: '100%',
             objectFit: 'contain',
-            filter: 'none'
+            filter: (modelId?.includes('gpt') || modelId?.includes('openai')) && theme.isDark ? 'invert(1) brightness(1.5)' : 'none'
           }}
         />
       ) : (
