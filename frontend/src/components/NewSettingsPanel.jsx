@@ -698,22 +698,30 @@ const Slider = styled.span`
     background: ${props.theme.buttonFace};
     background-image: none;
     transition: none;
-    
-    &:before {
-      border-radius: 0;
-      background: ${props.theme.buttonFace};
-      border: 1px solid;
-      border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
-      height: 16px;
-      width: 16px;
-      transform: ${props.checked ? 'translateX(20px)' : 'translateX(0)'};
-      content: '';
-      background-color: ${props.theme.buttonFace};
-      position: absolute;
-      top: 3px;
-      left: 3px;
-    }
+
+    /* hide the normal knob */
+    &:after { display: none; }
+
+    /* show checkmark svg when checked */
+    ${props.checked && `
+      &:after {
+        content: '';
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 12px 12px;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3 8.5l3 3L13 4.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'/></svg>");
+      }
+    `}
   `}
+
+
 `;
 
 const FontSizeOption = styled(RadioOption)`
@@ -781,6 +789,38 @@ const NotificationToggle = styled.div`
     transition: left 0.3s;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   }
+  
+  ${props => props.theme.name === 'retro' && `
+    width: 16px;
+    height: 16px;
+    border-radius: 0;
+    border: 1px solid;
+    border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
+    background: ${props.theme.buttonFace};
+    background-image: none;
+    transition: none;
+
+    /* hide the normal knob */
+    &:after { display: none; }
+
+    /* show checkmark svg when checked */
+    ${props.$isOn && `
+      &:after {
+        content: '';
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 12px 12px;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3 8.5l3 3L13 4.5' fill='none' stroke='black' stroke-width='2' stroke-linecap='square' stroke-linejoin='miter'/></svg>");
+      }
+    `}
+  `}
 `;
 
 const SystemPromptArea = styled.textarea`
