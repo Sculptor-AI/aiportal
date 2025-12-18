@@ -68,27 +68,93 @@ const GlobalStyle = createGlobalStyle`
     transition-duration: var(--transition-speed);
   }
   
-  ${props => props.highContrast && `
-    * {
-      --high-contrast-text: #ffffff;
-      --high-contrast-bg: #000000;
-      --high-contrast-border: #ffffff;
-    }
+  ${props => {
+    const isLightMode = props.theme?.name === 'light';
+    const isDarkMode = props.theme?.name === 'dark' || props.theme?.name === 'oled';
     
-    body, .message-content, .chat-window {
-      color: var(--high-contrast-text) !important;
+    if (props.highContrast) {
+      if (isLightMode) {
+        // Light mode high contrast: black text, black icons, black outline
+        return `
+          * {
+            --high-contrast-text: #000000;
+            --high-contrast-bg: #ffffff;
+            --high-contrast-border: #000000;
+          }
+          
+          body, .message-content, .chat-window, p, span, div, h1, h2, h3, h4, h5, h6 {
+            color: var(--high-contrast-text) !important;
+          }
+          
+          /* Make all icons black in light mode high contrast */
+          svg, path, circle, rect, polygon, line, polyline {
+            stroke: var(--high-contrast-text) !important;
+            fill: var(--high-contrast-text) !important;
+            color: var(--high-contrast-text) !important;
+          }
+          
+          /* Remove black highlight background, add black outline with curved edges */
+          .message-bubble, [class*="message"], [class*="Message"] {
+            background: transparent !important;
+            border: 2px solid var(--high-contrast-border) !important;
+            border-radius: 12px !important;
+            box-shadow: none !important;
+          }
+          
+          button, input, textarea, select {
+            border: 2px solid var(--high-contrast-border) !important;
+            border-radius: 8px !important;
+            color: var(--high-contrast-text) !important;
+            background: var(--high-contrast-bg) !important;
+          }
+          
+          /* Ensure text in inputs is black */
+          input::placeholder, textarea::placeholder {
+            color: rgba(0, 0, 0, 0.5) !important;
+          }
+        `;
+      } else {
+        // Dark mode high contrast: white text, white icons, white outline
+        return `
+          * {
+            --high-contrast-text: #ffffff;
+            --high-contrast-bg: #000000;
+            --high-contrast-border: #ffffff;
+          }
+          
+          body, .message-content, .chat-window, p, span, div, h1, h2, h3, h4, h5, h6 {
+            color: var(--high-contrast-text) !important;
+          }
+          
+          /* Make all icons white in dark mode high contrast */
+          svg, path, circle, rect, polygon, line, polyline {
+            stroke: var(--high-contrast-text) !important;
+            fill: var(--high-contrast-text) !important;
+            color: var(--high-contrast-text) !important;
+          }
+          
+          .message-bubble, [class*="message"], [class*="Message"] {
+            background: var(--high-contrast-bg) !important;
+            border: 2px solid var(--high-contrast-border) !important;
+            border-radius: 12px !important;
+          }
+          
+          button, input, textarea, select {
+            border: 2px solid var(--high-contrast-border) !important;
+            border-radius: 8px !important;
+            color: var(--high-contrast-text) !important;
+            background: var(--high-contrast-bg) !important;
+          }
+          
+          /* Ensure text in inputs is white */
+          input::placeholder, textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5) !important;
+          }
+        `;
+      }
     }
-    
-    button, input, textarea, select {
-      border: 2px solid var(--high-contrast-border) !important;
-      color: var(--high-contrast-text) !important;
-    }
-    
-    .message-bubble {
-      background: var(--high-contrast-bg) !important;
-      border: 2px solid var(--high-contrast-border) !important;
-    }
-  `}
+    return '';
+  }}
   
   /* Loading spinner animation */
   @keyframes spin {

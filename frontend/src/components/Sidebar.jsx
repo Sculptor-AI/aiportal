@@ -273,6 +273,26 @@ const ChatItem = styled.div`
   width: 100%;
   position: relative;
   
+  ${props => {
+    const isLightMode = props.theme.name === 'light';
+    const isDarkMode = props.theme.name === 'dark' || props.theme.name === 'oled';
+    
+    if (props.$highContrast) {
+      if (isLightMode) {
+        return `
+          border: 2px solid #000000 !important;
+          border-radius: 8px !important;
+        `;
+      } else if (isDarkMode) {
+        return `
+          border: 2px solid #ffffff !important;
+          border-radius: 8px !important;
+        `;
+      }
+    }
+    return '';
+  }}
+  
   &:hover {
     background: ${props => {
     if (props.$active) {
@@ -662,6 +682,26 @@ const NavLink = styled(Link)`
   text-decoration: none;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   
+  ${props => {
+    const isLightMode = props.theme.name === 'light';
+    const isDarkMode = props.theme.name === 'dark' || props.theme.name === 'oled';
+    
+    if (props.$highContrast) {
+      if (isLightMode) {
+        return `
+          border: 2px solid #000000 !important;
+          border-radius: 8px !important;
+        `;
+      } else if (isDarkMode) {
+        return `
+          border: 2px solid #ffffff !important;
+          border-radius: 8px !important;
+        `;
+      }
+    }
+    return '';
+  }}
+  
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
   }
@@ -688,10 +728,21 @@ const SearchInputWrapper = styled.div`
     props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' :
       props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 20px;
+  border-radius: ${props => {
+    // In high contrast dark mode, slightly curve the border
+    if (props.$highContrast && (props.theme.name === 'dark' || props.theme.name === 'oled')) {
+      return '12px';
+    }
+    return '20px';
+  }};
   overflow: hidden;
   transition: border-color 0.2s ease;
   min-height: 32px;
+  
+  ${props => props.$highContrast && `
+    border: 2px solid ${props.theme.name === 'light' ? '#000000' : '#ffffff'} !important;
+    border-radius: 12px !important;
+  `}
 
   &:focus-within {
     border-color: ${props =>
@@ -1023,7 +1074,7 @@ const Sidebar = ({
         {/* Persistent Search Input Section */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
           <SearchInputContainer>
-            <SearchInputWrapper>
+            <SearchInputWrapper $highContrast={settings?.highContrast || false}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '12px', opacity: 0.6, color: 'currentColor' }}>
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
@@ -1050,7 +1101,7 @@ const Sidebar = ({
         {(!$collapsed || (theme && theme.name === 'retro')) && (
           <SidebarSection style={{ paddingTop: '8px', paddingBottom: '16px', borderTop: 'none' }}>
             {location.pathname !== '/' && (
-              <NavLink to="/">
+              <NavLink to="/" $highContrast={settings?.highContrast || false}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
@@ -1058,7 +1109,7 @@ const Sidebar = ({
               </NavLink>
             )}
             {location.pathname !== '/media' && (
-              <NavLink to="/media">
+              <NavLink to="/media" $highContrast={settings?.highContrast || false}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
@@ -1066,7 +1117,7 @@ const Sidebar = ({
               </NavLink>
             )}
             {location.pathname !== '/news' && (
-              <NavLink to="/news">
+              <NavLink to="/news" $highContrast={settings?.highContrast || false}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                 </svg>
@@ -1074,7 +1125,7 @@ const Sidebar = ({
               </NavLink>
             )}
             {location.pathname !== '/projects' && (
-              <NavLink to="/projects">
+              <NavLink to="/projects" $highContrast={settings?.highContrast || false}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="7" height="7" rx="1"></rect>
                   <rect x="14" y="3" width="7" height="7" rx="1"></rect>
@@ -1085,7 +1136,7 @@ const Sidebar = ({
               </NavLink>
             )}
             {location.pathname !== '/workspace' && (
-              <NavLink to="/workspace">
+              <NavLink to="/workspace" $highContrast={settings?.highContrast || false}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
                 </svg>
@@ -1149,7 +1200,7 @@ const Sidebar = ({
 
                 {/* Persistent Search Input for Mobile */}
                 <SearchInputContainer>
-                  <SearchInputWrapper>
+                  <SearchInputWrapper $highContrast={settings?.highContrast || false}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '12px', opacity: 0.6, color: 'currentColor' }}>
                       <circle cx="11" cy="11" r="8"></circle>
                       <path d="m21 21-4.35-4.35"></path>
@@ -1192,6 +1243,7 @@ const Sidebar = ({
                     $active={activeChat === chat.id}
                     onClick={() => setActiveChat(chat.id)}
                     $collapsed={$collapsed}
+                    $highContrast={settings?.highContrast || false}
                     title={chat.title || `Chat ${chat.id.substring(0, 4)}`}
                   >
                     {/* TODO: Add chat icon if desired */}

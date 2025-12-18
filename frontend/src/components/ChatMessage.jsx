@@ -734,6 +734,29 @@ const Content = styled.div`
   margin-right: ${props => props.role === 'user' ? '0' : '0'};
   position: relative;
   
+  /* High contrast mode: Add curved border to AI responses */
+  ${props => {
+    if (props.$highContrast && props.role === 'assistant') {
+      const isLightMode = props.theme.name === 'light';
+      const isDarkMode = props.theme.name === 'dark' || props.theme.name === 'oled';
+      
+      if (isLightMode) {
+        return `
+          border: 2px solid #000000 !important;
+          border-radius: 12px !important;
+          padding: 8px 12px !important;
+        `;
+      } else if (isDarkMode) {
+        return `
+          border: 2px solid #ffffff !important;
+          border-radius: 12px !important;
+          padding: 8px 12px !important;
+        `;
+      }
+    }
+    return '';
+  }}
+  
   /* Bubble pointer for user messages */
   ${props => props.role === 'user' && `
     &::after {
@@ -1854,7 +1877,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       <Message $alignment={messageAlignment}>
         {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
         <MessageWrapper role={role}>
-          <Content role={role} $bubbleStyle={bubbleStyle}>
+          <Content role={role} $bubbleStyle={bubbleStyle} $highContrast={highContrast}>
             {generatedFlowchartContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
               <MessageActions role={role}>
@@ -1976,7 +1999,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       <Message $alignment={messageAlignment}>
         {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
         <MessageWrapper role={role}>
-          <Content role={role} $bubbleStyle={bubbleStyle}>
+          <Content role={role} $bubbleStyle={bubbleStyle} $highContrast={highContrast}>
             {deepResearchContent}
             {/* Show sources if available */}
             {hasSources && status === 'completed' && (
@@ -2061,7 +2084,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       <Message $alignment={messageAlignment}>
         {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
         <MessageWrapper role={role}>
-          <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+          <Content role={role} $bubbleStyle={bubbleStyle} $highContrast={highContrast} className={highContrast ? 'high-contrast' : ''}>
             {generatedImageContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
               <MessageActions role={role}>
@@ -2124,7 +2147,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       <Message $alignment={messageAlignment}>
         {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
         <MessageWrapper role={role}>
-          <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+          <Content role={role} $bubbleStyle={bubbleStyle} $highContrast={highContrast} className={highContrast ? 'high-contrast' : ''}>
             {generatedVideoContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
               <MessageActions role={role}>
@@ -2159,7 +2182,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         </ErrorMessage>
       ) : (
         <MessageWrapper role={role}>
-          <Content role={role} $bubbleStyle={bubbleStyle} className={highContrast ? 'high-contrast' : ''}>
+          <Content role={role} $bubbleStyle={bubbleStyle} $highContrast={highContrast} className={highContrast ? 'high-contrast' : ''}>
             {image && (
               <MessageImage src={image} alt="Uploaded image" />
             )}
