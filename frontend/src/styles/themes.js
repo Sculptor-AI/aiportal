@@ -380,6 +380,32 @@ export const retroTheme = {
   checkmarkColor: '#000000',
   fontFamily: "'MSW98UI', 'MS Sans Serif', 'Tahoma', 'Microsoft Sans Serif', 'Arial', sans-serif",
 };
+export const oceanBreezeTheme = {
+  name: 'ocean-breeze',
+  background: 'linear-gradient(145deg, #85C9F2, #2EA8E2)', // Light aquamarine gradient
+  backgroundAttachment: 'fixed', // Fixed scrolling background
+  backgroundSize: 'cover', // Covers the screen
+  backgroundPosition: 'center', // Centers the background
+  sidebar: 'linear-gradient(rgba(60, 120, 180, 1), rgba(45, 100, 150, 1))', // Blue gradient for sidebar
+  chat: 'linear-gradient(rgba(60, 120, 180, 1), rgba(45, 100, 150, 1))', // Chat with a similar blue tone
+  text: '#ffffff', // White text for clarity
+  border: 'rgba(255, 255, 255, 0.1)', // Subtle white borders
+  messageUser: 'rgba(85, 170, 220, 0.8)', // Light aquatic tone for user messages
+  messageAi: 'rgba(70, 140, 195, 0.8)', // Slightly darker aquatic tone for AI messages
+  hover: 'rgba(50, 140, 200, 0.5)', // Light blue hover effect
+  primary: '#2EA8E2', // Bright aqua primary
+  secondary: '#85C9F2', // Soft aquamarine secondary
+  shadow: 'rgba(0, 0, 0, 0.3)', // Subtle shadows for depth
+  glassBlur: '10px', // Glassmorphism blur effect
+  glassEffect: 'blur(10px) saturate(180%)', // Saturation effect for glassmorphism
+  inputBackground: 'rgba(45, 100, 150, 1.0)', // Input box background matching the theme
+  buttonGradient: 'linear-gradient(145deg, #2EA8E2, #85C9F2)', // Button gradient matching theme
+  buttonHoverGradient: 'linear-gradient(145deg, #85C9F2, #2EA8E2)', // Hover effect reversed
+  cardBackground: 'rgba(60, 120, 180, 0.8)', // Card background in blue tones
+  accentGradient: 'linear-gradient(to right, #2EA8E2, #85C9F2)', // Accent gradient for highlights
+  modelSelectorBackground: 'linear-gradient(rgba(45, 100, 150, 1), rgba(85, 170, 220, 0.7))',
+  highlightBorder: 'linear-gradient(to right, #2EA8E2, #85C9F2)', // Border for active elements
+};
 
 // Custom theme for the model icons with enhanced gradients
 export const modelThemes = {
@@ -427,6 +453,7 @@ export const modelThemes = {
     secondary: '#1DA1F2',   // Twitter blue
     gradient: 'linear-gradient(135deg, #000000, #1DA1F2)'
   }
+  
 };
 
 export const getTheme = (themeName) => {
@@ -445,6 +472,7 @@ export const getTheme = (themeName) => {
     case 'desert': return desertTheme;
     case 'lakeside': return lakesideTheme;
     case 'retro': return retroTheme;
+    case 'ocean-breeze': return oceanBreezeTheme;
     default: return lightTheme;
   }
 };
