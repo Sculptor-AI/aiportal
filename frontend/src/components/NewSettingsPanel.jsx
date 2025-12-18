@@ -1186,6 +1186,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
                   <option value="cyberpunk">Cyberpunk</option>
                   <option value="bubblegum">Bubblegum</option>
                   <option value="desert">Desert</option>
+                  <option value="imperial">Imperial</option>
                   <option value="matrix">Matrix</option>
                   <option value="comic-book">Comic Book</option>
                 </SelectBox>

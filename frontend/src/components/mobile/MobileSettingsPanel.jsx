@@ -223,6 +223,7 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
     { value: 'dark', label: 'Dark', color: '#1a1a1a' },
     { value: 'oled', label: 'OLED', color: '#000000' },
     { value: 'bisexual', label: 'Bisexual', color: '#d60270' },
+    { value: 'imperial', label: 'Imperial', color: 'linear-gradient(135deg, #b30000, #ffcc00)' },
     { value: 'lakeside', label: 'Lakeside', color: '#5b0019' },
     { value: 'pride', label: 'Pride', color: 'linear-gradient(135deg, #E40303 0%, #FF8C00 16.67%, #FFED00 33.33%, #008026 50%, #004DFF 66.67%, #750787 83.33%, #E40303 100%)' },
     { value: 'trans', label: 'Trans', color: 'linear-gradient(135deg, #5BCEFA 0%, #F5A9B8 50%, #FFFFFF 100%)' },

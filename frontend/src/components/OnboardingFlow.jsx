@@ -254,6 +254,12 @@ const OptionCard = styled.div`
     color: white;
     border-color: ${props => props.$selected ? '#D60270' : 'transparent'};
   }
+
+  &.imperial-theme {
+    background: ${props => props.$selected ? '#b30000' : 'linear-gradient(135deg, #b30000, #ffcc00)'};
+    color: ${props => props.$selected ? '#ffffff' : '#1a1a1a'};
+    border-color: ${props => props.$selected ? '#b30000' : 'transparent'};
+  }
   
   &.galaxy-theme {
     background: ${props => props.$selected ? '#7b61ff' : 'linear-gradient(135deg, #0f052b, #12063b, #1b0a4a)'};
@@ -511,6 +517,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
         { id: 'pride', label: 'Pride', className: 'pride-theme' },
         { id: 'trans', label: 'Trans', className: 'trans-theme' },
         { id: 'bisexual', label: 'Bisexual', className: 'bisexual-theme' },
+        { id: 'imperial', label: 'Imperial', className: 'imperial-theme' },
         { id: 'galaxy', label: 'Galaxy', className: 'galaxy-theme' },
         { id: 'sunset', label: 'Sunset', className: 'sunset-theme' },
         { id: 'cyberpunk', label: 'Cyberpunk', className: 'cyberpunk-theme' },

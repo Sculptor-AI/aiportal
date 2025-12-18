@@ -339,6 +339,34 @@ export const desertTheme = {
   cardBackground: 'rgba(235, 200, 160, 0.8)'
 };
 
+// Imperial red & gold theme inspired by traditional Chinese design cues
+export const imperialTheme = {
+  name: 'imperial',
+  background: 'linear-gradient(rgba(120, 0, 0, 0.92), rgba(210, 0, 0, 0.98)), url("https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1920&q=80")',
+  backgroundAttachment: 'fixed',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  sidebar: 'rgba(255, 238, 184, 0.95)',
+  chat: 'rgba(255, 249, 225, 0.95)',
+  text: '#1a1a1a',
+  border: 'rgba(153, 0, 0, 0.35)',
+  messageUser: 'linear-gradient(145deg, rgba(255, 242, 204, 0.95), rgba(255, 225, 140, 0.9))',
+  messageAi: 'linear-gradient(145deg, rgba(255, 210, 170, 0.95), rgba(210, 0, 0, 0.15))',
+  hover: 'rgba(200, 0, 0, 0.4)',
+  primary: '#a00000',
+  primaryGradient: 'linear-gradient(145deg, #8b0000, #ff1a1a)',
+  secondary: '#ffcc00',
+  shadow: 'rgba(139, 0, 0, 0.45)',
+  glassBlur: '8px',
+  glassEffect: 'blur(8px) saturate(170%)',
+  inputBackground: 'rgba(255, 248, 225, 1)',
+  buttonGradient: 'linear-gradient(145deg, #8b0000, #ff1a1a)',
+  buttonHoverGradient: 'linear-gradient(145deg, #ff1a1a, #8b0000)',
+  cardBackground: 'rgba(255, 247, 220, 0.92)',
+  accent: '#ffb703',
+  accentGradient: 'linear-gradient(120deg, #8b0000, #ffde59, #8b0000)'
+};
+
 // Windows 98 "Retro" Theme
 export const retroTheme = {
   name: 'retro',
@@ -443,6 +471,7 @@ export const getTheme = (themeName) => {
     case 'cyberpunk': return cyberpunkTheme;
     case 'bubblegum': return bubblegumTheme;
     case 'desert': return desertTheme;
+    case 'imperial': return imperialTheme;
     case 'lakeside': return lakesideTheme;
     case 'retro': return retroTheme;
     default: return lightTheme;

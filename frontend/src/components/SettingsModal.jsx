@@ -346,6 +346,15 @@ const ThemeOption = styled.label`
     border-color: ${props => props.isSelected ? '#D60270' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
+
+  &.imperial-theme {
+    background: ${props => props.isSelected ? 
+      'linear-gradient(135deg, #b30000, #ffcc00)' : 
+      'linear-gradient(135deg, #b3000088, #ffcc0088)'};
+    color: #1a1a1a;
+    border-color: ${props => props.isSelected ? '#b30000' : 'transparent'};
+    text-shadow: 0 1px 1px rgba(255,255,255,0.4);
+  }
   
   &.lakeside-theme {
     background: ${props => props.isSelected ? 
@@ -632,6 +641,19 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     onChange={() => handleChange('theme', 'bisexual')}
                   />
                   Bisexual
+                </ThemeOption>
+                <ThemeOption 
+                  isSelected={localSettings.theme === 'imperial'}
+                  className="imperial-theme"
+                >
+                  <input
+                    type="radio"
+                    name="theme"
+                    value="imperial"
+                    checked={localSettings.theme === 'imperial'}
+                    onChange={() => handleChange('theme', 'imperial')}
+                  />
+                  Imperial
                 </ThemeOption>
                 <ThemeOption 
                   isSelected={localSettings.theme === 'lakeside'}
