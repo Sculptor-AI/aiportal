@@ -61,7 +61,7 @@ const LogoContainer = styled.div`
 const LogoText = styled.span`
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-weight: 600;
-  font-size: 18px;
+  font-size: calc(var(--font-size, 1rem) * 1.125);
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 `;
 
@@ -136,7 +136,7 @@ const MobileLogoContainer = styled.div`
 const MobileLogoText = styled.span`
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-weight: 600;
-  font-size: 16px;
+  font-size: var(--font-size, 1rem);
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 `;
 
@@ -160,7 +160,7 @@ const NewChatButton = styled.button`
   padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '10px 12px'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
   font-weight: 400;
-  font-size: 14px;
+  font-size: calc(var(--font-size, 1rem) * 0.875);
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -303,7 +303,7 @@ const ChatTitle = styled.div`
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
-  font-size: 14px;
+  font-size: calc(var(--font-size, 1rem) * 0.875);
   font-weight: 400;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
@@ -409,7 +409,7 @@ const BottomSection = styled.div`
 const SectionHeader = styled.div`
   padding: 0 16px;
   margin: 12px 0 8px 0;
-  font-size: 11px;
+  font-size: calc(var(--font-size, 1rem) * 0.7);
   text-transform: uppercase;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -561,7 +561,7 @@ const ModelInfo = styled.div`
 const ModelName = styled.span`
   font-weight: ${props => props.$isSelected ? '500' : '400'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -569,7 +569,7 @@ const ModelName = styled.span`
 `;
 
 const ModelDescription = styled.span`
-  font-size: 12px;
+  font-size: calc(var(--font-size, 1rem) * 0.85);
   color: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : `${props.theme.text}80`};
   white-space: nowrap;
   overflow: hidden;
@@ -586,7 +586,7 @@ const SidebarButton = styled.button`
   border: none;
   border-radius: 6px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -655,7 +655,7 @@ const NavLink = styled(Link)`
   border: none;
   border-radius: 6px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -710,7 +710,7 @@ const SearchInput = styled.input`
   color: ${props =>
     props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
       props.theme.text};
-  font-size: 13px;
+  font-size: var(--font-size, 1rem);
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &::placeholder {
@@ -751,7 +751,7 @@ const NoResultsMessage = styled.div`
   color: ${props =>
     props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' :
       `${props.theme.text}60`};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 `;
 
@@ -789,7 +789,7 @@ const ProfileDropdownItem = styled.button`
   background: transparent;
   border: none;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -818,7 +818,7 @@ const ProfileAvatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: calc(var(--font-size, 1rem) * 0.7);
   font-weight: bold;
   margin-right: 8px;
   background-image: ${props => props.$profilePicture ? `url(${props.$profilePicture})` : 'none'};
@@ -1235,7 +1235,18 @@ const Sidebar = ({
                 ))}
               </ChatList>
               {/* Display copy status message */}
-              {copyStatus && <div style={{ padding: '5px 10px', fontSize: '11px', color: '#aaa', textAlign: 'center' }}>{copyStatus}</div>}
+              {copyStatus && (
+                <div
+                  style={{
+                    padding: '5px 10px',
+                    fontSize: 'calc(var(--font-size, 1rem) * 0.85)',
+                    color: '#aaa',
+                    textAlign: 'center'
+                  }}
+                >
+                  {copyStatus}
+                </div>
+              )}
             </ScrollableContent>
 
             {/* --- Bottom Buttons Section (Profile with Dropdown) --- */}

@@ -55,7 +55,7 @@ const ModalHeader = styled.div`
 
 const ModalTitle = styled.h2`
   margin: 0;
-  font-size: 1.1rem;
+  font-size: calc(var(--font-size, 1rem) * 1.1);
   font-weight: 600;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   letter-spacing: -0.01em;
@@ -124,7 +124,7 @@ const Avatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  font-size: calc(var(--font-size, 1rem) * 2.5);
   font-weight: 600;
   background-image: ${props => props.$profilePicture ? `url(${props.$profilePicture})` : 'none'};
   background-size: cover;
@@ -163,7 +163,7 @@ const HiddenFileInput = styled.input`
 
 const Username = styled.h4`
   margin: 0;
-  font-size: 1.5rem;
+  font-size: calc(var(--font-size, 1rem) * 1.5);
   font-weight: 700;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   letter-spacing: -0.02em;
@@ -175,7 +175,7 @@ const Username = styled.h4`
 
 const UserEmail = styled.p`
   margin: 4px 0 0 0;
-  font-size: 0.9rem;
+  font-size: calc(var(--font-size, 1rem) * 0.9);
   color: ${props => props.theme.subText};
 `;
 
@@ -200,13 +200,13 @@ const InfoItem = styled.div`
 `;
 
 const InfoLabel = styled.span`
-  font-size: 0.9rem;
+  font-size: calc(var(--font-size, 1rem) * 0.9);
   font-weight: 500;
   color: ${props => props.theme.text};
 `;
 
 const InfoValue = styled.span`
-  font-size: 0.9rem;
+  font-size: calc(var(--font-size, 1rem) * 0.9);
   color: ${props => props.theme.subText};
   font-variant-numeric: tabular-nums;
 `;
@@ -220,7 +220,7 @@ const ActionButton = styled.button`
   border-radius: 12px;
   padding: 14px;
   width: 100%;
-  font-size: 0.95rem;
+  font-size: calc(var(--font-size, 1rem) * 0.95);
   font-weight: 600;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   cursor: pointer;
