@@ -705,7 +705,8 @@ const Content = styled.div`
   margin-right: ${props => props.$alignment === 'left' ? 'auto' : '0'};
   position: relative;
   text-align: ${props => props.$alignment === 'right' ? 'right' : 'left'};
-  direction: ${props => props.$alignment === 'right' ? 'rtl' : 'ltr'};
+  direction: ltr;
+  unicode-bidi: plaintext;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   
   ${props => props.role === 'user' && css`
@@ -720,7 +721,6 @@ const Content = styled.div`
     margin-left: ${props.$alignment === 'right' ? 'auto' : '0'};
     margin-right: ${props.$alignment === 'left' ? 'auto' : '0'};
     text-align: ${props.$alignment === 'right' ? 'right' : 'left'};
-    direction: ${props.$alignment === 'right' ? 'rtl' : 'ltr'};
   `}
   
   /* Bubble pointer for user messages */
@@ -1705,9 +1705,11 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Determine if we should use a model icon (for AI messages with a modelId)
   const useModelIcon = role === 'assistant' && showModelIcons && modelId;
 
-  // Get message alignment from settings, but default user messages to right
-  const messageAlignmentPreference = settings.messageAlignment || 'left';
-  const messageAlignment = messageAlignmentPreference === 'right' ? 'right' : 'left';
+  // Determine alignment preference; default keeps AI left and user right
+  const messageAlignmentPreference = settings.messageAlignment || 'default';
+  const messageAlignment = messageAlignmentPreference === 'default'
+    ? (role === 'assistant' ? 'left' : 'right')
+    : (messageAlignmentPreference === 'right' ? 'right' : 'left');
 
   // Get bubble style from settings
   // Apply high contrast mode if set

@@ -779,6 +779,16 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
             <SettingGroup>
               <SettingLabel>Message Alignment</SettingLabel>
               <RadioGroup>
+                <RadioOption isSelected={!localSettings.messageAlignment || localSettings.messageAlignment === 'default'}>
+                  <input
+                    type="radio"
+                    name="messageAlignment"
+                    value="default"
+                    checked={!localSettings.messageAlignment || localSettings.messageAlignment === 'default'}
+                    onChange={() => handleChange('messageAlignment', 'default')}
+                  />
+                  Default
+                </RadioOption>
                 <RadioOption isSelected={localSettings.messageAlignment === 'left'}>
                   <input
                     type="radio"

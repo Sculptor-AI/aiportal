@@ -417,7 +417,7 @@ const AppContent = () => {
       sendWithEnter: true,
       showTimestamps: true,
       showModelIcons: true,
-      messageAlignment: 'left',
+      messageAlignment: 'default',
       codeHighlighting: true,
       bubbleStyle: 'minimal',
       messageSpacing: 'comfortable',
@@ -893,7 +893,7 @@ const AppContent = () => {
     <ThemeProvider theme={currentTheme}>
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
-        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'minimal'} message-spacing-${settings.messageSpacing || 'comfortable'} message-align-${settings.messageAlignment || 'left'}`}>
+        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'minimal'} message-spacing-${settings.messageSpacing || 'comfortable'} message-align-${settings.messageAlignment || 'default'}`}>
           <MainContentArea
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}
