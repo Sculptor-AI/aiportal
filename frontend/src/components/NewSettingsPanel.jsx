@@ -183,7 +183,6 @@ const CloseButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1.5rem;
   color: ${props => props.theme.text};
   opacity: 0.7;
   transition: all 0.2s ease;
@@ -195,6 +194,17 @@ const CloseButton = styled.button`
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  position: relative;
+  text-align: center;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
   
   /* Specific styling for the retro theme */
   ${props => props.theme.name === 'retro' && `
@@ -206,13 +216,15 @@ const CloseButton = styled.button`
     padding: 0;
     width: 16px;
     height: 16px;
-    font-size: 14px;
-    line-height: 14px;
     opacity: 1;
     transition: none;
     margin-right: 2px;
     margin-top: 2px;
     color: black;
+    svg {
+      width: 12px;
+      height: 12px;
+    }
     
     &:active {
       border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
@@ -475,14 +487,11 @@ const ThemeOption = styled.label`
 `;
 
 const SelectBox = styled.select`
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
   border: 1px solid ${props => props.theme.border};
   background-color: ${props => props.theme.name === 'dark' || props.theme.name === 'oled' ? '#333' : props.theme.cardBackground || '#f5f5f7'};
   color: ${props => props.theme.text};
-  font-family: inherit;
-  width: 100%;
-  margin-bottom: 15px;
   font-size: 0.95rem;
   
   /* Specific styling for the retro theme */
@@ -592,7 +601,7 @@ const RadioOption = styled.label`
   }
   
   input {
-    margin-right: 10px;
+    margin: 0 10px 0 0;
   }
 `;
 
@@ -651,14 +660,24 @@ const Slider = styled.span`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: ${props => props.checked ? props.theme.primary : 'rgba(0,0,0,0.15)'};
-  background-image: ${props => props.checked ? 
-    `linear-gradient(to right, ${props.theme.primary}90, ${props.theme.primary})` : 
-    'none'};
-  transition: 0.3s;
-  border-radius: 26px;
+  border-radius: 13px;
+  background-color: ${props => props.checked ? props.theme.primary : '#ccc'};
+  transition: background-color 0.3s;
   overflow: visible;
   
+  &:after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: ${props => props.checked ? '25px' : '3px'};
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: white;
+    transition: left 0.3s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  }
+
   /* Specific styling for the retro theme */
   ${props => props.theme.name === 'retro' && `
     border-radius: 0;
@@ -683,36 +702,6 @@ const Slider = styled.span`
       left: 3px;
     }
   `}
-  
-  &:before {
-    position: absolute;
-    content: "";
-    height: ${props => props.checked ? '22px' : '20px'};
-    width: ${props => props.checked ? '22px' : '20px'};
-    left: ${props => props.checked ? '2px' : '3px'};
-    bottom: ${props => props.checked ? '2px' : '3px'};
-    background-color: ${props => props.checked ? '#4caf50' : 'white'};
-    transition: 0.3s;
-    border-radius: 50%;
-    box-shadow: ${props => props.checked ? 
-      `0 2px 5px rgba(0,0,0,0.2)` : 
-      '0 2px 5px rgba(0,0,0,0.2)'};
-    transform: ${props => props.checked ? 'translateX(22px)' : 'translateX(0)'};
-  }
-  
-  /* Visual indicator on track */
-  &:after {
-    content: "";
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: ${props => props.checked ? 'white' : 'transparent'};
-    top: 10px;
-    left: 9px;
-    opacity: ${props => props.checked ? '0.7' : '0'};
-    transition: 0.3s;
-  }
 `;
 
 const FontSizeOption = styled(RadioOption)`
@@ -745,18 +734,8 @@ const FontSizeOption = styled(RadioOption)`
   .large {
     font-size: 1.1rem;
   }
-`;
-
-const LanguageSelect = styled.select`
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid ${props => props.theme.border};
-  background-color: ${props => props.theme.name === 'dark' || props.theme.name === 'oled' ? '#333' : props.theme.cardBackground || '#f5f5f7'};
-  color: ${props => props.theme.text};
-  
-  option {
-    background-color: ${props => props.theme.name === 'dark' || props.theme.name === 'oled' ? '#333' : props.theme.cardBackground || '#f5f5f7'};
-    color: ${props => props.theme.text};
+  input {
+    margin: 0;
   }
 `;
 
@@ -771,7 +750,7 @@ const TranslateLink = styled.a`
 
 const NotificationToggle = styled.div`
   position: relative;
-  width: 50px;
+  width: 48px;
   height: 26px;
   border-radius: 13px;
   background-color: ${props => props.$isOn ? props.theme.primary : '#ccc'};
@@ -782,12 +761,13 @@ const NotificationToggle = styled.div`
     content: '';
     position: absolute;
     top: 3px;
-    left: ${props => props.$isOn ? '27px' : '3px'};
+    left: ${props => props.$isOn ? '25px' : '3px'};
     width: 20px;
     height: 20px;
     border-radius: 50%;
     background-color: white;
     transition: left 0.3s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   }
 `;
 
@@ -1155,7 +1135,12 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
         </SettingsSidebar>
         
         <MainContent>
-          <CloseButton onClick={handleClose}>×</CloseButton>
+          <CloseButton onClick={handleClose} aria-label="Close">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </CloseButton>
           
           {activeSection === 'general' && (
             <div>
@@ -1166,10 +1151,6 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
                 <SelectBox 
                   value={localSettings.theme || 'light'}
                   onChange={(e) => handleChange('theme', e.target.value)}
-                  style={{ 
-                    backgroundColor: isDarkMode() ? '#333' : '#f5f5f7',
-                    color: isDarkMode() ? '#fff' : '#000'
-                  }}
                 >
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
@@ -1193,20 +1174,16 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
               
               <SettingsRow>
                 <SettingsLabel>Language</SettingsLabel>
-                <LanguageSelect 
+                <SelectBox 
                   value={localSettings.language || 'en-US'} 
                   onChange={e => handleChange('language', e.target.value)}
-                  style={{ 
-                    backgroundColor: isDarkMode() ? '#333' : '#f5f5f7',
-                    color: isDarkMode() ? '#fff' : '#000'
-                  }}
                 >
                   <option value="en-US">English (US)</option>
                   <option value="fr">French</option>
                   <option value="es">Spanish</option>
                   <option value="de">German</option>
                   <option value="zh">Chinese</option>
-                </LanguageSelect>
+                </SelectBox>
               </SettingsRow>
                             
               <SettingsRow>
@@ -1267,10 +1244,6 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
                 <SelectBox
                   value={localSettings.fontFamily || 'system'}
                   onChange={(e) => handleChange('fontFamily', e.target.value)}
-                  style={{ 
-                    backgroundColor: isDarkMode() ? '#333' : '#f5f5f7',
-                    color: isDarkMode() ? '#fff' : '#000'
-                  }}
                 >
                   <option value="system">System Default</option>
                   <option value="inter">Inter</option>
