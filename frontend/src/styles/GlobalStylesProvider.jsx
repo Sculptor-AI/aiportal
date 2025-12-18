@@ -1,7 +1,10 @@
 import React from 'react';
 import { createGlobalStyle } from 'styled-components';
+import { getFontFamilyValue } from './fontUtils';
 
 const GlobalStyle = createGlobalStyle`
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@400;700&family=Open+Sans:wght@400;600&family=Roboto:wght@400;500&display=swap');
+
   /* Add Windows 98 font */
   @font-face {
     font-family: 'MSW98UI';
@@ -20,16 +23,7 @@ const GlobalStyle = createGlobalStyle`
       }
     }};
     
-    --font-family: ${props => {
-      switch(props.fontFamily) {
-        case 'inter': return "'Inter', sans-serif";
-        case 'roboto': return "'Roboto', sans-serif";
-        case 'opensans': return "'Open Sans', sans-serif";
-        case 'georgia': return "'Georgia', serif";
-        case 'merriweather': return "'Merriweather', serif";
-        default: return "Inter, system-ui, Avenir, Helvetica, Arial, sans-serif";
-      }
-    }};
+    --font-family: ${props => getFontFamilyValue(props.fontFamily)};
     
     --line-height: ${props => {
       switch(props.lineSpacing) {

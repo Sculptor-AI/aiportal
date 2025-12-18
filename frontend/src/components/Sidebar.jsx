@@ -27,6 +27,7 @@ const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
   z-index: 101;
   opacity: ${props => props.$collapsed ? '0' : '1'};
   box-shadow: ${props => props.$sidebarStyle === 'traditional' ? 'none' : '0 8px 28px rgba(0, 0, 0, 0.16)'};
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   
   @media (max-width: 768px) {
     left: ${props => (props.$collapsed ? '-100%' : '0')};
@@ -58,7 +59,7 @@ const LogoContainer = styled.div`
 `;
 
 const LogoText = styled.span`
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-weight: 600;
   font-size: 18px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
@@ -133,7 +134,7 @@ const MobileLogoContainer = styled.div`
 `;
 
 const MobileLogoText = styled.span`
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-weight: 600;
   font-size: 16px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
@@ -168,7 +169,7 @@ const NewChatButton = styled.button`
   margin: 0 16px 16px;
   width: calc(100% - 32px);
   flex-shrink: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &:hover {
     background: ${props => {
@@ -304,7 +305,7 @@ const ChatTitle = styled.div`
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
   font-size: 14px;
   font-weight: 400;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   @media (max-width: 768px) {
       opacity: 1;
@@ -416,7 +417,7 @@ const SectionHeader = styled.div`
   opacity: ${props => props.$collapsed ? '0' : '0.6'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   @media (max-width: 768px) {
       opacity: 0.6;
@@ -447,7 +448,7 @@ const ModelDropdownButton = styled.button`
   transition: all 0.2s ease;
   min-height: 36px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &:hover {
     border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
@@ -564,7 +565,7 @@ const ModelName = styled.span`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 `;
 
 const ModelDescription = styled.span`
@@ -573,7 +574,7 @@ const ModelDescription = styled.span`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 `;
 
 const SidebarButton = styled.button`
@@ -590,7 +591,7 @@ const SidebarButton = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   justify-content: flex-start;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
@@ -660,7 +661,7 @@ const NavLink = styled(Link)`
   transition: all 0.2s ease;
   justify-content: flex-start;
   text-decoration: none;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
@@ -710,7 +711,7 @@ const SearchInput = styled.input`
     props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
       props.theme.text};
   font-size: 13px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &::placeholder {
     color: ${props =>
@@ -751,7 +752,7 @@ const NoResultsMessage = styled.div`
     props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' :
       `${props.theme.text}60`};
   font-size: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 `;
 
 const ProfileDropdownContainer = styled.div`
@@ -793,7 +794,7 @@ const ProfileDropdownItem = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   justify-content: flex-start;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};

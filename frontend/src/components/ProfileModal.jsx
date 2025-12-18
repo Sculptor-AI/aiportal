@@ -41,6 +41,7 @@ const ModalContent = styled.div`
   animation: ${scaleUp} 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 `;
 
 const ModalHeader = styled.div`
@@ -56,7 +57,7 @@ const ModalTitle = styled.h2`
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   letter-spacing: -0.01em;
 `;
 
@@ -164,7 +165,7 @@ const Username = styled.h4`
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   letter-spacing: -0.02em;
   background: ${props => props.theme.primaryGradient};
   -webkit-background-clip: text;
@@ -221,7 +222,7 @@ const ActionButton = styled.button`
   width: 100%;
   font-size: 0.95rem;
   font-weight: 600;
-  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: ${props => props.$marginTop ? '12px' : '0'};

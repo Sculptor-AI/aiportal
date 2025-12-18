@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
@@ -14,6 +14,7 @@ import Sandbox3DModal from './components/Sandbox3DModal';
 import OnboardingFlow from './components/OnboardingFlow';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
+import { getFontFamilyValue } from './styles/fontUtils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import GlobalStylesProvider from './styles/GlobalStylesProvider';
 import SharedChatView from './components/SharedChatView';
@@ -840,7 +841,13 @@ const AppContent = () => {
 
   // Render logic
   const currentChat = getCurrentChat();
-  const currentTheme = getTheme(settings.theme);
+  const currentTheme = useMemo(() => {
+    const baseTheme = getTheme(settings.theme);
+    const resolvedFontFamily = baseTheme.name === 'retro'
+      ? baseTheme.fontFamily
+      : getFontFamilyValue(settings.fontFamily || 'system');
+    return { ...baseTheme, fontFamily: resolvedFontFamily };
+  }, [settings.theme, settings.fontFamily]);
 
   // AUTHENTICATION CHECKS - After all hooks are declared
   // Show loading spinner while checking authentication
