@@ -67,6 +67,7 @@ const ChatInputArea = forwardRef(({
   onImageModeChange,
   selectedImageModel,
   onUserTyping,
+  onMessageSent,
 }, ref) => {
   const theme = useTheme();
   const [inputMessage, setInputMessage] = useState('');
@@ -258,6 +259,9 @@ const ChatInputArea = forwardRef(({
           imageModel: selectedImageModel?.id || selectedImageModel?.apiId
         });
         setInputMessage('');
+        if (onMessageSent) {
+          onMessageSent();
+        }
         // Keep image mode active for multi-turn generation
         // User can click "Default" in Create menu to exit
       }
@@ -272,6 +276,9 @@ const ChatInputArea = forwardRef(({
         setIsVideoPromptMode(false);
         setCreateType(null);
         setSelectedActionChip(null);
+        if (onMessageSent) {
+          onMessageSent();
+        }
       }
       return;
     }
@@ -288,6 +295,9 @@ const ChatInputArea = forwardRef(({
         setIsFlowchartPromptMode(false);
         setCreateType(null);
         setSelectedActionChip(null);
+        if (onMessageSent) {
+          onMessageSent();
+        }
       }
       return;
     }
@@ -301,6 +311,9 @@ const ChatInputArea = forwardRef(({
       createType: createType
     });
     setInputMessage(''); // Clear input after submission attempt
+    if (onMessageSent) {
+      onMessageSent();
+    }
     // Clearing uploadedFile and selectedActionChip should be handled by parent via props or after successful submission
   };
 
