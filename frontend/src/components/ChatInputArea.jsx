@@ -26,7 +26,8 @@ import {
   FilePreviewRemove,
   FileTypeIcon,
   OverflowChipButton,
-  OverflowDropdown
+  OverflowDropdown,
+  InputGreeting
 } from './ChatWindow.styled';
 
 const ChatInputArea = forwardRef(({
@@ -86,6 +87,8 @@ const ChatInputArea = forwardRef(({
   const [chipsExpanded, setChipsExpanded] = useState(chatIsEmpty);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const dragCounterRef = useRef(0);
+  const greetingEnabled = settings?.showGreeting !== false;
+  const showGreetingMessage = greetingEnabled && chatIsEmpty && !animateDown;
 
   // Use image mode from prop (state managed by parent)
   const isImagePromptMode = isImagePromptModeProp || false;
@@ -715,6 +718,12 @@ const ChatInputArea = forwardRef(({
       $isFlowchartOpen={isFlowchartOpen}
       $isSandbox3DOpen={isSandbox3DOpen}
     >
+      {showGreetingMessage && (
+        <InputGreeting>
+          What can I do for you?
+        </InputGreeting>
+      )}
+
       <ChipsDock $visible={chatIsEmpty || chipsExpanded} $indent={chatIsEmpty || chipsExpanded}>
         <ActionChipsContainer ref={chipsContainerRef}>
           <HammerButton
@@ -760,7 +769,6 @@ const ChatInputArea = forwardRef(({
           )}
         </ActionChipsContainer>
       </ChipsDock>
-
       <ComposerRow>
         <ComposerPlusButton
           type="button"

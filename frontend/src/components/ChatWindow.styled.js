@@ -277,6 +277,19 @@ export const InputContainer = styled.div`
   }}
 `;
 
+export const InputGreeting = styled.div`
+  width: 100%;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 650;
+  color: ${props => props.theme.name === 'retro' ? props.theme.text : props.theme.text};
+  opacity: 0.95;
+  margin: 0 0 14px;
+  pointer-events: none;
+  letter-spacing: -0.01em;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+`;
+
 export const MessageInputWrapper = styled.div.attrs({ 'data-shadow': 'message-bar' })`
   position: relative;
   width: 100%;
