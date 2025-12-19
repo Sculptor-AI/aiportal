@@ -336,6 +336,53 @@ const OptionCard = styled.div`
   }
 `;
 
+const CustomColorInputs = styled.div`
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+`;
+
+const ColorInputGroup = styled.label`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 10px;
+  background: ${props => props.theme.background};
+  color: ${props => props.theme.text};
+  font-weight: 500;
+
+  input {
+    width: 48px;
+    height: 36px;
+    border: 1px solid ${props => props.theme.border};
+    border-radius: 8px;
+    padding: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+`;
+
+const ColorSwatchRow = styled.div`
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 8px;
+`;
+
+const ColorDot = styled.div`
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.$color};
+`;
+
 const FontSizeLabel = styled.div`
   font-weight: 600;
   
@@ -531,7 +578,12 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
   const [selections, setSelections] = useState({
     theme: 'light',
     fontSize: 'medium',
-    sidebarStyle: 'floating'
+    sidebarStyle: 'floating',
+    customColors: {
+      background: '#f0f2f5',
+      text: '#212529',
+      border: '#d0d0d0'
+    }
   });
 
   const steps = [
@@ -553,7 +605,8 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
         { id: 'bubblegum', label: 'Bubblegum', className: 'bubblegum-theme' },
         { id: 'desert', label: 'Desert', className: 'desert-theme' },
         { id: 'lakeside', label: 'Lakeside', className: 'lakeside-theme' },
-        { id: 'retro', label: 'Retro', className: 'retro-theme' }
+        { id: 'retro', label: 'Retro', className: 'retro-theme' },
+        { id: 'custom', label: 'Custom', className: 'custom-theme', description: 'Pick your own colors' }
       ],
       selectionKey: 'theme'
     },
@@ -578,12 +631,36 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
     }
   ];
 
-  const currentTheme = getTheme(selections.theme);
+  const currentTheme = selections.theme === 'custom'
+    ? {
+        ...getTheme('light'),
+        name: 'custom',
+        background: selections.customColors.background,
+        sidebar: selections.customColors.background,
+        chat: selections.customColors.background,
+        text: selections.customColors.text,
+        border: selections.customColors.border,
+        primary: selections.customColors.text,
+        messageUser: selections.customColors.background,
+        messageAi: selections.customColors.background,
+        inputBackground: selections.customColors.background
+      }
+    : getTheme(selections.theme);
 
   const handleOptionSelect = (optionId) => {
     setSelections(prev => ({
       ...prev,
       [steps[currentStep].selectionKey]: optionId
+    }));
+  };
+
+  const handleColorChange = (key, value) => {
+    setSelections(prev => ({
+      ...prev,
+      customColors: {
+        ...prev.customColors,
+        [key]: value
+      }
     }));
   };
 
@@ -654,6 +731,15 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
                         theme={currentTheme}
                       />
                     </SidebarIndicator>
+                  ) : option.id === 'custom' ? (
+                    <>
+                      <div>{option.label}</div>
+                      <ColorSwatchRow theme={currentTheme}>
+                        <ColorDot theme={currentTheme} $color={selections.customColors.background} />
+                        <ColorDot theme={currentTheme} $color={selections.customColors.text} />
+                        <ColorDot theme={currentTheme} $color={selections.customColors.border} />
+                      </ColorSwatchRow>
+                    </>
                   ) : (
                     option.label
                   )}
@@ -665,6 +751,35 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
                 </OptionCard>
               ))}
             </OptionGrid>
+
+            {currentStep === 0 && selections.theme === 'custom' && (
+              <CustomColorInputs>
+                <ColorInputGroup theme={currentTheme}>
+                  <span>Background</span>
+                  <input
+                    type="color"
+                    value={selections.customColors.background}
+                    onChange={(e) => handleColorChange('background', e.target.value)}
+                  />
+                </ColorInputGroup>
+                <ColorInputGroup theme={currentTheme}>
+                  <span>Text</span>
+                  <input
+                    type="color"
+                    value={selections.customColors.text}
+                    onChange={(e) => handleColorChange('text', e.target.value)}
+                  />
+                </ColorInputGroup>
+                <ColorInputGroup theme={currentTheme}>
+                  <span>Border</span>
+                  <input
+                    type="color"
+                    value={selections.customColors.border}
+                    onChange={(e) => handleColorChange('border', e.target.value)}
+                  />
+                </ColorInputGroup>
+              </CustomColorInputs>
+            )}
           </StepContent>
 
           <NavigationButtons>
