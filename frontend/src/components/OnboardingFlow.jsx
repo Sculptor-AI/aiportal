@@ -298,6 +298,42 @@ const OptionCard = styled.div`
     border-style: ${props => props.$selected ? 'solid' : 'inset'};
     border-width: 2px;
   }
+
+  &.nord-theme {
+    background: ${props => props.$selected ? '#88C0D0' : '#2E3440'};
+    color: ${props => props.$selected ? '#2E3440' : '#ECEFF4'};
+    border-color: ${props => props.$selected ? '#88C0D0' : '#3B4252'};
+  }
+
+  &.dracula-theme {
+    background: ${props => props.$selected ? '#bd93f9' : '#282a36'};
+    color: ${props => props.$selected ? '#282a36' : '#f8f8f2'};
+    border-color: ${props => props.$selected ? '#ff79c6' : '#44475a'};
+
+  &.coffee-theme {
+    background: ${props => props.$selected ? '#6f4e37' : '#fdf5e6'};
+    color: ${props => props.$selected ? '#ffffff' : '#4b3621'};
+    border-color: ${props => props.$selected ? '#6f4e37' : '#d2b48c'};
+
+  &.terminal-theme {
+    background: ${props => props.$selected ? '#00FF00' : '#000000'};
+    color: ${props => props.$selected ? '#000000' : '#00FF00'};
+    border-color: ${props => props.$selected ? '#00FF00' : '#003300'};
+    font-family: 'Courier New', Courier, monospace;
+  }
+
+  &.cherry-theme {
+    background: ${props => props.$selected ? '#900c3f' : '#1a050d'};
+    color: white;
+    border-color: ${props => props.$selected ? '#c70039' : '#2d0a15'};
+  }
+
+  &.synthwave-theme {
+    background: ${props => props.$selected ? '#f97e72' : 'linear-gradient(135deg, #2b213a, #241b30)'};
+    color: #ff7edb;
+    border-color: #ff7edb;
+    text-shadow: 0 0 5px #ff7edb;
+  }
 `;
 
 const FontSizeLabel = styled.div`
