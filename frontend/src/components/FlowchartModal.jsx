@@ -13,6 +13,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { toPng } from 'html-to-image';
 import { parseFlowchartInstructions, parseAIFlowchartResponse, validateFlowchartInstructions } from '../utils/flowchartTools';
+import { useTranslation } from '../contexts/TranslationContext';
 
 // --- Styled Components (Glassmorphism) ---
 
@@ -257,6 +258,7 @@ const nodeTypes = {
 // --- Main Components ---
 
 const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, aiFlowchartData }) => {
+  const { t } = useTranslation();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const reactFlowWrapper = useRef(null);
@@ -354,18 +356,20 @@ const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, aiFlowchartData }) =
         <ReactFlowProvider>
           <Sidebar>
             <SidebarHeader>
-              <Title>SCULPTOR <TitleText>Flow</TitleText></Title>
+              <Title>SCULPTOR <TitleText>{t('flowchart.titleSuffix', 'Flow')}</TitleText></Title>
             </SidebarHeader>
             <SidebarContent>
-              <div style={{ fontSize: '14px', color: '#888', marginBottom: '8px' }}>Drag to Board</div>
+              <div style={{ fontSize: '14px', color: '#888', marginBottom: '8px' }}>
+                {t('flowchart.sidebar.helper')}
+              </div>
               <NodeButton draggable onDragStart={(event) => onDragStart(event, 'input')}>
-                Start / Input Node
+                {t('flowchart.node.start')}
               </NodeButton>
               <NodeButton draggable onDragStart={(event) => onDragStart(event, 'default')}>
-                Process Node
+                {t('flowchart.node.process')}
               </NodeButton>
               <NodeButton draggable onDragStart={(event) => onDragStart(event, 'output')}>
-                End / Output Node
+                {t('flowchart.node.end')}
               </NodeButton>
             </SidebarContent>
           </Sidebar>
@@ -390,8 +394,8 @@ const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, aiFlowchartData }) =
             <CloseButton onClick={onClose}>×</CloseButton>
 
             <ToolbarOverlay>
-              <ToolButton onClick={handleExport} $primary>Save & Insert</ToolButton>
-              <ToolButton onClick={() => setNodes([])}>Clear</ToolButton>
+              <ToolButton onClick={handleExport} $primary>{t('flowchart.toolbar.save')}</ToolButton>
+              <ToolButton onClick={() => setNodes([])}>{t('flowchart.toolbar.clear')}</ToolButton>
             </ToolbarOverlay>
           </MainContent>
         </ReactFlowProvider>

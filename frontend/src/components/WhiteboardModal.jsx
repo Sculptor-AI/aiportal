@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
+import { useTranslation } from '../contexts/TranslationContext';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -269,6 +270,7 @@ const Icons = {
 };
 
 const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
+  const { t } = useTranslation();
   const canvasRef = useRef(null);
   const [ctx, setCtx] = useState(null);
   const [tool, setTool] = useState('pencil');
@@ -552,34 +554,34 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
         <CloseButton onClick={onClose}>×</CloseButton>
 
         <FloatingToolbar>
-          <ToolButton $active={tool === 'pencil'} onClick={() => setTool('pencil')} data-tooltip="Pencil">
+          <ToolButton $active={tool === 'pencil'} onClick={() => setTool('pencil')} data-tooltip={t('whiteboard.tool.pencil')}>
             <Icons.Pencil />
           </ToolButton>
-          <ToolButton $active={tool === 'square'} onClick={() => setTool('square')} data-tooltip="Square">
+          <ToolButton $active={tool === 'square'} onClick={() => setTool('square')} data-tooltip={t('whiteboard.tool.square')}>
             <Icons.Square />
           </ToolButton>
-          <ToolButton $active={tool === 'circle'} onClick={() => setTool('circle')} data-tooltip="Circle">
+          <ToolButton $active={tool === 'circle'} onClick={() => setTool('circle')} data-tooltip={t('whiteboard.tool.circle')}>
             <Icons.Circle />
           </ToolButton>
-          <ToolButton $active={tool === 'line'} onClick={() => setTool('line')} data-tooltip="Line">
+          <ToolButton $active={tool === 'line'} onClick={() => setTool('line')} data-tooltip={t('whiteboard.tool.line')}>
             <Icons.Line />
           </ToolButton>
-          <ToolButton $active={tool === 'text'} onClick={() => setTool('text')} data-tooltip="Text">
+          <ToolButton $active={tool === 'text'} onClick={() => setTool('text')} data-tooltip={t('whiteboard.tool.text')}>
             <Icons.Text />
           </ToolButton>
-          <ToolButton $active={tool === 'eraser'} onClick={() => setTool('eraser')} data-tooltip="Eraser">
+          <ToolButton $active={tool === 'eraser'} onClick={() => setTool('eraser')} data-tooltip={t('whiteboard.tool.eraser')}>
             <Icons.Eraser />
           </ToolButton>
 
           <Divider />
 
-          <ToolButton onClick={handleUndo} data-tooltip="Undo">
+          <ToolButton onClick={handleUndo} data-tooltip={t('whiteboard.tool.undo')}>
             <Icons.Undo />
           </ToolButton>
-          <ToolButton onClick={handleRedo} data-tooltip="Redo">
+          <ToolButton onClick={handleRedo} data-tooltip={t('whiteboard.tool.redo')}>
             <Icons.Redo />
           </ToolButton>
-          <ToolButton onClick={clearCanvas} data-tooltip="Clear">
+          <ToolButton onClick={clearCanvas} data-tooltip={t('whiteboard.tool.clear')}>
             <Icons.Trash />
           </ToolButton>
         </FloatingToolbar>
@@ -637,10 +639,10 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
 
         <ActionToolbar>
           <PillButton onClick={handleExport}>
-            <Icons.Download /> Export
+            <Icons.Download /> {t('whiteboard.action.export')}
           </PillButton>
           <PillButton $primary onClick={handleSendToChat}>
-            <Icons.Send /> Send
+            <Icons.Send /> {t('whiteboard.action.send')}
           </PillButton>
         </ActionToolbar>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled, { withTheme } from 'styled-components';
 import { fetchArticlesByCategory, fetchArticleContent } from '../services/rssService';
 import { sendMessageToBackend } from '../services/aiService';
+import { useTranslation } from '../contexts/TranslationContext';
 
 const NewsContainer = styled.div`
   flex: 1;
@@ -661,42 +662,51 @@ const EmptyStateMessage = styled.p`
   color: ${props => props.theme.textSecondary};
 `;
 
-const filters = [
-    {
-      name: 'Top',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-    },
-    {
-      name: 'Saved',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-    },
-    {
-      name: 'Tech',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="22" y2="7"></line><line x1="2" y1="17" x2="22" y2="17"></line></svg>
-    },
-    {
-      name: 'Sports',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="8"></line></svg>
-    },
-    {
-      name: 'Finance',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-    },
-    {
-      name: 'Art',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-    },
-    {
-      name: 'TV',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
-    },
-    {
-      name: 'Politics',
-      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-    }
-  ];
+const filterOptions = [
+  {
+    id: 'top',
+    labelKey: 'news.filters.top',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+  },
+  {
+    id: 'saved',
+    labelKey: 'news.filters.saved',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+  },
+  {
+    id: 'tech',
+    labelKey: 'news.filters.tech',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="22" y2="7"></line><line x1="2" y1="17" x2="22" y2="17"></line></svg>
+  },
+  {
+    id: 'sports',
+    labelKey: 'news.filters.sports',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="8"></line></svg>
+  },
+  {
+    id: 'finance',
+    labelKey: 'news.filters.finance',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+  },
+  {
+    id: 'art',
+    labelKey: 'news.filters.art',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+  },
+  {
+    id: 'tv',
+    labelKey: 'news.filters.tv',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+  },
+  {
+    id: 'politics',
+    labelKey: 'news.filters.politics',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+  }
+];
 
 const ArticleDetailView = ({ article, onClose }) => {
+  const { t } = useTranslation();
   const [articleContent, setArticleContent] = useState(null);
   const [loadingContent, setLoadingContent] = useState(true);
   const [contentError, setContentError] = useState(null);
@@ -721,11 +731,11 @@ const ArticleDetailView = ({ article, onClose }) => {
             if (result && result.response) {
               setSummary(result.response);
             } else {
-              setSummary('Could not generate summary.');
+              setSummary(t('news.summary.couldNotGenerate'));
             }
           } catch (summaryError) {
             console.error('Error generating summary:', summaryError);
-            setSummary('Failed to generate summary.');
+            setSummary(t('news.summary.failed'));
           } finally {
             setSummarizing(false);
           }
@@ -733,9 +743,9 @@ const ArticleDetailView = ({ article, onClose }) => {
 
       } catch (error) {
         console.error('Error loading article content:', error);
-        setContentError('Failed to load full article content');
+        setContentError(t('news.error.articleContent'));
         const fallbackContent = {
-          content: article.description || 'No content available',
+          content: article.description || t('news.article.noContent'),
           title: article.title,
           image: article.image,
           extracted: false
@@ -751,11 +761,11 @@ const ArticleDetailView = ({ article, onClose }) => {
             if (result && result.response) {
               setSummary(result.response);
             } else {
-              setSummary('Could not generate summary.');
+              setSummary(t('news.summary.couldNotGenerate'));
             }
           } catch (summaryError) {
             console.error('Error generating summary:', summaryError);
-            setSummary('Failed to generate summary.');
+            setSummary(t('news.summary.failed'));
           } finally {
             setSummarizing(false);
           }
@@ -769,7 +779,7 @@ const ArticleDetailView = ({ article, onClose }) => {
   }, [article]);
 
   const displayContent = articleContent || {
-    content: article.description || 'Loading...',
+    content: article.description || t('news.article.loading'),
     title: article.title,
     image: article.image
   };
@@ -799,7 +809,9 @@ const ArticleDetailView = ({ article, onClose }) => {
                 </AuthorAvatar>
                 <AuthorInfo>
                   <AuthorName>
-                    {displayContent.author ? `By ${displayContent.author}` : `Source: ${article.source}`}
+                    {displayContent.author 
+                      ? t('news.detail.byAuthor', 'By {{author}}', { author: displayContent.author })
+                      : t('news.detail.source', 'Source: {{source}}', { source: article.source })}
                   </AuthorName>
                   <ReadTime>
                     {displayContent.publishDate 
@@ -810,14 +822,18 @@ const ArticleDetailView = ({ article, onClose }) => {
               </AuthorSection>
               
               <MetadataRight>
-                <PublishTime>Published {new Date(article.pubDate).toLocaleString()}</PublishTime>
+                <PublishTime>
+                  {t('news.detail.published', 'Published {{time}}', { time: new Date(article.pubDate).toLocaleString() })}
+                </PublishTime>
               </MetadataRight>
             </ArticleMetadata>
 
             <SourceTags>
               <SourceTag>{article.source}</SourceTag>
-              <SourceTag>{article.category}</SourceTag>
-              {articleContent?.extracted && <SourceTag style={{ backgroundColor: '#28a745' }}>Full Article</SourceTag>}
+              <SourceTag>{article.category
+                ? t(`news.filters.${article.category}`, article.category)
+                : t('news.category.uncategorized')}</SourceTag>
+              {articleContent?.extracted && <SourceTag style={{ backgroundColor: '#28a745' }}>{t('news.fullArticleTag')}</SourceTag>}
             </SourceTags>
             
             {(displayContent.image || article.image) && 
@@ -835,7 +851,7 @@ const ArticleDetailView = ({ article, onClose }) => {
               {loadingContent ? (
                 <LoadingContainer>
                   <LoadingSpinner />
-                  <LoadingText>Loading article...</LoadingText>
+                  <LoadingText>{t('news.loadingArticle')}</LoadingText>
                 </LoadingContainer>
               ) : contentError ? (
                 <>
@@ -845,7 +861,7 @@ const ArticleDetailView = ({ article, onClose }) => {
               ) : summarizing ? (
                 <LoadingContainer>
                   <LoadingSpinner />
-                  <LoadingText>Generating summary...</LoadingText>
+                  <LoadingText>{t('news.generatingSummary')}</LoadingText>
                 </LoadingContainer>
               ) : (
                 summary.split('\n\n').map((paragraph, index) => (
@@ -855,7 +871,7 @@ const ArticleDetailView = ({ article, onClose }) => {
               
               <p style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e0e0e0' }}>
                 <a href={article.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
-                  Read the original article on {article.source} →
+                  {t('news.readOriginal', 'Read the original article on {{source}} →', { source: article.source })}
                 </a>
               </p>
             </DetailBody>
@@ -867,7 +883,8 @@ const ArticleDetailView = ({ article, onClose }) => {
 };
 
 const NewsPage = ({ collapsed }) => {
-  const [activeFilter, setActiveFilter] = useState('Top');
+  const { t } = useTranslation();
+  const [activeFilter, setActiveFilter] = useState('top');
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -888,13 +905,13 @@ const NewsPage = ({ collapsed }) => {
     setError(null);
     
     try {
-      const categoryToFetch = activeFilter.toLowerCase();
+      const categoryToFetch = activeFilter;
       const fetchedArticles = await fetchArticlesByCategory(categoryToFetch, 20);
       setArticles(fetchedArticles);
       setLastRefresh(new Date());
     } catch (err) {
       console.error('Error loading articles:', err);
-      setError(err.message || 'Failed to load articles');
+      setError(err.message || t('news.error.fetch'));
       setArticles([]);
     } finally {
       if (showLoading) setLoading(false);
@@ -947,7 +964,7 @@ const NewsPage = ({ collapsed }) => {
     loadArticles();
   };
 
-  const displayArticles = activeFilter === 'Saved' 
+  const displayArticles = activeFilter === 'saved' 
     ? articles.filter(article => savedArticles.includes(article.id))
     : articles;
 
@@ -958,25 +975,25 @@ const NewsPage = ({ collapsed }) => {
           <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
           </svg>
-          News
+          {t('news.title')}
         </Title>
         <RefreshButton onClick={handleRefresh} disabled={loading} $loading={loading}>
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
           </svg>
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? t('news.refreshing') : t('news.refresh')}
         </RefreshButton>
       </Header>
 
       <FilterBar>
-        {filters.map(filter => (
+        {filterOptions.map(filter => (
           <FilterButton
-            key={filter.name}
-            $active={activeFilter === filter.name}
-            onClick={() => setActiveFilter(filter.name)}
+            key={filter.id}
+            $active={activeFilter === filter.id}
+            onClick={() => setActiveFilter(filter.id)}
           >
             {filter.icon}
-            {filter.name}
+            {t(filter.labelKey)}
           </FilterButton>
         ))}
       </FilterBar>
@@ -984,24 +1001,24 @@ const NewsPage = ({ collapsed }) => {
       {loading && (
         <LoadingContainer>
           <LoadingSpinner />
-          <LoadingText>Loading fresh articles...</LoadingText>
+          <LoadingText>{t('news.loadingList')}</LoadingText>
         </LoadingContainer>
       )}
 
       {error && !loading && (
         <ErrorContainer>
-          <ErrorMessage>Failed to load articles</ErrorMessage>
+          <ErrorMessage>{t('news.error.title')}</ErrorMessage>
           <p>{error}</p>
-          <RetryButton onClick={handleRetry}>Try Again</RetryButton>
+          <RetryButton onClick={handleRetry}>{t('news.error.retry')}</RetryButton>
         </ErrorContainer>
       )}
 
       {!loading && !error && displayArticles.length === 0 && (
         <EmptyStateContainer>
           <EmptyStateMessage>
-            {activeFilter === 'Saved' 
-              ? 'No saved articles yet. Click the bookmark icon to save articles.'
-              : 'No articles available for this category.'}
+            {activeFilter === 'saved' 
+              ? t('news.empty.saved')
+              : t('news.empty.category')}
           </EmptyStateMessage>
         </EmptyStateContainer>
       )}
@@ -1009,7 +1026,7 @@ const NewsPage = ({ collapsed }) => {
       {!loading && !error && displayArticles.length > 0 && (
         <ArticlesGrid>
           {displayArticles.map(article => {
-            const filter = filters.find(f => f.name.toLowerCase() === article.category);
+            const filter = filterOptions.find(f => f.id === article.category);
             const isSaved = savedArticles.includes(article.id);
             return (
               <ArticleCard key={article.id} $size={article.size} onClick={() => handleArticleClick(article)}>
@@ -1028,7 +1045,7 @@ const NewsPage = ({ collapsed }) => {
                   {filter && (
                     <ArticleTag>
                       {filter.icon}
-                      <span>{filter.name}</span>
+                      <span>{t(filter.labelKey)}</span>
                     </ArticleTag>
                   )}
                   <ArticleDescription $size={article.size}>{article.description}</ArticleDescription>

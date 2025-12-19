@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useTranslation } from '../contexts/TranslationContext';
 
 const WorkspaceContainer = styled.div`
   flex: 1;
@@ -496,6 +497,7 @@ const ActionButtonWrapper = styled.div`
 `;
 
 const WorkspacePage = ({ collapsed }) => {
+  const { t } = useTranslation();
   const [models, setModels] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredModels, setFilteredModels] = useState([]);
@@ -729,7 +731,7 @@ const WorkspacePage = ({ collapsed }) => {
     <WorkspaceContainer $collapsed={collapsed}>
       <Header>
         <Title>
-          Models
+          {t('workspace.title')}
           <ModelCount>{models.length}</ModelCount>
         </Title>
         
@@ -740,7 +742,7 @@ const WorkspacePage = ({ collapsed }) => {
           </SearchIcon>
           <SearchInput 
             type="text" 
-            placeholder="Search Models"
+            placeholder={t('workspace.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -751,7 +753,7 @@ const WorkspacePage = ({ collapsed }) => {
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
-          New Model
+          {t('workspace.button.newModel')}
         </AddButton>
       </Header>
 
@@ -759,7 +761,7 @@ const WorkspacePage = ({ collapsed }) => {
         {filteredModels.map((model) => {
           // Find the base model name for display
           const baseModelInfo = availableBaseModels.find(m => m.id === model.baseModel);
-          const baseModelName = baseModelInfo ? `${baseModelInfo.name} (${baseModelInfo.provider})` : model.baseModel || 'Unknown';
+          const baseModelName = baseModelInfo ? `${baseModelInfo.name} (${baseModelInfo.provider})` : (model.baseModel || t('workspace.baseModelFallback'));
           
           return (
             <ModelCard key={model.id}>
@@ -771,15 +773,17 @@ const WorkspacePage = ({ collapsed }) => {
                   <ModelName>{model.name}</ModelName>
                   <ModelDescription>{model.description}</ModelDescription>
                   {model.baseModel && (
-                    <BaseModelInfo>Based on: {baseModelName}</BaseModelInfo>
+                    <BaseModelInfo>{t('workspace.model.baseLabel', 'Based on:')} {baseModelName}</BaseModelInfo>
                   )}
                 </ModelInfo>
               </ModelHeader>
               
-              <ModelAuthor>By {model.author}</ModelAuthor>
+              <ModelAuthor>
+                {t('workspace.model.byLabel', 'By')} {model.author}
+              </ModelAuthor>
               
               <ModelActions>
-                <ActionButton title="Edit" onClick={() => handleEditModel(model)}>
+                <ActionButton title={t('workspace.actions.edit')} onClick={() => handleEditModel(model)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -787,7 +791,7 @@ const WorkspacePage = ({ collapsed }) => {
                 </ActionButton>
                 
                 <ActionButtonWrapper className="options-menu-wrapper">
-                  <ActionButton title="More options" onClick={() => toggleOptionsMenu(model.id)}>
+                  <ActionButton title={t('workspace.actions.moreOptions')} onClick={() => toggleOptionsMenu(model.id)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                       <circle cx="12" cy="5" r="2"/>
                       <circle cx="12" cy="12" r="2"/>
@@ -796,8 +800,8 @@ const WorkspacePage = ({ collapsed }) => {
                   </ActionButton>
                   {activeOptionsMenu === model.id && (
                     <OptionsMenu>
-                      <OptionItem onClick={() => handleEditModel(model)}>Edit</OptionItem>
-                      <OptionItem onClick={() => handleDeleteModel(model.id)}>Delete</OptionItem>
+                      <OptionItem onClick={() => handleEditModel(model)}>{t('workspace.actions.edit')}</OptionItem>
+                      <OptionItem onClick={() => handleDeleteModel(model.id)}>{t('workspace.modal.button.delete')}</OptionItem>
                     </OptionsMenu>
                   )}
                 </ActionButtonWrapper>
@@ -820,31 +824,33 @@ const WorkspacePage = ({ collapsed }) => {
         <ModalOverlay onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
           <ModalContent>
             <ModalHeader>
-              <ModalTitle>{editingModel ? 'Edit Model' : 'Create New Model'}</ModalTitle>
+            <ModalTitle>
+              {editingModel ? t('workspace.modal.titleEdit') : t('workspace.modal.titleCreate')}
+            </ModalTitle>
               <CloseButton onClick={() => setShowModal(false)}>×</CloseButton>
             </ModalHeader>
 
             <FormGroup>
-              <Label>Model Name</Label>
-              <Input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g. Code Assistant, Creative Writer"
-              />
+              <Label>{t('workspace.modal.fieldName')}</Label>
+                <Input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder={t('workspace.modal.placeholderExamples')}
+                />
             </FormGroup>
 
             <FormGroup>
-              <Label>Description</Label>
-              <TextArea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Briefly describe what this model specializes in..."
-              />
+              <Label>{t('workspace.modal.fieldDescription')}</Label>
+                <TextArea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder={t('workspace.modal.placeholderDescription')}
+                />
             </FormGroup>
 
             <FormGroup>
-              <Label>Avatar</Label>
+              <Label>{t('workspace.modal.fieldAvatar')}</Label>
               <AvatarPicker>
                 {avatarOptions.map((avatar) => (
                   <AvatarOption
@@ -860,11 +866,11 @@ const WorkspacePage = ({ collapsed }) => {
             </FormGroup>
 
             <FormGroup>
-              <Label>Base Model</Label>
-              <Select
-                value={formData.baseModel}
-                onChange={(e) => setFormData({ ...formData, baseModel: e.target.value })}
-              >
+              <Label>{t('workspace.modal.fieldBaseModel')}</Label>
+                <Select
+                  value={formData.baseModel}
+                  onChange={(e) => setFormData({ ...formData, baseModel: e.target.value })}
+                >
                 {availableBaseModels.length > 0 ? (
                   availableBaseModels.map((model) => (
                     <option key={model.id} value={model.id}>
@@ -872,20 +878,20 @@ const WorkspacePage = ({ collapsed }) => {
                     </option>
                   ))
                 ) : (
-                  <option value="">Loading models...</option>
+                  <option value="">{t('workspace.modal.status.loadingModels')}</option>
                 )}
               </Select>
-              <HelperText>
-                Select which AI model this custom model should use
-              </HelperText>
+                <HelperText>
+                  {t('workspace.modal.helperBaseModel')}
+                </HelperText>
             </FormGroup>
 
             <FormGroup>
-              <Label>System Prompt</Label>
+              <Label>{t('workspace.modal.fieldSystemPrompt')}</Label>
               <SystemPromptArea
                 value={formData.systemPrompt}
                 onChange={(e) => setFormData({ ...formData, systemPrompt: e.target.value })}
-                placeholder="Enter the system prompt that defines how this model should behave..."
+                placeholder={t('workspace.modal.placeholderSystemPrompt')}
               />
             </FormGroup>
 
@@ -898,14 +904,14 @@ const WorkspacePage = ({ collapsed }) => {
                   }}
                   style={{ marginRight: 'auto' }}
                 >
-                  Delete Model
+                  {t('workspace.modal.button.delete')}
                 </DeleteButton>
               )}
               <SecondaryButton onClick={() => setShowModal(false)}>
-                Cancel
+                {t('workspace.modal.button.cancel')}
               </SecondaryButton>
               <PrimaryButton onClick={handleSaveModel}>
-                {editingModel ? 'Save Changes' : 'Create Model'}
+                {editingModel ? t('workspace.modal.button.save') : t('workspace.modal.button.create')}
               </PrimaryButton>
             </ButtonGroup>
           </ModalContent>

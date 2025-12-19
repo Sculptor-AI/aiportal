@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
@@ -9,6 +9,7 @@ import CodeBlockWithExecution from './CodeBlockWithExecution';
 import useSupportedLanguages from '../hooks/useSupportedLanguages';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
+import { useTranslation } from '../contexts/TranslationContext';
 
 // Helper function to parse and render LaTeX
 const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
@@ -1547,6 +1548,7 @@ const ThinkingSectionHeader = styled.div`
 `;
 
 const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const toggleExpanded = () => {
@@ -1561,9 +1563,9 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
   }
 
   const getHeaderTitle = () => {
-    if (hasThinking && hasToolActivity) return 'Thoughts & Tools';
-    if (hasThinking) return 'Thoughts';
-    return 'Tool Activity';
+    if (hasThinking && hasToolActivity) return t('chat.thinking.header.thoughtsAndTools');
+    if (hasThinking) return t('chat.thinking.header.thoughts');
+    return t('chat.thinking.header.tools');
   };
 
   const getStatusIcon = (status) => {
@@ -1585,7 +1587,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
       <ThinkingContent expanded={expanded}>
         {hasToolActivity && (
           <ToolActivitySection>
-            <ToolActivitySectionHeader>🛠️ Tool Activity</ToolActivitySectionHeader>
+            <ToolActivitySectionHeader>{t('chat.thinking.toolActivity')}</ToolActivitySectionHeader>
             {toolCalls.map((toolCall, index) => (
               <ToolActivityItem key={toolCall.tool_id || index}>
                 <ToolActivityItemHeader>
@@ -1593,16 +1595,16 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
                     {getStatusIcon(toolCall.status)}
                   </ToolActivityIcon>
                   <ToolActivityName>
-                    {toolCall.tool_name || 'Unknown Tool'}
+                    {toolCall.tool_name || t('chat.thinking.tool.unknown')}
                   </ToolActivityName>
                   <ToolActivityStatus status={toolCall.status}>
-                    {toolCall.status || 'pending'}
+                    {t(`chat.thinking.tool.status.${toolCall.status || 'pending'}`, toolCall.status || 'pending')}
                   </ToolActivityStatus>
                 </ToolActivityItemHeader>
 
                 {toolCall.parameters && Object.keys(toolCall.parameters).length > 0 && (
                   <ToolActivityDetail>
-                    <ToolActivityLabel>Parameters:</ToolActivityLabel>
+                    <ToolActivityLabel>{t('chat.thinking.tool.parameters')}</ToolActivityLabel>
                     <ToolActivityValue>
                       {JSON.stringify(toolCall.parameters, null, 2)}
                     </ToolActivityValue>
@@ -1611,7 +1613,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
                 {toolCall.result && toolCall.status === 'completed' && (
                   <ToolActivityDetail>
-                    <ToolActivityLabel>Result:</ToolActivityLabel>
+                    <ToolActivityLabel>{t('chat.thinking.tool.result')}</ToolActivityLabel>
                     <ToolActivityValue>
                       {typeof toolCall.result === 'string' ? toolCall.result : JSON.stringify(toolCall.result, null, 2)}
                     </ToolActivityValue>
@@ -1620,7 +1622,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
                 {toolCall.error && toolCall.status === 'error' && (
                   <ToolActivityDetail>
-                    <ToolActivityLabel>Error:</ToolActivityLabel>
+                    <ToolActivityLabel>{t('chat.thinking.tool.error')}</ToolActivityLabel>
                     <ToolActivityError>
                       {toolCall.error}
                     </ToolActivityError>
@@ -1633,7 +1635,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
         {hasThinking && (
           <ThinkingSection hasToolActivity={hasToolActivity}>
-            {hasToolActivity && <ThinkingSectionHeader>💭 Reasoning</ThinkingSectionHeader>}
+            {hasToolActivity && <ThinkingSectionHeader>{t('chat.thinking.section.reasoning')}</ThinkingSectionHeader>}
             {thinkingContent}
           </ThinkingSection>
         )}
@@ -1643,6 +1645,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
+  const { t } = useTranslation();
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
 
@@ -1654,18 +1657,32 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Get the prompt for both image and flowchart messages
   const prompt = message.prompt;
 
+  const translateSystemMessage = useCallback((text) => {
+    if (!text) return text;
+    const trimmed = text.trim();
+    if (trimmed.startsWith('API keys are not configured')) {
+      return t('chat.errors.apiKeys.notConfigured');
+    }
+    if (trimmed.startsWith('Add OPENROUTER_API_KEY')) {
+      return t('chat.errors.apiKeys.instructions');
+    }
+    return text;
+  }, [t]);
+
+  const normalizedContent = translateSystemMessage(content);
+
   // Extract sources from content if this is an assistant message and not loading
   const { cleanedContent, sources: extractedSources } = useMemo(() => {
-    if (role === 'assistant' && content && !isLoading) {
-      const result = extractSourcesFromResponse(content);
+    if (role === 'assistant' && normalizedContent && !isLoading) {
+      const result = extractSourcesFromResponse(normalizedContent);
       console.log('[ChatMessage] Extracted sources from content:', result);
       return result;
     }
     return { cleanedContent: content, sources: [] };
-  }, [content, role, isLoading]);
+  }, [normalizedContent, content, role, isLoading]);
 
   // Use cleaned content if available, otherwise use original content
-  const contentToProcess = cleanedContent || content;
+  const contentToProcess = cleanedContent || normalizedContent;
 
   const is3DScene = useMemo(() => {
     if (role !== 'assistant' || isLoading || !content) return false;
@@ -1808,7 +1825,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedFlowchartContent = (
         <ThinkingContainer>
           <SpinnerIcon />
-          Creating flowchart for: "{prompt || 'your request'}"...
+          {t('chat.flowchart.creating', { prompt: prompt || t('chat.labels.yourRequest') })}
         </ThinkingContainer>
       );
     } else if (status === 'completed' && flowchartData) {
@@ -1816,7 +1833,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <>
           {prompt && (
             <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
-              Request: "{prompt}"
+              {t('chat.labels.request')}: "{prompt || t('chat.labels.yourRequest')}"
             </p>
           )}
           <FlowchartContainer>
@@ -1828,12 +1845,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
                 <path d="M12 12v3"></path>
               </svg>
-              Open Flowchart Builder
+              {t('chat.flowchart.openBuilder')}
             </FlowchartButton>
             <FlowchartPreview>
-              <p style={{ fontSize: '0.9em', opacity: 0.7 }}>
-                Flowchart instructions generated. Click "Open Flowchart Builder" to visualize and edit.
-              </p>
+              <p style={{ fontSize: '0.9em', opacity: 0.7 }}>{t('chat.flowchart.instructionsHint', { buttonLabel: t('chat.flowchart.openBuilder') })}</p>
             </FlowchartPreview>
           </FlowchartContainer>
         </>
@@ -1842,10 +1857,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedFlowchartContent = (
         <div>
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
-            Flowchart Generation Failed
+            {t('chat.flowchart.failed')}
           </p>
-          {prompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Request: "{prompt}"</p>}
-          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
+          {prompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.request')}: "{prompt || t('chat.labels.yourRequest')}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {content}</p>}
         </div>
       );
     }
@@ -1867,7 +1882,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      Copy Instructions
+                      {t('chat.actions.copyInstructions')}
                     </ActionButton>
                   </>
                 )}
@@ -1887,16 +1902,16 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <SpinnerIcon />
-            <span>Performing deep research...</span>
+            <span>{t('chat.research.performing')}</span>
           </div>
           <div style={{ fontSize: '0.9em', opacity: 0.7 }}>
-            Query: "{content || 'your query'}"
+            {t('chat.labels.query')}: "{content || t('chat.labels.yourQuery')}"
           </div>
           {message.progress !== undefined && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.85em', opacity: 0.8 }}>
-                  {message.statusMessage || 'Initializing...'}
+                  {message.statusMessage || t('chat.research.initializing')}
                 </span>
                 <span style={{ fontSize: '0.8em', opacity: 0.6 }}>
                   {message.progress}%
@@ -1929,12 +1944,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
               </svg>
-              Deep Research Results
+              {t('chat.research.results')}
             </div>
             {message.subQuestions && message.subQuestions.length > 0 && (
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ fontSize: '0.9em', fontWeight: '500', marginBottom: '6px', opacity: 0.8 }}>
-                  Research Questions ({message.subQuestions.length}):
+                  {t('chat.research.questionsLabel', { count: message.subQuestions.length })}
                 </div>
                 <ul style={{
                   margin: '0',
@@ -1951,7 +1966,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
             {message.agentResults && message.agentResults.length > 0 && (
               <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '12px' }}>
-                Analyzed by {message.agentResults.length} research agents
+                {t('chat.research.analyzedBy', { count: message.agentResults.length })}
               </div>
             )}
           </div>
@@ -1964,10 +1979,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       deepResearchContent = (
         <div>
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
-            Deep Research Failed
+            {t('chat.research.failed')}
           </p>
-          <p style={{ margin: '4px 0', opacity: 0.85 }}>Query: "{content || 'your query'}"</p>
-          {message.content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {message.content}</p>}
+          <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.query')}: "{content || t('chat.labels.yourQuery')}"</p>
+          {message.content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {message.content}</p>}
         </div>
       );
     }
@@ -2012,7 +2027,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      Copy Results
+                      {t('chat.actions.copyResults')}
                     </ActionButton>
                   </>
                 )}
@@ -2031,7 +2046,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedImageContent = (
         <ThinkingContainer>
           <SpinnerIcon />
-          Generating image for: "{imagePrompt || 'your prompt'}"...
+          {t('chat.image.generating', { prompt: imagePrompt || t('chat.labels.yourPrompt') })}
         </ThinkingContainer>
       );
     } else if (status === 'completed' && imageUrl) {
@@ -2039,7 +2054,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <>
           {imagePrompt && (
             <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
-              Prompt: "{imagePrompt}"
+              {t('chat.labels.prompt')}: "{imagePrompt}"
             </p>
           )}
           <MessageImage src={imageUrl} alt={imagePrompt || 'Generated AI image'} style={{ maxHeight: '400px' }} />
@@ -2049,10 +2064,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedImageContent = (
         <div>
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
-            Image Generation Failed
+            {t('chat.image.failed')}
           </p>
-          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Prompt: "{imagePrompt}"</p>}
-          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
+          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.prompt')}: "{imagePrompt}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {content}</p>}
         </div>
       );
     }
@@ -2074,7 +2089,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      Copy URL
+                      {t('chat.actions.copyUrl')}
                     </ActionButton>
                   </>
                 )}
@@ -2094,7 +2109,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedVideoContent = (
         <ThinkingContainer>
           <SpinnerIcon />
-          Generating video for: "{imagePrompt || 'your prompt'}"...
+          {t('chat.video.generating', { prompt: imagePrompt || t('chat.labels.yourPrompt') })}
         </ThinkingContainer>
       );
     } else if (status === 'completed' && videoUrl) {
@@ -2102,7 +2117,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <>
           {imagePrompt && (
             <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
-              Prompt: "{imagePrompt}"
+              {t('chat.labels.prompt')}: "{imagePrompt}"
             </p>
           )}
           <MessageVideo controls src={videoUrl} style={{ maxHeight: '400px' }} />
@@ -2112,10 +2127,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedVideoContent = (
         <div>
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
-            Video Generation Failed
+            {t('chat.video.failed')}
           </p>
-          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Prompt: "{imagePrompt}"</p>}
-          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
+          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.prompt')}: "{imagePrompt}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {content}</p>}
         </div>
       );
     }
@@ -2137,7 +2152,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      Copy URL
+                      {t('chat.actions.copyUrl')}
                     </ActionButton>
                   </>
                 )}
@@ -2196,7 +2211,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 return (
                   <ThinkingContainer>
                     <SpinnerIcon />
-                    Thinking
+                    {t('chat.status.thinking')}
                   </ThinkingContainer>
                 );
               }
@@ -2328,7 +2343,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 // Share functionality
                 if (navigator.share) {
                   navigator.share({
-                    title: 'AI Chat Message',
+                    title: t('chat.share.title', 'AI Chat Message'),
                     text: contentToProcess
                   });
                 }
@@ -2355,7 +2370,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </ActionButton>
                 </>
               )}
-              <ActionButton onClick={handleReadAloud} title={isSpeaking ? 'Stop speaking' : 'Read aloud'}>
+              <ActionButton onClick={handleReadAloud} title={isSpeaking ? t('chat.actions.stopSpeaking', 'Stop speaking') : t('chat.actions.readAloud', 'Read aloud')}>
                 {isSpeaking ? (
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -2394,7 +2409,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
                   </svg>
-                  Load in 3D
+                  {t('chat.actions.load3d', 'Load in 3D')}
                 </ActionButton>
               )}
             </MessageActions>

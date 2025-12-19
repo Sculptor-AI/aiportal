@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { css } from 'styled-components';
 import ModelIcon from './ModelIcon';
+import { useTranslation } from '../contexts/TranslationContext';
 
 // Remove environment variable imports for UI filtering
 // const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -274,6 +275,7 @@ const ProviderLogo = styled.img`
 `;
 
 const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef(null);
@@ -429,14 +431,14 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
                <ProviderLogo 
                  src="/images/google.png" 
                  alt="Google" 
-                 title="Google Gemini API"
+                 title={t('models.provider.google')}
                />
              )}
              {getProviderSource(currentModel) === 'openrouter' && (
                <ProviderLogo 
                  src="/images/openrouter.png" 
                  alt="OpenRouter" 
-                 title="OpenRouter API"
+                 title={t('models.provider.openrouter')}
                />
              )}
            </div>
@@ -460,15 +462,15 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
            )}
          </ModelButton>
        ) : (
-         <ModelButton disabled theme={theme}>No Models Available</ModelButton>
-       )}
+        <ModelButton disabled theme={theme}>{t('models.noModels')}</ModelButton>
+      )}
 
       {isOpen && (
         <DropdownMenu theme={theme}>
           <SearchContainer theme={theme}>
             <SearchBar
               type="text"
-              placeholder="Search models..."
+              placeholder={t('models.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               theme={theme}
@@ -490,14 +492,14 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
                     <ProviderLogo 
                       src="/images/google.png" 
                       alt="Google" 
-                      title="Google Gemini API"
+                      title={t('models.provider.google')}
                     />
                   )}
                   {getProviderSource(model) === 'openrouter' && (
                     <ProviderLogo 
                       src="/images/openrouter.png" 
                       alt="OpenRouter" 
-                      title="OpenRouter API"
+                      title={t('models.provider.openrouter')}
                     />
                   )}
                 </div>

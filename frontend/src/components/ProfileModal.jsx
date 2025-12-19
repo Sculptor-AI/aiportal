@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/TranslationContext';
 import AdminLoginModal from './AdminLoginModal';
 
 const fadeIn = keyframes`
@@ -269,6 +270,7 @@ const formatDate = (dateString) => {
 
 const ProfileModal = ({ closeModal }) => {
   const { user, adminUser, logout, adminLogout } = useAuth();
+  const { t } = useTranslation();
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [profilePicture, setProfilePicture] = useState(
     localStorage.getItem('profilePicture') || null
@@ -303,11 +305,11 @@ const ProfileModal = ({ closeModal }) => {
     const file = event.target.files[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        alert(t('account.alert.invalidImageType'));
         return;
       }
       if (file.size > 5 * 1024 * 1024) {
-        alert('Please select an image smaller than 5MB');
+        alert(t('account.alert.imageTooLarge'));
         return;
       }
       const reader = new FileReader();
@@ -335,7 +337,7 @@ const ProfileModal = ({ closeModal }) => {
     <ModalOverlay onClick={handleOutsideClick}>
       <ModalContent>
         <ModalHeader>
-          <ModalTitle>Account</ModalTitle>
+          <ModalTitle>{t('account.title')}</ModalTitle>
           <CloseButton onClick={closeModal}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -358,7 +360,7 @@ const ProfileModal = ({ closeModal }) => {
               </AvatarOverlay>
             </AvatarContainer>
             <Username>{user.username}</Username>
-            <UserEmail>{user.email || 'No email provided'}</UserEmail>
+            <UserEmail>{user.email || t('account.emailFallback')}</UserEmail>
 
             <HiddenFileInput
               ref={fileInputRef}
@@ -370,18 +372,18 @@ const ProfileModal = ({ closeModal }) => {
 
           <InfoGroup>
             <InfoItem>
-              <InfoLabel>Member since</InfoLabel>
-              <InfoValue>{formatDate(user.createdAt)}</InfoValue>
-            </InfoItem>
-            <InfoItem>
-              <InfoLabel>Theme</InfoLabel>
-              <InfoValue style={{ textTransform: 'capitalize' }}>{user.settings?.theme || 'Default'}</InfoValue>
-            </InfoItem>
-            <InfoItem>
-              <InfoLabel>Status</InfoLabel>
-              <InfoValue>{adminUser ? 'Admin' : 'Member'}</InfoValue>
-            </InfoItem>
-          </InfoGroup>
+            <InfoLabel>{t('account.memberSince')}</InfoLabel>
+            <InfoValue>{formatDate(user.createdAt)}</InfoValue>
+          </InfoItem>
+          <InfoItem>
+            <InfoLabel>{t('account.theme')}</InfoLabel>
+            <InfoValue style={{ textTransform: 'capitalize' }}>{user.settings?.theme || t('account.themeDefault')}</InfoValue>
+          </InfoItem>
+          <InfoItem>
+            <InfoLabel>{t('account.status')}</InfoLabel>
+            <InfoValue>{adminUser ? t('account.statusAdmin') : t('account.statusMember')}</InfoValue>
+          </InfoItem>
+        </InfoGroup>
 
           {!adminUser ? (
             <SecondaryButton onClick={() => setShowAdminLogin(true)}>
@@ -389,7 +391,7 @@ const ProfileModal = ({ closeModal }) => {
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
               </svg>
-              Switch to Admin
+              {t('account.button.switchToAdmin')}
             </SecondaryButton>
           ) : (
             <SecondaryButton onClick={handleAdminLogout}>
@@ -398,7 +400,7 @@ const ProfileModal = ({ closeModal }) => {
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
-              Logout Admin
+              {t('account.button.logoutAdmin')}
             </SecondaryButton>
           )}
 
@@ -408,7 +410,7 @@ const ProfileModal = ({ closeModal }) => {
               <polyline points="16 17 21 12 16 7"></polyline>
               <line x1="21" y1="12" x2="9" y2="12"></line>
             </svg>
-            Sign Out
+            {t('account.button.signOut')}
           </ActionButton>
         </ModalBody>
       </ModalContent>

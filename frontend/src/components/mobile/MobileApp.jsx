@@ -12,6 +12,8 @@ import LoginModal from '../LoginModal';
 import ProfileModal from '../ProfileModal';
 import ModelIcon from '../ModelIcon';
 import OnboardingFlow from '../OnboardingFlow';
+import { getDefaultChatTitle, isDefaultChatTitle } from '../../utils/chatLocalization';
+import { useTranslation } from '../../contexts/TranslationContext';
 
 const MobileAppContainer = styled.div`
   display: flex;
@@ -212,6 +214,25 @@ const SectionHeaderStyled = styled.div`
 
 const MobileAppContent = () => {
   const { user, updateSettings: updateUserSettings, loading } = useAuth();
+  const { t } = useTranslation();
+  
+  const getLanguagePreference = () => {
+    if (user?.settings?.language) {
+      return user.settings.language;
+    }
+    try {
+      const savedSettings = localStorage.getItem('settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        if (parsedSettings.language) {
+          return parsedSettings.language;
+        }
+      }
+    } catch (error) {
+      console.error('Error reading saved language preference:', error);
+    }
+    return 'en-US';
+  };
   
   // State management
   const [chats, setChats] = useState(() => {
@@ -226,7 +247,7 @@ const MobileAppContent = () => {
     } catch (err) {
       console.error("Error loading chats from localStorage:", err);
     }
-    const defaultChat = { id: uuidv4(), title: 'New Chat', messages: [] };
+    const defaultChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
     return [defaultChat];
   });
   
@@ -276,7 +297,8 @@ const MobileAppContent = () => {
       focusMode: false,
       highContrast: false,
       reducedMotion: false,
-      lineSpacing: 'normal'
+      lineSpacing: 'normal',
+      language: 'en-US'
     };
   });
   
@@ -324,7 +346,7 @@ const MobileAppContent = () => {
       setActiveChat(chats[0].id);
     } else if (!currentChat && chats.length === 0) {
       // If no chats exist, create a new one
-      const newChat = { id: uuidv4(), title: 'New Chat', messages: [] };
+      const newChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
       setChats([newChat]);
       setActiveChat(newChat.id);
     }
@@ -348,6 +370,23 @@ const MobileAppContent = () => {
     }
   }, [settings, user]);
 
+  useEffect(() => {
+    if (!settings?.language) return;
+    const desiredTitle = getDefaultChatTitle(settings.language);
+    setChats(prevChats => {
+      let changed = false;
+      const updatedChats = prevChats.map(chat => {
+        const hasMessages = chat.messages && chat.messages.length > 0;
+        if (!hasMessages && isDefaultChatTitle(chat.title) && chat.title !== desiredTitle) {
+          changed = true;
+          return { ...chat, title: desiredTitle };
+        }
+        return chat;
+      });
+      return changed ? updatedChats : prevChats;
+    });
+  }, [settings?.language]);
+
   // Check if onboarding is needed for new users
   useEffect(() => {
     if (user && !loading) {
@@ -367,13 +406,12 @@ const MobileAppContent = () => {
   // Functions for model selector (moved from MobileChatWindow.jsx)
   const getModelDisplay = (modelId) => {
     const model = availableModels.find(m => m.id === modelId);
-    if (!model) return { name: 'Select Model', provider: '' };
-    // Basic provider extraction, can be enhanced
-    let provider = model.isBackendModel ? 'Backend' : 'Local';
-    if (model.id.includes('gemini')) provider = 'Google';
-    if (model.id.includes('claude')) provider = 'Anthropic';
-    if (model.id.includes('chatgpt')) provider = 'OpenAI';
-    if (model.id.includes('nemotron')) provider = 'Nvidia';
+    if (!model) return { name: t('models.selectPlaceholder'), provider: '' };
+    let provider = model.isBackendModel ? t('models.provider.backend') : t('models.provider.local');
+    if (model.id.includes('gemini')) provider = t('models.provider.google');
+    if (model.id.includes('claude')) provider = t('models.provider.anthropic');
+    if (model.id.includes('chatgpt')) provider = t('models.provider.openai');
+    if (model.id.includes('nemotron')) provider = t('models.provider.nvidia');
 
     return {
       name: model.name || model.id,
@@ -406,9 +444,10 @@ const MobileAppContent = () => {
 
   // Chat management functions
   const createNewChat = () => {
+    const currentLanguage = settings?.language || getLanguagePreference();
     const newChat = {
       id: uuidv4(),
-      title: 'New Chat',
+      title: getDefaultChatTitle(currentLanguage),
       messages: []
     };
     setChats([newChat, ...chats]);
@@ -420,9 +459,10 @@ const MobileAppContent = () => {
     const updatedChats = chats.filter(chat => chat.id !== chatId);
     
     if (updatedChats.length === 0) {
+      const currentLanguage = settings?.language || getLanguagePreference();
       const newChat = {
         id: uuidv4(),
-        title: 'New Chat',
+        title: getDefaultChatTitle(currentLanguage),
         messages: []
       };
       setChats([newChat]);
@@ -454,7 +494,7 @@ const MobileAppContent = () => {
           const updatedChat = {
             ...chat,
             messages: [...chat.messages, message],
-            title: chat.title === 'New Chat' && message.role === 'user' 
+            title: isDefaultChatTitle(chat.title) && message.role === 'user' 
               ? message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
               : chat.title
           };
@@ -521,7 +561,7 @@ const MobileAppContent = () => {
 
   // Function to reset chats and start fresh
   const resetChats = () => {
-    const newChat = { id: uuidv4(), title: 'New Chat', messages: [] };
+    const newChat = { id: uuidv4(), title: getDefaultChatTitle(settings?.language || getLanguagePreference()), messages: [] };
     setChats([newChat]);
     setActiveChat(newChat.id);
     // Clear localStorage to start fresh
@@ -636,7 +676,7 @@ const MobileAppContent = () => {
         {/* Model Selection Menu */}
         <ModelMenuOverlay $isOpen={isModelMenuOpen} onClick={() => setIsModelMenuOpen(false)} />
         <ModelMenuContainer $isOpen={isModelMenuOpen}>
-          <SectionHeaderStyled>Select AI Model</SectionHeaderStyled>
+          <SectionHeaderStyled>{t('models.sectionHeader')}</SectionHeaderStyled>
           {availableModels && availableModels.map(model => (
             <ModelMenuItem 
               key={model.id} 

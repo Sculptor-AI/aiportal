@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { useTranslation } from '../../contexts/TranslationContext';
 import ModelIcon from '../ModelIcon';
 
 const SidebarOverlay = styled.div`
@@ -324,6 +325,7 @@ const MobileSidebar = ({
   username,
   onModelChange
 }) => {
+  const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showShareModal, setShowShareModal] = useState(null);
   const [shareLink, setShareLink] = useState('');
@@ -355,10 +357,10 @@ const MobileSidebar = ({
     const shareUrl = `${window.location.origin}/share-view?id=${chatId}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
-      alert('Share link copied to clipboard!');
+      alert(t('sidebar.copySuccess'));
     } catch (err) {
       console.error('Failed to copy share link: ', err);
-      alert('Could not copy share link.');
+      alert(t('sidebar.copyFailure'));
     }
   };
 
@@ -380,7 +382,7 @@ const MobileSidebar = ({
 
   const getLastMessage = (chat) => {
     if (!chat.messages || chat.messages.length === 0) {
-      return 'No messages yet';
+      return t('chat.history.noMessages');
     }
     
     const lastMessage = chat.messages[chat.messages.length - 1];
@@ -390,7 +392,7 @@ const MobileSidebar = ({
       return content.substring(0, 50) + '...';
     }
     
-    return content || 'No content';
+    return content || t('chat.history.noContent');
   };
 
   const handleModelSelect = (modelId) => {
@@ -419,7 +421,7 @@ const MobileSidebar = ({
         </SidebarHeader>
         
         <SidebarContent>
-          <SectionHeader>Conversations</SectionHeader>
+          <SectionHeader>{t('sidebar.section.chats')}</SectionHeader>
           <ChatList>
             {chats.map(chat => (
               <ChatItem 
@@ -450,15 +452,15 @@ const MobileSidebar = ({
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            {isLoggedIn ? username : 'Sign In'}
+            {isLoggedIn ? username : t('sidebar.profile.signIn')}
           </FooterButton>
-          
+
           <FooterButton onClick={toggleSettings}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3"></circle>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
             </svg>
-            Settings
+            {t('sidebar.profile.settings')}
           </FooterButton>
         </SidebarFooter>
       </SidebarContainer>

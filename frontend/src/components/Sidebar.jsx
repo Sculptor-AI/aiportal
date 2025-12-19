@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from '../contexts/TranslationContext';
 
 // Styled Components - Updated for Grok.com-inspired design
 const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
@@ -851,6 +852,7 @@ const Sidebar = ({
   onSignOut,
   focusModeActive = false
 }) => {
+  const { t, language } = useTranslation();
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -938,10 +940,12 @@ const Sidebar = ({
     const shareUrl = `${window.location.origin}/share-view?id=${chatId}`; // Use query param for ID
     try {
       await navigator.clipboard.writeText(shareUrl);
-      alert('Static share link copied to clipboard! You need to implement the /share-view route.');
+      setCopyStatus(t('sidebar.copySuccess'));
+      setTimeout(() => setCopyStatus(''), 3000);
     } catch (err) {
       console.error('Failed to copy share link: ', err);
-      alert('Could not copy share link.');
+      setCopyStatus(t('sidebar.copyFailure'));
+      setTimeout(() => setCopyStatus(''), 3000);
     }
   };
 
@@ -972,10 +976,12 @@ const Sidebar = ({
     }
   };
 
+  const getChatTitle = (chat) => chat.title || t('chat.list.untitled', 'Chat {{id}}', { id: chat.id.substring(0, 4) });
+
   // Filter chats based on search term
   const filteredChats = chats.filter(chat => {
     if (!searchTerm) return true;
-    const chatTitle = chat.title || `Chat ${chat.id.substring(0, 4)}`;
+    const chatTitle = getChatTitle(chat);
     return chatTitle.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
@@ -1002,9 +1008,9 @@ const Sidebar = ({
             <CollapseButton
               onClick={toggleCollapsed}
               $collapsed={$collapsed}
-              title="Collapse Sidebar"
+              title={t('sidebar.collapseTitle')}
               style={{ marginLeft: 'auto' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line>
               </svg>
             </CollapseButton>
@@ -1013,13 +1019,13 @@ const Sidebar = ({
 
         {/* New Chat Button Section */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
-          <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }}>
-            <SidebarButton onClick={createNewChat}>
+                <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
+                  <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9"></path>
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
               </svg>
-              <span>New Chat</span>
+              <span>{t('sidebar.newChat')}</span>
             </SidebarButton>
           </SidebarSection>
         )}
@@ -1034,7 +1040,7 @@ const Sidebar = ({
               </svg>
               <SearchInput
                 type="text"
-                placeholder="Search chats..."
+                placeholder={t('sidebar.searchPlaceholder')}
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
@@ -1054,56 +1060,56 @@ const Sidebar = ({
         {(!$collapsed || (theme && theme.name === 'retro')) && (
           <SidebarSection style={{ paddingTop: '8px', paddingBottom: '16px', borderTop: 'none' }}>
             {location.pathname !== '/' && (
-              <NavLink to="/">
+                  <NavLink to="/">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
-                <span>Chat</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/media' && (
-              <NavLink to="/media">
+                    <span>{t('sidebar.nav.chat')}</span>
+                  </NavLink>
+                )}
+                {location.pathname !== '/media' && (
+                  <NavLink to="/media">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="5 3 19 12 5 21 5 3"></polygon>
                 </svg>
-                <span>Media</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/news' && (
-              <NavLink to="/news">
+                    <span>{t('sidebar.nav.media')}</span>
+                  </NavLink>
+                )}
+                {location.pathname !== '/news' && (
+                  <NavLink to="/news">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                 </svg>
-                <span>News</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/projects' && (
-              <NavLink to="/projects">
+                    <span>{t('sidebar.nav.news')}</span>
+                  </NavLink>
+                )}
+                {location.pathname !== '/projects' && (
+                  <NavLink to="/projects">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="3" width="7" height="7" rx="1"></rect>
                   <rect x="14" y="3" width="7" height="7" rx="1"></rect>
                   <rect x="3" y="14" width="7" height="7" rx="1"></rect>
                   <rect x="14" y="14" width="7" height="7" rx="1"></rect>
                 </svg>
-                <span>Projects</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/workspace' && (
-              <NavLink to="/workspace">
+                    <span>{t('sidebar.nav.projects')}</span>
+                  </NavLink>
+                )}
+                {location.pathname !== '/workspace' && (
+                  <NavLink to="/workspace">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
                 </svg>
-                <span>Workspace</span>
-              </NavLink>
-            )}
-            {isAdmin && location.pathname !== '/admin' && (
-              <NavLink to="/admin">
+                    <span>{t('sidebar.nav.workspace')}</span>
+                  </NavLink>
+                )}
+                {isAdmin && location.pathname !== '/admin' && (
+                  <NavLink to="/admin">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                 </svg>
-                <span>Admin</span>
-              </NavLink>
-            )}
+                    <span>{t('sidebar.nav.admin')}</span>
+                  </NavLink>
+                )}
           </SidebarSection>
         )}
 
@@ -1119,7 +1125,7 @@ const Sidebar = ({
           <MobileToggleButton
             onClick={toggleMobileExpanded}
             $isExpanded={isMobileExpanded}
-            title={isMobileExpanded ? "Collapse Menu" : "Expand Menu"}
+            title={isMobileExpanded ? t('sidebar.mobile.collapse') : t('sidebar.mobile.expand')}
             style={{ marginLeft: 'auto' }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1141,13 +1147,13 @@ const Sidebar = ({
 
               {/* New Chat Button for Mobile */}
               <div className="mobile-only" style={{ display: 'none' }}>
-                <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }}>
-                  <SidebarButton onClick={createNewChat}>
+            <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
+              <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 20h9"></path>
                       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                     </svg>
-                    <span>New Chat</span>
+                    <span>{t('sidebar.newChat')}</span>
                   </SidebarButton>
                 </SidebarSection>
 
@@ -1160,7 +1166,7 @@ const Sidebar = ({
                     </svg>
                     <SearchInput
                       type="text"
-                      placeholder="Search chats..."
+                      placeholder={t('sidebar.searchPlaceholder')}
                       value={searchTerm}
                       onChange={handleSearchChange}
                     />
@@ -1180,30 +1186,32 @@ const Sidebar = ({
 
               {/* Section header for chats */}
               <SectionHeader $collapsed={$collapsed}>
-                Chats
+                {t('sidebar.section.chats')}
               </SectionHeader>
 
               {/* --- Chats Section --- */}
               <ChatList $collapsed={$collapsed}>
                 {filteredChats.length === 0 && searchTerm && (
                   <NoResultsMessage>
-                    No chats found for "{searchTerm}"
+                    {t('sidebar.emptySearch', null, { term: searchTerm })}
                   </NoResultsMessage>
                 )}
-                {filteredChats.map(chat => (
+                {filteredChats.map(chat => {
+                  const chatTitle = getChatTitle(chat);
+                  return (
                   <ChatItem
                     key={chat.id}
                     $active={activeChat === chat.id}
                     onClick={() => setActiveChat(chat.id)}
                     $collapsed={$collapsed}
-                    title={chat.title || `Chat ${chat.id.substring(0, 4)}`}
+                    title={chatTitle}
                   >
                     {/* TODO: Add chat icon if desired */}
-                    <ChatTitle $collapsed={$collapsed}>{chat.title || `Chat ${chat.id.substring(0, 4)}`}</ChatTitle>
+                    <ChatTitle $collapsed={$collapsed}>{chatTitle}</ChatTitle>
                     {/* Container for action buttons */}
                     <ButtonContainer $collapsed={$collapsed}>
                       <ShareButton
-                        title="Share Chat"
+                        title={t('sidebar.button.share')}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent chat selection
                           handleShareChat(chat.id);
@@ -1218,7 +1226,7 @@ const Sidebar = ({
                         </svg>
                       </ShareButton>
                       <DeleteButton
-                        title="Delete Chat"
+                        title={t('sidebar.button.delete')}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent chat selection
                           deleteChat(chat.id);
@@ -1235,7 +1243,8 @@ const Sidebar = ({
                       </DeleteButton>
                     </ButtonContainer>
                   </ChatItem>
-                ))}
+                  );
+                })}
               </ChatList>
               {/* Display copy status message */}
               {copyStatus && <div style={{ padding: '5px 10px', fontSize: '11px', color: '#aaa', textAlign: 'center' }}>{copyStatus}</div>}
@@ -1248,7 +1257,7 @@ const Sidebar = ({
               <ProfileDropdownContainer data-profile-dropdown>
                 <ProfileButton
                   onClick={handleProfileClick}
-                  title={isLoggedIn ? `View profile: ${username}` : "Sign In"}
+                  title={isLoggedIn ? t('sidebar.profile.viewProfile', null, { username }) : t('sidebar.profile.signIn')}
                 >
                   {isLoggedIn ? (
                     <ProfileAvatar $profilePicture={profilePicture}>
@@ -1259,7 +1268,7 @@ const Sidebar = ({
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
                     </svg>
                   )}
-                  <span>{isLoggedIn ? username : 'Sign In'}</span>
+                  <span>{isLoggedIn ? username : t('sidebar.profile.signIn')}</span>
                 </ProfileButton>
 
                 {/* Profile Dropdown Menu */}
@@ -1269,7 +1278,7 @@ const Sidebar = ({
                       <circle cx="12" cy="12" r="3"></circle>
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                     </svg>
-                    <span>Settings</span>
+                    <span>{t('sidebar.profile.settings')}</span>
                   </ProfileDropdownItem>
 
                   <ProfileDropdownItem onClick={handleInfoClick}>
@@ -1278,7 +1287,7 @@ const Sidebar = ({
                       <path d="M12 16v-4"></path>
                       <path d="M12 8h.01"></path>
                     </svg>
-                    <span>Info</span>
+                    <span>{t('sidebar.profile.info')}</span>
                   </ProfileDropdownItem>
 
                   {isLoggedIn && (
@@ -1288,7 +1297,7 @@ const Sidebar = ({
                         <polyline points="16 17 21 12 16 7"></polyline>
                         <line x1="21" y1="12" x2="9" y2="12"></line>
                       </svg>
-                      <span>Sign Out</span>
+                      <span>{t('sidebar.profile.signOut')}</span>
                     </ProfileDropdownItem>
                   )}
                 </ProfileDropdown>
