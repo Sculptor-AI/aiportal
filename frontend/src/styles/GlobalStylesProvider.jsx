@@ -33,9 +33,9 @@ const GlobalStyle = createGlobalStyle`
     
     --line-height: ${props => {
       switch(props.lineSpacing) {
-        case 'relaxed': return '1.7';
-        case 'loose': return '2';
-        default: return '1.5';
+        case 'relaxed': return '1.75';
+        case 'loose': return '2.2';
+        default: return '1.25';
       }
     }};
     
@@ -43,9 +43,9 @@ const GlobalStyle = createGlobalStyle`
     
     --message-spacing: ${props => {
       switch(props.messageSpacing) {
-        case 'compact': return '16px';
-        case 'spacious': return '32px';
-        default: return '24px'; // comfortable
+        case 'compact': return '10px';
+        case 'spacious': return '85px';
+        default: return '42.5px'; // comfortable
       }
     }};
     
