@@ -893,7 +893,7 @@ const AppContent = () => {
     <ThemeProvider theme={currentTheme}>
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
-        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'minimal'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
+        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'minimal'} message-spacing-${settings.messageSpacing || 'comfortable'} message-align-${settings.messageAlignment || 'left'}`}>
           <MainContentArea
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}

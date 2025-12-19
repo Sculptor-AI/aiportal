@@ -631,22 +631,14 @@ const Pre = styled.pre`
 
 const Message = styled.div`
   display: flex;
-  flex-direction: ${props => props.$alignment === 'right' ? 'column' : 'row'};
-  margin-bottom: ${props => {
-    // Apply message spacing settings
-    const spacing = props.theme.messageSpacing || 'comfortable';
-    switch (spacing) {
-      case 'compact': return '16px';
-      case 'spacious': return '32px';
-      default: return '24px'; // comfortable
-    }
-  }};
-  align-items: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
+  flex-direction: ${props => props.$alignment === 'right' ? 'row-reverse' : 'row'};
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin-bottom: var(--message-spacing, 24px);
   max-width: 100%;
   width: 100%;
-  justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
-  padding: 0;
-  padding-right: ${props => props.$alignment === 'right' ? '20px' : '0'};
+  padding-left: ${props => props.$alignment === 'left' ? '20px' : '0'};
+  padding-right: ${props => props.$alignment === 'right' ? '30px' : '0'};
 `;
 
 const Avatar = styled.div`
@@ -656,8 +648,8 @@ const Avatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: ${props => props.role === 'user' ? '0' : '14px'};
-  margin-left: ${props => props.role === 'user' ? '0' : '20px'};
+  margin-right: ${props => props.$alignment === 'right' ? '0' : (props.role === 'user' ? '18px' : '14px')};
+  margin-left: ${props => props.$alignment === 'left' ? '0' : (props.role === 'user' ? '18px' : '14px')};
   margin-top: ${props => props.role === 'user' ? '8px' : '0'};
   font-weight: 600;
   flex-shrink: 0;
@@ -669,7 +661,6 @@ const Avatar = styled.div`
   color: ${props => props.role === 'user' ? props.theme.text : 'white'};
   transition: all 0.2s ease;
   box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
-  order: ${props => props.role === 'user' ? '2' : '1'};
   opacity: ${props => props.role === 'user' ? '0.6' : '1'};
   
   &:hover {
@@ -689,8 +680,7 @@ const MessageWrapper = styled.div`
   flex-direction: column;
   max-width: ${props => props.role === 'user' ? '70%' : 'calc(100% - 60px)'};
   flex: ${props => props.role === 'user' ? '0 1 auto' : '1'};
-  order: ${props => props.role === 'user' ? '1' : '2'};
-  align-items: ${props => props.role === 'user' ? 'flex-end' : 'flex-start'};
+  align-items: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   
   @media (max-width: 768px) {
     max-width: ${props => props.role === 'user' ? '85%' : 'calc(100% - 60px)'};
@@ -711,24 +701,30 @@ const Content = styled.div`
   line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
-  margin-left: ${props => props.role === 'user' ? 'auto' : '0'};
-  margin-right: ${props => props.role === 'user' ? '0' : '0'};
+  margin-left: ${props => props.$alignment === 'right' ? 'auto' : '0'};
+  margin-right: ${props => props.$alignment === 'left' ? 'auto' : '0'};
   position: relative;
+  text-align: ${props => props.$alignment === 'right' ? 'right' : 'left'};
+  direction: ${props => props.$alignment === 'right' ? 'rtl' : 'ltr'};
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   
   ${props => props.role === 'user' && css`
     padding: 15px 18px;
     padding-right: 18px;
-    border-radius: 20px 20px 4px 20px;
+    border-radius: ${props.$alignment === 'right' ? '20px 20px 4px 20px' : '20px 20px 20px 4px'};
     background: ${getUserBubbleBackground(props.theme)};
     box-shadow: 0 2px 10px ${props.theme.shadow};
     border: 1px solid ${props.theme.border};
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
+    margin-left: ${props.$alignment === 'right' ? 'auto' : '0'};
+    margin-right: ${props.$alignment === 'left' ? 'auto' : '0'};
+    text-align: ${props.$alignment === 'right' ? 'right' : 'left'};
+    direction: ${props.$alignment === 'right' ? 'rtl' : 'ltr'};
   `}
   
   /* Bubble pointer for user messages */
-  ${props => props.role === 'user' && `
+  ${props => props.role === 'user' && props.$alignment === 'right' && `
     &::after {
       content: '';
       position: absolute;
@@ -739,6 +735,20 @@ const Content = styled.div`
       border-left: 8px solid ${props.theme.name === 'dark' || props.theme.name === 'oled'
       ? 'rgba(40, 40, 45, 0.95)'
       : props.theme.messageUser};
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+    }
+  `}
+  
+  ${props => props.role === 'user' && props.$alignment === 'left' && `
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: -8px;
+      width: 0;
+      height: 0;
+      border-right: 8px solid ${props.theme.messageUser};
       border-top: 8px solid transparent;
       border-bottom: 8px solid transparent;
     }
@@ -768,6 +778,8 @@ const Content = styled.div`
   /* Force code blocks to stay within container width */
   & > ${CodeBlock} {
     max-width: 100%;
+    text-align: left;
+    direction: ltr;
   }
   
   /* Style for AI model signatures */
@@ -801,15 +813,15 @@ const Timestamp = styled.div`
 
 const MessageActions = styled.div`
   display: flex;
-  justify-content: flex-start;
+  justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   align-items: center;
   gap: 8px;
   margin-top: 8px;
   padding: 0;
   opacity: 1;
-  width: fit-content;
+  width: ${props => props.$alignment === 'right' ? '100%' : 'fit-content'};
   max-width: 100%;
-  align-self: flex-start;
+  align-self: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
 `;
 
 const ActionButton = styled.button`
@@ -1694,7 +1706,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   const useModelIcon = role === 'assistant' && showModelIcons && modelId;
 
   // Get message alignment from settings, but default user messages to right
-  const messageAlignment = role === 'user' ? 'right' : (settings.messageAlignment || 'left');
+  const messageAlignmentPreference = settings.messageAlignment || 'left';
+  const messageAlignment = messageAlignmentPreference === 'right' ? 'right' : 'left';
 
   // Get bubble style from settings
   // Apply high contrast mode if set
@@ -1838,12 +1851,16 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
     return (
       <Message $alignment={messageAlignment}>
-        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <MessageWrapper role={role}>
-          <Content role={role} className={`chat-message chat-message--${role}`}>
+        {role !== 'user' && (
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+            {getAvatar()}
+          </Avatar>
+        )}
+        <MessageWrapper role={role} $alignment={messageAlignment}>
+          <Content role={role} $alignment={messageAlignment} className={`chat-message chat-message--${role}`}>
             {generatedFlowchartContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-              <MessageActions role={role}>
+              <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
                 {status === 'completed' && flowchartData && (
                   <>
@@ -1960,9 +1977,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
     return (
       <Message $alignment={messageAlignment}>
-        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <MessageWrapper role={role}>
-          <Content role={role} className={`chat-message chat-message--${role}`}>
+        {role !== 'user' && (
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+            {getAvatar()}
+          </Avatar>
+        )}
+        <MessageWrapper role={role} $alignment={messageAlignment}>
+          <Content role={role} $alignment={messageAlignment} className={`chat-message chat-message--${role}`}>
             {deepResearchContent}
             {/* Show sources if available */}
             {hasSources && status === 'completed' && (
@@ -1988,7 +2009,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               </SourcesContainer>
             )}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-              <MessageActions role={role}>
+              <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
                 {status === 'completed' && content && (
                   <>
@@ -2045,15 +2066,20 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
     return (
       <Message $alignment={messageAlignment}>
-        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <MessageWrapper role={role}>
+        {role !== 'user' && (
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+            {getAvatar()}
+          </Avatar>
+        )}
+        <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content
             role={role}
+            $alignment={messageAlignment}
             className={`chat-message chat-message--${role}${highContrast ? ' high-contrast' : ''}`}
           >
             {generatedImageContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-              <MessageActions role={role}>
+              <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
                 {status === 'completed' && imageUrl && (
                   <>
@@ -2111,15 +2137,20 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
     return (
       <Message $alignment={messageAlignment}>
-        {role !== 'user' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
-        <MessageWrapper role={role}>
+        {role !== 'user' && (
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+            {getAvatar()}
+          </Avatar>
+        )}
+        <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content
             role={role}
+            $alignment={messageAlignment}
             className={`chat-message chat-message--${role}${highContrast ? ' high-contrast' : ''}`}
           >
             {generatedVideoContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-              <MessageActions role={role}>
+              <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
                 {status === 'completed' && videoUrl && (
                   <>
@@ -2143,16 +2174,21 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   return (
     <Message $alignment={messageAlignment}>
-      {messageAlignment !== 'right' && <Avatar role={role} $useModelIcon={useModelIcon}>{getAvatar()}</Avatar>}
+      {(role === 'assistant' || role === 'user') && (
+        <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+          {getAvatar()}
+        </Avatar>
+      )}
       {isError ? (
-        <ErrorMessage role={role} className={`chat-message chat-message--${role}`}>
+        <ErrorMessage role={role} $alignment={messageAlignment} className={`chat-message chat-message--${role}`}>
           {content}
           {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
         </ErrorMessage>
       ) : (
-        <MessageWrapper role={role}>
+        <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content
             role={role}
+            $alignment={messageAlignment}
             className={`chat-message chat-message--${role}${highContrast ? ' high-contrast' : ''}`}
           >
             {image && (
@@ -2301,7 +2337,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
           {/* Message action buttons - only show for completed AI messages (not loading) */}
           {!isLoading && contentToProcess && role === 'assistant' && (
-            <MessageActions role={role}>
+            <MessageActions role={role} $alignment={messageAlignment}>
               {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
               <div style={{ flexGrow: 1 }}></div>
               {role === 'assistant' && (
