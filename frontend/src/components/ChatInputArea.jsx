@@ -17,6 +17,8 @@ import {
   ActionChip,
   RetroIconWrapper,
   HammerButton,
+  HammerIcon,
+  CloseIcon,
   ToolbarContainer,
   ToolbarItem,
   FilesPreviewContainer,
@@ -721,16 +723,56 @@ const ChatInputArea = forwardRef(({
             ref={toolbarRef}
             $isOpen={showToolbar}
             onClick={() => setShowToolbar(!showToolbar)}
-            title="Toggle Toolbar"
+            type="button"
+            title={showToolbar ? 'Close Toolbar' : 'Open Toolbar'}
+            aria-label={showToolbar ? 'Close Toolbar' : 'Open Toolbar'}
+            aria-expanded={showToolbar}
           >
-            {theme.name === 'retro' ? (
-              <img src="/images/retroTheme/hammerIcon.png" alt="Tools" style={{ width: '18px', height: '18px' }} />
-            ) : (
+            <HammerIcon aria-hidden="true" $isOpen={showToolbar}>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
               </svg>
-            )}
+            </HammerIcon>
+            <CloseIcon aria-hidden="true" $isOpen={showToolbar}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </CloseIcon>
           </HammerButton>
+
+          <ToolbarContainer $isOpen={showToolbar} $isEmpty={chatIsEmpty} ref={toolbarContainerRef}>
+            <ToolbarItem title="Equation Editor" onClick={onToggleEquationEditor}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 4H6L12 12L6 20H18" />
+              </svg>
+            </ToolbarItem>
+            <ToolbarItem title="Whiteboard" onClick={onToggleWhiteboard}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"></path><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"></path></svg>
+            </ToolbarItem>
+            <ToolbarItem title="Graphing Calculator" onClick={onToggleGraphing}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+              </svg>
+            </ToolbarItem>
+            <ToolbarItem title="Flowchart" onClick={onToggleFlowchart}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="18" r="3"></circle>
+                <circle cx="6" cy="6" r="3"></circle>
+                <circle cx="18" cy="6" r="3"></circle>
+                <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
+                <path d="M12 12v3"></path>
+              </svg>
+            </ToolbarItem>
+            <ToolbarItem title="3D Sandbox" onClick={onToggleSandbox3D}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </ToolbarItem>
+          </ToolbarContainer>
 
           {/* Render visible chips */}
           {visibleChips.map((chip, index) => renderChip({
@@ -1132,39 +1174,6 @@ const ChatInputArea = forwardRef(({
               )}
             </SendButton>
           </InputRow>
-
-          <ToolbarContainer $isOpen={showToolbar} $isEmpty={chatIsEmpty} ref={toolbarContainerRef}>
-            <ToolbarItem title="Equation Editor" onClick={onToggleEquationEditor}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 4H6L12 12L6 20H18" />
-              </svg>
-            </ToolbarItem>
-            <ToolbarItem title="Whiteboard" onClick={onToggleWhiteboard}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"></path><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"></path></svg>
-            </ToolbarItem>
-            <ToolbarItem title="Graphing Calculator" onClick={onToggleGraphing}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                <polyline points="17 6 23 6 23 12"></polyline>
-              </svg>
-            </ToolbarItem>
-            <ToolbarItem title="Flowchart" onClick={onToggleFlowchart}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="18" r="3"></circle>
-                <circle cx="6" cy="6" r="3"></circle>
-                <circle cx="18" cy="6" r="3"></circle>
-                <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
-                <path d="M12 12v3"></path>
-              </svg>
-            </ToolbarItem>
-            <ToolbarItem title="3D Sandbox" onClick={onToggleSandbox3D}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                <line x1="12" y1="22.08" x2="12" y2="12"></line>
-              </svg>
-            </ToolbarItem>
-          </ToolbarContainer>
         </MessageInputWrapper>
       </ComposerRow>
 
