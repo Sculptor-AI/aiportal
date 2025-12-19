@@ -35,7 +35,12 @@ export const ChatHeader = styled.div`
   -webkit-backdrop-filter: blur(5px);
   z-index: 101; // Changed from 10 to 101
   position: relative;
-  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1),
+              opacity 0.3s ease,
+              filter 0.3s ease;
+  opacity: ${props => props.$focusModeActive ? 0.12 : 1};
+  filter: ${props => props.$focusModeActive ? 'blur(6px)' : 'none'};
+  pointer-events: ${props => props.$focusModeActive ? 'none' : 'auto'};
 `;
 
 export const ChatTitleSection = styled.div`
@@ -110,6 +115,11 @@ export const MessageList = styled.div`
     `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
     'none'};
   }
+  
+  opacity: ${props => props.$focusModeActive ? 0.1 : 1};
+  filter: ${props => props.$focusModeActive ? 'blur(6px)' : 'none'};
+  pointer-events: ${props => props.$focusModeActive ? 'none' : 'auto'};
+  transition: opacity 0.3s ease, filter 0.3s ease;
 `;
 
 export const fadeIn = keyframes`
@@ -926,6 +936,9 @@ export const EmptyState = styled.div`
   ${({ $isExiting }) => $isExiting && css`
     animation: ${emptyStateExitAnimation} 0.5s ease-out forwards;
   `}
+  
+  opacity: ${props => props.$focusModeActive ? 0.1 : 1};
+  filter: ${props => props.$focusModeActive ? 'blur(6px)' : 'none'};
   
   h3 {
     margin-bottom: 0;

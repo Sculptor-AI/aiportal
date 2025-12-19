@@ -1296,9 +1296,12 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
                   onChange={(e) => handleChange('fontFamily', e.target.value)}
                 >
                   <option value="system">System Default</option>
-                  <option value="inter">Inter</option>
+                  <option value="inter">Space Mono</option>
                   <option value="roboto">Roboto</option>
                   <option value="opensans">Open Sans</option>
+                  <option value="montserrat">Montserrat</option>
+                  <option value="lato">Lato</option>
+                  <option value="caveat">Caveat</option>
                   <option value="georgia">Georgia</option>
                   <option value="merriweather">Merriweather</option>
                 </SelectBox>

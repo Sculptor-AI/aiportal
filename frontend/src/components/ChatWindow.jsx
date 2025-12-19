@@ -50,6 +50,9 @@ const ChatWindow = forwardRef(({
   onToggleSandbox3D,
   onCloseSandbox3D,
   onToolbarToggle,
+  onUserTyping,
+  focusModeActive = false,
+  onMessageSent,
 }, ref) => {
   // All hooks at the top level - no conditional returns before this
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
@@ -491,8 +494,12 @@ const ChatWindow = forwardRef(({
   // Early return for no chat - after all hooks
   if (!chat) {
     return (
-      <ChatWindowContainer fontSize={settings?.fontSize} $sidebarCollapsed={$sidebarCollapsed}>
-        <EmptyState $isExiting={animateEmptyStateOut}>
+      <ChatWindowContainer
+        fontSize={settings?.fontSize}
+        $sidebarCollapsed={$sidebarCollapsed}
+        $focusModeActive={focusModeActive}
+      >
+        <EmptyState $isExiting={animateEmptyStateOut} $focusModeActive={focusModeActive}>
           <div style={{ textAlign: 'center', padding: '20px' }}>
             <h3>No chat available</h3>
             <p>Creating a new chat...</p>
@@ -525,6 +532,7 @@ const ChatWindow = forwardRef(({
           onClearAttachment={() => { }}
           resetFileUploadTrigger={false}
           availableModels={availableModels}
+          onMessageSent={onMessageSent}
         />
       </ChatWindowContainer>
     );
@@ -534,10 +542,12 @@ const ChatWindow = forwardRef(({
     <ChatWindowContainer
       fontSize={settings?.fontSize}
       $sidebarCollapsed={$sidebarCollapsed}
+      $focusModeActive={focusModeActive}
     >
       <ChatHeader
         style={{ opacity: ($sidebarCollapsed && isFocused) ? '0' : '1', transition: 'opacity 0.3s ease' }}
         $sidebarCollapsed={$sidebarCollapsed}
+        $focusModeActive={focusModeActive}
       >
         <ChatTitleSection $sidebarCollapsed={$sidebarCollapsed}>
           <ModelSelectorsRow>
@@ -562,13 +572,13 @@ const ChatWindow = forwardRef(({
       </ChatHeader>
 
       {(showGreeting && (showEmptyStateStatic || animateEmptyStateOut)) && !isLiveModeOpen && (
-        <EmptyState $isExiting={animateEmptyStateOut}>
+        <EmptyState $isExiting={animateEmptyStateOut} $focusModeActive={focusModeActive}>
           {/* Content for empty state, e.g., a greeting message */}
         </EmptyState>
       )}
 
       {/* Main Chat Content */}
-      <MessageList>
+      <MessageList $focusModeActive={focusModeActive}>
         {!chatIsEmpty && !isLiveModeOpen && chat && Array.isArray(chat.messages) && chat.messages.map(message => (
           <ChatMessage
             key={message.id}
@@ -627,6 +637,8 @@ const ChatWindow = forwardRef(({
           isImagePromptMode={isImagePromptMode}
           onImageModeChange={setIsImagePromptMode}
           selectedImageModel={selectedImageModel}
+          onUserTyping={onUserTyping}
+          onMessageSent={onMessageSent}
         />
       )}
 
@@ -642,5 +654,3 @@ const ChatWindow = forwardRef(({
 ChatWindow.displayName = 'ChatWindow';
 
 export default ChatWindow;
-
-

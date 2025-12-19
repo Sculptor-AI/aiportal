@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
@@ -14,6 +14,7 @@ import Sandbox3DModal from './components/Sandbox3DModal';
 import OnboardingFlow from './components/OnboardingFlow';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
+import { getFontFamilyValue } from './styles/fontUtils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import GlobalStylesProvider from './styles/GlobalStylesProvider';
 import SharedChatView from './components/SharedChatView';
@@ -445,6 +446,8 @@ const AppContent = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDinosaurGame, setShowDinosaurGame] = useState(false);
   const chatWindowRef = useRef(null);
+  const [isFocusModeActive, setIsFocusModeActive] = useState(false);
+  const focusModeDefaultedRef = useRef(false);
 
   // Easter eggs hook
   const {
@@ -697,6 +700,12 @@ const AppContent = () => {
     setIsProfileOpen(!isProfileOpen);
   };
 
+  useEffect(() => {
+    if (!settings.focusMode && isFocusModeActive) {
+      setIsFocusModeActive(false);
+    }
+  }, [settings.focusMode, isFocusModeActive]);
+
   // Update settings
   const updateSettings = (newSettings) => {
     setSettings(newSettings);
@@ -706,6 +715,15 @@ const AppContent = () => {
       updateUserSettings(newSettings);
     }
   };
+
+  useEffect(() => {
+    if (!focusModeDefaultedRef.current) {
+      focusModeDefaultedRef.current = true;
+      if (settings.focusMode) {
+        updateSettings({ ...settings, focusMode: false });
+      }
+    }
+  }, [settings.focusMode]);
 
   // Handle onboarding completion
   const handleOnboardingComplete = (onboardingSettings) => {
@@ -737,6 +755,21 @@ const AppContent = () => {
     setSelectedModel(modelId);
     // Any other actions needed when model changes, like saving to storage
   };
+
+  const handleUserTyping = useCallback(() => {
+    if (settings.sidebarAutoCollapse && !collapsed) {
+      setCollapsed(true);
+    }
+    if (settings.focusMode && !isFocusModeActive) {
+      setIsFocusModeActive(true);
+    }
+  }, [settings.sidebarAutoCollapse, settings.focusMode, collapsed, isFocusModeActive]);
+
+  const handleMessageSent = useCallback(() => {
+    if (isFocusModeActive) {
+      setIsFocusModeActive(false);
+    }
+  }, [isFocusModeActive]);
 
   // Function to reset chats and start fresh
   const resetChats = () => {
@@ -840,7 +873,13 @@ const AppContent = () => {
 
   // Render logic
   const currentChat = getCurrentChat();
-  const currentTheme = getTheme(settings.theme);
+  const currentTheme = useMemo(() => {
+    const baseTheme = getTheme(settings.theme);
+    const resolvedFontFamily = baseTheme.name === 'retro'
+      ? baseTheme.fontFamily
+      : getFontFamilyValue(settings.fontFamily || 'system');
+    return { ...baseTheme, fontFamily: resolvedFontFamily };
+  }, [settings.theme, settings.fontFamily]);
 
   // AUTHENTICATION CHECKS - After all hooks are declared
   // Show loading spinner while checking authentication
@@ -874,8 +913,9 @@ const AppContent = () => {
   if (window.location.pathname === '/share-view') {
     return (
       <ThemeProvider theme={currentTheme}>
-        <GlobalStylesProvider />
-        <SharedChatView />
+        <GlobalStylesProvider settings={settings}>
+          <SharedChatView />
+        </GlobalStylesProvider>
       </ThemeProvider>
     );
   }
@@ -946,6 +986,7 @@ const AppContent = () => {
               setCollapsed={setCollapsed}
               settings={settings}
               onSignOut={logout}
+              focusModeActive={isFocusModeActive}
             />
             {console.log('Available models for ChatWindow:', availableModels)}
             <Routes>
@@ -979,6 +1020,9 @@ const AppContent = () => {
                   onToggleSandbox3D={() => setIsSandbox3DOpen(prev => !prev)}
                   onCloseSandbox3D={() => setIsSandbox3DOpen(false)}
                   onToolbarToggle={setIsToolbarOpen}
+                  onUserTyping={handleUserTyping}
+                  focusModeActive={isFocusModeActive}
+                  onMessageSent={handleMessageSent}
                 />
               } />
               <Route path="/media" element={<MediaPage />} />
