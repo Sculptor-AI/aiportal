@@ -419,7 +419,7 @@ const AppContent = () => {
       showModelIcons: true,
       messageAlignment: 'left',
       codeHighlighting: true,
-      bubbleStyle: 'modern',
+      bubbleStyle: 'minimal',
       messageSpacing: 'comfortable',
       sidebarAutoCollapse: false,
       focusMode: false,
@@ -893,7 +893,7 @@ const AppContent = () => {
     <ThemeProvider theme={currentTheme}>
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
-        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
+        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'minimal'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
           <MainContentArea
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}

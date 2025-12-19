@@ -56,6 +56,12 @@ const GlobalStyle = createGlobalStyle`
         default: return '18px'; // modern
       }
     }};
+
+    --bubble-user-bg: ${props => props.theme?.messageUser || 'rgba(255, 255, 255, 0.8)'};
+    --bubble-assistant-bg: ${props => props.theme?.messageAi || 'rgba(240, 244, 248, 0.8)'};
+    --bubble-border-color: ${props => props.theme?.border || 'rgba(0, 0, 0, 0.08)'};
+    --bubble-shadow-color: ${props => props.theme?.shadow || 'rgba(0, 0, 0, 0.06)'};
+    --bubble-user-pointer: ${props => props.theme?.messageUser || 'rgba(255, 255, 255, 0.8)'};
   }
 
   body {
@@ -131,7 +137,7 @@ const GlobalStylesProvider = ({ settings, children }) => {
         lineSpacing={settings?.lineSpacing || 'normal'}
         reducedMotion={settings?.reducedMotion || false}
         highContrast={settings?.highContrast || false}
-        bubbleStyle={settings?.bubbleStyle || 'modern'}
+        bubbleStyle={settings?.bubbleStyle || 'minimal'}
         messageSpacing={settings?.messageSpacing || 'comfortable'}
         theme={settings?.theme}
       />

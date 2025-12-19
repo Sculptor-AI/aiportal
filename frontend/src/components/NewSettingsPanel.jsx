@@ -1468,12 +1468,12 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
               <SettingGroup>
                 <SettingLabel>Message Bubbles</SettingLabel>
                 <RadioGroup>
-                  <RadioOption isSelected={localSettings.bubbleStyle === 'modern' || !localSettings.bubbleStyle}>
+                  <RadioOption isSelected={localSettings.bubbleStyle === 'modern'}>
                     <input
                       type="radio"
                       name="bubbleStyle"
                       value="modern"
-                      checked={localSettings.bubbleStyle === 'modern' || !localSettings.bubbleStyle}
+                      checked={localSettings.bubbleStyle === 'modern'}
                       onChange={() => handleChange('bubbleStyle', 'modern')}
                     />
                     Modern (rounded)
@@ -1488,12 +1488,12 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
                     />
                     Classic (rectangle)
                   </RadioOption>
-                  <RadioOption isSelected={localSettings.bubbleStyle === 'minimal'}>
+                  <RadioOption isSelected={localSettings.bubbleStyle === 'minimal' || !localSettings.bubbleStyle}>
                     <input
                       type="radio"
                       name="bubbleStyle"
                       value="minimal"
-                      checked={localSettings.bubbleStyle === 'minimal'}
+                      checked={localSettings.bubbleStyle === 'minimal' || !localSettings.bubbleStyle}
                       onChange={() => handleChange('bubbleStyle', 'minimal')}
                     />
                     Minimal (no bubbles)

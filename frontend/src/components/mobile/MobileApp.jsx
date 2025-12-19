@@ -270,7 +270,7 @@ const MobileAppContent = () => {
       showModelIcons: true,
       messageAlignment: 'left',
       codeHighlighting: true,
-      bubbleStyle: 'modern',
+      bubbleStyle: 'minimal',
       messageSpacing: 'comfortable',
       sidebarAutoCollapse: false,
       focusMode: false,
