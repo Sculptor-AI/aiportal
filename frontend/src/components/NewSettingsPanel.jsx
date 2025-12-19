@@ -1270,7 +1270,7 @@ const SettingDescription = styled.p`
     { key: 'showGreeting', labelKey: 'settings.interface.layout.showGreeting', invertDefault: true }
   ];
 
-  const bubbleStyleOptions = ['modern', 'classic', 'minimal'];
+  const bubbleStyleOptions = ['minimal', 'modern', 'classic'];
 
   const messageSpacingOptions = ['compact', 'comfortable', 'spacious'];
 
@@ -1495,7 +1495,6 @@ const SettingDescription = styled.p`
               </SettingGroup>
 
               <SettingGroup>
-                <SettingLabel>Sidebar Style</SettingLabel>
                 <SettingLabel>{t('settings.appearance.sidebarStyle.label')}</SettingLabel>
                 <RadioGroup>
                   {sidebarStyleOptions.map(option => (
@@ -1559,7 +1558,7 @@ const SettingDescription = styled.p`
               </SettingGroup>
               
             <SettingGroup>
-              <SettingLabel>{t('settings.appearance.accent.title')}</SettingLabel>
+              <SettingLabel>{t('settings.appearance.accent.color', 'Accent Color')}</SettingLabel>
               <AccentDropdown ref={accentMenuRef}>
                 <AccentTrigger
                   type="button"
@@ -1616,7 +1615,7 @@ const SettingDescription = styled.p`
             </SettingGroup>
 
             <SettingGroup>
-              <SettingLabel>{t('settings.chats.profiles.label')}</SettingLabel>
+              <SettingLabel>{t('settings.chats.profiles.toggleVisibility.label', 'Toggle profile icon visibility')}</SettingLabel>
               <ToggleWrapper>
                 <Toggle checked={localSettings.showProfilePicture !== false}>
                   <input
@@ -1626,7 +1625,7 @@ const SettingDescription = styled.p`
                   />
                   <Slider checked={localSettings.showProfilePicture !== false} />
                 </Toggle>
-                {t('settings.chats.profiles.description')}
+                {t('settings.chats.profiles.toggleVisibility.description', 'Show profile icon in chats')}
               </ToggleWrapper>
             </SettingGroup>
 
@@ -1667,19 +1666,19 @@ const SettingDescription = styled.p`
                 <SettingLabel>{t('settings.interface.bubbles.label')}</SettingLabel>
                 <RadioGroup>
                   {bubbleStyleOptions.map(option => (
-                    <RadioOption
-                      key={option}
-                      isSelected={localSettings.bubbleStyle === option || (!localSettings.bubbleStyle && option === 'modern')}
-                    >
-                      <input
-                        type="radio"
-                        name="bubbleStyle"
-                        value={option}
-                        checked={localSettings.bubbleStyle === option || (!localSettings.bubbleStyle && option === 'modern')}
-                        onChange={() => handleChange('bubbleStyle', option)}
-                      />
-                      {t(`settings.interface.bubbles.${option}`)}
-                    </RadioOption>
+                  <RadioOption
+                    key={option}
+                    isSelected={localSettings.bubbleStyle === option || (!localSettings.bubbleStyle && option === 'minimal')}
+                  >
+                    <input
+                      type="radio"
+                      name="bubbleStyle"
+                      value={option}
+                      checked={localSettings.bubbleStyle === option || (!localSettings.bubbleStyle && option === 'minimal')}
+                      onChange={() => handleChange('bubbleStyle', option)}
+                    />
+                    {t(`settings.interface.bubbles.${option}`)}
+                  </RadioOption>
                   ))}
                 </RadioGroup>
               </SettingGroup>

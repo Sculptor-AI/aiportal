@@ -724,48 +724,12 @@ const Content = styled.div`
   unicode-bidi: plaintext;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   background: ${props => getBubbleBackground(props.role, props.theme)};
-  border: 1px solid ${props => getBubbleBorderColor(props.theme)};
-  padding: ${props => props.role === 'user' ? '15px 18px' : '12px 17px'};
-  
-  ${props => props.role === 'user' && css`
-    padding-right: 18px;
-    border-radius: ${props.$alignment === 'right' ? '20px 20px 4px 20px' : '20px 20px 20px 4px'};
-    box-shadow: 0 2px 10px ${props.theme.shadow};
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    margin-left: ${props.$alignment === 'right' ? 'auto' : '0'};
-    margin-right: ${props.$alignment === 'left' ? 'auto' : '0'};
-    text-align: ${props.$alignment === 'right' ? 'right' : 'left'};
-  `}
-  
-  /* Bubble pointer for user messages */
-  ${props => props.role === 'user' && props.$alignment === 'right' && `
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      right: -8px;
-      width: 0;
-      height: 0;
-      border-left: 8px solid ${getBubbleBackground('user', props.theme)};
-      border-top: 8px solid transparent;
-      border-bottom: 8px solid transparent;
-    }
-  `}
-
-  ${props => props.role === 'user' && props.$alignment === 'left' && `
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: -8px;
-      width: 0;
-      height: 0;
-      border-right: 8px solid ${getBubbleBackground('user', props.theme)};
-      border-top: 8px solid transparent;
-      border-bottom: 8px solid transparent;
-    }
-  `}
+  border: var(--bubble-border, 1px solid ${props => getBubbleBorderColor(props.theme)});
+  border-radius: var(--bubble-radius, 18px);
+  padding: var(--bubble-padding-vertical, 14px) var(--bubble-padding-horizontal, 18px);
+  box-shadow: var(--bubble-box-shadow, 0 2px 10px ${props => props.theme.shadow});
+  backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
+  -webkit-backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
   
   /* Special border for bisexual theme */
   ${props => props.theme.name === 'bisexual' && props.role === 'user' && `
@@ -781,10 +745,6 @@ const Content = styled.div`
       border-radius: 19px;
       z-index: -1;
       opacity: 0.3;
-    }
-    
-    &::after {
-      border-left-color: #D60270;
     }
   `}
   

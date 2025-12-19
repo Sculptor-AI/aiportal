@@ -50,6 +50,18 @@ const addAlpha = (color, alpha) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const applyAlpha = (color, alpha) => {
+  if (!color) return color;
+  const hex = extractHex(color);
+  if (hex) return addAlpha(hex, alpha);
+  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (rgbMatch) {
+    const [, r, g, b] = rgbMatch;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return color;
+};
+
 export const getAccentStyles = (theme = {}, accentChoice = 'theme') => {
   const fallbackColor = extractHex(theme.primary) || theme.primary || '#6366F1';
   const background = theme.accentGradient || theme.buttonGradient || theme.primary || fallbackColor;
@@ -59,7 +71,7 @@ export const getAccentStyles = (theme = {}, accentChoice = 'theme') => {
       accentColor: fallbackColor,
       accentBackground: background,
       accentText: '#FFFFFF',
-      accentSurface: addAlpha(fallbackColor, 0.14) || background,
+      accentSurface: applyAlpha(fallbackColor, 0.14) || background,
       accentChoice,
     };
   }
