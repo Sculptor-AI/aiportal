@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink as RouterNavLink, useLocation } from 'react-router-dom';
 
 // Styled Components - Updated for Grok.com-inspired design
 const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
@@ -647,7 +647,7 @@ const SidebarSection = styled.div`
   gap: 2px;
 `;
 
-const NavLink = styled(Link)`
+const SidebarNavLink = styled(RouterNavLink)`
   display: flex;
   align-items: center;
   width: 100%;
@@ -674,6 +674,16 @@ const NavLink = styled(Link)`
     height: 16px;
     opacity: 0.7;
     color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
+  }
+  
+  &.active {
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'};
+    font-weight: 600;
+
+    svg {
+      opacity: 1;
+      color: ${props => props.theme.text};
+    }
   }
 `;
 
@@ -979,6 +989,75 @@ const Sidebar = ({
     return chatTitle.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
+  const navLinks = [
+    {
+      key: 'chat',
+      to: '/',
+      label: 'Chat',
+      end: true,
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      )
+    },
+    {
+      key: 'media',
+      to: '/media',
+      label: 'Media',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+      )
+    },
+    {
+      key: 'news',
+      to: '/news',
+      label: 'News',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+      )
+    },
+    {
+      key: 'projects',
+      to: '/projects',
+      label: 'Projects',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+        </svg>
+      )
+    },
+    {
+      key: 'workspace',
+      to: '/workspace',
+      label: 'Workspace',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+      )
+    },
+    {
+      key: 'admin',
+      to: '/admin',
+      label: 'Admin',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+      ),
+      adminOnly: true
+    }
+  ];
+
   return (
     <>
       {/* Main Sidebar container */}
@@ -1053,57 +1132,17 @@ const Sidebar = ({
         {/* --- Navigation Section --- */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
           <SidebarSection style={{ paddingTop: '8px', paddingBottom: '16px', borderTop: 'none' }}>
-            {location.pathname !== '/' && (
-              <NavLink to="/">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span>Chat</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/media' && (
-              <NavLink to="/media">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
-                <span>Media</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/news' && (
-              <NavLink to="/news">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-                <span>News</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/projects' && (
-              <NavLink to="/projects">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-                  <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-                  <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-                  <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-                </svg>
-                <span>Projects</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/workspace' && (
-              <NavLink to="/workspace">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                </svg>
-                <span>Workspace</span>
-              </NavLink>
-            )}
-            {isAdmin && location.pathname !== '/admin' && (
-              <NavLink to="/admin">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-                <span>Admin</span>
-              </NavLink>
-            )}
+            {navLinks.map(link => {
+              if (link.adminOnly && !isAdmin) {
+                return null;
+              }
+              return (
+                <SidebarNavLink key={link.key} to={link.to} end={link.end}>
+                  {link.icon}
+                  <span>{link.label}</span>
+                </SidebarNavLink>
+              );
+            })}
           </SidebarSection>
         )}
 
