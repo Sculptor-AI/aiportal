@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
+import React, { useState, useEffect, useRef } from 'react';
+import styled, { keyframes, useTheme } from 'styled-components';
 import TetrisGame from './TetrisGame';
 import { useAuth } from '../contexts/AuthContext';
+import { accentOptions, getAccentSwatch } from '../styles/accentColors';
 
 const SettingsOverlay = styled.div`
   position: fixed;
@@ -263,14 +264,15 @@ const NavItem = styled.div`
   padding: 12px 20px;
   cursor: pointer;
   transition: background-color 0.2s;
-  background-color: ${props => props.$active ? 'rgba(0, 0, 0, 0.05)' : 'transparent'};
-  color: ${props => props.$active ? props.theme.primary : props.theme.text};
+  background-color: ${props => props.$active ? props.theme.accentSurface : 'transparent'};
+  color: ${props => props.$active ? props.theme.accentColor : props.theme.text};
+  border-left: 3px solid ${props => props.$active ? props.theme.accentColor : 'transparent'};
   font-weight: ${props => props.$active ? '500' : 'normal'};
   
   /* Specific styling for the retro theme */
   ${props => props.theme.name === 'retro' && `
     padding: 6px 10px;
-    border: ${props.active ? '1px solid' : 'none'};
+    border: ${props.$active ? '1px solid' : 'none'};
     border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
     background-color: ${props.active ? props.theme.messageUser : 'transparent'};
     color: ${props.theme.text};
@@ -394,7 +396,7 @@ const ThemeOption = styled.label`
   align-items: center;
   padding: 16px 12px;
   border-radius: 10px;
-  border: 2px solid ${props => props.isSelected ? props.theme.primary : 'transparent'};
+  border: 2px solid ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
   background: ${props => props.isSelected ? props.theme.cardBackground : 'rgba(0,0,0,0.03)'};
   cursor: pointer;
   transition: all 0.25s ease;
@@ -428,19 +430,19 @@ const ThemeOption = styled.label`
   &.light-theme {
     background: ${props => props.isSelected ? '#ffffff' : '#f5f5f7'};
     color: #222222;
-    border-color: ${props => props.isSelected ? '#0078d7' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
   }
   
   &.dark-theme {
     background: ${props => props.isSelected ? '#222222' : '#333333'};
     color: #ffffff;
-    border-color: ${props => props.isSelected ? '#0078d7' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
   }
   
   &.oled-theme {
     background: ${props => props.isSelected ? '#000000' : '#0a0a0a'};
     color: #ffffff;
-    border-color: ${props => props.isSelected ? '#0078d7' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
   }
   
   &.ocean-theme {
@@ -448,7 +450,7 @@ const ThemeOption = styled.label`
       'linear-gradient(135deg, #0277bd, #039be5, #4fc3f7)' : 
       'linear-gradient(135deg, #0277bd80, #039be580, #4fc3f780)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#0277bd' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
@@ -457,7 +459,7 @@ const ThemeOption = styled.label`
       'linear-gradient(135deg, #2e7d32, #388e3c, #4caf50)' : 
       'linear-gradient(135deg, #2e7d3280, #388e3c80, #4caf5080)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#2e7d32' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
@@ -466,7 +468,7 @@ const ThemeOption = styled.label`
       'linear-gradient(135deg, #D60270, #9B4F96, #0038A8)' : 
       'linear-gradient(135deg, #D6027080, #9B4F9680, #0038A880)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#D60270' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
@@ -475,7 +477,7 @@ const ThemeOption = styled.label`
       'linear-gradient(135deg, #ff0000, #ff9900, #ffff00, #33cc33, #3399ff, #9933ff)' : 
       'linear-gradient(135deg, #ff000080, #ff990080, #ffff0080, #33cc3380, #3399ff80, #9933ff80)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#ff0000' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   
@@ -484,7 +486,7 @@ const ThemeOption = styled.label`
       'linear-gradient(135deg, #5BCEFA, #F5A9B8, #FFFFFF, #F5A9B8, #5BCEFA)' : 
       'linear-gradient(135deg, #5BCEFA80, #F5A9B880, #FFFFFF80, #F5A9B880, #5BCEFA80)'};
     color: #333;
-    border-color: ${props => props.isSelected ? '#5BCEFA' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
   }
   
@@ -493,7 +495,7 @@ const ThemeOption = styled.label`
       'linear-gradient(145deg, #121218, #1a1a22)' : 
       'linear-gradient(145deg, #12121880, #1a1a2280)'};
     color: white;
-    border-color: ${props => props.isSelected ? '#DAA520' : 'transparent'};
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
 `;
@@ -550,6 +552,90 @@ const SelectBox = styled.select`
   }
 `;
 
+const AccentDropdown = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+const AccentTrigger = styled.button`
+  width: 100%;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.cardBackground || props.theme.sidebar};
+  color: ${props => props.theme.text};
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  gap: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  }
+`;
+
+const AccentMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: ${props => props.theme.cardBackground || props.theme.sidebar};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  z-index: 60;
+  max-height: 240px;
+  overflow-y: auto;
+`;
+
+const AccentOptionButton = styled.button`
+  width: 100%;
+  border: none;
+  background: ${props => props.$isSelected ? props.theme.accentSurface : 'transparent'};
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: ${props => props.theme.text};
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-bottom: 1px solid ${props => props.theme.border};
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: ${props => props.$isSelected ? props.theme.accentSurface : 'rgba(0, 0, 0, 0.03)'};
+  }
+`;
+
+const AccentCircle = styled.span`
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid ${props => props.theme.border};
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+`;
+
+const AccentOptionLabel = styled.span`
+  flex: 1;
+  text-align: left;
+`;
+
+const AccentChevron = styled.span`
+  transition: transform 0.2s ease;
+  transform: ${props => props.$open ? 'rotate(-180deg)' : 'rotate(0deg)'};
+`;
+
 const RadioOption = styled.label`
   display: flex;
   align-items: center;
@@ -557,13 +643,16 @@ const RadioOption = styled.label`
   padding: 12px 16px;
   border-radius: 10px;
   background-color: ${props => props.isSelected ? 
-    `${props.theme.primary}15` : 
+    props.theme.accentSurface : 
     'rgba(0, 0, 0, 0.03)'};
   border: 1px solid ${props => props.isSelected ? 
-    props.theme.primary : 
+    props.theme.accentColor : 
     'transparent'};
   transition: all 0.2s ease;
   font-size: 0.95rem;
+  input[type="radio"] {
+    accent-color: ${props => props.theme.accentColor};
+  }
   
   /* Specific styling for the retro theme */
   ${props => props.theme.name === 'retro' && `
@@ -597,13 +686,13 @@ const RadioOption = styled.label`
       width: 5px;
       height: 5px;
       border-radius: 50%;
-      background-color: ${props.theme.text};
+      background-color: ${props.theme.accentColor};
     }
   `}
   
   &:hover {
     background-color: ${props => props.isSelected ? 
-      `${props.theme.primary}20` : 
+      props.theme.accentSurface : 
       'rgba(0, 0, 0, 0.05)'};
       
     /* Specific styling for the retro theme */
@@ -673,7 +762,7 @@ const Slider = styled.span`
   right: 0;
   bottom: 0;
   border-radius: 13px;
-  background-color: ${props => props.checked ? props.theme.primary : '#ccc'};
+  background-color: ${props => props.checked ? props.theme.accentColor : '#ccc'};
   transition: background-color 0.3s;
   overflow: visible;
   
@@ -866,15 +955,16 @@ const SaveButton = styled.button`
   position: absolute;
   bottom: 20px;
   right: 30px;
-  background-color: ${props => props.theme.primary};
-  color: white;
+  background: ${props => props.theme.accentBackground};
+  color: ${props => props.theme.accentText};
   border: none;
   border-radius: 20px;
   padding: 10px 25px;
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: filter 0.2s, box-shadow 0.2s;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
   
   /* Specific styling for the retro theme */
   ${props => props.theme.name === 'retro' && `
@@ -897,7 +987,7 @@ const SaveButton = styled.button`
   `}
   
   &:hover {
-    background-color: ${props => props.theme.primaryDark || props.theme.primary + 'dd'};
+    filter: brightness(0.95);
   }
 `;
 
@@ -993,6 +1083,8 @@ const RadioGroup = styled.div`
 
 const SettingGroup = styled.div`
   margin-bottom: 30px;
+  position: relative;
+  overflow: visible;
   
   &:last-child {
     margin-bottom: 0;
@@ -1056,26 +1148,49 @@ const SettingDescription = styled.p`
   `}
 `;
 
-const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboarding }) => {
+  const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboarding }) => {
   const [activeSection, setActiveSection] = useState('general');
   const [localSettings, setLocalSettings] = useState(settings || {});
   const [showTetris, setShowTetris] = useState(false);
+  const [isAccentMenuOpen, setIsAccentMenuOpen] = useState(false);
   const { adminUser } = useAuth();
+  const theme = useTheme();
+  const accentMenuRef = useRef(null);
   
   // Add a helper function to determine if in dark mode
   const isDarkMode = () => {
     return localSettings.theme === 'dark' || 
            localSettings.theme === 'oled' || 
            localSettings.theme === 'bisexual' ||
-           localSettings.theme === 'ocean' ||
+    localSettings.theme === 'ocean' ||
            localSettings.theme === 'lakeside';
   };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (accentMenuRef.current && !accentMenuRef.current.contains(event.target)) {
+        setIsAccentMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const accentValue = localSettings.accentColor || 'theme';
+  const selectedAccentLabel = accentOptions.find(option => option.value === accentValue)?.label || 'Same as theme';
   
   const handleChange = (key, value) => {
     const newSettings = { ...localSettings, [key]: value };
     setLocalSettings(newSettings);
     // Remove immediate parent update to prevent re-renders
     // updateSettings(newSettings);
+  };
+
+  const handleAccentSelect = (value) => {
+    handleChange('accentColor', value);
+    setIsAccentMenuOpen(false);
   };
 
   const handleSave = () => {
@@ -1302,6 +1417,42 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
                   <option value="georgia">Georgia</option>
                   <option value="merriweather">Merriweather</option>
                 </SelectBox>
+              </SettingGroup>
+
+              <SettingGroup>
+                <SettingLabel>Accent Color</SettingLabel>
+                <AccentDropdown ref={accentMenuRef}>
+                      <AccentTrigger
+                        type="button"
+                        onClick={() => setIsAccentMenuOpen(prev => !prev)}
+                        aria-haspopup="listbox"
+                        aria-expanded={isAccentMenuOpen}
+                      >
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <AccentCircle style={{ background: getAccentSwatch(accentValue, theme) }} />
+                          <AccentOptionLabel>{selectedAccentLabel}</AccentOptionLabel>
+                        </span>
+                        <AccentChevron $open={isAccentMenuOpen}>▾</AccentChevron>
+                      </AccentTrigger>
+                      {isAccentMenuOpen && (
+                        <AccentMenu role="listbox">
+                          {accentOptions.map((option) => (
+                        <AccentOptionButton
+                          key={option.value}
+                          type="button"
+                          onClick={() => handleAccentSelect(option.value)}
+                          $isSelected={accentValue === option.value}
+                        >
+                          <AccentCircle style={{ background: getAccentSwatch(option.value, theme) }} />
+                          <AccentOptionLabel>{option.label}</AccentOptionLabel>
+                        </AccentOptionButton>
+                      ))}
+                    </AccentMenu>
+                  )}
+                </AccentDropdown>
+                <SettingDescription>
+                  Accent colors update buttons, bubbles, toggles, and other highlights throughout the interface.
+                </SettingDescription>
               </SettingGroup>
 
               <SettingGroup>

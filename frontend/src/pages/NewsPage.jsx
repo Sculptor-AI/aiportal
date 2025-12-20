@@ -30,9 +30,9 @@ const Title = styled.h1`
 `;
 
 const RefreshButton = styled.button`
-  background-color: transparent;
-  color: ${props => props.theme.text};
-  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.accentSurface};
+  color: ${props => props.theme.accentColor};
+  border: 1px solid ${props => props.theme.accentColor};
   padding: 10px 20px;
   border-radius: 8px;
   font-size: 1rem;
@@ -43,9 +43,10 @@ const RefreshButton = styled.button`
   transition: all 0.2s ease-in-out;
 
   &:hover {
-    background-color: ${props => props.theme.primary || '#007bff'};
-    color: white;
-    border-color: ${props => props.theme.primary || '#007bff'};
+    background: ${props => props.theme.accentBackground};
+    color: ${props => props.theme.accentText};
+    border-color: ${props => props.theme.accentColor};
+    filter: brightness(0.95);
   }
 
   &:disabled {

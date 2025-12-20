@@ -735,8 +735,8 @@ const Content = styled.div`
       width: 0;
       height: 0;
       border-left: 8px solid ${props.theme.name === 'dark' || props.theme.name === 'oled'
-      ? 'rgba(40, 40, 45, 0.95)'
-      : props.theme.messageUser};
+        ? 'rgba(40, 40, 45, 0.95)'
+        : props.theme.messageUser};
       border-top: 8px solid transparent;
       border-bottom: 8px solid transparent;
     }

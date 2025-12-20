@@ -800,16 +800,8 @@ export const MessageInput = styled.textarea`
 `;
 
 export const WaveformButton = styled.button`
-  background: ${props => {
-    if (props.theme.name === 'retro') {
-      return props.theme.buttonFace;
-    }
-    if (props.$isActive) {
-      return '#ff4444';
-    }
-    return props.disabled ? 'rgba(0, 0, 0, 0.1)' : props.theme.buttonGradient;
-  }};
-  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'white'};
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.accentBackground};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.accentText};
   border: ${props => props.theme.name === 'retro' ?
     `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
     'none'};
@@ -827,7 +819,7 @@ export const WaveformButton = styled.button`
               box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: ${props => props.theme.name === 'retro' ?
     `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
-    props.$isActive ? '0 0 0 3px rgba(255, 68, 68, 0.25)' : '0 2px 8px rgba(0,0,0,0.1)'};
+    props.$isActive ? `0 0 0 3px ${props.theme.accentColor}33` : '0 2px 8px rgba(0,0,0,0.1)'};
 
   &:hover:not(:disabled) {
     background: ${props => {
@@ -835,13 +827,13 @@ export const WaveformButton = styled.button`
       return props.theme.buttonFace;
     }
     if (props.$isActive) {
-      return '#ff5555';
+      return props.theme.accentBackground;
     }
-    return props.theme.buttonHoverGradient;
+    return props.theme.accentBackground;
   }};
     box-shadow: ${props => props.theme.name === 'retro' ?
     `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
-    props.$isActive ? '0 0 0 4px rgba(255, 68, 68, 0.35)' : '0 4px 14px rgba(0,0,0,0.18)'};
+    props.$isActive ? `0 0 0 4px ${props.theme.accentColor}44` : '0 4px 14px rgba(0,0,0,0.18)'};
   }
 
   &:active:not(:disabled) {
@@ -863,9 +855,9 @@ export const SendButton = styled.button`
     if (props.theme.name === 'retro') {
       return props.theme.buttonFace;
     }
-    return props.disabled ? 'rgba(0, 0, 0, 0.1)' : props.theme.buttonGradient;
+    return props.disabled ? 'rgba(0, 0, 0, 0.1)' : props.theme.accentBackground;
   }};
-  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : 'white'};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.accentText};
   border: ${props => props.theme.name === 'retro' ?
     `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
     'none'};
@@ -889,7 +881,8 @@ export const SendButton = styled.button`
   &:hover:not(:disabled) {
     background: ${props => props.theme.name === 'retro' ?
     props.theme.buttonFace :
-    props.theme.buttonHoverGradient};
+    props.theme.accentBackground};
+    filter: ${props => props.theme.name === 'retro' ? 'none' : 'brightness(0.92)'};
     box-shadow: ${props => props.theme.name === 'retro' ?
     `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
     '0 4px 14px rgba(0,0,0,0.18)'};
