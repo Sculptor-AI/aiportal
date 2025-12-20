@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme } from '../../styles/themes';
@@ -587,7 +587,24 @@ const MobileAppContent = () => {
   };
 
   const currentChat = getCurrentChat();
-  const currentTheme = getTheme(settings.theme);
+  const currentTheme = useMemo(() => {
+    if (settings.theme === 'custom') {
+      const base = getTheme('light');
+      const overrides = settings.customTheme || {};
+      return {
+        ...base,
+        name: 'custom',
+        background: overrides.background || base.background,
+        sidebar: overrides.background || base.sidebar,
+        chat: overrides.background || base.chat,
+        text: overrides.text || base.text,
+        border: overrides.border || base.border,
+        primary: overrides.border || base.primary,
+        inputBackground: overrides.background || base.inputBackground
+      };
+    }
+    return getTheme(settings.theme);
+  }, [settings.theme, settings.customTheme]);
 
   return (
     <ThemeProvider theme={currentTheme}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { getTheme } from '../styles/themes';
 
@@ -195,10 +195,12 @@ const OptionCard = styled.div`
   &.theme-option {
     min-height: 80px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     font-weight: 500;
     color: ${props => props.theme.text};
+    gap: 8px;
     
     &.small {
       padding: 12px 8px;
@@ -298,6 +300,70 @@ const OptionCard = styled.div`
     border-style: ${props => props.$selected ? 'solid' : 'inset'};
     border-width: 2px;
   }
+
+  &.custom-theme {
+    border-style: dashed;
+    border-color: ${props => props.$selected ? props.theme.primary : props.theme.border};
+  }
+`;
+
+const ThemeOptionContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+`;
+
+const OptionIcon = styled.div`
+  width: 36px;
+  height: 36px;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: ${props => props.$tone || props.theme.background};
+  color: ${props => props.theme.text};
+  border: 1px solid ${props => props.theme.border};
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+`;
+
+const ColorInputs = styled.div`
+  margin-top: 12px;
+  width: 100%;
+  max-width: 520px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+`;
+
+const ColorInputRow = styled.label`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.background};
+`;
+
+const ColorInputLabel = styled.span`
+  font-weight: 600;
+  color: ${props => props.theme.text};
+`;
+
+const ColorInputField = styled.input`
+  width: 64px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.border};
+  background: transparent;
+  cursor: pointer;
 `;
 
 const FontSizeLabel = styled.div`
@@ -497,27 +563,33 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
     fontSize: 'medium',
     sidebarStyle: 'floating'
   });
+  const [customColors, setCustomColors] = useState({
+    background: '#0f172a',
+    text: '#e2e8f0',
+    border: '#4f46e5'
+  });
 
   const steps = [
     {
       title: 'Choose Your Theme',
       description: 'Select a theme that matches your style',
       options: [
-        { id: 'light', label: 'Light', className: 'light-theme' },
-        { id: 'dark', label: 'Dark', className: 'dark-theme' },
-        { id: 'oled', label: 'OLED', className: 'oled-theme' },
-        { id: 'ocean', label: 'Ocean', className: 'ocean-theme' },
-        { id: 'forest', label: 'Forest', className: 'forest-theme' },
-        { id: 'pride', label: 'Pride', className: 'pride-theme' },
-        { id: 'trans', label: 'Trans', className: 'trans-theme' },
-        { id: 'bisexual', label: 'Bisexual', className: 'bisexual-theme' },
-        { id: 'galaxy', label: 'Galaxy', className: 'galaxy-theme' },
-        { id: 'sunset', label: 'Sunset', className: 'sunset-theme' },
-        { id: 'cyberpunk', label: 'Cyberpunk', className: 'cyberpunk-theme' },
-        { id: 'bubblegum', label: 'Bubblegum', className: 'bubblegum-theme' },
-        { id: 'desert', label: 'Desert', className: 'desert-theme' },
-        { id: 'lakeside', label: 'Lakeside', className: 'lakeside-theme' },
-        { id: 'retro', label: 'Retro', className: 'retro-theme' }
+        { id: 'light', label: 'Light', className: 'light-theme', icon: '☀️' },
+        { id: 'dark', label: 'Dark', className: 'dark-theme', icon: '🌙' },
+        { id: 'oled', label: 'OLED', className: 'oled-theme', icon: '🖥️' },
+        { id: 'ocean', label: 'Ocean', className: 'ocean-theme', icon: '🌊' },
+        { id: 'forest', label: 'Forest', className: 'forest-theme', icon: '🌲' },
+        { id: 'pride', label: 'Pride', className: 'pride-theme', icon: '🏳️‍🌈' },
+        { id: 'trans', label: 'Trans', className: 'trans-theme', icon: '🏳️‍⚧️' },
+        { id: 'bisexual', label: 'Bisexual', className: 'bisexual-theme', icon: '💜' },
+        { id: 'galaxy', label: 'Galaxy', className: 'galaxy-theme', icon: '🌌' },
+        { id: 'sunset', label: 'Sunset', className: 'sunset-theme', icon: '🌅' },
+        { id: 'cyberpunk', label: 'Cyberpunk', className: 'cyberpunk-theme', icon: '🕹️' },
+        { id: 'bubblegum', label: 'Bubblegum', className: 'bubblegum-theme', icon: '🍬' },
+        { id: 'desert', label: 'Desert', className: 'desert-theme', icon: '🏜️' },
+        { id: 'lakeside', label: 'Lakeside', className: 'lakeside-theme', icon: '⛵' },
+        { id: 'retro', label: 'Retro', className: 'retro-theme', icon: '💾' },
+        { id: 'custom', label: 'Custom', className: 'custom-theme', icon: '🎛️'}
       ],
       selectionKey: 'theme'
     },
@@ -542,7 +614,35 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
     }
   ];
 
-  const currentTheme = getTheme(selections.theme);
+  const customTheme = useMemo(() => {
+    if (selections.theme !== 'custom') return null;
+    const base = getTheme('light');
+    return {
+      ...base,
+      name: 'custom',
+      background: customColors.background,
+      sidebar: customColors.background,
+      chat: customColors.background,
+      text: customColors.text,
+      border: customColors.border,
+      primary: customColors.border,
+      messageAi: base.messageAi,
+      messageUser: base.messageUser,
+      inputBackground: base.inputBackground
+    };
+  }, [selections.theme, customColors]);
+
+  const currentTheme = useMemo(() => {
+    if (customTheme) return customTheme;
+    return getTheme(selections.theme);
+  }, [customTheme, selections.theme]);
+
+  const isThemeStep = steps[currentStep].selectionKey === 'theme';
+
+  const payloadWithCustomTheme = () => {
+    if (selections.theme !== 'custom') return selections;
+    return { ...selections, customTheme: customColors };
+  };
 
   const handleOptionSelect = (optionId) => {
     setSelections(prev => ({
@@ -555,7 +655,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      onComplete(selections);
+      onComplete(payloadWithCustomTheme());
     }
   };
 
@@ -566,7 +666,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
   };
 
   const handleSkip = () => {
-    onComplete(selections);
+    onComplete(payloadWithCustomTheme());
   };
 
   return (
@@ -601,12 +701,23 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
               {steps[currentStep].options.map((option) => (
                 <OptionCard
                   key={option.id}
-                  className={`theme-option ${option.className || ''} ${currentStep === 0 ? 'small' : ''}`}
+                  className={`${isThemeStep ? 'theme-option' : ''} ${option.className || ''} ${isThemeStep ? 'small' : ''}`}
                   $selected={selections[steps[currentStep].selectionKey] === option.id}
                   onClick={() => handleOptionSelect(option.id)}
                   theme={currentTheme}
                 >
-                  {option.preview ? (
+                  {isThemeStep ? (
+                    <ThemeOptionContent>
+                      <OptionIcon
+                        className="option-icon"
+                        $tone={option.id === 'custom' ? `${customColors.border}20` : undefined}
+                        theme={currentTheme}
+                      >
+                        {option.icon || '🎨'}
+                      </OptionIcon>
+                      <div>{option.label}</div>
+                    </ThemeOptionContent>
+                  ) : option.preview ? (
                     <FontSizeLabel className={option.id}>
                       {option.label}
                     </FontSizeLabel>
@@ -629,6 +740,38 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
                 </OptionCard>
               ))}
             </OptionGrid>
+
+            {isThemeStep && selections.theme === 'custom' && (
+              <ColorInputs theme={currentTheme}>
+                <ColorInputRow theme={currentTheme}>
+                  <ColorInputLabel theme={currentTheme}>Background</ColorInputLabel>
+                  <ColorInputField
+                    type="color"
+                    value={customColors.background}
+                    onChange={(e) => setCustomColors(prev => ({ ...prev, background: e.target.value }))}
+                    title="Pick background color"
+                  />
+                </ColorInputRow>
+                <ColorInputRow theme={currentTheme}>
+                  <ColorInputLabel theme={currentTheme}>Text</ColorInputLabel>
+                  <ColorInputField
+                    type="color"
+                    value={customColors.text}
+                    onChange={(e) => setCustomColors(prev => ({ ...prev, text: e.target.value }))}
+                    title="Pick text color"
+                  />
+                </ColorInputRow>
+                <ColorInputRow theme={currentTheme}>
+                  <ColorInputLabel theme={currentTheme}>Border</ColorInputLabel>
+                  <ColorInputField
+                    type="color"
+                    value={customColors.border}
+                    onChange={(e) => setCustomColors(prev => ({ ...prev, border: e.target.value }))}
+                    title="Pick border color"
+                  />
+                </ColorInputRow>
+              </ColorInputs>
+            )}
           </StepContent>
 
           <NavigationButtons>
