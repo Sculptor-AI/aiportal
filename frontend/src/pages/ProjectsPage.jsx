@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import NewProjectModal from '../components/NewProjectModal';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../contexts/TranslationContext';
 
 const ProjectsPageContainer = styled.div`
   flex: 1;
@@ -148,7 +149,8 @@ const ProjectDate = styled.p`
 `;
 
 const ProjectsPage = ({ projects, createNewProject, collapsed, deleteProject }) => {
-    const [isModalOpen, setIsModalOpen] = useState(false);
+  const { t } = useTranslation();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <ProjectsPageContainer $collapsed={collapsed}>
@@ -160,12 +162,12 @@ const ProjectsPage = ({ projects, createNewProject, collapsed, deleteProject }) 
             <rect x="3" y="14" width="7" height="7" rx="1"></rect>
             <rect x="14" y="14" width="7" height="7" rx="1"></rect>
           </svg>
-          Projects
+          {t('projects.title')}
         </Title>
-        <NewProjectButton onClick={() => setIsModalOpen(true)}>Create project</NewProjectButton>
+        <NewProjectButton onClick={() => setIsModalOpen(true)}>{t('projects.createButton')}</NewProjectButton>
       </Header>
       <SearchContainer>
-          <SearchInput placeholder="Search projects..." />
+          <SearchInput placeholder={t('projects.searchPlaceholder')} />
       </SearchContainer>
       <ProjectsGrid>
         {projects && projects.map(project => (
@@ -188,8 +190,8 @@ const ProjectsPage = ({ projects, createNewProject, collapsed, deleteProject }) 
       </ProjectsGrid>
       {(!projects || projects.length === 0) && (
         <EmptyProjectsContainer>
-            <EmptyProjectsTitle>No projects yet</EmptyProjectsTitle>
-            <EmptyProjectsText>Get started by creating a new project. It's a great way to organize your work.</EmptyProjectsText>
+            <EmptyProjectsTitle>{t('projects.emptyTitle')}</EmptyProjectsTitle>
+            <EmptyProjectsText>{t('projects.emptyDescription')}</EmptyProjectsText>
         </EmptyProjectsContainer>
       )}
       {isModalOpen && <NewProjectModal closeModal={() => setIsModalOpen(false)} createNewProject={createNewProject} />}

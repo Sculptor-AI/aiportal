@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import { useTranslation } from '../../contexts/TranslationContext';
 
 const SettingsOverlay = styled.div`
   position: fixed;
@@ -203,6 +204,7 @@ const ColorOption = styled.button`
 `;
 
 const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
+  const { t } = useTranslation();
   const [localSettings, setLocalSettings] = useState(settings);
 
   const handleSettingChange = (key, value) => {
@@ -230,23 +232,23 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
   ];
 
   const fontSizeOptions = [
-    { value: 'small', label: 'Small' },
-    { value: 'medium', label: 'Medium' },
-    { value: 'large', label: 'Large' }
+    { value: 'small', labelKey: 'settings.fontSize.small' },
+    { value: 'medium', labelKey: 'settings.fontSize.medium' },
+    { value: 'large', labelKey: 'settings.fontSize.large' }
   ];
 
   const bubbleStyleOptions = [
-    { value: 'modern', label: 'Modern' },
-    { value: 'classic', label: 'Classic' },
-    { value: 'minimal', label: 'Minimal' }
+    { value: 'modern', labelKey: 'settings.interface.bubbles.modern' },
+    { value: 'classic', labelKey: 'settings.interface.bubbles.classic' },
+    { value: 'minimal', labelKey: 'settings.interface.bubbles.minimal' }
   ];
 
   return (
     <SettingsOverlay onClick={handleClose}>
       <SettingsContainer onClick={(e) => e.stopPropagation()}>
         <SettingsHeader>
-          <SettingsTitle>Settings</SettingsTitle>
-          <CloseButton onClick={handleClose}>
+          <SettingsTitle>{t('settings.title')}</SettingsTitle>
+          <CloseButton onClick={handleClose} aria-label={t('settings.close')}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -256,12 +258,12 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
         
         <SettingsContent>
           <SettingsSection>
-            <SectionTitle>Appearance</SectionTitle>
+            <SectionTitle>{t('settings.sections.appearance')}</SectionTitle>
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>Theme</SettingName>
-                <SettingDescription>Choose your preferred color scheme</SettingDescription>
+                <SettingName>{t('settings.general.theme.label')}</SettingName>
+                <SettingDescription>{t('settings.mobile.themeDescription')}</SettingDescription>
               </SettingLabel>
             </SettingItem>
             <ColorGrid>
@@ -277,8 +279,8 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>Font Size</SettingName>
-                <SettingDescription>Adjust text size for better readability</SettingDescription>
+                <SettingName>{t('settings.appearance.fontSize.label')}</SettingName>
+                <SettingDescription>{t('settings.mobile.fontSizeDescription')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Select
@@ -287,7 +289,7 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                 >
                   {fontSizeOptions.map(option => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {t(option.labelKey)}
                     </option>
                   ))}
                 </Select>
@@ -296,8 +298,8 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>Message Style</SettingName>
-                <SettingDescription>Choose message bubble appearance</SettingDescription>
+                <SettingName>{t('settings.mobile.messageStyle.label')}</SettingName>
+                <SettingDescription>{t('settings.mobile.messageStyle.description')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Select
@@ -306,7 +308,7 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
                 >
                   {bubbleStyleOptions.map(option => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {t(option.labelKey)}
                     </option>
                   ))}
                 </Select>
@@ -315,12 +317,12 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           </SettingsSection>
           
           <SettingsSection>
-            <SectionTitle>Chat Behavior</SectionTitle>
+            <SectionTitle>{t('settings.mobile.chatBehavior')}</SectionTitle>
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>Send with Enter</SettingName>
-                <SettingDescription>Press Enter to send messages</SettingDescription>
+                <SettingName>{t('settings.mobile.sendWithEnter.title')}</SettingName>
+                <SettingDescription>{t('settings.mobile.sendWithEnter.description')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Toggle
@@ -332,8 +334,8 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>Show Timestamps</SettingName>
-                <SettingDescription>Display time for each message</SettingDescription>
+                <SettingName>{t('settings.mobile.timestamps.title')}</SettingName>
+                <SettingDescription>{t('settings.mobile.timestamps.description')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Toggle
@@ -345,8 +347,8 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>Show Model Icons</SettingName>
-                <SettingDescription>Display AI model icons in messages</SettingDescription>
+                <SettingName>{t('settings.mobile.modelIcons.title')}</SettingName>
+                <SettingDescription>{t('settings.mobile.modelIcons.description')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Toggle
@@ -358,8 +360,8 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
 
             <SettingItem>
               <SettingLabel>
-                <SettingName>Show Greeting</SettingName>
-                <SettingDescription>Display greeting on empty chat</SettingDescription>
+                <SettingName>{t('settings.mobile.greeting.title')}</SettingName>
+                <SettingDescription>{t('settings.mobile.greeting.description')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Toggle
@@ -371,8 +373,8 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>Code Highlighting</SettingName>
-                <SettingDescription>Syntax highlighting for code blocks</SettingDescription>
+                <SettingName>{t('settings.mobile.codeHighlighting.title')}</SettingName>
+                <SettingDescription>{t('settings.mobile.codeHighlighting.description')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Toggle
@@ -384,12 +386,12 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
           </SettingsSection>
           
           <SettingsSection>
-            <SectionTitle>Accessibility</SectionTitle>
+            <SectionTitle>{t('settings.sections.accessibility')}</SectionTitle>
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>High Contrast</SettingName>
-                <SettingDescription>Increase contrast for better visibility</SettingDescription>
+                <SettingName>{t('settings.accessibility.visual.highContrast')}</SettingName>
+                <SettingDescription>{t('settings.mobile.accessibility.highContrastDescription')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Toggle
@@ -401,8 +403,8 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
             
             <SettingItem>
               <SettingLabel>
-                <SettingName>Reduced Motion</SettingName>
-                <SettingDescription>Minimize animations and transitions</SettingDescription>
+                <SettingName>{t('settings.accessibility.visual.reducedMotion')}</SettingName>
+                <SettingDescription>{t('settings.mobile.accessibility.reducedMotionDescription')}</SettingDescription>
               </SettingLabel>
               <SettingControl>
                 <Toggle

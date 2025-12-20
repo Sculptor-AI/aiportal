@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, Suspense } from 'react';
 import styled from 'styled-components';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, TransformControls, Grid, Stage, PerspectiveCamera } from '@react-three/drei';
+import { useTranslation } from '../contexts/TranslationContext';
 
 // --- Styled Components (Glassmorphism) ---
 
@@ -305,6 +306,7 @@ const DraggableMesh = ({ object, isSelected, onSelect, onChange }) => {
 // --- Main Modal ---
 
 const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
+  const { t } = useTranslation();
   const [objects, setObjects] = useState([
     { id: '1', type: 'box', position: { x: 0, y: 0.5, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 }, color: '#4facfe' }
   ]);
@@ -360,12 +362,12 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
       <ModalContainer $isOpen={isOpen} onClick={e => e.stopPropagation()}>
 
         {/* Left Sidebar: Outliner */}
-        <Sidebar>
-          <SidebarHeader>
-            <Title>SCULPTOR <span style={{ color: theme.text }}>3D</span></Title>
-          </SidebarHeader>
+          <Sidebar>
+            <SidebarHeader>
+              <Title>{t('sandbox3d.title', 'SCULPTOR 3D')}</Title>
+            </SidebarHeader>
           <SectionHeader>
-            OUTLINER ({objects.length})
+            {t('sandbox3d.outliner.title', 'OUTLINER ({{count}})', { count: objects.length })}
           </SectionHeader>
           <ItemList>
             {objects.map(obj => (
@@ -380,7 +382,7 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
                   {obj.type === 'cylinder' && '🛢️'}
                   {obj.type === 'torus' && '🍩'}
                 </Icon>
-                {obj.type} {obj.id.slice(-4)}
+                {t(`sandbox3d.types.${obj.type}`, obj.type)} {obj.id.slice(-4)}
               </ObjectItem>
             ))}
           </ItemList>
@@ -411,16 +413,16 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
           </Canvas>
 
           <FloatingGizmo>
-            Use Mouse to Orbit • Click to Select • Drag Gizmo to Move
+            {t('sandbox3d.gizmoHint')}
           </FloatingGizmo>
 
           <ToolbarOverlay>
-            <ToolButton onClick={() => addObject('box')}>+ Box</ToolButton>
-            <ToolButton onClick={() => addObject('sphere')}>+ Sphere</ToolButton>
-            <ToolButton onClick={() => addObject('cylinder')}>+ Cyl</ToolButton>
-            <ToolButton onClick={() => addObject('torus')}>+ Torus</ToolButton>
+            <ToolButton onClick={() => addObject('box')}>{t('sandbox3d.toolbar.addBox')}</ToolButton>
+            <ToolButton onClick={() => addObject('sphere')}>{t('sandbox3d.toolbar.addSphere')}</ToolButton>
+            <ToolButton onClick={() => addObject('cylinder')}>{t('sandbox3d.toolbar.addCylinder')}</ToolButton>
+            <ToolButton onClick={() => addObject('torus')}>{t('sandbox3d.toolbar.addTorus')}</ToolButton>
             <div style={{ width: 1, background: 'rgba(255,255,255,0.2)', margin: '0 4px' }} />
-            <ToolButton onClick={deleteSelected} disabled={!selectedId} style={{ color: '#ff4d4d' }}>Delete</ToolButton>
+            <ToolButton onClick={deleteSelected} disabled={!selectedId} style={{ color: '#ff4d4d' }}>{t('sandbox3d.toolbar.delete')}</ToolButton>
           </ToolbarOverlay>
 
           <CloseButton onClick={onClose}>×</CloseButton>
@@ -429,18 +431,18 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
         {/* Right Sidebar: Properties */}
         <RightSidebar>
           <SidebarHeader>
-            <div style={{ fontWeight: 600 }}>PROPERTIES</div>
+            <div style={{ fontWeight: 600 }}>{t('sandbox3d.section.properties')}</div>
             <ToolButton $primary onClick={handleSend} style={{ padding: '4px 12px', fontSize: '12px' }}>
-              Save
+              {t('sandbox3d.toolbar.save')}
             </ToolButton>
           </SidebarHeader>
 
           {selectedObject ? (
             <>
-              <SectionHeader>TRANSFORM</SectionHeader>
+              <SectionHeader>{t('sandbox3d.section.transform')}</SectionHeader>
               <PropertyGroup>
                 <PropertyRow>
-                  <Label>Position</Label>
+                  <Label>{t('sandbox3d.label.position')}</Label>
                   <InputGroup>
                     {['x', 'y', 'z'].map(axis => (
                       <NumInputWrapper key={axis}>
@@ -455,7 +457,7 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
                   </InputGroup>
                 </PropertyRow>
                 <PropertyRow>
-                  <Label>Rotation</Label>
+                  <Label>{t('sandbox3d.label.rotation')}</Label>
                   <InputGroup>
                     {['x', 'y', 'z'].map(axis => (
                       <NumInputWrapper key={axis}>
@@ -470,7 +472,7 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
                   </InputGroup>
                 </PropertyRow>
                 <PropertyRow>
-                  <Label>Scale</Label>
+                  <Label>{t('sandbox3d.label.scale')}</Label>
                   <InputGroup>
                     {['x', 'y', 'z'].map(axis => (
                       <NumInputWrapper key={axis}>
@@ -486,10 +488,10 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
                 </PropertyRow>
               </PropertyGroup>
 
-              <SectionHeader>MATERIAL</SectionHeader>
+              <SectionHeader>{t('sandbox3d.section.material')}</SectionHeader>
               <PropertyGroup>
                 <PropertyRow>
-                  <Label>Color</Label>
+                  <Label>{t('sandbox3d.label.color')}</Label>
                   <StyledInput
                     type="color"
                     value={selectedObject.color}
@@ -498,7 +500,7 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
                   />
                 </PropertyRow>
                 <PropertyRow>
-                  <Label>Hex</Label>
+                  <Label>{t('sandbox3d.label.hex')}</Label>
                   <StyledInput
                     type="text"
                     value={selectedObject.color}
@@ -509,7 +511,7 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
             </>
           ) : (
             <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>
-              No object selected
+              {t('sandbox3d.noObjectSelected')}
             </div>
           )}
         </RightSidebar>

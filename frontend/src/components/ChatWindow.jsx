@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { useTheme } from 'styled-components';
+import { useTranslation } from '../contexts/TranslationContext';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
 import ImageModelSelector from './ImageModelSelector';
@@ -76,8 +77,10 @@ const ChatWindow = forwardRef(({
   const chatInputAreaRef = useRef(null);
   const prevIsEmptyRef = useRef(false);
 
+  const { t } = useTranslation();
   const toast = useToast();
   const theme = useTheme();
+  const newConversationLabel = t('chat.newConversation', 'New Conversation');
 
   // Memoized values
   const chatIsEmpty = useMemo(() => {
@@ -355,8 +358,8 @@ const ChatWindow = forwardRef(({
 
   const handleStartEditing = useCallback(() => {
     setIsEditingTitle(true);
-    setEditedTitle(chat?.title || 'New Conversation');
-  }, [chat?.title]);
+    setEditedTitle(chat?.title || newConversationLabel);
+  }, [chat?.title, newConversationLabel]);
 
   const handleTitleChange = useCallback((e) => {
     setEditedTitle(e.target.value);
@@ -375,9 +378,9 @@ const ChatWindow = forwardRef(({
       handleTitleSave();
     } else if (e.key === 'Escape') {
       setIsEditingTitle(false);
-      setEditedTitle(chat?.title || 'New Conversation');
+      setEditedTitle(chat?.title || newConversationLabel);
     }
-  }, [handleTitleSave, chat?.title]);
+  }, [handleTitleSave, chat?.title, newConversationLabel]);
 
   // Message sender hook
   const { isLoading, submitMessage: sendChatMessage } = useMessageSender({
@@ -405,6 +408,12 @@ const ChatWindow = forwardRef(({
       return () => clearTimeout(timer);
     }
   }, [shouldStartAnimationThisRender]);
+
+  useEffect(() => {
+    if (!isEditingTitle) {
+      setEditedTitle(chat?.title || newConversationLabel);
+    }
+  }, [chat, newConversationLabel, isEditingTitle]);
 
   // Fetch available image models from backend
   useEffect(() => {
@@ -501,8 +510,8 @@ const ChatWindow = forwardRef(({
       >
         <EmptyState $isExiting={animateEmptyStateOut} $focusModeActive={focusModeActive}>
           <div style={{ textAlign: 'center', padding: '20px' }}>
-            <h3>No chat available</h3>
-            <p>Creating a new chat...</p>
+            <h3>{t('chat.emptyHeading')}</h3>
+            <p>{t('chat.emptySubheading')}</p>
             <button
               onClick={() => window.location.reload()}
               style={{
@@ -515,7 +524,7 @@ const ChatWindow = forwardRef(({
                 cursor: 'pointer'
               }}
             >
-              Refresh Page
+              {t('chat.emptyRefresh')}
             </button>
           </div>
         </EmptyState>
