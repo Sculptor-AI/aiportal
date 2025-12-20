@@ -30,9 +30,9 @@ const Title = styled.h1`
 `;
 
 const NewProjectButton = styled.button`
-  background-color: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.03)'};
-  color: ${props => props.theme.text};
-  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.accentSurface};
+  color: ${props => props.theme.accentColor};
+  border: 1px solid ${props => props.theme.accentColor};
   padding: 12px 24px;
   border-radius: 8px;
   font-size: 1rem;
@@ -41,7 +41,10 @@ const NewProjectButton = styled.button`
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)'};
+    background: ${props => props.theme.accentBackground};
+    color: ${props => props.theme.accentText};
+    border-color: ${props => props.theme.accentColor};
+    filter: brightness(0.95);
   }
 `;
 

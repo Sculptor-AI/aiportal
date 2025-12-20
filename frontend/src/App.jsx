@@ -14,6 +14,7 @@ import Sandbox3DModal from './components/Sandbox3DModal';
 import OnboardingFlow from './components/OnboardingFlow';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
+import { getAccentStyles } from './styles/accentColors';
 import { getFontFamilyValue } from './styles/fontUtils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import GlobalStylesProvider from './styles/GlobalStylesProvider';
@@ -435,16 +436,18 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
     // Otherwise, use localStorage
     const savedSettings = localStorage.getItem('settings');
-    return savedSettings ? JSON.parse(savedSettings) : {
-      theme: 'light',
-      fontSize: 'medium',
-      fontFamily: 'system',
-      sendWithEnter: true,
+      return savedSettings ? JSON.parse(savedSettings) : {
+        theme: 'light',
+        accentColor: 'theme',
+        fontSize: 'medium',
+        fontFamily: 'system',
+        sendWithEnter: true,
       showTimestamps: true,
       showModelIcons: true,
-      messageAlignment: 'left',
+      showProfilePicture: true,
+      messageAlignment: 'default',
       codeHighlighting: true,
-      bubbleStyle: 'modern',
+      bubbleStyle: 'minimal',
       messageSpacing: 'comfortable',
       sidebarAutoCollapse: false,
       focusMode: false,
@@ -927,8 +930,9 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     const resolvedFontFamily = baseTheme.name === 'retro'
       ? baseTheme.fontFamily
       : getFontFamilyValue(settings.fontFamily || 'system');
-    return { ...baseTheme, fontFamily: resolvedFontFamily };
-  }, [settings.theme, settings.fontFamily]);
+    const accentStyles = getAccentStyles(baseTheme, settings.accentColor || 'theme');
+    return { ...baseTheme, ...accentStyles, fontFamily: resolvedFontFamily };
+  }, [settings.theme, settings.fontFamily, settings.accentColor]);
 
   // AUTHENTICATION CHECKS - After all hooks are declared
   // Show loading spinner while checking authentication
@@ -982,7 +986,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     <ThemeProvider theme={currentTheme}>
       <GlobalStylesProvider settings={settings}>
         <GlobalStyles />
-        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'modern'} message-spacing-${settings.messageSpacing || 'comfortable'}`}>
+        <AppContainer className={`bubble-style-${settings.bubbleStyle || 'minimal'} message-spacing-${settings.messageSpacing || 'comfortable'} message-align-${settings.messageAlignment || 'default'}`}>
           <MainContentArea
             $equationEditorOpen={isEquationEditorOpen}
             $graphingOpen={isGraphingOpen}

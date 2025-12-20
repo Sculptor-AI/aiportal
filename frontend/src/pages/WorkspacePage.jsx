@@ -79,21 +79,23 @@ const SearchIcon = styled.svg`
 `;
 
 const AddButton = styled.button`
-  background: ${props => props.theme.primary};
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
-  font-size: 0.9rem;
+  background: ${props => props.theme.accentSurface};
+  color: ${props => props.theme.accentColor};
+  border: 1px solid ${props => props.theme.accentColor};
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
+  gap: 8px;
+  transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
   margin-left: auto;
 
   &:hover {
-    opacity: 0.9;
+    background: ${props => props.theme.accentBackground};
+    color: ${props => props.theme.accentText};
     transform: translateY(-1px);
   }
 `;

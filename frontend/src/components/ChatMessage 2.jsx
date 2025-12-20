@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
@@ -9,7 +9,6 @@ import CodeBlockWithExecution from './CodeBlockWithExecution';
 import useSupportedLanguages from '../hooks/useSupportedLanguages';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
-import { useTranslation } from '../contexts/TranslationContext';
 
 // Helper function to parse and render LaTeX
 const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
@@ -654,14 +653,12 @@ const Avatar = styled.div`
   margin-top: ${props => props.role === 'user' ? '8px' : '0'};
   font-weight: 600;
   flex-shrink: 0;
-  background: ${props => props.$profilePicture
-    ? `url(${props.$profilePicture}) center/cover`
-    : (props.$useModelIcon
-      ? 'transparent'
-      : (props.role === 'user'
-        ? props.theme.buttonGradient
-        : props.theme.secondary))};
-  color: ${props => props.$profilePicture ? 'transparent' : (props.role === 'user' ? props.theme.text : 'white')};
+  background: ${props => props.$useModelIcon
+    ? 'transparent'
+    : (props.role === 'user'
+      ? props.theme.buttonGradient
+      : props.theme.secondary)};
+  color: ${props => props.role === 'user' ? props.theme.text : 'white'};
   transition: all 0.2s ease;
   box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
   opacity: ${props => props.role === 'user' ? '0.6' : '1'};
@@ -690,29 +687,17 @@ const MessageWrapper = styled.div`
   }
 `;
 
-const DEFAULT_USER_ACCENT_BG = 'rgba(148, 163, 184, 0.18)';
-const DEFAULT_AI_ACCENT_BG = 'rgba(148, 163, 184, 0.1)';
-const LIGHT_THEME_USER_BG = 'rgba(59, 130, 246, 0.15)';
-
-const isCustomAccent = (theme) => theme?.accentChoice && theme.accentChoice !== 'theme';
-
-const getBubbleBackground = (role, theme) => {
-  const customAccent = isCustomAccent(theme);
-  if (role === 'user') {
-    if (customAccent) return theme.accentBackground;
-    return theme.name === 'light' ? LIGHT_THEME_USER_BG : DEFAULT_USER_ACCENT_BG;
+const getUserBubbleBackground = (theme) => {
+  if (theme.name === 'dark' || theme.name === 'oled') {
+    return 'rgba(40, 40, 45, 0.95)';
   }
-  return customAccent ? theme.accentBackground : DEFAULT_AI_ACCENT_BG;
+  return theme.messageUser;
 };
-
-const getBubbleBorderColor = (theme) => isCustomAccent(theme) ? theme.accentColor : theme.border;
-
-const getBubbleTextColor = (theme) => isCustomAccent(theme) ? theme.accentText : theme.text;
 
 const Content = styled.div`
   width: fit-content;
   white-space: pre-wrap;
-  color: ${props => getBubbleTextColor(props.theme)};
+  color: ${props => props.theme.text};
   line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
@@ -720,16 +705,54 @@ const Content = styled.div`
   margin-right: ${props => props.$alignment === 'left' ? 'auto' : '0'};
   position: relative;
   text-align: ${props => props.$alignment === 'right' ? 'right' : 'left'};
-  direction: ltr;
-  unicode-bidi: plaintext;
+  direction: ${props => props.$alignment === 'right' ? 'rtl' : 'ltr'};
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-  background: ${props => getBubbleBackground(props.role, props.theme)};
-  border: var(--bubble-border, 1px solid ${props => getBubbleBorderColor(props.theme)});
-  border-radius: var(--bubble-radius, 18px);
-  padding: var(--bubble-padding-vertical, 14px) var(--bubble-padding-horizontal, 18px);
-  box-shadow: var(--bubble-box-shadow, 0 2px 10px ${props => props.theme.shadow});
-  backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
-  -webkit-backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
+  
+  ${props => props.role === 'user' && css`
+    padding: 15px 18px;
+    padding-right: 18px;
+    border-radius: ${props.$alignment === 'right' ? '20px 20px 4px 20px' : '20px 20px 20px 4px'};
+    background: ${getUserBubbleBackground(props.theme)};
+    box-shadow: 0 2px 10px ${props.theme.shadow};
+    border: 1px solid ${props.theme.border};
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    margin-left: ${props.$alignment === 'right' ? 'auto' : '0'};
+    margin-right: ${props.$alignment === 'left' ? 'auto' : '0'};
+    text-align: ${props.$alignment === 'right' ? 'right' : 'left'};
+    direction: ${props.$alignment === 'right' ? 'rtl' : 'ltr'};
+  `}
+  
+  /* Bubble pointer for user messages */
+  ${props => props.role === 'user' && props.$alignment === 'right' && `
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: -8px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid ${props.theme.name === 'dark' || props.theme.name === 'oled'
+      ? 'rgba(40, 40, 45, 0.95)'
+      : props.theme.messageUser};
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+    }
+  `}
+  
+  ${props => props.role === 'user' && props.$alignment === 'left' && `
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: -8px;
+      width: 0;
+      height: 0;
+      border-right: 8px solid ${props.theme.messageUser};
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+    }
+  `}
   
   /* Special border for bisexual theme */
   ${props => props.theme.name === 'bisexual' && props.role === 'user' && `
@@ -745,6 +768,10 @@ const Content = styled.div`
       border-radius: 19px;
       z-index: -1;
       opacity: 0.3;
+    }
+    
+    &::after {
+      border-left-color: #D60270;
     }
   `}
   
@@ -1520,7 +1547,6 @@ const ThinkingSectionHeader = styled.div`
 `;
 
 const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
-  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   const toggleExpanded = () => {
@@ -1535,9 +1561,9 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
   }
 
   const getHeaderTitle = () => {
-    if (hasThinking && hasToolActivity) return t('chat.thinking.header.thoughtsAndTools');
-    if (hasThinking) return t('chat.thinking.header.thoughts');
-    return t('chat.thinking.header.tools');
+    if (hasThinking && hasToolActivity) return 'Thoughts & Tools';
+    if (hasThinking) return 'Thoughts';
+    return 'Tool Activity';
   };
 
   const getStatusIcon = (status) => {
@@ -1559,7 +1585,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
       <ThinkingContent expanded={expanded}>
         {hasToolActivity && (
           <ToolActivitySection>
-            <ToolActivitySectionHeader>{t('chat.thinking.toolActivity')}</ToolActivitySectionHeader>
+            <ToolActivitySectionHeader>🛠️ Tool Activity</ToolActivitySectionHeader>
             {toolCalls.map((toolCall, index) => (
               <ToolActivityItem key={toolCall.tool_id || index}>
                 <ToolActivityItemHeader>
@@ -1567,16 +1593,16 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
                     {getStatusIcon(toolCall.status)}
                   </ToolActivityIcon>
                   <ToolActivityName>
-                    {toolCall.tool_name || t('chat.thinking.tool.unknown')}
+                    {toolCall.tool_name || 'Unknown Tool'}
                   </ToolActivityName>
                   <ToolActivityStatus status={toolCall.status}>
-                    {t(`chat.thinking.tool.status.${toolCall.status || 'pending'}`, toolCall.status || 'pending')}
+                    {toolCall.status || 'pending'}
                   </ToolActivityStatus>
                 </ToolActivityItemHeader>
 
                 {toolCall.parameters && Object.keys(toolCall.parameters).length > 0 && (
                   <ToolActivityDetail>
-                    <ToolActivityLabel>{t('chat.thinking.tool.parameters')}</ToolActivityLabel>
+                    <ToolActivityLabel>Parameters:</ToolActivityLabel>
                     <ToolActivityValue>
                       {JSON.stringify(toolCall.parameters, null, 2)}
                     </ToolActivityValue>
@@ -1585,7 +1611,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
                 {toolCall.result && toolCall.status === 'completed' && (
                   <ToolActivityDetail>
-                    <ToolActivityLabel>{t('chat.thinking.tool.result')}</ToolActivityLabel>
+                    <ToolActivityLabel>Result:</ToolActivityLabel>
                     <ToolActivityValue>
                       {typeof toolCall.result === 'string' ? toolCall.result : JSON.stringify(toolCall.result, null, 2)}
                     </ToolActivityValue>
@@ -1594,7 +1620,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
                 {toolCall.error && toolCall.status === 'error' && (
                   <ToolActivityDetail>
-                    <ToolActivityLabel>{t('chat.thinking.tool.error')}</ToolActivityLabel>
+                    <ToolActivityLabel>Error:</ToolActivityLabel>
                     <ToolActivityError>
                       {toolCall.error}
                     </ToolActivityError>
@@ -1607,7 +1633,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
         {hasThinking && (
           <ThinkingSection hasToolActivity={hasToolActivity}>
-            {hasToolActivity && <ThinkingSectionHeader>{t('chat.thinking.section.reasoning')}</ThinkingSectionHeader>}
+            {hasToolActivity && <ThinkingSectionHeader>💭 Reasoning</ThinkingSectionHeader>}
             {thinkingContent}
           </ThinkingSection>
         )}
@@ -1616,8 +1642,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
   );
 };
 
-const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
-  const { t } = useTranslation();
+const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
 
@@ -1629,32 +1654,18 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Get the prompt for both image and flowchart messages
   const prompt = message.prompt;
 
-  const translateSystemMessage = useCallback((text) => {
-    if (!text) return text;
-    const trimmed = text.trim();
-    if (trimmed.startsWith('API keys are not configured')) {
-      return t('chat.errors.apiKeys.notConfigured');
-    }
-    if (trimmed.startsWith('Add OPENROUTER_API_KEY')) {
-      return t('chat.errors.apiKeys.instructions');
-    }
-    return text;
-  }, [t]);
-
-  const normalizedContent = translateSystemMessage(content);
-
   // Extract sources from content if this is an assistant message and not loading
   const { cleanedContent, sources: extractedSources } = useMemo(() => {
-    if (role === 'assistant' && normalizedContent && !isLoading) {
-      const result = extractSourcesFromResponse(normalizedContent);
+    if (role === 'assistant' && content && !isLoading) {
+      const result = extractSourcesFromResponse(content);
       console.log('[ChatMessage] Extracted sources from content:', result);
       return result;
     }
     return { cleanedContent: content, sources: [] };
-  }, [normalizedContent, content, role, isLoading]);
+  }, [content, role, isLoading]);
 
   // Use cleaned content if available, otherwise use original content
-  const contentToProcess = cleanedContent || normalizedContent;
+  const contentToProcess = cleanedContent || content;
 
   const is3DScene = useMemo(() => {
     if (role !== 'assistant' || isLoading || !content) return false;
@@ -1672,9 +1683,6 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   const getAvatar = () => {
     if (role === 'user') {
-      if (userProfilePicture) {
-        return null;
-      }
       return (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -1697,12 +1705,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Determine if we should use a model icon (for AI messages with a modelId)
   const useModelIcon = role === 'assistant' && showModelIcons && modelId;
 
-  // Determine alignment preference; default keeps AI left and user right
-  const messageAlignmentPreference = settings.messageAlignment || 'default';
-  const messageAlignment = messageAlignmentPreference === 'default'
-    ? (role === 'assistant' ? 'left' : 'right')
-    : (messageAlignmentPreference === 'right' ? 'right' : 'left');
-  const shouldRenderAvatar = role !== 'user' || showProfileIcon;
+  // Get message alignment from settings, but default user messages to right
+  const messageAlignmentPreference = settings.messageAlignment || 'left';
+  const messageAlignment = messageAlignmentPreference === 'right' ? 'right' : 'left';
 
   // Get bubble style from settings
   // Apply high contrast mode if set
@@ -1802,7 +1807,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedFlowchartContent = (
         <ThinkingContainer>
           <SpinnerIcon />
-          {t('chat.flowchart.creating', { prompt: prompt || t('chat.labels.yourRequest') })}
+          Creating flowchart for: "{prompt || 'your request'}"...
         </ThinkingContainer>
       );
     } else if (status === 'completed' && flowchartData) {
@@ -1810,7 +1815,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <>
           {prompt && (
             <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
-              {t('chat.labels.request')}: "{prompt || t('chat.labels.yourRequest')}"
+              Request: "{prompt}"
             </p>
           )}
           <FlowchartContainer>
@@ -1822,10 +1827,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
                 <path d="M12 12v3"></path>
               </svg>
-              {t('chat.flowchart.openBuilder')}
+              Open Flowchart Builder
             </FlowchartButton>
             <FlowchartPreview>
-              <p style={{ fontSize: '0.9em', opacity: 0.7 }}>{t('chat.flowchart.instructionsHint', { buttonLabel: t('chat.flowchart.openBuilder') })}</p>
+              <p style={{ fontSize: '0.9em', opacity: 0.7 }}>
+                Flowchart instructions generated. Click "Open Flowchart Builder" to visualize and edit.
+              </p>
             </FlowchartPreview>
           </FlowchartContainer>
         </>
@@ -1834,10 +1841,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedFlowchartContent = (
         <div>
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
-            {t('chat.flowchart.failed')}
+            Flowchart Generation Failed
           </p>
-          {prompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.request')}: "{prompt || t('chat.labels.yourRequest')}"</p>}
-          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {content}</p>}
+          {prompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Request: "{prompt}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
         </div>
       );
     }
@@ -1845,12 +1852,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar
-            role={role}
-            $alignment={messageAlignment}
-            $useModelIcon={useModelIcon}
-            $profilePicture={role === 'user' ? userProfilePicture : null}
-          >
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
             {getAvatar()}
           </Avatar>
         )}
@@ -1868,7 +1870,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      {t('chat.actions.copyInstructions')}
+                      Copy Instructions
                     </ActionButton>
                   </>
                 )}
@@ -1888,16 +1890,16 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <SpinnerIcon />
-            <span>{t('chat.research.performing')}</span>
+            <span>Performing deep research...</span>
           </div>
           <div style={{ fontSize: '0.9em', opacity: 0.7 }}>
-            {t('chat.labels.query')}: "{content || t('chat.labels.yourQuery')}"
+            Query: "{content || 'your query'}"
           </div>
           {message.progress !== undefined && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.85em', opacity: 0.8 }}>
-                  {message.statusMessage || t('chat.research.initializing')}
+                  {message.statusMessage || 'Initializing...'}
                 </span>
                 <span style={{ fontSize: '0.8em', opacity: 0.6 }}>
                   {message.progress}%
@@ -1930,12 +1932,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
               </svg>
-              {t('chat.research.results')}
+              Deep Research Results
             </div>
             {message.subQuestions && message.subQuestions.length > 0 && (
               <div style={{ marginBottom: '12px' }}>
                 <div style={{ fontSize: '0.9em', fontWeight: '500', marginBottom: '6px', opacity: 0.8 }}>
-                  {t('chat.research.questionsLabel', { count: message.subQuestions.length })}
+                  Research Questions ({message.subQuestions.length}):
                 </div>
                 <ul style={{
                   margin: '0',
@@ -1952,7 +1954,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
             {message.agentResults && message.agentResults.length > 0 && (
               <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '12px' }}>
-                {t('chat.research.analyzedBy', { count: message.agentResults.length })}
+                Analyzed by {message.agentResults.length} research agents
               </div>
             )}
           </div>
@@ -1965,10 +1967,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       deepResearchContent = (
         <div>
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
-            {t('chat.research.failed')}
+            Deep Research Failed
           </p>
-          <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.query')}: "{content || t('chat.labels.yourQuery')}"</p>
-          {message.content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {message.content}</p>}
+          <p style={{ margin: '4px 0', opacity: 0.85 }}>Query: "{content || 'your query'}"</p>
+          {message.content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {message.content}</p>}
         </div>
       );
     }
@@ -1976,12 +1978,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar
-            role={role}
-            $alignment={messageAlignment}
-            $useModelIcon={useModelIcon}
-            $profilePicture={role === 'user' ? userProfilePicture : null}
-          >
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
             {getAvatar()}
           </Avatar>
         )}
@@ -2022,7 +2019,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      {t('chat.actions.copyResults')}
+                      Copy Results
                     </ActionButton>
                   </>
                 )}
@@ -2041,7 +2038,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedImageContent = (
         <ThinkingContainer>
           <SpinnerIcon />
-          {t('chat.image.generating', { prompt: imagePrompt || t('chat.labels.yourPrompt') })}
+          Generating image for: "{imagePrompt || 'your prompt'}"...
         </ThinkingContainer>
       );
     } else if (status === 'completed' && imageUrl) {
@@ -2049,7 +2046,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <>
           {imagePrompt && (
             <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
-              {t('chat.labels.prompt')}: "{imagePrompt}"
+              Prompt: "{imagePrompt}"
             </p>
           )}
           <MessageImage src={imageUrl} alt={imagePrompt || 'Generated AI image'} style={{ maxHeight: '400px' }} />
@@ -2059,10 +2056,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedImageContent = (
         <div>
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
-            {t('chat.image.failed')}
+            Image Generation Failed
           </p>
-          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.prompt')}: "{imagePrompt}"</p>}
-          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {content}</p>}
+          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Prompt: "{imagePrompt}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
         </div>
       );
     }
@@ -2070,12 +2067,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar
-            role={role}
-            $alignment={messageAlignment}
-            $useModelIcon={useModelIcon}
-            $profilePicture={role === 'user' ? userProfilePicture : null}
-          >
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
             {getAvatar()}
           </Avatar>
         )}
@@ -2097,7 +2089,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      {t('chat.actions.copyUrl')}
+                      Copy URL
                     </ActionButton>
                   </>
                 )}
@@ -2117,7 +2109,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedVideoContent = (
         <ThinkingContainer>
           <SpinnerIcon />
-          {t('chat.video.generating', { prompt: imagePrompt || t('chat.labels.yourPrompt') })}
+          Generating video for: "{imagePrompt || 'your prompt'}"...
         </ThinkingContainer>
       );
     } else if (status === 'completed' && videoUrl) {
@@ -2125,7 +2117,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <>
           {imagePrompt && (
             <p style={{ margin: '0 0 8px 0', opacity: 0.85, fontSize: '0.9em' }}>
-              {t('chat.labels.prompt')}: "{imagePrompt}"
+              Prompt: "{imagePrompt}"
             </p>
           )}
           <MessageVideo controls src={videoUrl} style={{ maxHeight: '400px' }} />
@@ -2135,10 +2127,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       generatedVideoContent = (
         <div>
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
-            {t('chat.video.failed')}
+            Video Generation Failed
           </p>
-          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.prompt')}: "{imagePrompt}"</p>}
-          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {content}</p>}
+          {imagePrompt && <p style={{ margin: '4px 0', opacity: 0.85 }}>Prompt: "{imagePrompt}"</p>}
+          {content && <p style={{ margin: '4px 0', opacity: 0.85 }}>Error: {content}</p>}
         </div>
       );
     }
@@ -2146,12 +2138,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar
-            role={role}
-            $alignment={messageAlignment}
-            $useModelIcon={useModelIcon}
-            $profilePicture={role === 'user' ? userProfilePicture : null}
-          >
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
             {getAvatar()}
           </Avatar>
         )}
@@ -2173,7 +2160,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                         <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                       </svg>
-                      {t('chat.actions.copyUrl')}
+                      Copy URL
                     </ActionButton>
                   </>
                 )}
@@ -2187,13 +2174,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   return (
     <Message $alignment={messageAlignment}>
-      {shouldRenderAvatar && (
-        <Avatar
-          role={role}
-          $alignment={messageAlignment}
-          $useModelIcon={useModelIcon}
-          $profilePicture={role === 'user' ? userProfilePicture : null}
-        >
+      {(role === 'assistant' || role === 'user') && (
+        <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
           {getAvatar()}
         </Avatar>
       )}
@@ -2245,7 +2227,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 return (
                   <ThinkingContainer>
                     <SpinnerIcon />
-                    {t('chat.status.thinking')}
+                    Thinking
                   </ThinkingContainer>
                 );
               }
@@ -2377,7 +2359,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 // Share functionality
                 if (navigator.share) {
                   navigator.share({
-                    title: t('chat.share.title', 'AI Chat Message'),
+                    title: 'AI Chat Message',
                     text: contentToProcess
                   });
                 }
@@ -2404,7 +2386,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </ActionButton>
                 </>
               )}
-              <ActionButton onClick={handleReadAloud} title={isSpeaking ? t('chat.actions.stopSpeaking', 'Stop speaking') : t('chat.actions.readAloud', 'Read aloud')}>
+              <ActionButton onClick={handleReadAloud} title={isSpeaking ? 'Stop speaking' : 'Read aloud'}>
                 {isSpeaking ? (
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -2443,7 +2425,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
                   </svg>
-                  {t('chat.actions.load3d', 'Load in 3D')}
+                  Load in 3D
                 </ActionButton>
               )}
             </MessageActions>

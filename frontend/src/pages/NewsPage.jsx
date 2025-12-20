@@ -6,13 +6,31 @@ import { useTranslation } from '../contexts/TranslationContext';
 
 const NewsContainer = styled.div`
   flex: 1;
-  padding: 40px;
+  padding: 40px 20px 40px ${props => props.$collapsed ? '40px' : '360px'};
   background-color: ${props => props.theme.background};
   color: ${props => props.theme.text};
   overflow-y: auto;
-  width: ${props => (props.$collapsed ? '100%' : 'calc(100% - 320px)')};
-  margin-left: ${props => (props.$collapsed ? '0' : '320px')};
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  width: 100%;
+  margin-left: 0;
+  box-sizing: border-box;
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1), all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  
+  @media (max-width: 1024px) {
+    padding-left: 40px;
+  }
+`;
+
+const NewsContent = styled.div`
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-right: 20px;
+`;
+
+const NewsZoomWrapper = styled.div`
+  width: 100%;
+  transform: scale(0.95);
+  transform-origin: top center;
 `;
 
 const Header = styled.div`
@@ -20,6 +38,9 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 80px;
 `;
 
 const Title = styled.h1`
@@ -31,10 +52,10 @@ const Title = styled.h1`
 `;
 
 const RefreshButton = styled.button`
-  background-color: transparent;
-  color: ${props => props.theme.text};
-  border: 1px solid ${props => props.theme.border};
-  padding: 10px 20px;
+  background: ${props => props.theme.accentSurface};
+  color: ${props => props.theme.accentColor};
+  border: 1px solid ${props => props.theme.accentColor};
+  padding: 10px 80px 10px 20px;
   border-radius: 8px;
   font-size: 1rem;
   cursor: pointer;
@@ -44,9 +65,10 @@ const RefreshButton = styled.button`
   transition: all 0.2s ease-in-out;
 
   &:hover {
-    background-color: ${props => props.theme.primary || '#007bff'};
-    color: white;
-    border-color: ${props => props.theme.primary || '#007bff'};
+    background: ${props => props.theme.accentBackground};
+    color: ${props => props.theme.accentText};
+    border-color: ${props => props.theme.accentColor};
+    filter: brightness(0.95);
   }
 
   &:disabled {
@@ -111,6 +133,7 @@ const ArticlesGrid = styled.div`
   grid-auto-rows: minmax(280px, auto);
   grid-auto-flow: dense;
   gap: 20px;
+  padding-right: 80px;
   
   @media (max-width: 1200px) {
     grid-template-columns: repeat(3, 1fr);
@@ -970,6 +993,8 @@ const NewsPage = ({ collapsed }) => {
 
   return (
     <NewsContainer $collapsed={collapsed}>
+      <NewsContent>
+      <NewsZoomWrapper>
       <Header>
         <Title>
           <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1067,6 +1092,8 @@ const NewsPage = ({ collapsed }) => {
       {selectedArticle && (
         <ArticleDetailView article={selectedArticle} onClose={handleCloseArticle} />
       )}
+      </NewsZoomWrapper>
+      </NewsContent>
     </NewsContainer>
   );
 };
