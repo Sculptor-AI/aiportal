@@ -265,7 +265,7 @@ const NavItem = styled.div`
   cursor: pointer;
   transition: background-color 0.2s;
   background-color: ${props => props.$active ? props.theme.accentSurface : 'transparent'};
-  color: ${props => props.$active ? props.theme.accentColor : props.theme.text};
+  color: ${props => props.$active ? props.theme.accentText : props.theme.text};
   border-left: 3px solid ${props => props.$active ? props.theme.accentColor : 'transparent'};
   font-weight: ${props => props.$active ? '500' : 'normal'};
   

@@ -60,6 +60,7 @@ export const getAccentStyles = (theme = {}, accentChoice = 'theme') => {
       accentBackground: background,
       accentText: '#FFFFFF',
       accentSurface: addAlpha(fallbackColor, 0.14) || background,
+      accentChoice,
     };
   }
 
@@ -69,6 +70,7 @@ export const getAccentStyles = (theme = {}, accentChoice = 'theme') => {
     accentBackground: solidColor,
     accentText: accentTextMap[accentChoice] || '#FFFFFF',
     accentSurface: addAlpha(solidColor, 0.14),
+    accentChoice,
   };
 };
 

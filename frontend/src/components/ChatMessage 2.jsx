@@ -653,14 +653,12 @@ const Avatar = styled.div`
   margin-top: ${props => props.role === 'user' ? '8px' : '0'};
   font-weight: 600;
   flex-shrink: 0;
-  background: ${props => props.$profilePicture
-    ? `url(${props.$profilePicture}) center/cover`
-    : (props.$useModelIcon
-      ? 'transparent'
-      : (props.role === 'user'
-        ? props.theme.buttonGradient
-        : props.theme.secondary))};
-  color: ${props => props.$profilePicture ? 'transparent' : (props.role === 'user' ? props.theme.text : 'white')};
+  background: ${props => props.$useModelIcon
+    ? 'transparent'
+    : (props.role === 'user'
+      ? props.theme.buttonGradient
+      : props.theme.secondary)};
+  color: ${props => props.role === 'user' ? props.theme.text : 'white'};
   transition: all 0.2s ease;
   box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
   opacity: ${props => props.role === 'user' ? '0.6' : '1'};
@@ -689,29 +687,17 @@ const MessageWrapper = styled.div`
   }
 `;
 
-const DEFAULT_USER_ACCENT_BG = 'rgba(148, 163, 184, 0.18)';
-const DEFAULT_AI_ACCENT_BG = 'rgba(148, 163, 184, 0.1)';
-const LIGHT_THEME_USER_BG = 'rgba(59, 130, 246, 0.15)';
-
-const isCustomAccent = (theme) => theme?.accentChoice && theme.accentChoice !== 'theme';
-
-const getBubbleBackground = (role, theme) => {
-  const customAccent = isCustomAccent(theme);
-  if (role === 'user') {
-    if (customAccent) return theme.accentBackground;
-    return theme.name === 'light' ? LIGHT_THEME_USER_BG : DEFAULT_USER_ACCENT_BG;
+const getUserBubbleBackground = (theme) => {
+  if (theme.name === 'dark' || theme.name === 'oled') {
+    return 'rgba(40, 40, 45, 0.95)';
   }
-  return customAccent ? theme.accentBackground : DEFAULT_AI_ACCENT_BG;
+  return theme.messageUser;
 };
-
-const getBubbleBorderColor = (theme) => isCustomAccent(theme) ? theme.accentColor : theme.border;
-
-const getBubbleTextColor = (theme) => isCustomAccent(theme) ? theme.accentText : theme.text;
 
 const Content = styled.div`
   width: fit-content;
   white-space: pre-wrap;
-  color: ${props => getBubbleTextColor(props.theme)};
+  color: ${props => props.theme.text};
   line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
@@ -719,22 +705,22 @@ const Content = styled.div`
   margin-right: ${props => props.$alignment === 'left' ? 'auto' : '0'};
   position: relative;
   text-align: ${props => props.$alignment === 'right' ? 'right' : 'left'};
-  direction: ltr;
-  unicode-bidi: plaintext;
+  direction: ${props => props.$alignment === 'right' ? 'rtl' : 'ltr'};
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-  background: ${props => getBubbleBackground(props.role, props.theme)};
-  border: 1px solid ${props => getBubbleBorderColor(props.theme)};
-  padding: ${props => props.role === 'user' ? '15px 18px' : '12px 17px'};
   
   ${props => props.role === 'user' && css`
+    padding: 15px 18px;
     padding-right: 18px;
     border-radius: ${props.$alignment === 'right' ? '20px 20px 4px 20px' : '20px 20px 20px 4px'};
+    background: ${getUserBubbleBackground(props.theme)};
     box-shadow: 0 2px 10px ${props.theme.shadow};
+    border: 1px solid ${props.theme.border};
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     margin-left: ${props.$alignment === 'right' ? 'auto' : '0'};
     margin-right: ${props.$alignment === 'left' ? 'auto' : '0'};
     text-align: ${props.$alignment === 'right' ? 'right' : 'left'};
+    direction: ${props.$alignment === 'right' ? 'rtl' : 'ltr'};
   `}
   
   /* Bubble pointer for user messages */
@@ -746,12 +732,14 @@ const Content = styled.div`
       right: -8px;
       width: 0;
       height: 0;
-      border-left: 8px solid ${getBubbleBackground('user', props.theme)};
+      border-left: 8px solid ${props.theme.name === 'dark' || props.theme.name === 'oled'
+      ? 'rgba(40, 40, 45, 0.95)'
+      : props.theme.messageUser};
       border-top: 8px solid transparent;
       border-bottom: 8px solid transparent;
     }
   `}
-
+  
   ${props => props.role === 'user' && props.$alignment === 'left' && `
     &::after {
       content: '';
@@ -760,7 +748,7 @@ const Content = styled.div`
       left: -8px;
       width: 0;
       height: 0;
-      border-right: 8px solid ${getBubbleBackground('user', props.theme)};
+      border-right: 8px solid ${props.theme.messageUser};
       border-top: 8px solid transparent;
       border-bottom: 8px solid transparent;
     }
@@ -1654,7 +1642,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
   );
 };
 
-const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
+const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
 
@@ -1695,9 +1683,6 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   const getAvatar = () => {
     if (role === 'user') {
-      if (userProfilePicture) {
-        return null;
-      }
       return (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -1720,12 +1705,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   // Determine if we should use a model icon (for AI messages with a modelId)
   const useModelIcon = role === 'assistant' && showModelIcons && modelId;
 
-  // Determine alignment preference; default keeps AI left and user right
-  const messageAlignmentPreference = settings.messageAlignment || 'default';
-  const messageAlignment = messageAlignmentPreference === 'default'
-    ? (role === 'assistant' ? 'left' : 'right')
-    : (messageAlignmentPreference === 'right' ? 'right' : 'left');
-  const shouldRenderAvatar = role !== 'user' || showProfileIcon;
+  // Get message alignment from settings, but default user messages to right
+  const messageAlignmentPreference = settings.messageAlignment || 'left';
+  const messageAlignment = messageAlignmentPreference === 'right' ? 'right' : 'left';
 
   // Get bubble style from settings
   // Apply high contrast mode if set
@@ -1870,12 +1852,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar
-            role={role}
-            $alignment={messageAlignment}
-            $useModelIcon={useModelIcon}
-            $profilePicture={role === 'user' ? userProfilePicture : null}
-          >
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
             {getAvatar()}
           </Avatar>
         )}
@@ -2001,12 +1978,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar
-            role={role}
-            $alignment={messageAlignment}
-            $useModelIcon={useModelIcon}
-            $profilePicture={role === 'user' ? userProfilePicture : null}
-          >
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
             {getAvatar()}
           </Avatar>
         )}
@@ -2095,12 +2067,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar
-            role={role}
-            $alignment={messageAlignment}
-            $useModelIcon={useModelIcon}
-            $profilePicture={role === 'user' ? userProfilePicture : null}
-          >
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
             {getAvatar()}
           </Avatar>
         )}
@@ -2171,12 +2138,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar
-            role={role}
-            $alignment={messageAlignment}
-            $useModelIcon={useModelIcon}
-            $profilePicture={role === 'user' ? userProfilePicture : null}
-          >
+          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
             {getAvatar()}
           </Avatar>
         )}
@@ -2212,13 +2174,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   return (
     <Message $alignment={messageAlignment}>
-      {shouldRenderAvatar && (
-        <Avatar
-          role={role}
-          $alignment={messageAlignment}
-          $useModelIcon={useModelIcon}
-          $profilePicture={role === 'user' ? userProfilePicture : null}
-        >
+      {(role === 'assistant' || role === 'user') && (
+        <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
           {getAvatar()}
         </Avatar>
       )}
