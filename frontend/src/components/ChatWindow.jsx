@@ -63,6 +63,14 @@ const ChatWindow = forwardRef(({
   const [artifactHTML, setArtifactHTML] = useState(null);
   const [isArtifactModalOpen, setIsArtifactModalOpen] = useState(false);
   const [animateDown, setAnimateDown] = useState(false);
+  const [profilePicture, setProfilePicture] = useState(() => {
+    try {
+      return localStorage.getItem('profilePicture') || null;
+    } catch (err) {
+      console.error('Failed to read profile picture from localStorage', err);
+      return null;
+    }
+  });
 
   // Image generation model state
   const [isImagePromptMode, setIsImagePromptMode] = useState(false);
@@ -75,6 +83,7 @@ const ChatWindow = forwardRef(({
 
   const toast = useToast();
   const theme = useTheme();
+  const showProfilePicture = settings?.showProfilePicture !== false;
 
   // Memoized values
   const chatIsEmpty = useMemo(() => {
@@ -96,6 +105,17 @@ const ChatWindow = forwardRef(({
   const animateEmptyStateOut = useMemo(() => {
     return (!chatIsEmpty || shouldStartAnimationThisRender || !showGreeting) && effectiveAnimateDownSignal;
   }, [chatIsEmpty, shouldStartAnimationThisRender, showGreeting, effectiveAnimateDownSignal]);
+
+  useEffect(() => {
+    const handleProfilePictureChange = (event) => {
+      setProfilePicture(event?.detail?.profilePicture || null);
+    };
+
+    window.addEventListener('profilePictureChanged', handleProfilePictureChange);
+    return () => {
+      window.removeEventListener('profilePictureChanged', handleProfilePictureChange);
+    };
+  }, []);
 
   // Callbacks
   const scrollToBottom = useCallback(() => {
@@ -576,6 +596,8 @@ const ChatWindow = forwardRef(({
             showModelIcons={settings.showModelIcons}
             settings={settings}
             theme={theme}
+            userProfilePicture={showProfilePicture ? profilePicture : null}
+            showProfileIcon={showProfilePicture}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -642,5 +664,3 @@ const ChatWindow = forwardRef(({
 ChatWindow.displayName = 'ChatWindow';
 
 export default ChatWindow;
-
-

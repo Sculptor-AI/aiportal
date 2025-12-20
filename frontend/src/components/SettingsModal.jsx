@@ -808,9 +808,23 @@ const SettingsModal = ({ settings, updateSettings, closeModal }) => {
                     onChange={() => handleChange('messageAlignment', 'right')}
                   />
                   Right
-                </RadioOption>
-              </RadioGroup>
-            </SettingGroup>
+                  </RadioOption>
+                </RadioGroup>
+              </SettingGroup>
+              <SettingGroup>
+                <SettingLabel>Profiles</SettingLabel>
+                <ToggleWrapper>
+                  <Toggle checked={localSettings.showProfilePicture !== false}>
+                    <input
+                      type="checkbox"
+                      checked={localSettings.showProfilePicture !== false}
+                      onChange={() => handleChange('showProfilePicture', !(localSettings.showProfilePicture !== false))}
+                    />
+                    <Slider checked={localSettings.showProfilePicture !== false} />
+                  </Toggle>
+                  Show profile icon in chats
+                </ToggleWrapper>
+              </SettingGroup>
           </SettingsSection>
 
           {/* Add a new Interface section */}

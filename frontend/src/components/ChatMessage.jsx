@@ -653,12 +653,14 @@ const Avatar = styled.div`
   margin-top: ${props => props.role === 'user' ? '8px' : '0'};
   font-weight: 600;
   flex-shrink: 0;
-  background: ${props => props.$useModelIcon
-    ? 'transparent'
-    : (props.role === 'user'
-      ? props.theme.buttonGradient
-      : props.theme.secondary)};
-  color: ${props => props.role === 'user' ? props.theme.text : 'white'};
+  background: ${props => props.$profilePicture
+    ? `url(${props.$profilePicture}) center/cover`
+    : (props.$useModelIcon
+      ? 'transparent'
+      : (props.role === 'user'
+        ? props.theme.buttonGradient
+        : props.theme.secondary))};
+  color: ${props => props.$profilePicture ? 'transparent' : (props.role === 'user' ? props.theme.text : 'white')};
   transition: all 0.2s ease;
   box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
   opacity: ${props => props.role === 'user' ? '0.6' : '1'};
@@ -1642,7 +1644,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
   );
 };
 
-const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {} }) => {
+const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
 
@@ -1683,6 +1685,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   const getAvatar = () => {
     if (role === 'user') {
+      if (userProfilePicture) {
+        return null;
+      }
       return (
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
@@ -1710,6 +1715,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   const messageAlignment = messageAlignmentPreference === 'default'
     ? (role === 'assistant' ? 'left' : 'right')
     : (messageAlignmentPreference === 'right' ? 'right' : 'left');
+  const shouldRenderAvatar = role !== 'user' || showProfileIcon;
 
   // Get bubble style from settings
   // Apply high contrast mode if set
@@ -1854,7 +1860,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+          <Avatar
+            role={role}
+            $alignment={messageAlignment}
+            $useModelIcon={useModelIcon}
+            $profilePicture={role === 'user' ? userProfilePicture : null}
+          >
             {getAvatar()}
           </Avatar>
         )}
@@ -1980,7 +1991,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+          <Avatar
+            role={role}
+            $alignment={messageAlignment}
+            $useModelIcon={useModelIcon}
+            $profilePicture={role === 'user' ? userProfilePicture : null}
+          >
             {getAvatar()}
           </Avatar>
         )}
@@ -2069,7 +2085,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+          <Avatar
+            role={role}
+            $alignment={messageAlignment}
+            $useModelIcon={useModelIcon}
+            $profilePicture={role === 'user' ? userProfilePicture : null}
+          >
             {getAvatar()}
           </Avatar>
         )}
@@ -2140,7 +2161,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
-          <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+          <Avatar
+            role={role}
+            $alignment={messageAlignment}
+            $useModelIcon={useModelIcon}
+            $profilePicture={role === 'user' ? userProfilePicture : null}
+          >
             {getAvatar()}
           </Avatar>
         )}
@@ -2176,8 +2202,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   return (
     <Message $alignment={messageAlignment}>
-      {(role === 'assistant' || role === 'user') && (
-        <Avatar role={role} $alignment={messageAlignment} $useModelIcon={useModelIcon}>
+      {shouldRenderAvatar && (
+        <Avatar
+          role={role}
+          $alignment={messageAlignment}
+          $useModelIcon={useModelIcon}
+          $profilePicture={role === 'user' ? userProfilePicture : null}
+        >
           {getAvatar()}
         </Avatar>
       )}

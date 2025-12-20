@@ -268,6 +268,7 @@ const MobileAppContent = () => {
       sendWithEnter: true,
       showTimestamps: true,
       showModelIcons: true,
+      showProfilePicture: true,
       messageAlignment: 'default',
       codeHighlighting: true,
       bubbleStyle: 'minimal',
