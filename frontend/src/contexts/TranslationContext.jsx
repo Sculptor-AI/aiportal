@@ -7,10 +7,10 @@ export const TranslationProvider = ({ language: initialLanguage = 'en-US', setti
   const [language, setLanguage] = useState(initialLanguage);
 
   useEffect(() => {
-    if (settingsLanguage && settingsLanguage !== language) {
+    if (settingsLanguage) {
       setLanguage(settingsLanguage);
     }
-  }, [settingsLanguage, language]);
+  }, [settingsLanguage]);
 
   const value = useMemo(() => ({
     language,
