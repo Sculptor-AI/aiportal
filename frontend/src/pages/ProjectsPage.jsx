@@ -63,7 +63,7 @@ const CreateButton = styled.button`
   align-items: center;
   gap: 8px;
   background: ${props => props.theme.primary || '#007AFF'};
-  color: white;
+  color: ${props => props.theme.primaryForeground || 'white'};
   border: none;
   padding: 12px 20px;
   border-radius: 10px;
@@ -75,12 +75,11 @@ const CreateButton = styled.button`
   white-space: nowrap;
   
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px ${props => props.theme.primary || '#007AFF'}40;
+    filter: brightness(1.1);
   }
   
   &:active {
-    transform: translateY(0);
+    filter: brightness(0.95);
   }
   
   svg {
@@ -214,7 +213,7 @@ const ProjectIcon = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: ${props => props.$color || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  background: ${props => props.$color || props.theme.primary || '#5B6AD0'};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -381,14 +380,14 @@ const EmptyDescription = styled.p`
 `;
 
 const PROJECT_COLORS = [
-  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-  'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-  'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-  'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
-  'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-  'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+  '#5B6AD0',
+  '#E85D75',
+  '#3B9ED8',
+  '#36B37E',
+  '#F5A623',
+  '#9B6BD1',
+  '#E87D8A',
+  '#4C6EF5',
 ];
 
 const PROJECT_ICONS = ['📁', '💼', '🎨', '🔬', '📊', '💡', '🚀', '📝', '🎯', '⚡'];

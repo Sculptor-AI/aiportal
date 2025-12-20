@@ -1124,7 +1124,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   onMessageSent={handleMessageSent}
                 />
               } />
-              <Route path="/media" element={<MediaPage />} />
+              <Route path="/media" element={<MediaPage collapsed={collapsed} />} />
               <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
               <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
               <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} toggleProjectStar={toggleProjectStar} collapsed={collapsed} chats={chats} />} />

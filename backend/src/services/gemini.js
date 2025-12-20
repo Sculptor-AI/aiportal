@@ -12,6 +12,7 @@
  * - URL-based media fetching
  * - System instructions
  * - Safety settings
+ * - Video generation (Veo)
  */
 
 import { resolveModel, getImageModelFallbacks } from '../config/index.js';
@@ -706,4 +707,159 @@ export async function generateImageWithImagen(prompt, apiKey, options = {}) {
   }
 
   return { success: false, error: `All image models failed. Details: ${errors.join('; ')}` };
+}
+
+/**
+ * Generate video using Veo 2 (Gemini API)
+ * 
+ * Uses the long-running predictLongRunning endpoint
+ * Note: Veo 2 requires specific API access and may not be available to all users
+ */
+export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
+  // Use the specific model ID for Veo 2
+  const model = 'veo-2.0-generate-001';
+  
+  console.log(`[Veo Video] Generating with model: ${model}`);
+  console.log(`[Veo Video] Prompt: "${prompt.substring(0, 100)}..."`);
+  console.log(`[Veo Video] Options:`, options);
+
+  const requestBody = {
+    instances: [{ 
+      prompt: prompt 
+    }],
+    parameters: {
+      aspectRatio: options.aspectRatio || '16:9',
+      ...(options.negativePrompt && { negativePrompt: options.negativePrompt })
+    }
+  };
+
+  console.log(`[Veo Video] Request body:`, JSON.stringify(requestBody, null, 2));
+
+  try {
+    const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
+    console.log(`[Veo Video] URL: ${url.replace(apiKey, 'API_KEY_HIDDEN')}`);
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error(`[Veo Video] API Error (${response.status}):`, JSON.stringify(result, null, 2));
+      
+      // Provide more helpful error messages
+      let errorMessage = result.error?.message || `API returned status ${response.status}`;
+      
+      if (response.status === 403) {
+        errorMessage = 'Access denied. Veo 2 video generation requires specific API access. Please check your API key permissions.';
+      } else if (response.status === 404) {
+        errorMessage = 'Veo 2 model not found. This model may not be available in your region or requires special access.';
+      } else if (response.status === 429) {
+        errorMessage = 'Rate limit exceeded. Please wait a moment and try again.';
+      }
+      
+      return { 
+        success: false, 
+        error: errorMessage
+      };
+    }
+    
+    // Returns an operation name for polling
+    if (result.name) {
+      console.log(`[Veo Video] Operation started successfully: ${result.name}`);
+      return {
+        success: true,
+        operationName: result.name,
+        model
+      };
+    } else {
+      console.error(`[Veo Video] Unexpected response structure:`, JSON.stringify(result, null, 2));
+      return { success: false, error: 'Unexpected API response - no operation name returned' };
+    }
+  } catch (e) {
+    console.error(`[Veo Video] Exception:`, e);
+    return { success: false, error: `Network error: ${e.message}` };
+  }
+}
+
+/**
+ * Check status of a long-running operation (Veo video generation)
+ */
+export async function checkOperationStatus(operationName, apiKey) {
+  try {
+    // Operation name usually looks like "operations/..."
+    const url = `${GEMINI_BASE_URL}/${operationName}?key=${apiKey}`;
+    console.log(`[Veo Status] Checking: ${operationName}`);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error(`[Veo Status] Error (${response.status}):`, JSON.stringify(result, null, 2));
+      return { 
+        success: false, 
+        error: result.error?.message || `Status ${response.status}: Unknown error` 
+      };
+    }
+
+    console.log(`[Veo Status] Response done=${result.done}:`, JSON.stringify(result, null, 2).substring(0, 500));
+
+    // Check if done
+    if (result.done) {
+      if (result.error) {
+        console.error(`[Veo Status] Operation failed:`, result.error);
+        return { success: false, done: true, error: result.error.message || 'Video generation failed' };
+      }
+      
+      // Extract video URI - try multiple possible response structures
+      // Based on REST API docs: response.generateVideoResponse.generatedSamples[0].video.uri
+      let videoUri = null;
+      
+      // Try different response structures (API may vary)
+      const possiblePaths = [
+        result.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri,
+        result.response?.result?.videos?.[0]?.video?.uri,
+        result.response?.videos?.[0]?.uri,
+        result.response?.generatedSamples?.[0]?.video?.uri,
+        result.result?.generatedSamples?.[0]?.video?.uri,
+      ];
+      
+      for (const path of possiblePaths) {
+        if (path) {
+          videoUri = path;
+          break;
+        }
+      }
+      
+      if (!videoUri) {
+        console.log('[Veo Status] Completed but could not find video URI. Full response:', JSON.stringify(result, null, 2));
+      } else {
+        console.log(`[Veo Status] Video ready at: ${videoUri}`);
+      }
+      
+      return {
+        success: true,
+        done: true,
+        videoUri
+      };
+    }
+    
+    // Still running
+    return {
+      success: true,
+      done: false,
+      metadata: result.metadata
+    };
+    
+  } catch (e) {
+    console.error(`[Veo Status] Exception:`, e);
+    return { success: false, error: `Network error: ${e.message}` };
+  }
 }
