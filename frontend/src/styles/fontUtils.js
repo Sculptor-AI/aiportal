@@ -1,4 +1,4 @@
-const fontMap = {
+export const FONT_FAMILY_MAP = {
   system: "Inter, system-ui, Avenir, Helvetica, Arial, sans-serif",
   inter: "'Inter', sans-serif",
   roboto: "'Roboto', sans-serif",
@@ -8,11 +8,14 @@ const fontMap = {
   caveat: "'Caveat', cursive",
   georgia: "'Georgia', serif",
   merriweather: "'Merriweather', serif",
+  spaceMono: "'Space Mono', 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace",
+  default: "Inter, system-ui, Avenir, Helvetica, Arial, sans-serif"
 };
 
-export const getFontFamilyValue = (key) => {
+export const getFontFamilyValue = (key = 'system') => {
   const normalized = (key || 'system').toLowerCase();
-  return fontMap[normalized] || fontMap.system;
+  return FONT_FAMILY_MAP[normalized] || FONT_FAMILY_MAP.default;
 };
 
 export default getFontFamilyValue;
+

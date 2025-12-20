@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useTranslation } from '../contexts/TranslationContext';
 
 const PageContainer = styled.div`
   flex: 1;
@@ -17,10 +18,11 @@ const Title = styled.h1`
 `;
 
 const MediaPage = () => {
+  const { t } = useTranslation();
   return (
     <PageContainer>
-      <Title>Media Page</Title>
-      <p>Content for the Media page will go here.</p>
+      <Title>{t('media.title')}</Title>
+      <p>{t('media.placeholder')}</p>
     </PageContainer>
   );
 };

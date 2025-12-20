@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
+import { useTranslation } from '../contexts/TranslationContext';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -251,6 +252,7 @@ const ControlButton = styled.button`
 `;
 
 const GraphingModal = ({ isOpen, onClose, theme }) => {
+  const { t } = useTranslation();
   const canvasRef = useRef(null);
   const [items, setItems] = useState([
     { id: 1, type: 'equation', expression: 'y = sin(x)', color: '#c74440', visible: true },
@@ -502,7 +504,7 @@ const GraphingModal = ({ isOpen, onClose, theme }) => {
       <GraphingContainer $isOpen={isOpen} onClick={e => e.stopPropagation()}>
         <Sidebar>
           <SidebarHeader>
-            <Title>SCULPTOR <TitleText>Graph</TitleText></Title>
+            <Title>SCULPTOR <TitleText>{t('graph.titleSuffix', 'Graph')}</TitleText></Title>
           </SidebarHeader>
           <EquationList>
             {items.map(item => (
@@ -516,13 +518,13 @@ const GraphingModal = ({ isOpen, onClose, theme }) => {
                   <StyledInput
                     value={item.expression}
                     onChange={e => updateItem(item.id, 'expression', e.target.value)}
-                    placeholder="Enter expression..."
+                    placeholder={t('graph.placeholder')}
                   />
                 </InputWrapper>
                 <DeleteButton onClick={() => removeItem(item.id)}>×</DeleteButton>
               </EquationItem>
             ))}
-            <AddButton onClick={addItem}>+ Add Expression</AddButton>
+            <AddButton onClick={addItem}>{t('graph.button.addExpression')}</AddButton>
           </EquationList>
         </Sidebar>
 
@@ -537,12 +539,12 @@ const GraphingModal = ({ isOpen, onClose, theme }) => {
 
           <CloseButton onClick={onClose}>×</CloseButton>
 
-          <ControlsOverlay>
-            <ControlButton onClick={centerGraph} title="Reset View">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M12 3v18M19 12a7 7 0 0 1-7 7 7 7 0 0 1 0-14 7 7 0 0 1 7 7z" /></svg>
-            </ControlButton>
-            <ControlButton onClick={() => setScale(s => s * 1.2)} title="Zoom In">+</ControlButton>
-            <ControlButton onClick={() => setScale(s => s / 1.2)} title="Zoom Out">-</ControlButton>
+            <ControlsOverlay>
+              <ControlButton onClick={centerGraph} title={t('graph.controls.reset')}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12h18M12 3v18M19 12a7 7 0 0 1-7 7 7 7 0 0 1 0-14 7 7 0 0 1 7 7z" /></svg>
+              </ControlButton>
+              <ControlButton onClick={() => setScale(s => s * 1.2)} title={t('graph.controls.zoomIn')}>+</ControlButton>
+              <ControlButton onClick={() => setScale(s => s / 1.2)} title={t('graph.controls.zoomOut')}>-</ControlButton>
           </ControlsOverlay>
         </CanvasArea>
 

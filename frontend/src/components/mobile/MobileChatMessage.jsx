@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import StreamingMarkdownRenderer from '../StreamingMarkdownRenderer';
 import { processCodeBlocks } from '../../utils/codeBlockProcessor';
+import { useTranslation } from '../../contexts/TranslationContext';
 
 const MessageContainer = styled.div`
   margin: 16px 0;
@@ -363,6 +364,7 @@ const formatTimestamp = (timestamp) => {
 };
 
 const MobileChatMessage = ({ message, settings, theme = {} }) => {
+  const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
   
   const isUser = message.role === 'user';
@@ -374,7 +376,7 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
         {message.image && !imageError && (
           <MessageImage
             src={message.image}
-            alt="Uploaded content"
+            alt={t('chat.attachments.uploaded')}
             onError={() => setImageError(true)}
           />
         )}
@@ -416,13 +418,13 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
               <span></span>
               <span></span>
             </LoadingDots>
-            Thinking...
+            {t('chat.status.thinking')}
           </LoadingIndicator>
         )}
         
         {message.isError && (
           <ErrorMessage>
-            {message.content || 'Failed to generate response. Please try again.'}
+            {message.content || t('chat.errors.generic')}
           </ErrorMessage>
         )}
       </MessageBubble>

@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { css, keyframes } from 'styled-components';
-import { useTheme } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import useGeminiLive from '../hooks/useGeminiLive';
 import AudioVisualizer from './AudioVisualizer';
+import { useTranslation } from '../contexts/TranslationContext';
 
 // --- Animations ---
 
@@ -317,6 +317,7 @@ const ErrorBanner = styled.div`
 `;
 
 const LiveModeUI = ({ selectedModel, onClose }) => {
+  const { t } = useTranslation();
   const [microphoneActive, setMicrophoneActive] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [screenShareActive, setScreenShareActive] = useState(false);
@@ -437,7 +438,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         setCameraError('');
       } catch (e) {
         console.error(e);
-        setCameraError('Camera access denied');
+        setCameraError(t('liveMode.errors.cameraDenied', 'Camera access denied'));
       }
     }
   };
@@ -464,18 +465,18 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         setScreenError('');
       } catch (e) {
         console.error(e);
-        setScreenError('Screen share denied');
+        setScreenError(t('liveMode.errors.screenDenied', 'Screen share denied'));
       }
     }
   };
 
   // Status Text
   const getStatusText = () => {
-    if (!isConnected) return 'Connecting...';
-    if (!sessionActive) return 'Starting...';
-    if (isRecording) return 'Listening';
-    if (status === 'processing') return 'Thinking';
-    return 'Ready';
+    if (!isConnected) return t('liveMode.status.connecting', 'Connecting...');
+    if (!sessionActive) return t('liveMode.status.starting', 'Starting...');
+    if (isRecording) return t('liveMode.status.listening', 'Listening');
+    if (status === 'processing') return t('liveMode.status.thinking', 'Thinking');
+    return t('liveMode.status.ready', 'Ready');
   };
 
   const getStatusColor = () => {
@@ -494,7 +495,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         {getStatusText()}
       </StatusBadge>
 
-      <CloseButton onClick={onClose} aria-label="Close Live Mode">
+      <CloseButton onClick={onClose} aria-label={t('liveMode.controls.close', 'Close Live Mode')}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -504,7 +505,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
       {/* Errors */}
       {(cameraError || screenError || geminiError) && (
         <ErrorBanner>
-          {cameraError || screenError || (typeof geminiError === 'string' ? geminiError : 'Connection error')}
+          {cameraError || screenError || (typeof geminiError === 'string' ? geminiError : t('liveMode.errors.connection', 'Connection error'))}
         </ErrorBanner>
       )}
 
@@ -545,7 +546,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
           $isActive={microphoneActive}
           $variant="danger" // Red when active
           onClick={handleMicrophoneToggle}
-          title={microphoneActive ? "Mute Microphone" : "Unmute Microphone"}
+          title={microphoneActive ? t('liveMode.controls.mic.mute', 'Mute Microphone') : t('liveMode.controls.mic.unmute', 'Unmute Microphone')}
         >
           {microphoneActive ? (
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -564,7 +565,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         <ControlButton
           $isActive={cameraActive}
           onClick={handleCameraToggle}
-          title={cameraActive ? "Turn Off Camera" : "Turn On Camera"}
+          title={cameraActive ? t('liveMode.controls.camera.off', 'Turn Off Camera') : t('liveMode.controls.camera.on', 'Turn On Camera')}
         >
           {cameraActive ? (
             <svg viewBox="0 0 24 24" fill="currentColor">
@@ -580,7 +581,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         <ControlButton
           $isActive={screenShareActive}
           onClick={handleScreenShareToggle}
-          title={screenShareActive ? "Stop Sharing" : "Share Screen"}
+          title={screenShareActive ? t('liveMode.controls.screen.stop', 'Stop Sharing') : t('liveMode.controls.screen.start', 'Share Screen')}
         >
           <svg viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />

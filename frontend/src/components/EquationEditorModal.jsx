@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
+import { useTranslation } from '../contexts/TranslationContext';
 
 // Animations
 const fadeIn = keyframes`
@@ -387,6 +388,7 @@ const SYMBOL_CATEGORIES = {
 };
 
 const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme }) => {
+  const { t } = useTranslation();
   const [userInput, setUserInput] = useState('');
   const [latexOutput, setLatexOutput] = useState('');
   const [activeCategory, setActiveCategory] = useState('basic');
@@ -533,7 +535,7 @@ const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme }) => {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 18h16M4 6h16M9 12h6" />
             </svg>
-            Equation Editor
+            {t('equation.title', 'Equation Editor')}
           </ModalTitle>
           <CloseButton onClick={onClose} theme={theme}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -578,23 +580,23 @@ const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme }) => {
                   <ReactKatex key={latexOutput} displayMode={true} errorColor={'#cc0000'}>{latexOutput}</ReactKatex>
                 ) : (
                   <div style={{ opacity: 0.3, fontSize: '1rem', fontStyle: 'italic' }}>
-                    Type math naturally... (e.g. "1/2", "sqrt(x)", "alpha")
+                    {t('equation.preview.hint')}
                   </div>
                 )}
               </PreviewContainer>
             </PreviewSection>
 
             <InputSection theme={theme}>
-              <TextArea
-                ref={textAreaRef}
-                theme={theme}
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                placeholder="Type math here... e.g. 'x^2 + y^2 = r^2' or '1/2'"
-                spellCheck={false}
-              />
+                <TextArea
+                  ref={textAreaRef}
+                  theme={theme}
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  placeholder={t('equation.input.placeholder')}
+                  spellCheck={false}
+                />
               <div style={{ fontSize: '0.8rem', opacity: 0.6, textAlign: 'right', marginTop: '5px' }}>
-                Typing: "{userInput}" → Renders as LaTeX
+                {t('equation.preview.typing', 'Typing: "{{input}}" → Renders as LaTeX', { input: userInput })}
               </div>
             </InputSection>
           </EditorArea>
@@ -602,7 +604,7 @@ const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme }) => {
 
         <Footer theme={theme}>
           <ActionButton theme={theme} onClick={onClose}>
-            Cancel
+            {t('equation.button.cancel')}
           </ActionButton>
           <ActionButton
             theme={theme}
@@ -610,7 +612,7 @@ const EquationEditorModal = ({ isOpen, onClose, onSubmit, theme }) => {
             onClick={() => onSubmit(latexOutput)}
             disabled={!latexOutput.trim()}
           >
-            Insert Equation
+            {t('equation.button.insert')}
           </ActionButton>
         </Footer>
       </ModalContent>

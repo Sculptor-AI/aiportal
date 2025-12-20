@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink as RouterNavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from '../contexts/TranslationContext';
 
 // Styled Components - Updated for Grok.com-inspired design
 const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
@@ -15,7 +16,6 @@ const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
   border-right: ${props => props.$sidebarStyle === 'traditional' ? `1px solid ${props.theme.border}` : 'none'};
   border-radius: ${props => props.$sidebarStyle === 'traditional' ? '0' : '20px'};
   overflow: hidden;
-  transition: all 0.3s ease;
   position: fixed;
   top: ${props => props.$sidebarStyle === 'traditional' ? '0' : '20px'};
   left: ${props => {
@@ -25,8 +25,11 @@ const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
     return props.$sidebarStyle === 'traditional' ? '0' : '20px';
   }};
   z-index: 101;
-  opacity: ${props => props.$collapsed ? '0' : '1'};
+  opacity: ${props => props.$collapsed ? '0' : (props.$focusModeActive ? '0.12' : '1')};
   box-shadow: ${props => props.$sidebarStyle === 'traditional' ? 'none' : '0 8px 28px rgba(0, 0, 0, 0.16)'};
+  filter: ${props => props.$focusModeActive ? 'blur(6px)' : 'none'};
+  pointer-events: ${props => props.$focusModeActive ? 'none' : 'auto'};
+  transition: all 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
   
   @media (max-width: 768px) {
     left: ${props => (props.$collapsed ? '-100%' : '0')};
@@ -58,9 +61,9 @@ const LogoContainer = styled.div`
 `;
 
 const LogoText = styled.span`
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-weight: 600;
-  font-size: 18px;
+  font-size: calc(var(--font-size, 1rem) * 1.125);
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 `;
 
@@ -133,9 +136,9 @@ const MobileLogoContainer = styled.div`
 `;
 
 const MobileLogoText = styled.span`
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-weight: 600;
-  font-size: 16px;
+  font-size: var(--font-size, 1rem);
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 `;
 
@@ -159,7 +162,7 @@ const NewChatButton = styled.button`
   padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '10px 12px'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
   font-weight: 400;
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -168,7 +171,7 @@ const NewChatButton = styled.button`
   margin: 0 16px 16px;
   width: calc(100% - 32px);
   flex-shrink: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &:hover {
     background: ${props => {
@@ -302,9 +305,9 @@ const ChatTitle = styled.div`
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
-  font-size: 14px;
+  font-size: calc(var(--font-size, 1rem) * 0.9);
   font-weight: 400;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   @media (max-width: 768px) {
       opacity: 1;
@@ -408,7 +411,7 @@ const BottomSection = styled.div`
 const SectionHeader = styled.div`
   padding: 0 16px;
   margin: 12px 0 8px 0;
-  font-size: 11px;
+  font-size: calc(var(--font-size, 1rem) * 0.7);
   text-transform: uppercase;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -416,7 +419,7 @@ const SectionHeader = styled.div`
   opacity: ${props => props.$collapsed ? '0' : '0.6'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   @media (max-width: 768px) {
       opacity: 0.6;
@@ -447,7 +450,7 @@ const ModelDropdownButton = styled.button`
   transition: all 0.2s ease;
   min-height: 36px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &:hover {
     border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
@@ -560,20 +563,20 @@ const ModelInfo = styled.div`
 const ModelName = styled.span`
   font-weight: ${props => props.$isSelected ? '500' : '400'};
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 `;
 
 const ModelDescription = styled.span`
-  font-size: 12px;
+  font-size: calc(var(--font-size, 1rem) * 0.85);
   color: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : `${props.theme.text}80`};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 `;
 
 const SidebarButton = styled.button`
@@ -585,12 +588,12 @@ const SidebarButton = styled.button`
   border: none;
   border-radius: 6px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
   justify-content: flex-start;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
@@ -645,7 +648,7 @@ const SidebarSection = styled.div`
   gap: 2px;
 `;
 
-const NavLink = styled(Link)`
+const SidebarNavLink = styled(RouterNavLink)`
   display: flex;
   align-items: center;
   width: 100%;
@@ -654,13 +657,13 @@ const NavLink = styled(Link)`
   border: none;
   border-radius: 6px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
   justify-content: flex-start;
   text-decoration: none;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
@@ -672,6 +675,16 @@ const NavLink = styled(Link)`
     height: 16px;
     opacity: 0.7;
     color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
+  }
+  
+  &.active {
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'};
+    font-weight: 600;
+
+    svg {
+      opacity: 1;
+      color: ${props => props.theme.text};
+    }
   }
 `;
 
@@ -709,8 +722,8 @@ const SearchInput = styled.input`
   color: ${props =>
     props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
       props.theme.text};
-  font-size: 13px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--font-size, 1rem);
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &::placeholder {
     color: ${props =>
@@ -750,8 +763,8 @@ const NoResultsMessage = styled.div`
   color: ${props =>
     props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' :
       `${props.theme.text}60`};
-  font-size: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--font-size, 1rem);
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 `;
 
 const ProfileDropdownContainer = styled.div`
@@ -788,12 +801,12 @@ const ProfileDropdownItem = styled.button`
   background: transparent;
   border: none;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: 14px;
+  font-size: var(--font-size, 1rem);
   font-weight: 400;
   cursor: pointer;
   transition: all 0.2s ease;
   justify-content: flex-start;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
@@ -817,7 +830,7 @@ const ProfileAvatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: calc(var(--font-size, 1rem) * 0.7);
   font-weight: bold;
   margin-right: 8px;
   background-image: ${props => props.$profilePicture ? `url(${props.$profilePicture})` : 'none'};
@@ -846,8 +859,10 @@ const Sidebar = ({
   setCollapsed,
   theme,
   settings = {},
-  onSignOut
+  onSignOut,
+  focusModeActive = false
 }) => {
+  const { t, language } = useTranslation();
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
   const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -935,10 +950,12 @@ const Sidebar = ({
     const shareUrl = `${window.location.origin}/share-view?id=${chatId}`; // Use query param for ID
     try {
       await navigator.clipboard.writeText(shareUrl);
-      alert('Static share link copied to clipboard! You need to implement the /share-view route.');
+      setCopyStatus(t('sidebar.copySuccess'));
+      setTimeout(() => setCopyStatus(''), 3000);
     } catch (err) {
       console.error('Failed to copy share link: ', err);
-      alert('Could not copy share link.');
+      setCopyStatus(t('sidebar.copyFailure'));
+      setTimeout(() => setCopyStatus(''), 3000);
     }
   };
 
@@ -969,12 +986,83 @@ const Sidebar = ({
     }
   };
 
+  const getChatTitle = (chat) => chat.title || t('chat.list.untitled', 'Chat {{id}}', { id: chat.id.substring(0, 4) });
+
   // Filter chats based on search term
   const filteredChats = chats.filter(chat => {
     if (!searchTerm) return true;
-    const chatTitle = chat.title || `Chat ${chat.id.substring(0, 4)}`;
+    const chatTitle = getChatTitle(chat);
     return chatTitle.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  const navLinks = [
+    {
+      key: 'chat',
+      to: '/',
+      translationKey: 'sidebar.nav.chat',
+      end: true,
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      )
+    },
+    {
+      key: 'media',
+      to: '/media',
+      translationKey: 'sidebar.nav.media',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+      )
+    },
+    {
+      key: 'news',
+      to: '/news',
+      translationKey: 'sidebar.nav.news',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+      )
+    },
+    {
+      key: 'projects',
+      to: '/projects',
+      translationKey: 'sidebar.nav.projects',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+          <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+        </svg>
+      )
+    },
+    {
+      key: 'workspace',
+      to: '/workspace',
+      translationKey: 'sidebar.nav.workspace',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+      )
+    },
+    {
+      key: 'admin',
+      to: '/admin',
+      translationKey: 'sidebar.nav.admin',
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+      ),
+      adminOnly: true
+    }
+  ];
 
   return (
     <>
@@ -983,6 +1071,7 @@ const Sidebar = ({
         $isExpanded={isMobileExpanded}
         $collapsed={theme && theme.name === 'retro' ? false : $collapsed}
         $sidebarStyle={settings.sidebarStyle || 'floating'}
+        $focusModeActive={focusModeActive}
       >
         {/* Top Bar for Desktop */}
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
@@ -998,9 +1087,9 @@ const Sidebar = ({
             <CollapseButton
               onClick={toggleCollapsed}
               $collapsed={$collapsed}
-              title="Collapse Sidebar"
+              title={t('sidebar.collapseTitle')}
               style={{ marginLeft: 'auto' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line>
               </svg>
             </CollapseButton>
@@ -1009,13 +1098,13 @@ const Sidebar = ({
 
         {/* New Chat Button Section */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
-          <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }}>
-            <SidebarButton onClick={createNewChat}>
+                <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
+                  <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9"></path>
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
               </svg>
-              <span>New Chat</span>
+              <span>{t('sidebar.newChat')}</span>
             </SidebarButton>
           </SidebarSection>
         )}
@@ -1030,7 +1119,7 @@ const Sidebar = ({
               </svg>
               <SearchInput
                 type="text"
-                placeholder="Search chats..."
+                placeholder={t('sidebar.searchPlaceholder')}
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
@@ -1049,57 +1138,17 @@ const Sidebar = ({
         {/* --- Navigation Section --- */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
           <SidebarSection style={{ paddingTop: '8px', paddingBottom: '16px', borderTop: 'none' }}>
-            {location.pathname !== '/' && (
-              <NavLink to="/">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <span>Chat</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/media' && (
-              <NavLink to="/media">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                </svg>
-                <span>Media</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/news' && (
-              <NavLink to="/news">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                </svg>
-                <span>News</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/projects' && (
-              <NavLink to="/projects">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-                  <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-                  <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-                  <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-                </svg>
-                <span>Projects</span>
-              </NavLink>
-            )}
-            {location.pathname !== '/workspace' && (
-              <NavLink to="/workspace">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                </svg>
-                <span>Workspace</span>
-              </NavLink>
-            )}
-            {isAdmin && location.pathname !== '/admin' && (
-              <NavLink to="/admin">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-                <span>Admin</span>
-              </NavLink>
-            )}
+            {navLinks.map(link => {
+              if (link.adminOnly && !isAdmin) {
+                return null;
+              }
+              return (
+                <SidebarNavLink key={link.key} to={link.to} end={link.end}>
+                  {link.icon}
+                  <span>{t(link.translationKey)}</span>
+                </SidebarNavLink>
+              );
+            })}
           </SidebarSection>
         )}
 
@@ -1115,7 +1164,7 @@ const Sidebar = ({
           <MobileToggleButton
             onClick={toggleMobileExpanded}
             $isExpanded={isMobileExpanded}
-            title={isMobileExpanded ? "Collapse Menu" : "Expand Menu"}
+            title={isMobileExpanded ? t('sidebar.mobile.collapse') : t('sidebar.mobile.expand')}
             style={{ marginLeft: 'auto' }}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1137,13 +1186,13 @@ const Sidebar = ({
 
               {/* New Chat Button for Mobile */}
               <div className="mobile-only" style={{ display: 'none' }}>
-                <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }}>
-                  <SidebarButton onClick={createNewChat}>
+            <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
+              <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 20h9"></path>
                       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
                     </svg>
-                    <span>New Chat</span>
+                    <span>{t('sidebar.newChat')}</span>
                   </SidebarButton>
                 </SidebarSection>
 
@@ -1156,7 +1205,7 @@ const Sidebar = ({
                     </svg>
                     <SearchInput
                       type="text"
-                      placeholder="Search chats..."
+                      placeholder={t('sidebar.searchPlaceholder')}
                       value={searchTerm}
                       onChange={handleSearchChange}
                     />
@@ -1176,30 +1225,32 @@ const Sidebar = ({
 
               {/* Section header for chats */}
               <SectionHeader $collapsed={$collapsed}>
-                Chats
+                {t('sidebar.section.chats')}
               </SectionHeader>
 
               {/* --- Chats Section --- */}
               <ChatList $collapsed={$collapsed}>
                 {filteredChats.length === 0 && searchTerm && (
                   <NoResultsMessage>
-                    No chats found for "{searchTerm}"
+                    {t('sidebar.emptySearch', null, { term: searchTerm })}
                   </NoResultsMessage>
                 )}
-                {filteredChats.map(chat => (
+                {filteredChats.map(chat => {
+                  const chatTitle = getChatTitle(chat);
+                  return (
                   <ChatItem
                     key={chat.id}
                     $active={activeChat === chat.id}
                     onClick={() => setActiveChat(chat.id)}
                     $collapsed={$collapsed}
-                    title={chat.title || `Chat ${chat.id.substring(0, 4)}`}
+                    title={chatTitle}
                   >
                     {/* TODO: Add chat icon if desired */}
-                    <ChatTitle $collapsed={$collapsed}>{chat.title || `Chat ${chat.id.substring(0, 4)}`}</ChatTitle>
+                    <ChatTitle $collapsed={$collapsed}>{chatTitle}</ChatTitle>
                     {/* Container for action buttons */}
                     <ButtonContainer $collapsed={$collapsed}>
                       <ShareButton
-                        title="Share Chat"
+                        title={t('sidebar.button.share')}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent chat selection
                           handleShareChat(chat.id);
@@ -1214,7 +1265,7 @@ const Sidebar = ({
                         </svg>
                       </ShareButton>
                       <DeleteButton
-                        title="Delete Chat"
+                        title={t('sidebar.button.delete')}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent chat selection
                           deleteChat(chat.id);
@@ -1231,7 +1282,8 @@ const Sidebar = ({
                       </DeleteButton>
                     </ButtonContainer>
                   </ChatItem>
-                ))}
+                  );
+                })}
               </ChatList>
               {/* Display copy status message */}
               {copyStatus && <div style={{ padding: '5px 10px', fontSize: '11px', color: '#aaa', textAlign: 'center' }}>{copyStatus}</div>}
@@ -1244,7 +1296,7 @@ const Sidebar = ({
               <ProfileDropdownContainer data-profile-dropdown>
                 <ProfileButton
                   onClick={handleProfileClick}
-                  title={isLoggedIn ? `View profile: ${username}` : "Sign In"}
+                  title={isLoggedIn ? t('sidebar.profile.viewProfile', null, { username }) : t('sidebar.profile.signIn')}
                 >
                   {isLoggedIn ? (
                     <ProfileAvatar $profilePicture={profilePicture}>
@@ -1255,7 +1307,7 @@ const Sidebar = ({
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
                     </svg>
                   )}
-                  <span>{isLoggedIn ? username : 'Sign In'}</span>
+                  <span>{isLoggedIn ? username : t('sidebar.profile.signIn')}</span>
                 </ProfileButton>
 
                 {/* Profile Dropdown Menu */}
@@ -1265,7 +1317,7 @@ const Sidebar = ({
                       <circle cx="12" cy="12" r="3"></circle>
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                     </svg>
-                    <span>Settings</span>
+                    <span>{t('sidebar.profile.settings')}</span>
                   </ProfileDropdownItem>
 
                   <ProfileDropdownItem onClick={handleInfoClick}>
@@ -1274,7 +1326,7 @@ const Sidebar = ({
                       <path d="M12 16v-4"></path>
                       <path d="M12 8h.01"></path>
                     </svg>
-                    <span>Info</span>
+                    <span>{t('sidebar.profile.info')}</span>
                   </ProfileDropdownItem>
 
                   {isLoggedIn && (
@@ -1284,7 +1336,7 @@ const Sidebar = ({
                         <polyline points="16 17 21 12 16 7"></polyline>
                         <line x1="21" y1="12" x2="9" y2="12"></line>
                       </svg>
-                      <span>Sign Out</span>
+                      <span>{t('sidebar.profile.signOut')}</span>
                     </ProfileDropdownItem>
                   )}
                 </ProfileDropdown>

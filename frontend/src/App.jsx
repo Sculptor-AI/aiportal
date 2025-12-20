@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import Sidebar from './components/Sidebar';
 import ChatWindow from './components/ChatWindow';
@@ -21,6 +21,8 @@ import GlobalStylesProvider from './styles/GlobalStylesProvider';
 import SharedChatView from './components/SharedChatView';
 import { keyframes } from 'styled-components';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { TranslationProvider } from './contexts/TranslationContext';
+import { getDefaultChatTitle, isDefaultChatTitle } from './utils/chatLocalization';
 import { fetchModelsFromBackend } from './services/aiService';
 import NewSettingsPanel from './components/NewSettingsPanel';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
@@ -181,10 +183,14 @@ const MainGreeting = styled.div`
 
 // App wrapper with authentication context
 const AppWithAuth = () => {
+  const [settingsLanguage, setSettingsLanguage] = useState('en-US');
+
   return (
     <AuthProvider>
       <ToastProvider>
-        <AppContent />
+        <TranslationProvider settingsLanguage={settingsLanguage}>
+          <AppContent onSettingsLanguageChange={setSettingsLanguage} />
+        </TranslationProvider>
       </ToastProvider>
     </AuthProvider>
   );
@@ -222,12 +228,30 @@ const useIsMobile = () => {
 };
 
 // Main app component
-const AppContent = () => {
+const AppContent = ({ onSettingsLanguageChange }) => {
   const { user, adminUser, updateSettings: updateUserSettings, loading, logout } = useAuth();
   const toast = useToast();
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const getLanguagePreference = () => {
+    if (user?.settings?.language) {
+      return user.settings.language;
+    }
+    try {
+      const savedSettings = localStorage.getItem('settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        if (parsedSettings.language) {
+          return parsedSettings.language;
+        }
+      }
+    } catch (error) {
+      console.error('Error reading saved language preference:', error);
+    }
+    return 'en-US';
+  };
 
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
   const [hasAttachment, setHasAttachment] = useState(false);
@@ -248,7 +272,7 @@ const AppContent = () => {
       console.error("Error loading chats from localStorage:", err);
     }
     // Default chat if nothing valid in localStorage
-    const defaultChat = { id: uuidv4(), title: 'New Chat', messages: [] };
+    const defaultChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
     console.log("Using default chat:", defaultChat);
     return [defaultChat];
   });
@@ -430,7 +454,8 @@ const AppContent = () => {
       highContrast: false,
       reducedMotion: false,
       lineSpacing: 'normal',
-      showGreeting: true
+      showGreeting: true,
+      language: 'en-US'
     };
   });
 
@@ -449,6 +474,8 @@ const AppContent = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDinosaurGame, setShowDinosaurGame] = useState(false);
   const chatWindowRef = useRef(null);
+  const [isFocusModeActive, setIsFocusModeActive] = useState(false);
+  const focusModeDefaultedRef = useRef(false);
 
   // Easter eggs hook
   const {
@@ -464,6 +491,12 @@ const AppContent = () => {
       setSettings(user.settings);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (onSettingsLanguageChange) {
+      onSettingsLanguageChange(settings.language || 'en-US');
+    }
+  }, [settings.language, onSettingsLanguageChange]);
 
   // Check if onboarding is needed for new users
   useEffect(() => {
@@ -520,7 +553,7 @@ const AppContent = () => {
       setActiveChat(chats[0].id);
     } else if (!currentChat && chats.length === 0) {
       // If no chats exist, create a new one
-      const newChat = { id: uuidv4(), title: 'New Chat', messages: [] };
+      const newChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
       setChats([newChat]);
       setActiveChat(newChat.id);
     }
@@ -549,10 +582,28 @@ const AppContent = () => {
     }
   }, [settings, user]);
 
+  useEffect(() => {
+    if (!settings?.language) return;
+    const desiredTitle = getDefaultChatTitle(settings.language);
+    setChats(prevChats => {
+      let changed = false;
+      const updatedChats = prevChats.map(chat => {
+        const hasMessages = chat.messages && chat.messages.length > 0;
+        if (!hasMessages && isDefaultChatTitle(chat.title) && chat.title !== desiredTitle) {
+          changed = true;
+          return { ...chat, title: desiredTitle };
+        }
+        return chat;
+      });
+      return changed ? updatedChats : prevChats;
+    });
+  }, [settings?.language]);
+
   const createNewChat = (projectId = null) => {
+    const currentLanguage = settings?.language || getLanguagePreference();
     const newChat = {
       id: uuidv4(),
-      title: 'New Chat',
+      title: getDefaultChatTitle(currentLanguage),
       messages: [],
       projectId: projectId,
     };
@@ -602,7 +653,7 @@ const AppContent = () => {
     if (updatedChats.length === 0) {
       const newChat = {
         id: uuidv4(),
-        title: 'New Chat',
+        title: getDefaultChatTitle(settings?.language || getLanguagePreference()),
         messages: []
       };
       setChats([newChat]);
@@ -656,7 +707,7 @@ const AppContent = () => {
           const updatedChat = {
             ...chat,
             messages: [...chat.messages, message],
-            title: chat.title === 'New Chat' && message.role === 'user'
+            title: isDefaultChatTitle(chat.title) && message.role === 'user'
               ? message.content.slice(0, 30) + (message.content.length > 30 ? '...' : '')
               : chat.title
           };
@@ -701,6 +752,12 @@ const AppContent = () => {
     setIsProfileOpen(!isProfileOpen);
   };
 
+  useEffect(() => {
+    if (!settings.focusMode && isFocusModeActive) {
+      setIsFocusModeActive(false);
+    }
+  }, [settings.focusMode, isFocusModeActive]);
+
   // Update settings
   const updateSettings = (newSettings) => {
     setSettings(newSettings);
@@ -710,6 +767,15 @@ const AppContent = () => {
       updateUserSettings(newSettings);
     }
   };
+
+  useEffect(() => {
+    if (!focusModeDefaultedRef.current) {
+      focusModeDefaultedRef.current = true;
+      if (settings.focusMode) {
+        updateSettings({ ...settings, focusMode: false });
+      }
+    }
+  }, [settings.focusMode]);
 
   // Handle onboarding completion
   const handleOnboardingComplete = (onboardingSettings) => {
@@ -742,9 +808,24 @@ const AppContent = () => {
     // Any other actions needed when model changes, like saving to storage
   };
 
+  const handleUserTyping = useCallback(() => {
+    if (settings.sidebarAutoCollapse && !collapsed) {
+      setCollapsed(true);
+    }
+    if (settings.focusMode && !isFocusModeActive) {
+      setIsFocusModeActive(true);
+    }
+  }, [settings.sidebarAutoCollapse, settings.focusMode, collapsed, isFocusModeActive]);
+
+  const handleMessageSent = useCallback(() => {
+    if (isFocusModeActive) {
+      setIsFocusModeActive(false);
+    }
+  }, [isFocusModeActive]);
+
   // Function to reset chats and start fresh
   const resetChats = () => {
-    const newChat = { id: uuidv4(), title: 'New Chat', messages: [] };
+    const newChat = { id: uuidv4(), title: getDefaultChatTitle(settings?.language || getLanguagePreference()), messages: [] };
     setChats([newChat]);
     setActiveChat(newChat.id);
     // Clear localStorage to start fresh
@@ -885,8 +966,9 @@ const AppContent = () => {
   if (window.location.pathname === '/share-view') {
     return (
       <ThemeProvider theme={currentTheme}>
-        <GlobalStylesProvider />
-        <SharedChatView />
+        <GlobalStylesProvider settings={settings}>
+          <SharedChatView />
+        </GlobalStylesProvider>
       </ThemeProvider>
     );
   }
@@ -957,6 +1039,7 @@ const AppContent = () => {
               setCollapsed={setCollapsed}
               settings={settings}
               onSignOut={logout}
+              focusModeActive={isFocusModeActive}
             />
             {console.log('Available models for ChatWindow:', availableModels)}
             <Routes>
@@ -990,6 +1073,9 @@ const AppContent = () => {
                   onToggleSandbox3D={() => setIsSandbox3DOpen(prev => !prev)}
                   onCloseSandbox3D={() => setIsSandbox3DOpen(false)}
                   onToolbarToggle={setIsToolbarOpen}
+                  onUserTyping={handleUserTyping}
+                  focusModeActive={isFocusModeActive}
+                  onMessageSent={handleMessageSent}
                 />
               } />
               <Route path="/media" element={<MediaPage />} />

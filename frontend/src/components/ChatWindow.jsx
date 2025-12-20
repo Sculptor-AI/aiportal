@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { useTheme } from 'styled-components';
+import { useTranslation } from '../contexts/TranslationContext';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
 import ImageModelSelector from './ImageModelSelector';
@@ -50,6 +51,9 @@ const ChatWindow = forwardRef(({
   onToggleSandbox3D,
   onCloseSandbox3D,
   onToolbarToggle,
+  onUserTyping,
+  focusModeActive = false,
+  onMessageSent,
 }, ref) => {
   // All hooks at the top level - no conditional returns before this
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
@@ -81,9 +85,11 @@ const ChatWindow = forwardRef(({
   const chatInputAreaRef = useRef(null);
   const prevIsEmptyRef = useRef(false);
 
+  const { t } = useTranslation();
   const toast = useToast();
   const theme = useTheme();
   const showProfilePicture = settings?.showProfilePicture !== false;
+  const newConversationLabel = t('chat.newConversation', 'New Conversation');
 
   // Memoized values
   const chatIsEmpty = useMemo(() => {
@@ -372,8 +378,8 @@ const ChatWindow = forwardRef(({
 
   const handleStartEditing = useCallback(() => {
     setIsEditingTitle(true);
-    setEditedTitle(chat?.title || 'New Conversation');
-  }, [chat?.title]);
+    setEditedTitle(chat?.title || newConversationLabel);
+  }, [chat?.title, newConversationLabel]);
 
   const handleTitleChange = useCallback((e) => {
     setEditedTitle(e.target.value);
@@ -392,9 +398,9 @@ const ChatWindow = forwardRef(({
       handleTitleSave();
     } else if (e.key === 'Escape') {
       setIsEditingTitle(false);
-      setEditedTitle(chat?.title || 'New Conversation');
+      setEditedTitle(chat?.title || newConversationLabel);
     }
-  }, [handleTitleSave, chat?.title]);
+  }, [handleTitleSave, chat?.title, newConversationLabel]);
 
   // Message sender hook
   const { isLoading, submitMessage: sendChatMessage } = useMessageSender({
@@ -422,6 +428,12 @@ const ChatWindow = forwardRef(({
       return () => clearTimeout(timer);
     }
   }, [shouldStartAnimationThisRender]);
+
+  useEffect(() => {
+    if (!isEditingTitle) {
+      setEditedTitle(chat?.title || newConversationLabel);
+    }
+  }, [chat, newConversationLabel, isEditingTitle]);
 
   // Fetch available image models from backend
   useEffect(() => {
@@ -511,11 +523,15 @@ const ChatWindow = forwardRef(({
   // Early return for no chat - after all hooks
   if (!chat) {
     return (
-      <ChatWindowContainer fontSize={settings?.fontSize} $sidebarCollapsed={$sidebarCollapsed}>
-        <EmptyState $isExiting={animateEmptyStateOut}>
+      <ChatWindowContainer
+        fontSize={settings?.fontSize}
+        $sidebarCollapsed={$sidebarCollapsed}
+        $focusModeActive={focusModeActive}
+      >
+        <EmptyState $isExiting={animateEmptyStateOut} $focusModeActive={focusModeActive}>
           <div style={{ textAlign: 'center', padding: '20px' }}>
-            <h3>No chat available</h3>
-            <p>Creating a new chat...</p>
+            <h3>{t('chat.emptyHeading')}</h3>
+            <p>{t('chat.emptySubheading')}</p>
             <button
               onClick={() => window.location.reload()}
               style={{
@@ -528,7 +544,7 @@ const ChatWindow = forwardRef(({
                 cursor: 'pointer'
               }}
             >
-              Refresh Page
+              {t('chat.emptyRefresh')}
             </button>
           </div>
         </EmptyState>
@@ -545,6 +561,7 @@ const ChatWindow = forwardRef(({
           onClearAttachment={() => { }}
           resetFileUploadTrigger={false}
           availableModels={availableModels}
+          onMessageSent={onMessageSent}
         />
       </ChatWindowContainer>
     );
@@ -554,10 +571,12 @@ const ChatWindow = forwardRef(({
     <ChatWindowContainer
       fontSize={settings?.fontSize}
       $sidebarCollapsed={$sidebarCollapsed}
+      $focusModeActive={focusModeActive}
     >
       <ChatHeader
         style={{ opacity: ($sidebarCollapsed && isFocused) ? '0' : '1', transition: 'opacity 0.3s ease' }}
         $sidebarCollapsed={$sidebarCollapsed}
+        $focusModeActive={focusModeActive}
       >
         <ChatTitleSection $sidebarCollapsed={$sidebarCollapsed}>
           <ModelSelectorsRow>
@@ -582,13 +601,13 @@ const ChatWindow = forwardRef(({
       </ChatHeader>
 
       {(showGreeting && (showEmptyStateStatic || animateEmptyStateOut)) && !isLiveModeOpen && (
-        <EmptyState $isExiting={animateEmptyStateOut}>
+        <EmptyState $isExiting={animateEmptyStateOut} $focusModeActive={focusModeActive}>
           {/* Content for empty state, e.g., a greeting message */}
         </EmptyState>
       )}
 
       {/* Main Chat Content */}
-      <MessageList>
+      <MessageList $focusModeActive={focusModeActive}>
         {!chatIsEmpty && !isLiveModeOpen && chat && Array.isArray(chat.messages) && chat.messages.map(message => (
           <ChatMessage
             key={message.id}
@@ -649,6 +668,8 @@ const ChatWindow = forwardRef(({
           isImagePromptMode={isImagePromptMode}
           onImageModeChange={setIsImagePromptMode}
           selectedImageModel={selectedImageModel}
+          onUserTyping={onUserTyping}
+          onMessageSent={onMessageSent}
         />
       )}
 

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { css } from 'styled-components';
+import { useTranslation } from '../contexts/TranslationContext';
 
 const SelectorContainer = styled.div`
   position: relative;
@@ -183,9 +184,11 @@ const ImageModelSelector = ({
     setIsOpen(false);
   };
 
+  const { t } = useTranslation();
+
   return (
     <SelectorContainer ref={containerRef} theme={theme}>
-      <ImageLabel theme={theme}>Image:</ImageLabel>
+      <ImageLabel theme={theme}>{t('imageSelector.label')}</ImageLabel>
       <div style={{ position: 'relative' }}>
         <SelectorButton
           onClick={() => setIsOpen(!isOpen)}
@@ -206,7 +209,7 @@ const ImageModelSelector = ({
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <polyline points="21 15 16 10 5 21"/>
             </ImageIcon>
-            <span>{selectedModel?.id || 'Select model'}</span>
+            <span>{selectedModel?.id || t('imageSelector.placeholder')}</span>
           </div>
           {theme.name === 'retro' ? (
             <div className="dropdown-arrow"></div>
