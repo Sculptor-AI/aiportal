@@ -127,16 +127,34 @@ a {
   border: none !important;
 }
 
+.message-spacing-compact {
+  --message-spacing: 10px;
+}
+
+.message-spacing-comfortable {
+  --message-spacing: 42.5px;
+}
+
+.message-spacing-spacious {
+  --message-spacing: 85px;
+}
+
 .message-spacing-compact .chat-message {
-  margin-bottom: 10px;
+  /* Message spacing is handled on the message row wrapper (see ChatMessage.jsx).
+     Adding margin on the bubble creates a large gap between the bubble and its action buttons. */
+  margin-bottom: 0;
 }
 
 .message-spacing-comfortable .chat-message {
-  margin-bottom: 42.5px;
+  /* Message spacing is handled on the message row wrapper (see ChatMessage.jsx).
+     Adding margin on the bubble creates a large gap between the bubble and its action buttons. */
+  margin-bottom: 0;
 }
 
 .message-spacing-spacious .chat-message {
-  margin-bottom: 75px;
+  /* Message spacing is handled on the message row wrapper (see ChatMessage.jsx).
+     Adding margin on the bubble creates a large gap between the bubble and its action buttons. */
+  margin-bottom: 0;
 }
 
 /* High contrast mode */

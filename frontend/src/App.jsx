@@ -631,6 +631,9 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       id: uuidv4(),
       ...projectData,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      starred: false,
+      knowledge: [],
     };
     setProjects(prevProjects => [...prevProjects, newProject]);
     setActiveProject(newProject.id);
@@ -640,7 +643,50 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     setProjects(prevProjects => prevProjects.map(p => {
       if (p.id === projectId) {
         const newKnowledge = { id: uuidv4(), ...file };
-        return { ...p, knowledge: [...(p.knowledge || []), newKnowledge] };
+        return { 
+          ...p, 
+          knowledge: [...(p.knowledge || []), newKnowledge],
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return p;
+    }));
+  };
+
+  const removeKnowledgeFromProject = (projectId, knowledgeId) => {
+    setProjects(prevProjects => prevProjects.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          knowledge: (p.knowledge || []).filter(k => k.id !== knowledgeId),
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return p;
+    }));
+  };
+
+  const updateProjectInstructions = (projectId, instructions) => {
+    setProjects(prevProjects => prevProjects.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          projectInstructions: instructions,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return p;
+    }));
+  };
+
+  const toggleProjectStar = (projectId) => {
+    setProjects(prevProjects => prevProjects.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          starred: !p.starred,
+          updatedAt: new Date().toISOString()
+        };
       }
       return p;
     }));
@@ -1081,7 +1127,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               <Route path="/media" element={<MediaPage />} />
               <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
               <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
-              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} collapsed={collapsed} />} />
+              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} toggleProjectStar={toggleProjectStar} collapsed={collapsed} chats={chats} />} />
               <Route path="/workspace" element={<WorkspacePage collapsed={collapsed} />} />
               <Route path="/projects/:projectId" element={
                 <ProjectDetailPage
@@ -1093,9 +1139,13 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   setActiveChat={setActiveChat}
                   activeChat={activeChat}
                   addKnowledgeToProject={addKnowledgeToProject}
+                  removeKnowledgeFromProject={removeKnowledgeFromProject}
+                  updateProjectInstructions={updateProjectInstructions}
                   // Pass down all the props ChatInputArea needs
                   settings={settings}
                   availableModels={availableModels}
+                  selectedModel={selectedModel}
+                  onModelChange={handleModelChange}
                   isWhiteboardOpen={isWhiteboardOpen}
                   onToggleWhiteboard={() => setIsWhiteboardOpen(p => !p)}
                   isEquationEditorOpen={isEquationEditorOpen}

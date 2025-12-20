@@ -638,8 +638,8 @@ const Message = styled.div`
   margin-bottom: var(--message-spacing, 24px);
   max-width: 100%;
   width: 100%;
-  padding-left: ${props => props.$alignment === 'left' ? '20px' : '0'};
-  padding-right: ${props => props.$alignment === 'right' ? '30px' : '0'};
+  padding-left: ${props => props.$alignment === 'left' ? '12px' : '0'};
+  padding-right: ${props => props.$alignment === 'right' ? '12px' : '0'};
 `;
 
 const Avatar = styled.div`
@@ -649,9 +649,9 @@ const Avatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: ${props => props.$alignment === 'right' ? '0' : (props.role === 'user' ? '18px' : '14px')};
-  margin-left: ${props => props.$alignment === 'left' ? '0' : (props.role === 'user' ? '18px' : '14px')};
-  margin-top: ${props => props.role === 'user' ? '8px' : '0'};
+  margin-right: ${props => props.$alignment === 'right' ? '0' : '10px'};
+  margin-left: ${props => props.$alignment === 'left' ? '0' : '10px'};
+  margin-top: 4px;
   font-weight: 600;
   flex-shrink: 0;
   background: ${props => props.$profilePicture
@@ -707,7 +707,7 @@ const getBubbleBackground = (role, theme) => {
 
 const getBubbleBorderColor = (theme) => isCustomAccent(theme) ? theme.accentColor : theme.border;
 
-const getBubbleTextColor = (theme) => isCustomAccent(theme) ? theme.accentText : theme.text;
+const getBubbleTextColor = (theme) => isCustomAccent(theme) ? '#FFFFFF' : theme.text;
 
 const Content = styled.div`
   width: fit-content;
@@ -789,7 +789,7 @@ const MessageActions = styled.div`
   justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 6px;
   padding: 0;
   opacity: 1;
   width: ${props => props.$alignment === 'right' ? '100%' : 'fit-content'};

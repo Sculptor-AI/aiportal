@@ -65,22 +65,27 @@ const applyAlpha = (color, alpha) => {
 export const getAccentStyles = (theme = {}, accentChoice = 'theme') => {
   const fallbackColor = extractHex(theme.primary) || theme.primary || '#6366F1';
   const background = theme.accentGradient || theme.buttonGradient || theme.primary || fallbackColor;
+  const isDark = theme.isDark !== false; // Default to dark if not specified
 
   if (accentChoice === 'theme') {
     return {
       accentColor: fallbackColor,
       accentBackground: background,
-      accentText: '#FFFFFF',
+      accentText: isDark ? '#FFFFFF' : fallbackColor,
       accentSurface: applyAlpha(fallbackColor, 0.14) || background,
       accentChoice,
     };
   }
 
   const solidColor = accentColorMap[accentChoice] || '#6366F1';
+  // For light themes, use the accent color itself as text; for dark themes use white (or custom)
+  const textColor = isDark 
+    ? (accentTextMap[accentChoice] || '#FFFFFF')
+    : solidColor;
   return {
     accentColor: solidColor,
     accentBackground: solidColor,
-    accentText: accentTextMap[accentChoice] || '#FFFFFF',
+    accentText: textColor,
     accentSurface: addAlpha(solidColor, 0.14),
     accentChoice,
   };

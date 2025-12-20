@@ -62,7 +62,7 @@ const LogoContainer = styled.div`
 
 const LogoText = styled.span`
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
-  font-weight: 600;
+  font-weight: 400;
   font-size: calc(var(--font-size, 1rem) * 1.125);
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 `;
@@ -103,7 +103,7 @@ const CollapseButton = styled.button`
 const TopBarContainer = styled.div`
   display: flex;
   align-items: center;
-  padding: 16px 16px 12px 16px;
+  padding: 14px 16px 10px 16px;
   width: 100%;
   justify-content: space-between;
   flex-shrink: 0;
@@ -111,7 +111,7 @@ const TopBarContainer = styled.div`
   @media (max-width: 768px) {
     &.mobile-top-bar {
         display: flex !important;
-        padding: 16px;
+        padding: 14px;
         width: 100%;
         justify-content: space-between;
     }
@@ -137,7 +137,7 @@ const MobileLogoContainer = styled.div`
 
 const MobileLogoText = styled.span`
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
-  font-weight: 600;
+  font-weight: 400;
   font-size: var(--font-size, 1rem);
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
 `;
@@ -159,19 +159,20 @@ const NewChatButton = styled.button`
     }
     return '1px solid rgba(0,0,0,0.06)';
   }};
-  padding: ${props => props.theme.name === 'retro' ? '8px 15px' : '10px 12px'};
+  padding: ${props => props.theme.name === 'retro' ? '7px 12px' : '8px 10px'};
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '6px'};
   font-weight: 400;
-  font-size: var(--font-size, 1rem);
+  font-size: calc(var(--font-size, 1rem) * 0.875);
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  transition: all 0.2s ease;
-  margin: 0 16px 16px;
+  transition: all 0.15s ease;
+  margin: 0 16px 12px;
   width: calc(100% - 32px);
   flex-shrink: 0;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
+  letter-spacing: -0.01em;
 
   &:hover {
     background: ${props => {
@@ -188,21 +189,21 @@ const NewChatButton = styled.button`
   }
 
   svg {
-    width: 16px;
-    height: 16px;
-    opacity: 0.8;
+    width: 15px;
+    height: 15px;
+    opacity: 0.7;
   }
 
   span {
     opacity: ${props => props.$collapsed ? '0' : '1'};
     visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-    transition: opacity 0.2s ease;
+    transition: opacity 0.15s ease;
   }
 
   @media (max-width: 768px) {
     width: auto;
     margin: 0 10px 10px auto;
-    padding: 10px 12px;
+    padding: 8px 10px;
     
     span {
         opacity: 1;
@@ -239,7 +240,7 @@ const ChatList = styled.div`
   display: flex;
   flex-direction: column;
   margin-bottom: 8px;
-  gap: 2px;
+  gap: 4px;
 
   @media (max-width: 768px) {
      max-height: none;
@@ -261,7 +262,7 @@ const ChatList = styled.div`
 
 const ChatItem = styled.div`
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -272,7 +273,7 @@ const ChatItem = styled.div`
     if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.08)';
     return 'rgba(0, 0, 0, 0.04)';
   }};
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   width: 100%;
   position: relative;
   
@@ -303,11 +304,12 @@ const ChatTitle = styled.div`
   margin-right: 8px;
   opacity: ${props => props.$collapsed ? '0' : '1'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-  transition: opacity 0.2s ease;
+  transition: opacity 0.15s ease;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
-  font-size: calc(var(--font-size, 1rem) * 0.9);
+  font-size: calc(var(--font-size, 1rem) * 0.8125);
   font-weight: 400;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
+  line-height: 1.4;
 
   @media (max-width: 768px) {
       opacity: 1;
@@ -410,19 +412,19 @@ const BottomSection = styled.div`
 
 const SectionHeader = styled.div`
   padding: 0 16px;
-  margin: 12px 0 8px 0;
-  font-size: calc(var(--font-size, 1rem) * 0.7);
+  margin: 10px 0 6px 0;
+  font-size: calc(var(--font-size, 1rem) * 0.65);
   text-transform: uppercase;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  opacity: ${props => props.$collapsed ? '0' : '0.6'};
+  opacity: ${props => props.$collapsed ? '0' : '0.5'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-  transition: opacity 0.2s ease;
+  transition: opacity 0.15s ease;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   @media (max-width: 768px) {
-      opacity: 0.6;
+      opacity: 0.5;
       visibility: visible;
   }
 `;
@@ -442,15 +444,16 @@ const ModelDropdownButton = styled.button`
   background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
   border-radius: 6px;
-  padding: ${props => props.$collapsed ? '8px' : '8px 12px'};
+  padding: ${props => props.$collapsed ? '6px' : '6px 10px'};
   display: flex;
   align-items: center;
   justify-content: ${props => props.$collapsed ? 'center' : 'space-between'};
   cursor: pointer;
-  transition: all 0.2s ease;
-  min-height: 36px;
+  transition: all 0.15s ease;
+  min-height: 32px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
+  font-size: calc(var(--font-size, 1rem) * 0.8125);
 
   &:hover {
     border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
@@ -465,7 +468,7 @@ const ModelDropdownButton = styled.button`
   }
 
   > svg:last-child {
-      transition: transform 0.2s;
+      transition: transform 0.15s;
       transform: ${props => props.$isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
       flex-shrink: 0;
       opacity: ${props => props.$collapsed ? '0' : '1'};
@@ -474,7 +477,7 @@ const ModelDropdownButton = styled.button`
 
   @media (max-width: 768px) {
       justify-content: space-between;
-      padding: 8px 12px;
+      padding: 6px 10px;
        > svg:last-child {
            opacity: 1;
            visibility: visible;
@@ -528,10 +531,10 @@ const ModelOption = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   margin: 2px;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background 0.15s ease;
   background: ${props => {
     if (props.$isSelected) {
       return props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 'rgba(0,0,0,0.06)';
@@ -540,6 +543,7 @@ const ModelOption = styled.div`
   }};
   border-radius: 4px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  font-size: calc(var(--font-size, 1rem) * 0.8125);
 
   &:hover {
     background: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.08)' : 'rgba(0,0,0,0.04)'};
@@ -561,9 +565,9 @@ const ModelInfo = styled.div`
 `;
 
 const ModelName = styled.span`
-  font-weight: ${props => props.$isSelected ? '500' : '400'};
+  font-weight: 400;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: var(--font-size, 1rem);
+  font-size: calc(var(--font-size, 1rem) * 0.8125);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -571,7 +575,7 @@ const ModelName = styled.span`
 `;
 
 const ModelDescription = styled.span`
-  font-size: calc(var(--font-size, 1rem) * 0.85);
+  font-size: calc(var(--font-size, 1rem) * 0.75);
   color: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : `${props.theme.text}80`};
   white-space: nowrap;
   overflow: hidden;
@@ -583,27 +587,28 @@ const SidebarButton = styled.button`
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: var(--font-size, 1rem);
+  font-size: calc(var(--font-size, 1rem) * 0.875);
   font-weight: 400;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   justify-content: flex-start;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
+  line-height: 1.4;
   
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
   }
   
   svg {
-    margin-right: 8px;
+    margin-right: 12px;
     width: 16px;
     height: 16px;
-    opacity: 0.7;
+    opacity: 0.6;
     color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
   }
 `;
@@ -642,55 +647,56 @@ const MobileToggleButton = styled.button`
 
 const SidebarSection = styled.div`
   border-top: 1px solid ${props => props.theme.border};
-  padding: 8px 16px;
+  padding: 6px 16px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 `;
 
 const SidebarNavLink = styled(RouterNavLink)`
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  font-size: var(--font-size, 1rem);
+  font-size: calc(var(--font-size, 1rem) * 0.875);
   font-weight: 400;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   justify-content: flex-start;
   text-decoration: none;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
+  line-height: 1.4;
   
   &:hover {
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
   }
   
   svg {
-    margin-right: 8px;
+    margin-right: 12px;
     width: 16px;
     height: 16px;
-    opacity: 0.7;
+    opacity: 0.6;
     color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
   }
   
   &.active {
-    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'};
-    font-weight: 600;
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'};
+    font-weight: 400;
 
     svg {
-      opacity: 1;
+      opacity: 0.9;
       color: ${props => props.theme.text};
     }
   }
 `;
 
 const SearchInputContainer = styled.div`
-  padding: 4px 16px;
-  margin-bottom: 4px;
+  padding: 2px 16px;
+  margin-bottom: 2px;
 `;
 
 const SearchInputWrapper = styled.div`
@@ -701,10 +707,10 @@ const SearchInputWrapper = styled.div`
     props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' :
       props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 20px;
+  border-radius: 18px;
   overflow: hidden;
-  transition: border-color 0.2s ease;
-  min-height: 32px;
+  transition: border-color 0.15s ease;
+  min-height: 30px;
 
   &:focus-within {
     border-color: ${props =>
@@ -715,20 +721,20 @@ const SearchInputWrapper = styled.div`
 
 const SearchInput = styled.input`
   flex: 1;
-  padding: 6px 8px 6px 4px;
+  padding: 5px 8px 5px 4px;
   background: transparent;
   border: none;
   outline: none;
   color: ${props =>
     props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
       props.theme.text};
-  font-size: var(--font-size, 1rem);
+  font-size: calc(var(--font-size, 1rem) * 0.8125);
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &::placeholder {
     color: ${props =>
     props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.5)' :
-      `${props.theme.text}60`};
+      `${props.theme.text}50`};
   }
 `;
 
@@ -831,7 +837,7 @@ const ProfileAvatar = styled.div`
   align-items: center;
   justify-content: center;
   font-size: calc(var(--font-size, 1rem) * 0.7);
-  font-weight: bold;
+  font-weight: 400;
   margin-right: 8px;
   background-image: ${props => props.$profilePicture ? `url(${props.$profilePicture})` : 'none'};
   background-size: cover;
@@ -1113,7 +1119,7 @@ const Sidebar = ({
         {(!$collapsed || (theme && theme.name === 'retro')) && (
           <SearchInputContainer>
             <SearchInputWrapper>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '12px', opacity: 0.6, color: 'currentColor' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '10px', opacity: 0.5, color: 'currentColor' }}>
                 <circle cx="11" cy="11" r="8"></circle>
                 <path d="m21 21-4.35-4.35"></path>
               </svg>

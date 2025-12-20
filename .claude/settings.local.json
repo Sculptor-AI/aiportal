@@ -33,7 +33,8 @@
       "Bash(jq:*)",
       "WebSearch",
       "Bash(findstr:*)",
-      "WebFetch(domain:gist.github.com)"
+      "WebFetch(domain:gist.github.com)",
+      "Skill(frontend-design)"
     ],
     "deny": []
   }

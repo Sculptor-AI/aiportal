@@ -746,7 +746,7 @@ const ChatInputArea = forwardRef(({
     >
       {showGreetingMessage && (
         <InputGreeting>
-          What can I do for you?
+          What can I help with?
         </InputGreeting>
       )}
 

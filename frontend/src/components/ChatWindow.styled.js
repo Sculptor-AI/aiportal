@@ -290,14 +290,18 @@ export const InputContainer = styled.div`
 export const InputGreeting = styled.div`
   width: 100%;
   text-align: center;
-  font-size: 1.25rem;
-  font-weight: 650;
-  color: ${props => props.theme.name === 'retro' ? props.theme.text : props.theme.text};
-  opacity: 0.95;
-  margin: 0 0 14px;
+  font-size: 2rem;
+  font-weight: 400;
+  color: ${props => props.theme.text};
+  margin: 0 0 20px;
   pointer-events: none;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   transition: opacity 0.3s ease, transform 0.3s ease;
+  
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+    margin: 0 0 16px;
+  }
 `;
 
 export const MessageInputWrapper = styled.div.attrs({ 'data-shadow': 'message-bar' })`
@@ -810,7 +814,7 @@ export const MessageInput = styled.textarea`
 
 export const WaveformButton = styled.button`
   background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.accentBackground};
-  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.accentText};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : '#FFFFFF'};
   border: ${props => props.theme.name === 'retro' ?
     `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
     'none'};
@@ -866,7 +870,19 @@ export const SendButton = styled.button`
     }
     return props.disabled ? 'rgba(0, 0, 0, 0.1)' : props.theme.accentBackground;
   }};
-  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.accentText};
+  color: ${props => {
+    if (props.theme.name === 'retro') {
+      return props.theme.buttonText;
+    }
+    // When disabled, use a muted accent color for visibility on light background
+    if (props.disabled) {
+      return props.theme.accentColor 
+        ? `${props.theme.accentColor}99` 
+        : 'rgba(0, 0, 0, 0.35)';
+    }
+    // When enabled, always use white for contrast on accent background
+    return '#FFFFFF';
+  }};
   border: ${props => props.theme.name === 'retro' ?
     `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
     'none'};

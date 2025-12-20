@@ -957,7 +957,7 @@ const SaveButton = styled.button`
   bottom: 20px;
   right: 30px;
   background: ${props => props.theme.accentBackground};
-  color: ${props => props.theme.accentText};
+  color: #FFFFFF;
   border: none;
   border-radius: 20px;
   padding: 10px 25px;

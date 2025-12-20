@@ -2,11 +2,6 @@ import React from 'react';
 import { createGlobalStyle } from 'styled-components';
 
 const GlobalStyle = createGlobalStyle`
-<<<<<<< Updated upstream
-=======
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&family=Merriweather:wght@400;700&family=Open+Sans:wght@400;600&family=Roboto:wght@400;500&family=Montserrat:wght@400;600&family=Lato:wght@400;700&family=Caveat:wght@400;600&display=swap');
-
->>>>>>> Stashed changes
   /* Add Windows 98 font */
   @font-face {
     font-family: 'MSW98UI';

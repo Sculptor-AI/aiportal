@@ -1,909 +1,1084 @@
-import React, { useState, useEffect } from 'react';
-import styled, { withTheme } from 'styled-components';
+import React, { useState, useEffect, useRef } from 'react';
+import styled, { keyframes, css } from 'styled-components';
 import { fetchArticlesByCategory, fetchArticleContent } from '../services/rssService';
 import { sendMessageToBackend } from '../services/aiService';
 import { useTranslation } from '../contexts/TranslationContext';
 
-const NewsContainer = styled.div`
-  flex: 1;
-  padding: 40px 20px 40px ${props => props.$collapsed ? '40px' : '360px'};
-  background-color: ${props => props.theme.background};
-  color: ${props => props.theme.text};
-  overflow-y: auto;
-  width: 100%;
-  margin-left: 0;
-  box-sizing: border-box;
-  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1), all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  
-  @media (max-width: 1024px) {
-    padding-left: 40px;
+// ============================================================================
+// ANIMATIONS
+// ============================================================================
+
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
+const slideUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 `;
 
-const NewsContent = styled.div`
-  width: 100%;
-  max-width: 1200px;
+const slideInFromRight = keyframes`
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+`;
+
+const shimmer = keyframes`
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`;
+
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+`;
+
+// ============================================================================
+// MAIN LAYOUT
+// ============================================================================
+
+const PageContainer = styled.div`
+  flex: 1;
+  min-height: 100vh;
+  color: ${props => props.theme.text};
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+
+  width: ${props => props.$collapsed ? '100%' : 'calc(100% - 320px)'};
+  margin-left: ${props => props.$collapsed ? '0' : '320px'};
+
+  @media (max-width: 1024px) {
+    width: 100%;
+    margin-left: 0;
+  }
+`;
+
+const ContentWrapper = styled.div`
+  max-width: 1400px;
   margin: 0 auto;
-  padding-right: 20px;
+  padding: 48px 40px 80px;
+
+  @media (max-width: 768px) {
+    padding: 32px 20px 60px;
+  }
 `;
 
-const NewsZoomWrapper = styled.div`
-  width: 100%;
-  transform: scale(0.95);
-  transform-origin: top center;
-`;
+// ============================================================================
+// HEADER
+// ============================================================================
 
-const Header = styled.div`
-  margin-bottom: 30px;
+const Header = styled.header`
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  box-sizing: border-box;
-  padding-right: 80px;
+  align-items: flex-start;
+  margin-bottom: 40px;
+  gap: 24px;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    gap: 20px;
+  }
 `;
 
-const Title = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 700;
+const TitleSection = styled.div`
   display: flex;
-  align-items: center;
-  gap: 15px;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const PageTitle = styled.h1`
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0;
+
+  @media (max-width: 640px) {
+    font-size: 1.875rem;
+  }
+`;
+
+const Subtitle = styled.p`
+  font-size: 0.9375rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  margin: 0;
+  letter-spacing: -0.01em;
 `;
 
 const RefreshButton = styled.button`
-  background: ${props => props.theme.accentSurface};
-  color: ${props => props.theme.accentColor};
-  border: 1px solid ${props => props.theme.accentColor};
-  padding: 10px 80px 10px 20px;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s ease-in-out;
+  padding: 10px 18px;
+  background: ${props => props.theme.inputBackground};
+  color: ${props => props.theme.text};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 
-  &:hover {
-    background: ${props => props.theme.accentBackground};
-    color: ${props => props.theme.accentText};
-    border-color: ${props => props.theme.accentColor};
-    filter: brightness(0.95);
+  &:hover:not(:disabled) {
+    background: ${props => props.theme.hover || props.theme.inputBackground};
+    border-color: ${props => props.theme.text}20;
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
   }
 
   svg {
-    width: 18px;
-    height: 18px;
-    animation: ${props => props.$loading ? 'spin 1s linear infinite' : 'none'};
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+    ${props => props.$loading && css`
+      animation: spin 1s linear infinite;
+    `}
   }
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 `;
 
-const FilterBar = styled.div`
+// ============================================================================
+// FILTER TABS
+// ============================================================================
+
+const FilterContainer = styled.nav`
+  margin-bottom: 36px;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: ${props => props.theme.border};
+  }
+`;
+
+const FilterScroll = styled.div`
   display: flex;
-  gap: 10px;
-  margin-bottom: 30px;
+  gap: 4px;
   overflow-x: auto;
-  padding-bottom: 10px;
-  -ms-overflow-style: none;
+  padding-bottom: 12px;
   scrollbar-width: none;
+  -ms-overflow-style: none;
+
   &::-webkit-scrollbar {
     display: none;
   }
 `;
 
-const FilterButton = styled.button`
-  background-color: ${props => props.$active ? 'rgba(0,0,0,0.1)' : 'transparent'};
-  color: ${props => props.theme.text};
-  border: 1px solid ${props => props.theme.border};
-  padding: 10px 20px;
-  border-radius: 20px;
-  font-size: 1rem;
-  font-weight: 500;
+const FilterTab = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: transparent;
+  color: ${props => props.$active
+    ? props.theme.text
+    : (props.theme.textSecondary || `${props.theme.text}60`)};
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: ${props => props.$active ? '600' : '400'};
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease;
   white-space: nowrap;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+    background: ${props => props.theme.accentColor || props.theme.primary};
+    border-radius: 2px;
+    opacity: ${props => props.$active ? 1 : 0};
+    transform: scaleX(${props => props.$active ? 1 : 0});
+    transition: all 0.2s ease;
+  }
+
+  &:hover {
+    color: ${props => props.theme.text};
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'};
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    opacity: ${props => props.$active ? 0.9 : 0.5};
+  }
+`;
+
+// ============================================================================
+// ARTICLES GRID
+// ============================================================================
+
+const ArticlesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+`;
+
+const FeaturedArticle = styled.article`
+  grid-column: span 2;
+  grid-row: span 2;
+
+  @media (max-width: 1200px) {
+    grid-column: span 2;
+    grid-row: span 1;
+  }
+
+  @media (max-width: 768px) {
+    grid-column: span 1;
+  }
+`;
+
+// ============================================================================
+// ARTICLE CARD
+// ============================================================================
+
+const CardContainer = styled.article`
+  background: ${props => props.theme.sidebar};
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  border: 1px solid ${props => props.theme.border};
+  animation: ${slideUp} 0.5s ease forwards;
+  animation-delay: ${props => props.$delay || 0}ms;
+  opacity: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px ${props => props.theme.isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.12)'};
+    border-color: transparent;
+  }
+`;
+
+const FeaturedCardContainer = styled(CardContainer)`
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  min-height: 380px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr 1fr;
+    min-height: 280px;
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+  }
+`;
+
+const CardImageWrapper = styled.div`
+  position: relative;
+  overflow: hidden;
+  background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'};
+
+  ${props => props.$featured ? css`
+    height: 100%;
+    min-height: 200px;
+  ` : css`
+    height: 180px;
+    flex-shrink: 0;
+  `}
+`;
+
+const CardImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+
+  ${CardContainer}:hover &,
+  ${FeaturedCardContainer}:hover & {
+    transform: scale(1.05);
+  }
+`;
+
+const ImagePlaceholder = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    ${props => props.theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'} 0%,
+    ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'} 100%
+  );
+
+  svg {
+    width: 48px;
+    height: 48px;
+    opacity: 0.3;
+  }
+`;
+
+const CardContent = styled.div`
+  padding: ${props => props.$featured ? '28px' : '20px'};
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 12px;
+`;
+
+const CardMeta = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const CategoryBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: ${props => props.theme.accentSurface || (props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)')};
+  color: ${props => props.theme.accentColor || props.theme.primary};
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+`;
+
+const SourceLabel = styled.span`
+  font-size: 0.8125rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+`;
+
+const CardTitle = styled.h3`
+  font-size: ${props => props.$featured ? '1.5rem' : '1.0625rem'};
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: ${props => props.$featured ? 3 : 2};
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    font-size: ${props => props.$featured ? '1.25rem' : '1rem'};
+  }
+`;
+
+const CardDescription = styled.p`
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: ${props => props.$featured ? 4 : 2};
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+`;
+
+const CardFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
+`;
+
+const TimeAgo = styled.span`
+  font-size: 0.8125rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}50`};
+`;
+
+const BookmarkButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: ${props => props.$saved
+    ? (props.theme.accentColor || props.theme.primary)
+    : (props.theme.textSecondary || `${props.theme.text}50`)};
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: rgba(0,0,0,0.05);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
+    color: ${props => props.theme.accentColor || props.theme.primary};
   }
 
   svg {
     width: 18px;
     height: 18px;
+  }
+`;
+
+// ============================================================================
+// LOADING & EMPTY STATES
+// ============================================================================
+
+const SkeletonCard = styled.div`
+  background: ${props => props.theme.sidebar};
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid ${props => props.theme.border};
+`;
+
+const SkeletonImage = styled.div`
+  height: 180px;
+  background: linear-gradient(
+    90deg,
+    ${props => props.theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 0%,
+    ${props => props.theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'} 50%,
+    ${props => props.theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 100%
+  );
+  background-size: 200% 100%;
+  animation: ${shimmer} 1.5s infinite;
+`;
+
+const SkeletonContent = styled.div`
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const SkeletonLine = styled.div`
+  height: ${props => props.$height || '14px'};
+  width: ${props => props.$width || '100%'};
+  background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'};
+  border-radius: 6px;
+  animation: ${pulse} 1.5s infinite;
+`;
+
+const EmptyState = styled.div`
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+
+  svg {
+    width: 64px;
+    height: 64px;
+    opacity: 0.3;
+    margin-bottom: 24px;
+  }
+`;
+
+const EmptyTitle = styled.h3`
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+`;
+
+const EmptyText = styled.p`
+  font-size: 0.9375rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+  margin: 0;
+  max-width: 320px;
+`;
+
+const ErrorState = styled(EmptyState)`
+  svg {
+    color: ${props => props.theme.error || '#EF4444'};
     opacity: 0.8;
   }
 `;
 
-const ArticlesGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: minmax(280px, auto);
-  grid-auto-flow: dense;
-  gap: 20px;
-  padding-right: 80px;
-  
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(3, 1fr);
-    grid-auto-rows: minmax(250px, auto);
-  }
-  
-  @media (max-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: minmax(220px, auto);
-    gap: 15px;
-  }
-  
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-    grid-auto-rows: auto;
-    gap: 15px;
-  }
-`;
-
-const ArticleCard = styled.div`
-  background-color: ${props => props.theme.sidebar};
-  border-radius: 15px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease-in-out;
+const RetryButton = styled.button`
+  margin-top: 20px;
+  padding: 10px 24px;
+  background: ${props => props.theme.accentBackground || props.theme.primary};
+  color: ${props => props.theme.accentText || '#fff'};
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  font-weight: 500;
   cursor: pointer;
-  min-height: 250px;
+  transition: all 0.2s ease;
 
   &:hover {
-    transform: translateY(-5px);
-  }
-
-  /* Size variants */
-  ${props => props.$size === 'featured' && `
-    grid-column: span 2;
-    grid-row: span 2;
-    min-height: 400px;
-    
-    @media (max-width: 768px) {
-      grid-column: span 2;
-      grid-row: span 1;
-      min-height: 320px;
-    }
-    
-    @media (max-width: 480px) {
-      grid-column: span 1;
-      grid-row: auto;
-      min-height: 280px;
-    }
-  `}
-
-  ${props => props.$size === 'wide' && `
-    grid-column: span 2;
-    grid-row: span 1;
-    min-height: 280px;
-    
-    @media (max-width: 768px) {
-      grid-column: span 2;
-      min-height: 250px;
-    }
-    
-    @media (max-width: 480px) {
-      grid-column: span 1;
-      min-height: 280px;
-    }
-  `}
-
-  ${props => props.$size === 'tall' && `
-    grid-column: span 1;
-    grid-row: span 2;
-    min-height: 400px;
-    
-    @media (max-width: 768px) {
-      grid-row: span 1;
-      min-height: 280px;
-    }
-    
-    @media (max-width: 480px) {
-      grid-row: auto;
-      min-height: 280px;
-    }
-  `}
-
-  ${props => props.$size === 'compact' && `
-    grid-column: span 1;
-    grid-row: span 1;
-    min-height: 250px;
-  `}
-
-  ${props => props.$size === 'standard' && `
-    grid-column: span 1;
-    grid-row: span 1;
-    min-height: 280px;
-  `}
-`;
-
-const ArticleImage = styled.img`
-  width: 100%;
-  height: ${props => {
-    switch(props.$size) {
-      case 'featured': return '220px';
-      case 'wide': return '160px';
-      case 'tall': return '200px';
-      case 'compact': return '140px';
-      default: return '180px';
-    }
-  }};
-  object-fit: cover;
-  flex-shrink: 0;
-  
-  @media (max-width: 768px) {
-    height: ${props => {
-      switch(props.$size) {
-        case 'featured': return '180px';
-        case 'wide': return '140px';
-        case 'tall': return '160px';
-        case 'compact': return '120px';
-        default: return '150px';
-      }
-    }};
-  }
-  
-  @media (max-width: 480px) {
-    height: 140px;
+    filter: brightness(1.1);
   }
 `;
 
-const ArticleContent = styled.div`
-  padding: ${props => {
-    switch(props.$size) {
-      case 'featured': return '20px';
-      case 'compact': return '16px';
-      default: return '18px';
-    }
-  }};
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  min-height: 0;
-  
-  @media (max-width: 768px) {
-    padding: ${props => {
-      switch(props.$size) {
-        case 'featured': return '18px';
-        case 'compact': return '14px';
-        default: return '16px';
-      }
-    }};
-  }
-  
-  @media (max-width: 480px) {
-    padding: 15px;
-  }
-`;
+// ============================================================================
+// ARTICLE DETAIL OVERLAY
+// ============================================================================
 
-const ArticleTag = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.8rem;
-  color: #6c757d;
-  margin-bottom: 8px;
-  font-weight: 500;
-
-  svg {
-    width: 12px;
-    height: 12px;
-    opacity: 0.7;
-  }
-`;
-
-const ArticleTitle = styled.h3`
-  font-size: ${props => {
-    switch(props.$size) {
-      case 'featured': return '1.4rem';
-      case 'wide': return '1.3rem';
-      case 'tall': return '1.2rem';
-      case 'compact': return '1.05rem';
-      default: return '1.2rem';
-    }
-  }};
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-line-clamp: ${props => {
-    switch(props.$size) {
-      case 'featured': return '3';
-      case 'wide': return '2';
-      case 'compact': return '2';
-      default: return '2';
-    }
-  }};
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  
-  @media (max-width: 768px) {
-    font-size: ${props => {
-      switch(props.$size) {
-        case 'featured': return '1.25rem';
-        case 'wide': return '1.2rem';
-        default: return '1.1rem';
-      }
-    }};
-  }
-  
-  @media (max-width: 480px) {
-    font-size: 1.1rem;
-    -webkit-line-clamp: 2;
-  }
-`;
-
-const ArticleDescription = styled.p`
-  font-size: ${props => {
-    switch(props.$size) {
-      case 'featured': return '1rem';
-      case 'wide': return '0.95rem';
-      case 'tall': return '0.9rem';
-      case 'compact': return '0.85rem';
-      default: return '0.9rem';
-    }
-  }};
-  color: ${props => props.theme.textSecondary};
-  line-height: 1.4;
-  margin: 0 0 12px 0;
-  flex-grow: 1;
-  display: -webkit-box;
-  -webkit-line-clamp: ${props => {
-    switch(props.$size) {
-      case 'featured': return '4';
-      case 'wide': return '3';
-      case 'tall': return '3';
-      case 'compact': return '2';
-      default: return '3';
-    }
-  }};
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  
-  @media (max-width: 768px) {
-    font-size: 0.85rem;
-    -webkit-line-clamp: ${props => {
-      switch(props.$size) {
-        case 'featured': return '3';
-        case 'wide': return '2';
-        default: return '2';
-      }
-    }};
-  }
-  
-  @media (max-width: 480px) {
-    font-size: 0.85rem;
-    -webkit-line-clamp: 2;
-    margin-bottom: 10px;
-  }
-`;
-
-const ArticleFooter = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-  padding-top: 8px;
-`;
-
-const ArticleSource = styled.span`
-  font-size: 0.8rem;
-  color: ${props => props.theme.textSecondary};
-  font-weight: 500;
-`;
-
-const BookmarkIcon = styled.div`
-  cursor: pointer;
-`;
-
-const ArticleDetailOverlay = styled.div`
+const DetailOverlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background: ${props => props.theme.isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.6)'};
+  backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  backdrop-filter: blur(5px);
-  animation: fadeIn 0.3s ease;
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
+  justify-content: flex-end;
+  animation: ${fadeIn} 0.2s ease;
 `;
 
-const ArticleDetailContainer = styled.div`
-  background-color: ${props => props.theme.name === 'light' ? '#f8f9fa' : '#2c2c2e'};
+const DetailPanel = styled.div`
+  width: 100%;
+  max-width: 720px;
+  height: 100%;
+  background: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
-  width: 90%;
-  max-width: 1000px;
-  height: 90vh;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: slideUp 0.4s ease-out;
+  overflow-y: auto;
+  animation: ${slideInFromRight} 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+  position: relative;
 
-  @keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+  @media (max-width: 768px) {
+    max-width: 100%;
   }
 `;
 
-const ArticleDetailContent = styled.div`
-  padding: 50px 60px;
-  overflow-y: auto;
-  flex-grow: 1;
+const DetailHeader = styled.div`
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: ${props => props.theme.sidebar};
+  border-bottom: 1px solid ${props => props.theme.border};
 `;
 
-const CloseButton = styled.button`
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: rgba(0,0,0,0.2);
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  color: white;
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
+const BackButton = styled.button`
   display: flex;
-  justify-content: center;
   align-items: center;
-  transition: background 0.2s;
+  gap: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: ${props => props.theme.text};
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(0,0,0,0.4);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
-const DetailTitle = styled.h1`
-  font-size: 2.2rem;
-  font-weight: 700;
-  line-height: 1.3;
-  margin-bottom: 20px;
+const OpenExternalButton = styled.a`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
   color: ${props => props.theme.text};
-`;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
 
-const DetailBody = styled.div`
-  font-size: 1.05rem;
-  line-height: 1.7;
-  color: ${props => props.theme.name === 'light' ? '#343a40' : '#e0e0e0'};
-  
-  p {
-    margin-bottom: 18px;
-    text-align: justify;
+  &:hover {
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'};
   }
-  
-  p:last-child {
-    margin-bottom: 0;
+
+  svg {
+    width: 14px;
+    height: 14px;
   }
 `;
 
 const DetailImage = styled.img`
   width: 100%;
-  height: auto;
   max-height: 400px;
   object-fit: cover;
-  border-radius: 10px;
-  margin: 30px 0;
 `;
 
-const DetailIntro = styled.p`
-  font-size: 1.2rem;
-  line-height: 1.6;
-  color: ${props => props.theme.name === 'light' ? '#495057' : '#d1d1d1'};
-  margin-bottom: 25px;
-  font-weight: 400;
+const DetailContent = styled.div`
+  padding: 32px 32px 48px;
+
+  @media (max-width: 640px) {
+    padding: 24px 20px 40px;
+  }
 `;
 
-const ArticleMetadata = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid ${props => props.theme.border};
-`;
-
-const AuthorSection = styled.div`
+const DetailMeta = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-`;
-
-const AuthorAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: ${props => props.theme.name === 'light' ? '#e9ecef' : '#404040'};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${props => props.theme.textSecondary};
-`;
-
-const AuthorInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-`;
-
-const AuthorName = styled.span`
-  font-weight: 500;
-  color: ${props => props.theme.text};
-  font-size: 0.95rem;
-`;
-
-const ReadTime = styled.span`
-  font-size: 0.85rem;
-  color: ${props => props.theme.textSecondary};
-`;
-
-const MetadataRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  font-size: 0.85rem;
-  color: ${props => props.theme.textSecondary};
-`;
-
-const PublishTime = styled.span`
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  
-  &:before {
-    content: "🕒";
-  }
-`;
-
-const SourceTags = styled.div`
-  display: flex;
-  gap: 10px;
-  margin-bottom: 25px;
   flex-wrap: wrap;
+  margin-bottom: 20px;
 `;
 
-const SourceTag = styled.span`
-  background-color: ${props => props.theme.name === 'light' ? '#007bff' : '#0056b3'};
-  color: white;
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 500;
+const DetailSource = styled.div`
   display: flex;
   align-items: center;
-  gap: 5px;
-  
-  &:first-child {
-    background-color: ${props => props.theme.name === 'light' ? '#dc3545' : '#c82333'};
-  }
-  
-  &:nth-child(2) {
-    background-color: ${props => props.theme.name === 'light' ? '#28a745' : '#1e7e34'};
-  }
-  
-  &:nth-child(3) {
-    background-color: ${props => props.theme.name === 'light' ? '#ffc107' : '#e0a800'};
-    color: #000;
-  }
+  gap: 8px;
+  font-size: 0.875rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}70`};
 `;
 
-const LoadingContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  gap: 20px;
-`;
-
-const LoadingSpinner = styled.div`
-  width: 50px;
-  height: 50px;
-  border: 3px solid ${props => props.theme.border};
-  border-top: 3px solid ${props => props.theme.primary || '#007bff'};
+const DetailDot = styled.span`
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  background: ${props => props.theme.textSecondary || `${props.theme.text}40`};
+`;
+
+const DetailTitle = styled.h1`
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin: 0 0 24px;
+
+  @media (max-width: 640px) {
+    font-size: 1.5rem;
+  }
+`;
+
+const DetailBody = styled.div`
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}e0`};
+
+  p {
+    margin: 0 0 20px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+`;
+
+const SummarySection = styled.div`
+  margin-bottom: 32px;
+  padding: 24px;
+  background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'};
+  border-radius: 12px;
+  border-left: 3px solid ${props => props.theme.accentColor || props.theme.primary};
+`;
+
+const SummaryLabel = styled.div`
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: ${props => props.theme.accentColor || props.theme.primary};
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+`;
+
+const SummaryText = styled.div`
+  font-size: 1rem;
+  line-height: 1.7;
+  color: ${props => props.theme.text};
+
+  p {
+    margin: 0 0 12px;
+    &:last-child { margin-bottom: 0; }
+  }
+`;
+
+const LoadingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 0;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+  font-size: 0.9375rem;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+  }
 
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 `;
 
-const LoadingText = styled.p`
-  font-size: 1.1rem;
-  color: ${props => props.theme.textSecondary};
-`;
-
-const ErrorContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  gap: 20px;
-  text-align: center;
-`;
-
-const ErrorMessage = styled.p`
-  font-size: 1.2rem;
-  color: ${props => props.theme.error || '#dc3545'};
-`;
-
-const RetryButton = styled.button`
-  background-color: ${props => props.theme.primary || '#007bff'};
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: ${props => props.theme.primaryHover || '#0056b3'};
-  }
-`;
-
-const EmptyStateContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  gap: 20px;
-  text-align: center;
-`;
-
-const EmptyStateMessage = styled.p`
-  font-size: 1.2rem;
-  color: ${props => props.theme.textSecondary};
-`;
+// ============================================================================
+// FILTER OPTIONS DATA
+// ============================================================================
 
 const filterOptions = [
   {
     id: 'top',
     labelKey: 'news.filters.top',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+      </svg>
+    )
   },
   {
     id: 'saved',
     labelKey: 'news.filters.saved',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+      </svg>
+    )
   },
   {
     id: 'tech',
     labelKey: 'news.filters.tech',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="22" y2="7"></line><line x1="2" y1="17" x2="22" y2="17"></line></svg>
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
+      </svg>
+    )
   },
   {
     id: 'sports',
     labelKey: 'news.filters.sports',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="8"></line></svg>
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" />
+      </svg>
+    )
   },
   {
     id: 'finance',
     labelKey: 'news.filters.finance',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    )
   },
   {
     id: 'art',
     labelKey: 'news.filters.art',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor" /><circle cx="17.5" cy="10.5" r="0.5" fill="currentColor" /><circle cx="8.5" cy="7.5" r="0.5" fill="currentColor" /><circle cx="6.5" cy="12.5" r="0.5" fill="currentColor" />
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z" />
+      </svg>
+    )
   },
   {
     id: 'tv',
     labelKey: 'news.filters.tv',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="7" width="20" height="15" rx="2" ry="2" /><polyline points="17 2 12 7 7 2" />
+      </svg>
+    )
   },
   {
     id: 'politics',
     labelKey: 'news.filters.politics',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 8h1a4 4 0 0 1 0 8h-1" /><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" /><line x1="6" y1="1" x2="6" y2="4" /><line x1="10" y1="1" x2="10" y2="4" /><line x1="14" y1="1" x2="14" y2="4" />
+      </svg>
+    )
   }
 ];
 
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+const getTimeAgo = (dateString) => {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+};
+
+// ============================================================================
+// ARTICLE CARD COMPONENT
+// ============================================================================
+
+const ArticleCard = ({ article, filter, isSaved, onSave, onClick, delay, featured }) => {
+  const { t } = useTranslation();
+  const [imageError, setImageError] = useState(false);
+
+  const Container = featured ? FeaturedCardContainer : CardContainer;
+
+  return (
+    <Container onClick={onClick} $delay={delay}>
+      <CardImageWrapper $featured={featured}>
+        {article.image && !imageError ? (
+          <CardImage
+            src={article.image}
+            alt={article.title}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <ImagePlaceholder>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </ImagePlaceholder>
+        )}
+      </CardImageWrapper>
+
+      <CardContent $featured={featured}>
+        <CardMeta>
+          {filter && (
+            <CategoryBadge>
+              {filter.icon}
+              {t(filter.labelKey)}
+            </CategoryBadge>
+          )}
+          <SourceLabel>{article.source}</SourceLabel>
+        </CardMeta>
+
+        <CardTitle $featured={featured}>{article.title}</CardTitle>
+
+        {article.description && (
+          <CardDescription $featured={featured}>
+            {article.description}
+          </CardDescription>
+        )}
+
+        <CardFooter>
+          <TimeAgo>{getTimeAgo(article.pubDate)}</TimeAgo>
+          <BookmarkButton
+            $saved={isSaved}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSave(article.id);
+            }}
+            aria-label={isSaved ? 'Remove from saved' : 'Save article'}
+          >
+            <svg viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+            </svg>
+          </BookmarkButton>
+        </CardFooter>
+      </CardContent>
+    </Container>
+  );
+};
+
+// ============================================================================
+// ARTICLE DETAIL VIEW COMPONENT
+// ============================================================================
+
 const ArticleDetailView = ({ article, onClose }) => {
   const { t } = useTranslation();
-  const [articleContent, setArticleContent] = useState(null);
-  const [loadingContent, setLoadingContent] = useState(true);
-  const [contentError, setContentError] = useState(null);
   const [summary, setSummary] = useState('');
-  const [summarizing, setSummarizing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  const panelRef = useRef(null);
 
   useEffect(() => {
-    const loadArticleContent = async () => {
-      setLoadingContent(true);
-      setContentError(null);
+    const loadContent = async () => {
+      setLoading(true);
       setSummary('');
-      
+
       try {
         const content = await fetchArticleContent(article.url, article.description);
-        setArticleContent(content);
-        
-        if (content && content.content) {
-          setSummarizing(true);
+        const textContent = content?.content || article.description;
+
+        if (textContent && textContent.length > 20) {
           try {
-            const summaryPrompt = `Please provide a concise summary of the following news article:\n\n---\n\n${content.content}`;
-            const result = await sendMessageToBackend('gemini-2.5-flash', summaryPrompt);
-            if (result && result.response) {
+            const prompt = `Please provide a concise, well-structured summary of the following news article. Focus on the key points and main takeaways:\n\n---\n\n${textContent}`;
+            const result = await sendMessageToBackend('gemini-2.5-flash', prompt);
+            if (result?.response) {
               setSummary(result.response);
             } else {
               setSummary(t('news.summary.couldNotGenerate'));
             }
-          } catch (summaryError) {
-            console.error('Error generating summary:', summaryError);
+          } catch (err) {
+            console.error('Summary generation failed:', err);
             setSummary(t('news.summary.failed'));
-          } finally {
-            setSummarizing(false);
           }
         }
-
-      } catch (error) {
-        console.error('Error loading article content:', error);
-        setContentError(t('news.error.articleContent'));
-        const fallbackContent = {
-          content: article.description || t('news.article.noContent'),
-          title: article.title,
-          image: article.image,
-          extracted: false
-        };
-        setArticleContent(fallbackContent);
-        
-        // Still try to generate a summary from the description
+      } catch (err) {
+        console.error('Content fetch failed:', err);
+        // Fall back to description-based summary
         if (article.description && article.description.length > 20) {
-          setSummarizing(true);
           try {
-            const summaryPrompt = `Please provide a concise summary and analysis of the following news article:\n\n${article.title}\n\n${article.description}`;
-            const result = await sendMessageToBackend('gemini-2.5-flash', summaryPrompt);
-            if (result && result.response) {
+            const prompt = `Please provide a concise summary and analysis of: ${article.title}\n\n${article.description}`;
+            const result = await sendMessageToBackend('gemini-2.5-flash', prompt);
+            if (result?.response) {
               setSummary(result.response);
-            } else {
-              setSummary(t('news.summary.couldNotGenerate'));
             }
-          } catch (summaryError) {
-            console.error('Error generating summary:', summaryError);
-            setSummary(t('news.summary.failed'));
-          } finally {
-            setSummarizing(false);
+          } catch (summaryErr) {
+            console.error('Fallback summary failed:', summaryErr);
           }
         }
       } finally {
-        setLoadingContent(false);
+        setLoading(false);
       }
     };
 
-    loadArticleContent();
-  }, [article]);
+    loadContent();
 
-  const displayContent = articleContent || {
-    content: article.description || t('news.article.loading'),
-    title: article.title,
-    image: article.image
+    // Handle escape key
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [article, t, onClose]);
+
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) onClose();
   };
 
-  const formatContent = (content) => {
-    if (!content) return [];
-    // Split content into paragraphs
-    return content.split('\n\n').filter(p => p.trim());
-  };
-
-  const contentParagraphs = formatContent(displayContent.content);
+  const filter = filterOptions.find(f => f.id === article.category);
 
   return (
-    <ArticleDetailOverlay onClick={onClose}>
-      <ArticleDetailContainer onClick={(e) => e.stopPropagation()}>
-        <ArticleDetailContent>
-            <DetailTitle>{displayContent.title || article.title}</DetailTitle>
-            
-            <ArticleMetadata>
-              <AuthorSection>
-                <AuthorAvatar>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <circle cx="12" cy="8" r="3"/>
-                    <path d="M6.168 18.849a4 4 0 0 1 3.832-2.849h4a4 4 0 0 1 3.834 2.855"/>
-                  </svg>
-                </AuthorAvatar>
-                <AuthorInfo>
-                  <AuthorName>
-                    {displayContent.author 
-                      ? t('news.detail.byAuthor', 'By {{author}}', { author: displayContent.author })
-                      : t('news.detail.source', 'Source: {{source}}', { source: article.source })}
-                  </AuthorName>
-                  <ReadTime>
-                    {displayContent.publishDate 
-                      ? new Date(displayContent.publishDate).toLocaleDateString()
-                      : new Date(article.pubDate).toLocaleDateString()}
-                  </ReadTime>
-                </AuthorInfo>
-              </AuthorSection>
-              
-              <MetadataRight>
-                <PublishTime>
-                  {t('news.detail.published', 'Published {{time}}', { time: new Date(article.pubDate).toLocaleString() })}
-                </PublishTime>
-              </MetadataRight>
-            </ArticleMetadata>
+    <DetailOverlay onClick={handleOverlayClick}>
+      <DetailPanel ref={panelRef}>
+        <DetailHeader>
+          <BackButton onClick={onClose}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            {t('news.detail.back', 'Back')}
+          </BackButton>
 
-            <SourceTags>
-              <SourceTag>{article.source}</SourceTag>
-              <SourceTag>{article.category
-                ? t(`news.filters.${article.category}`, article.category)
-                : t('news.category.uncategorized')}</SourceTag>
-              {articleContent?.extracted && <SourceTag style={{ backgroundColor: '#28a745' }}>{t('news.fullArticleTag')}</SourceTag>}
-            </SourceTags>
-            
-            {(displayContent.image || article.image) && 
-              <DetailImage
-                src={displayContent.image || article.image}
-                alt={displayContent.title || article.title}
-                $size={article.size}
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-            }
-            
+          <OpenExternalButton href={article.url} target="_blank" rel="noopener noreferrer">
+            {t('news.detail.openOriginal', 'Open original')}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </OpenExternalButton>
+        </DetailHeader>
+
+        {article.image && !imageError && (
+          <DetailImage
+            src={article.image}
+            alt={article.title}
+            onError={() => setImageError(true)}
+          />
+        )}
+
+        <DetailContent>
+          <DetailMeta>
+            {filter && <CategoryBadge>{filter.icon}{t(filter.labelKey)}</CategoryBadge>}
+            <DetailSource>{article.source}</DetailSource>
+            <DetailDot />
+            <DetailSource>{new Date(article.pubDate).toLocaleDateString()}</DetailSource>
+          </DetailMeta>
+
+          <DetailTitle>{article.title}</DetailTitle>
+
+          {loading ? (
+            <LoadingIndicator>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 11-6.219-8.56" />
+              </svg>
+              {t('news.generatingSummary', 'Generating summary...')}
+            </LoadingIndicator>
+          ) : summary ? (
+            <SummarySection>
+              <SummaryLabel>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                {t('news.summary.label', 'AI Summary')}
+              </SummaryLabel>
+              <SummaryText>
+                {summary.split('\n\n').map((para, i) => (
+                  <p key={i}>{para}</p>
+                ))}
+              </SummaryText>
+            </SummarySection>
+          ) : null}
+
+          {article.description && (
             <DetailBody>
-              {loadingContent ? (
-                <LoadingContainer>
-                  <LoadingSpinner />
-                  <LoadingText>{t('news.loadingArticle')}</LoadingText>
-                </LoadingContainer>
-              ) : contentError ? (
-                <>
-                  <ErrorMessage style={{ textAlign: 'center', marginBottom: '20px' }}>{contentError}</ErrorMessage>
-                  <p>{article.description}</p>
-                </>
-              ) : summarizing ? (
-                <LoadingContainer>
-                  <LoadingSpinner />
-                  <LoadingText>{t('news.generatingSummary')}</LoadingText>
-                </LoadingContainer>
-              ) : (
-                summary.split('\n\n').map((paragraph, index) => (
-                  <p key={index} style={{ marginBottom: '18px' }}>{paragraph}</p>
-                ))
-              )}
-              
-              <p style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #e0e0e0' }}>
-                <a href={article.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>
-                  {t('news.readOriginal', 'Read the original article on {{source}} →', { source: article.source })}
-                </a>
-              </p>
+              <p>{article.description}</p>
             </DetailBody>
-        </ArticleDetailContent>
-        <CloseButton onClick={onClose}>&times;</CloseButton>
-      </ArticleDetailContainer>
-    </ArticleDetailOverlay>
+          )}
+        </DetailContent>
+      </DetailPanel>
+    </DetailOverlay>
   );
 };
+
+// ============================================================================
+// MAIN NEWSPAGE COMPONENT
+// ============================================================================
 
 const NewsPage = ({ collapsed }) => {
   const { t } = useTranslation();
@@ -912,13 +1087,11 @@ const NewsPage = ({ collapsed }) => {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastRefresh, setLastRefresh] = useState(null);
   const [savedArticles, setSavedArticles] = useState(() => {
     try {
       const saved = window.localStorage.getItem('savedNewsArticles');
       return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error('Failed to parse saved articles from localStorage', e);
+    } catch {
       return [];
     }
   });
@@ -926,14 +1099,12 @@ const NewsPage = ({ collapsed }) => {
   const loadArticles = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     setError(null);
-    
+
     try {
-      const categoryToFetch = activeFilter;
-      const fetchedArticles = await fetchArticlesByCategory(categoryToFetch, 20);
-      setArticles(fetchedArticles);
-      setLastRefresh(new Date());
+      const fetched = await fetchArticlesByCategory(activeFilter, 20);
+      setArticles(fetched);
     } catch (err) {
-      console.error('Error loading articles:', err);
+      console.error('Failed to load articles:', err);
       setError(err.message || t('news.error.fetch'));
       setArticles([]);
     } finally {
@@ -947,155 +1118,155 @@ const NewsPage = ({ collapsed }) => {
 
   // Auto-refresh every 5 minutes
   useEffect(() => {
-    const interval = setInterval(() => {
-      loadArticles(false); // Don't show loading spinner for auto-refresh
-    }, 5 * 60 * 1000); // 5 minutes
-
+    const interval = setInterval(() => loadArticles(false), 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [activeFilter]);
 
+  // Persist saved articles
   useEffect(() => {
     try {
       window.localStorage.setItem('savedNewsArticles', JSON.stringify(savedArticles));
-    } catch (e) {
-      console.error('Failed to save articles to localStorage', e);
+    } catch (err) {
+      console.error('Failed to save articles:', err);
     }
   }, [savedArticles]);
 
-  const handleArticleClick = (article) => {
-    setSelectedArticle(article);
-  };
-
-  const handleCloseArticle = () => {
-    setSelectedArticle(null);
-  };
-
-  const handleSaveArticle = (e, articleId) => {
-    e.stopPropagation();
-    setSavedArticles(prev => 
-      prev.includes(articleId) 
+  const handleSaveArticle = (articleId) => {
+    setSavedArticles(prev =>
+      prev.includes(articleId)
         ? prev.filter(id => id !== articleId)
         : [...prev, articleId]
     );
   };
 
-  const handleRetry = () => {
-    loadArticles();
-  };
-
-  const handleRefresh = () => {
-    loadArticles();
-  };
-
-  const displayArticles = activeFilter === 'saved' 
+  const displayArticles = activeFilter === 'saved'
     ? articles.filter(article => savedArticles.includes(article.id))
     : articles;
 
   return (
-    <NewsContainer $collapsed={collapsed}>
-      <NewsContent>
-      <NewsZoomWrapper>
-      <Header>
-        <Title>
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-          </svg>
-          {t('news.title')}
-        </Title>
-        <RefreshButton onClick={handleRefresh} disabled={loading} $loading={loading}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/>
-          </svg>
-          {loading ? t('news.refreshing') : t('news.refresh')}
-        </RefreshButton>
-      </Header>
+    <PageContainer $collapsed={collapsed}>
+      <ContentWrapper>
+        <Header>
+          <TitleSection>
+            <PageTitle>{t('news.title', 'News')}</PageTitle>
+            <Subtitle>{t('news.subtitle', 'Stay informed with the latest stories')}</Subtitle>
+          </TitleSection>
 
-      <FilterBar>
-        {filterOptions.map(filter => (
-          <FilterButton
-            key={filter.id}
-            $active={activeFilter === filter.id}
-            onClick={() => setActiveFilter(filter.id)}
-          >
-            {filter.icon}
-            {t(filter.labelKey)}
-          </FilterButton>
-        ))}
-      </FilterBar>
+          <RefreshButton onClick={() => loadArticles()} disabled={loading} $loading={loading}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.3" />
+            </svg>
+            {loading ? t('news.refreshing', 'Refreshing...') : t('news.refresh', 'Refresh')}
+          </RefreshButton>
+        </Header>
 
-      {loading && (
-        <LoadingContainer>
-          <LoadingSpinner />
-          <LoadingText>{t('news.loadingList')}</LoadingText>
-        </LoadingContainer>
-      )}
+        <FilterContainer>
+          <FilterScroll>
+            {filterOptions.map(filter => (
+              <FilterTab
+                key={filter.id}
+                $active={activeFilter === filter.id}
+                onClick={() => setActiveFilter(filter.id)}
+              >
+                {filter.icon}
+                {t(filter.labelKey)}
+              </FilterTab>
+            ))}
+          </FilterScroll>
+        </FilterContainer>
 
-      {error && !loading && (
-        <ErrorContainer>
-          <ErrorMessage>{t('news.error.title')}</ErrorMessage>
-          <p>{error}</p>
-          <RetryButton onClick={handleRetry}>{t('news.error.retry')}</RetryButton>
-        </ErrorContainer>
-      )}
+        {loading ? (
+          <ArticlesGrid>
+            {[...Array(6)].map((_, i) => (
+              <SkeletonCard key={i}>
+                <SkeletonImage />
+                <SkeletonContent>
+                  <SkeletonLine $width="30%" $height="12px" />
+                  <SkeletonLine $width="90%" $height="18px" />
+                  <SkeletonLine $width="70%" $height="18px" />
+                  <SkeletonLine $width="100%" />
+                  <SkeletonLine $width="80%" />
+                </SkeletonContent>
+              </SkeletonCard>
+            ))}
+          </ArticlesGrid>
+        ) : error ? (
+          <ErrorState>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <EmptyTitle>{t('news.error.title', 'Failed to load news')}</EmptyTitle>
+            <EmptyText>{error}</EmptyText>
+            <RetryButton onClick={() => loadArticles()}>
+              {t('news.error.retry', 'Try again')}
+            </RetryButton>
+          </ErrorState>
+        ) : displayArticles.length === 0 ? (
+          <EmptyState>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+            </svg>
+            <EmptyTitle>
+              {activeFilter === 'saved'
+                ? t('news.empty.savedTitle', 'No saved articles')
+                : t('news.empty.categoryTitle', 'No articles found')}
+            </EmptyTitle>
+            <EmptyText>
+              {activeFilter === 'saved'
+                ? t('news.empty.saved', 'Articles you save will appear here')
+                : t('news.empty.category', 'Try a different category or refresh')}
+            </EmptyText>
+          </EmptyState>
+        ) : (
+          <ArticlesGrid>
+            {displayArticles.map((article, index) => {
+              const filter = filterOptions.find(f => f.id === article.category);
+              const isSaved = savedArticles.includes(article.id);
+              const isFeatured = index === 0 && article.size === 'featured';
 
-      {!loading && !error && displayArticles.length === 0 && (
-        <EmptyStateContainer>
-          <EmptyStateMessage>
-            {activeFilter === 'saved' 
-              ? t('news.empty.saved')
-              : t('news.empty.category')}
-          </EmptyStateMessage>
-        </EmptyStateContainer>
-      )}
+              if (isFeatured) {
+                return (
+                  <FeaturedArticle key={article.id}>
+                    <ArticleCard
+                      article={article}
+                      filter={filter}
+                      isSaved={isSaved}
+                      onSave={handleSaveArticle}
+                      onClick={() => setSelectedArticle(article)}
+                      delay={index * 50}
+                      featured
+                    />
+                  </FeaturedArticle>
+                );
+              }
 
-      {!loading && !error && displayArticles.length > 0 && (
-        <ArticlesGrid>
-          {displayArticles.map(article => {
-            const filter = filterOptions.find(f => f.id === article.category);
-            const isSaved = savedArticles.includes(article.id);
-            return (
-              <ArticleCard key={article.id} $size={article.size} onClick={() => handleArticleClick(article)}>
-                {article.image && (
-                  <ArticleImage
-                    src={article.image}
-                    alt={article.title}
-                    $size={article.size}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                )}
-                <ArticleContent $size={article.size}>
-                  <ArticleTitle $size={article.size}>{article.title}</ArticleTitle>
-                  {filter && (
-                    <ArticleTag>
-                      {filter.icon}
-                      <span>{t(filter.labelKey)}</span>
-                    </ArticleTag>
-                  )}
-                  <ArticleDescription $size={article.size}>{article.description}</ArticleDescription>
-                  <ArticleFooter>
-                    <ArticleSource>{article.source}</ArticleSource>
-                    <BookmarkIcon onClick={(e) => handleSaveArticle(e, article.id)}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>
-                      </svg>
-                    </BookmarkIcon>
-                  </ArticleFooter>
-                </ArticleContent>
-              </ArticleCard>
-            )
-          })}
-        </ArticlesGrid>
-      )}
+              return (
+                <ArticleCard
+                  key={article.id}
+                  article={article}
+                  filter={filter}
+                  isSaved={isSaved}
+                  onSave={handleSaveArticle}
+                  onClick={() => setSelectedArticle(article)}
+                  delay={index * 50}
+                />
+              );
+            })}
+          </ArticlesGrid>
+        )}
+      </ContentWrapper>
 
       {selectedArticle && (
-        <ArticleDetailView article={selectedArticle} onClose={handleCloseArticle} />
+        <ArticleDetailView
+          article={selectedArticle}
+          onClose={() => setSelectedArticle(null)}
+        />
       )}
-      </NewsZoomWrapper>
-      </NewsContent>
-    </NewsContainer>
+    </PageContainer>
   );
 };
 
-export default NewsPage; 
+export default NewsPage;
