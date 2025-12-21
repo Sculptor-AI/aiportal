@@ -553,6 +553,39 @@ const SelectBox = styled.select`
   }
 `;
 
+const ColorInputs = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  width: 100%;
+`;
+
+const ColorInputRow = styled.label`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.cardBackground || props.theme.sidebar};
+`;
+
+const ColorInputLabel = styled.span`
+  font-weight: 600;
+  color: ${props => props.theme.text};
+`;
+
+const ColorInputField = styled.input`
+  width: 64px;
+  height: 36px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.border};
+  background: transparent;
+  cursor: pointer;
+`;
+
 const AccentDropdown = styled.div`
   position: relative;
   width: 100%;
@@ -1180,11 +1213,29 @@ const SettingDescription = styled.p`
     };
   }, []);
 
+  const defaultCustomTheme = {
+    background: '#0f172a',
+    text: '#e2e8f0',
+    border: '#4f46e5'
+  };
+
   const accentValue = localSettings.accentColor || 'theme';
   const selectedAccentLabel = accentOptions.find(option => option.value === accentValue)?.label || 'Same as theme';
+  const customThemeValues = localSettings.customTheme || defaultCustomTheme;
+
+  const getThemeLabel = (value) => {
+    const translated = t(`settings.themeOptions.${value}`);
+    if (!translated || translated === `settings.themeOptions.${value}`) {
+      return value === 'custom' ? 'Custom' : value.charAt(0).toUpperCase() + value.slice(1);
+    }
+    return translated;
+  };
   
   const handleChange = (key, value) => {
     const newSettings = { ...localSettings, [key]: value };
+    if (key === 'theme' && value === 'custom' && !localSettings.customTheme) {
+      newSettings.customTheme = { ...defaultCustomTheme };
+    }
     setLocalSettings(newSettings);
     // Remove immediate parent update to prevent re-renders
     // updateSettings(newSettings);
@@ -1193,6 +1244,14 @@ const SettingDescription = styled.p`
   const handleAccentSelect = (value) => {
     handleChange('accentColor', value);
     setIsAccentMenuOpen(false);
+  };
+
+  const handleCustomColorChange = (field, value) => {
+    const nextTheme = { ...customThemeValues, [field]: value };
+    handleChange('customTheme', nextTheme);
+    if (localSettings.theme !== 'custom') {
+      handleChange('theme', 'custom');
+    }
   };
 
   const handleSave = () => {
@@ -1231,7 +1290,8 @@ const SettingDescription = styled.p`
     'bubblegum',
     'desert',
     'matrix',
-    'comic-book'
+    'comic-book',
+    'custom'
   ];
 
   const languageOptionValues = ['en-US', 'fr', 'es', 'de', 'zh'];
@@ -1391,11 +1451,45 @@ const SettingDescription = styled.p`
                 >
                   {themeOptionValues.map(value => (
                     <option key={value} value={value}>
-                      {t(`settings.themeOptions.${value}`)}
+                      {getThemeLabel(value)}
                     </option>
                   ))}
                 </SelectBox>
               </SettingsRow>
+              {localSettings.theme === 'custom' && (
+                <SettingGroup>
+                  <SettingLabel>Custom Theme Colors</SettingLabel>
+                  <ColorInputs>
+                    <ColorInputRow>
+                      <ColorInputLabel>Background</ColorInputLabel>
+                      <ColorInputField
+                        type="color"
+                        value={customThemeValues.background}
+                        onChange={(e) => handleCustomColorChange('background', e.target.value)}
+                        title="Pick background color"
+                      />
+                    </ColorInputRow>
+                    <ColorInputRow>
+                      <ColorInputLabel>Text</ColorInputLabel>
+                      <ColorInputField
+                        type="color"
+                        value={customThemeValues.text}
+                        onChange={(e) => handleCustomColorChange('text', e.target.value)}
+                        title="Pick text color"
+                      />
+                    </ColorInputRow>
+                    <ColorInputRow>
+                      <ColorInputLabel>Border</ColorInputLabel>
+                      <ColorInputField
+                        type="color"
+                        value={customThemeValues.border}
+                        onChange={(e) => handleCustomColorChange('border', e.target.value)}
+                        title="Pick border color"
+                      />
+                    </ColorInputRow>
+                  </ColorInputs>
+                </SettingGroup>
+              )}
               
               <SettingsRow>
                 <SettingsLabel>{t('settings.general.language.label')}</SettingsLabel>
