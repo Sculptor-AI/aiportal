@@ -19,6 +19,7 @@ import {
   ModelSelectorsRow,
   MessageList,
   EmptyState,
+  ChatDisclaimer,
 } from './ChatWindow.styled';
 
 pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
@@ -90,6 +91,7 @@ const ChatWindow = forwardRef(({
   const theme = useTheme();
   const showProfilePicture = settings?.showProfilePicture !== false;
   const newConversationLabel = t('chat.newConversation', 'New Conversation');
+  const sidebarEdge = $sidebarCollapsed ? 70 : 300;
 
   // Memoized values
   const chatIsEmpty = useMemo(() => {
@@ -418,6 +420,24 @@ const ChatWindow = forwardRef(({
     onAttachmentChange,
   });
 
+  useEffect(() => {
+    const handleRedoRequest = (event) => {
+      const messageId = event?.detail?.messageId;
+      if (!messageId || !chat?.messages?.length) return;
+      const index = chat.messages.findIndex((msg) => msg.id === messageId);
+      if (index <= 0) return;
+      const prev = chat.messages[index - 1];
+      if (prev.role === 'user' && prev.content) {
+        sendChatMessage({ text: prev.content });
+      }
+    };
+
+    window.addEventListener('sculptor.chat.redoRequest', handleRedoRequest);
+    return () => {
+      window.removeEventListener('sculptor.chat.redoRequest', handleRedoRequest);
+    };
+  }, [chat, sendChatMessage]);
+
   // Effects
   useEffect(() => {
     if (shouldStartAnimationThisRender) {
@@ -587,6 +607,8 @@ const ChatWindow = forwardRef(({
                 onChange={handleModelChange}
                 key="model-selector"
                 theme={theme}
+                sidebarCollapsed={$sidebarCollapsed}
+                sidebarEdge={sidebarEdge}
               />
             )}
             <ImageModelSelector
@@ -609,18 +631,23 @@ const ChatWindow = forwardRef(({
       {/* Main Chat Content */}
       <MessageList $focusModeActive={focusModeActive}>
         {!chatIsEmpty && !isLiveModeOpen && chat && Array.isArray(chat.messages) && chat.messages.map(message => (
-          <ChatMessage
-            key={message.id}
-            message={message}
-            showModelIcons={settings.showModelIcons}
-            settings={settings}
-            theme={theme}
-            userProfilePicture={showProfilePicture ? profilePicture : null}
-            showProfileIcon={showProfilePicture}
-          />
+        <ChatMessage
+          key={message.id}
+          message={message}
+          showModelIcons={settings.showModelIcons}
+          settings={settings}
+          theme={theme}
+          userProfilePicture={showProfilePicture ? profilePicture : null}
+          showProfileIcon={showProfilePicture}
+          sidebarCollapsed={$sidebarCollapsed}
+        />
         ))}
         <div ref={messagesEndRef} />
       </MessageList>
+
+      <ChatDisclaimer>
+        {t('chat.disclaimer', 'Sculptor can make mistakes. Andromeda doesn\'t use Lakeside School AI workspace data to train its models.')}
+      </ChatDisclaimer>
 
       {/* Live Mode Overlay - Now sibling to MessageList */}
       {isLiveModeOpen && (

@@ -722,6 +722,7 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
   console.log(`[Veo Video] Generating with model: ${model}`);
   console.log(`[Veo Video] Prompt: "${prompt.substring(0, 100)}..."`);
   console.log(`[Veo Video] Options:`, options);
+  console.log(`[Veo Video] Duration preference: ${options.duration || 'auto'}`);
 
   const requestBody = {
     instances: [{ 

@@ -90,11 +90,11 @@ const FloatingMenuButton = styled.button`
 `;
 
 // Main Greeting Component
-  const MainGreeting = styled.div`
+const MainGreeting = styled.div`
   position: fixed;
   top: ${props => props.$toolbarOpen ? '25%' : '28%'}; /* Moved up from 32%/35% */
   left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 70 : 160; // Increased from 140px to 160px to account for sidebar's 20px left margin
+    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160; // Increased from 140px to 160px to account for sidebar's 20px left margin
     return `calc(50% + ${sidebarOffset}px)`;
   }};
   transform: translateX(-50%);
@@ -600,28 +600,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   }, [settings?.language]);
 
   const createNewChat = (projectId = null) => {
-    const existingEmptyChat = chats.find(chat => !(chat.messages && chat.messages.length));
-    if (existingEmptyChat) {
-      const shouldReorder =
-        chats[0]?.id !== existingEmptyChat.id;
-      if (shouldReorder) {
-        setChats(prevChats => {
-          const reordered = [existingEmptyChat, ...prevChats.filter(chat => chat.id !== existingEmptyChat.id)];
-          try {
-            localStorage.setItem('chats', safeStringify(reordered));
-          } catch (error) {
-            console.error("Error saving chats to localStorage:", error);
-          }
-          return reordered;
-        });
-      }
-      setActiveChat(existingEmptyChat.id);
-      if (location.pathname !== '/') {
-        navigate('/');
-      }
-      return existingEmptyChat;
-    }
-
     const currentLanguage = settings?.language || getLanguagePreference();
     const newChat = {
       id: uuidv4(),
@@ -653,9 +631,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       id: uuidv4(),
       ...projectData,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      starred: false,
-      knowledge: [],
     };
     setProjects(prevProjects => [...prevProjects, newProject]);
     setActiveProject(newProject.id);
@@ -665,50 +640,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     setProjects(prevProjects => prevProjects.map(p => {
       if (p.id === projectId) {
         const newKnowledge = { id: uuidv4(), ...file };
-        return { 
-          ...p, 
-          knowledge: [...(p.knowledge || []), newKnowledge],
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return p;
-    }));
-  };
-
-  const removeKnowledgeFromProject = (projectId, knowledgeId) => {
-    setProjects(prevProjects => prevProjects.map(p => {
-      if (p.id === projectId) {
-        return {
-          ...p,
-          knowledge: (p.knowledge || []).filter(k => k.id !== knowledgeId),
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return p;
-    }));
-  };
-
-  const updateProjectInstructions = (projectId, instructions) => {
-    setProjects(prevProjects => prevProjects.map(p => {
-      if (p.id === projectId) {
-        return {
-          ...p,
-          projectInstructions: instructions,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return p;
-    }));
-  };
-
-  const toggleProjectStar = (projectId) => {
-    setProjects(prevProjects => prevProjects.map(p => {
-      if (p.id === projectId) {
-        return {
-          ...p,
-          starred: !p.starred,
-          updatedAt: new Date().toISOString()
-        };
+        return { ...p, knowledge: [...(p.knowledge || []), newKnowledge] };
       }
       return p;
     }));
@@ -1146,10 +1078,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   onMessageSent={handleMessageSent}
                 />
               } />
-              <Route path="/media" element={<MediaPage collapsed={collapsed} />} />
+              <Route path="/media" element={<MediaPage />} />
               <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
               <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
-              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} toggleProjectStar={toggleProjectStar} collapsed={collapsed} chats={chats} />} />
+              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} collapsed={collapsed} />} />
               <Route path="/workspace" element={<WorkspacePage collapsed={collapsed} />} />
               <Route path="/projects/:projectId" element={
                 <ProjectDetailPage
@@ -1161,13 +1093,9 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   setActiveChat={setActiveChat}
                   activeChat={activeChat}
                   addKnowledgeToProject={addKnowledgeToProject}
-                  removeKnowledgeFromProject={removeKnowledgeFromProject}
-                  updateProjectInstructions={updateProjectInstructions}
                   // Pass down all the props ChatInputArea needs
                   settings={settings}
                   availableModels={availableModels}
-                  selectedModel={selectedModel}
-                  onModelChange={handleModelChange}
                   isWhiteboardOpen={isWhiteboardOpen}
                   onToggleWhiteboard={() => setIsWhiteboardOpen(p => !p)}
                   isEquationEditorOpen={isEquationEditorOpen}

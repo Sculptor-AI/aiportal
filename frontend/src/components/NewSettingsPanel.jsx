@@ -266,7 +266,9 @@ const NavItem = styled.div`
   cursor: pointer;
   transition: background-color 0.2s;
   background-color: ${props => props.$active ? props.theme.accentSurface : 'transparent'};
-  color: ${props => props.$active ? props.theme.accentText : props.theme.text};
+  color: ${props => props.$active
+    ? (props.theme.isDark ? props.theme.accentText : '#fff')
+    : props.theme.text};
   border-left: 3px solid ${props => props.$active ? props.theme.accentColor : 'transparent'};
   font-weight: ${props => props.$active ? '500' : 'normal'};
   
@@ -1181,7 +1183,10 @@ const SettingDescription = styled.p`
   }, []);
 
   const accentValue = localSettings.accentColor || 'theme';
-  const selectedAccentLabel = accentOptions.find(option => option.value === accentValue)?.label || 'Same as theme';
+  const selectedAccentOption = accentOptions.find(option => option.value === accentValue);
+  const selectedAccentLabel = selectedAccentOption
+    ? t(selectedAccentOption.labelKey, selectedAccentOption.defaultLabel)
+    : t('settings.appearance.accent.option.theme', 'Same as theme');
   
   const handleChange = (key, value) => {
     const newSettings = { ...localSettings, [key]: value };
@@ -1262,7 +1267,7 @@ const SettingDescription = styled.p`
     { key: 'codeHighlighting', labelKey: 'settings.chats.features.codeHighlighting' }
   ];
 
-  const messageAlignmentOptions = ['left', 'right'];
+  const messageAlignmentOptions = ['default', 'left', 'right'];
 
   const layoutToggles = [
     { key: 'sidebarAutoCollapse', labelKey: 'settings.interface.layout.autoCollapse' },
@@ -1459,23 +1464,23 @@ const SettingDescription = styled.p`
               </SettingGroup>
 
               <SettingGroup>
-                <SettingLabel>Accent Color</SettingLabel>
+                <SettingLabel>{t('settings.appearance.accent.color', 'Accent Color')}</SettingLabel>
                 <AccentDropdown ref={accentMenuRef}>
-                      <AccentTrigger
-                        type="button"
-                        onClick={() => setIsAccentMenuOpen(prev => !prev)}
-                        aria-haspopup="listbox"
-                        aria-expanded={isAccentMenuOpen}
-                      >
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <AccentCircle style={{ background: getAccentSwatch(accentValue, theme) }} />
-                          <AccentOptionLabel>{selectedAccentLabel}</AccentOptionLabel>
-                        </span>
-                        <AccentChevron $open={isAccentMenuOpen}>▾</AccentChevron>
-                      </AccentTrigger>
-                      {isAccentMenuOpen && (
-                        <AccentMenu role="listbox">
-                          {accentOptions.map((option) => (
+                  <AccentTrigger
+                    type="button"
+                    onClick={() => setIsAccentMenuOpen(prev => !prev)}
+                    aria-haspopup="listbox"
+                    aria-expanded={isAccentMenuOpen}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <AccentCircle style={{ background: getAccentSwatch(accentValue, theme) }} />
+                      <AccentOptionLabel>{selectedAccentLabel}</AccentOptionLabel>
+                    </span>
+                    <AccentChevron $open={isAccentMenuOpen}>▾</AccentChevron>
+                  </AccentTrigger>
+                  {isAccentMenuOpen && (
+                    <AccentMenu role="listbox">
+                      {accentOptions.map((option) => (
                         <AccentOptionButton
                           key={option.value}
                           type="button"
@@ -1483,40 +1488,19 @@ const SettingDescription = styled.p`
                           $isSelected={accentValue === option.value}
                         >
                           <AccentCircle style={{ background: getAccentSwatch(option.value, theme) }} />
-                          <AccentOptionLabel>{option.label}</AccentOptionLabel>
+                          <AccentOptionLabel>
+                            {t(option.labelKey, option.defaultLabel)}
+                          </AccentOptionLabel>
                         </AccentOptionButton>
                       ))}
                     </AccentMenu>
                   )}
                 </AccentDropdown>
                 <SettingDescription>
-                  Accent colors update buttons, bubbles, toggles, and other highlights throughout the interface.
+                  {t('settings.appearance.accent.description')}
                 </SettingDescription>
               </SettingGroup>
 
-              <SettingGroup>
-                <SettingLabel>{t('settings.appearance.sidebarStyle.label')}</SettingLabel>
-                <RadioGroup>
-                  {sidebarStyleOptions.map(option => (
-                    <RadioOption
-                      key={option}
-                      isSelected={localSettings.sidebarStyle === option || (!localSettings.sidebarStyle && option === 'floating')}
-                    >
-                      <input
-                        type="radio"
-                        name="sidebarStyle"
-                        value={option}
-                        checked={localSettings.sidebarStyle === option || (!localSettings.sidebarStyle && option === 'floating')}
-                        onChange={() => handleChange('sidebarStyle', option)}
-                      />
-                      {t(`settings.appearance.sidebarStyle.${option}`)}
-                    </RadioOption>
-                  ))}
-                </RadioGroup>
-                <SettingDescription>
-                  {t('settings.appearance.sidebarStyle.description')}
-                </SettingDescription>
-              </SettingGroup>
             </div>
           )}
           
@@ -1558,61 +1542,67 @@ const SettingDescription = styled.p`
               </SettingGroup>
               
             <SettingGroup>
-              <SettingLabel>{t('settings.appearance.accent.color', 'Accent Color')}</SettingLabel>
-              <AccentDropdown ref={accentMenuRef}>
-                <AccentTrigger
-                  type="button"
-                  onClick={() => setIsAccentMenuOpen(prev => !prev)}
-                  aria-haspopup="listbox"
-                  aria-expanded={isAccentMenuOpen}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <AccentCircle style={{ background: getAccentSwatch(accentValue, theme) }} />
-                    <AccentOptionLabel>{selectedAccentLabel}</AccentOptionLabel>
-                  </span>
-                  <AccentChevron $open={isAccentMenuOpen}>▾</AccentChevron>
-                </AccentTrigger>
-                {isAccentMenuOpen && (
-                  <AccentMenu role="listbox">
-                    {accentOptions.map((option) => (
-                      <AccentOptionButton
-                        key={option.value}
-                        type="button"
-                        onClick={() => handleAccentSelect(option.value)}
-                        $isSelected={accentValue === option.value}
-                      >
-                        <AccentCircle style={{ background: getAccentSwatch(option.value, theme) }} />
-                        <AccentOptionLabel>{option.label}</AccentOptionLabel>
-                      </AccentOptionButton>
-                    ))}
-                  </AccentMenu>
-                )}
-              </AccentDropdown>
-              <SettingDescription>
-                {t('settings.appearance.accent.description')}
-              </SettingDescription>
-            </SettingGroup>
-
-            <SettingGroup>
               <SettingLabel>{t('settings.chats.alignment.label')}</SettingLabel>
-              <RadioGroup>
-                {['default', 'left', 'right'].map(option => (
-                  <RadioOption
-                    key={option}
-                    isSelected={(localSettings.messageAlignment || 'default') === option}
-                  >
-                    <input
-                      type="radio"
-                      name="messageAlignment"
-                      value={option}
-                      checked={(localSettings.messageAlignment || 'default') === option}
-                      onChange={() => handleChange('messageAlignment', option)}
-                    />
-                    {t(`settings.chats.alignment.${option}`, option.charAt(0).toUpperCase() + option.slice(1))}
-                  </RadioOption>
-                ))}
-              </RadioGroup>
-            </SettingGroup>
+                <RadioGroup>
+                  {messageAlignmentOptions.map(option => (
+                    <RadioOption
+                      key={option}
+                      isSelected={(localSettings.messageAlignment || 'default') === option}
+                    >
+                      <input
+                        type="radio"
+                        name="messageAlignment"
+                        value={option}
+                        checked={(localSettings.messageAlignment || 'default') === option}
+                        onChange={() => handleChange('messageAlignment', option)}
+                      />
+                      {t(`settings.chats.alignment.${option}`, option.charAt(0).toUpperCase() + option.slice(1))}
+                    </RadioOption>
+                  ))}
+                </RadioGroup>
+              </SettingGroup>
+
+              <SettingGroup>
+                <SettingLabel>{t('settings.interface.bubbles.label')}</SettingLabel>
+                <RadioGroup>
+                  {bubbleStyleOptions.map(option => (
+                    <RadioOption
+                      key={option}
+                      isSelected={localSettings.bubbleStyle === option || (!localSettings.bubbleStyle && option === 'minimal')}
+                    >
+                      <input
+                        type="radio"
+                        name="bubbleStyle"
+                        value={option}
+                        checked={localSettings.bubbleStyle === option || (!localSettings.bubbleStyle && option === 'minimal')}
+                        onChange={() => handleChange('bubbleStyle', option)}
+                      />
+                      {t(`settings.interface.bubbles.${option}`)}
+                    </RadioOption>
+                  ))}
+                </RadioGroup>
+              </SettingGroup>
+
+              <SettingGroup>
+                <SettingLabel>{t('settings.interface.spacing.label')}</SettingLabel>
+                <RadioGroup>
+                  {messageSpacingOptions.map(option => (
+                    <RadioOption
+                      key={option}
+                      isSelected={localSettings.messageSpacing === option || (!localSettings.messageSpacing && option === 'comfortable')}
+                    >
+                      <input
+                        type="radio"
+                        name="messageSpacing"
+                        value={option}
+                        checked={localSettings.messageSpacing === option || (!localSettings.messageSpacing && option === 'comfortable')}
+                        onChange={() => handleChange('messageSpacing', option)}
+                      />
+                      {t(`settings.interface.spacing.${option}`)}
+                    </RadioOption>
+                  ))}
+                </RadioGroup>
+              </SettingGroup>
 
             <SettingGroup>
               <SettingLabel>{t('settings.chats.profiles.toggleVisibility.label', 'Toggle profile icon visibility')}</SettingLabel>
@@ -1663,45 +1653,27 @@ const SettingDescription = styled.p`
               </SettingGroup>
               
               <SettingGroup>
-                <SettingLabel>{t('settings.interface.bubbles.label')}</SettingLabel>
+                <SettingLabel>{t('settings.appearance.sidebarStyle.label')}</SettingLabel>
                 <RadioGroup>
-                  {bubbleStyleOptions.map(option => (
-                  <RadioOption
-                    key={option}
-                    isSelected={localSettings.bubbleStyle === option || (!localSettings.bubbleStyle && option === 'minimal')}
-                  >
-                    <input
-                      type="radio"
-                      name="bubbleStyle"
-                      value={option}
-                      checked={localSettings.bubbleStyle === option || (!localSettings.bubbleStyle && option === 'minimal')}
-                      onChange={() => handleChange('bubbleStyle', option)}
-                    />
-                    {t(`settings.interface.bubbles.${option}`)}
-                  </RadioOption>
-                  ))}
-                </RadioGroup>
-              </SettingGroup>
-              
-              <SettingGroup>
-                <SettingLabel>{t('settings.interface.spacing.label')}</SettingLabel>
-                <RadioGroup>
-                  {messageSpacingOptions.map(option => (
+                  {sidebarStyleOptions.map(option => (
                     <RadioOption
                       key={option}
-                      isSelected={localSettings.messageSpacing === option || (!localSettings.messageSpacing && option === 'comfortable')}
+                      isSelected={localSettings.sidebarStyle === option || (!localSettings.sidebarStyle && option === 'floating')}
                     >
                       <input
                         type="radio"
-                        name="messageSpacing"
+                        name="sidebarStyle"
                         value={option}
-                        checked={localSettings.messageSpacing === option || (!localSettings.messageSpacing && option === 'comfortable')}
-                        onChange={() => handleChange('messageSpacing', option)}
+                        checked={localSettings.sidebarStyle === option || (!localSettings.sidebarStyle && option === 'floating')}
+                        onChange={() => handleChange('sidebarStyle', option)}
                       />
-                      {t(`settings.interface.spacing.${option}`)}
+                      {t(`settings.appearance.sidebarStyle.${option}`)}
                     </RadioOption>
                   ))}
                 </RadioGroup>
+                <SettingDescription>
+                  {t('settings.appearance.sidebarStyle.description')}
+                </SettingDescription>
               </SettingGroup>
             </div>
           )}

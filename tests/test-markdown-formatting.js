@@ -140,11 +140,13 @@ if (typeof window !== 'undefined') {
   console.log('Markdown test utilities loaded. Run testMarkdownRendering() to test.');
 }
 
-// Node.js export
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    testMarkdownRendering,
-    testMarkdownContent,
-    testThemes
-  };
-} 
+const isDirectNodeRun = typeof process !== 'undefined'
+  && process.argv
+  && process.argv[1]
+  && process.argv[1].endsWith('test-markdown-formatting.js');
+
+if (isDirectNodeRun) {
+  testMarkdownRendering();
+}
+
+export { testMarkdownRendering, testMarkdownContent, testThemes };

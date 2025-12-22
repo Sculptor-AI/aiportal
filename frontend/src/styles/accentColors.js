@@ -14,15 +14,15 @@ const accentTextMap = {
 };
 
 export const accentOptions = [
-  { value: 'theme', label: 'Same as theme' },
-  { value: 'gray', label: 'Gray' },
-  { value: 'blue', label: 'Blue' },
-  { value: 'green', label: 'Green' },
-  { value: 'yellow', label: 'Yellow' },
-  { value: 'pink', label: 'Pink' },
-  { value: 'orange', label: 'Orange' },
-  { value: 'purple', label: 'Purple' },
-  { value: 'red', label: 'Red' },
+  { value: 'theme', labelKey: 'settings.appearance.accent.option.theme', defaultLabel: 'Same as theme' },
+  { value: 'gray', labelKey: 'settings.appearance.accent.option.gray', defaultLabel: 'Gray' },
+  { value: 'blue', labelKey: 'settings.appearance.accent.option.blue', defaultLabel: 'Blue' },
+  { value: 'green', labelKey: 'settings.appearance.accent.option.green', defaultLabel: 'Green' },
+  { value: 'yellow', labelKey: 'settings.appearance.accent.option.yellow', defaultLabel: 'Yellow' },
+  { value: 'pink', labelKey: 'settings.appearance.accent.option.pink', defaultLabel: 'Pink' },
+  { value: 'orange', labelKey: 'settings.appearance.accent.option.orange', defaultLabel: 'Orange' },
+  { value: 'purple', labelKey: 'settings.appearance.accent.option.purple', defaultLabel: 'Purple' },
+  { value: 'red', labelKey: 'settings.appearance.accent.option.red', defaultLabel: 'Red' },
 ];
 
 const extractHex = (value) => {
@@ -68,11 +68,14 @@ export const getAccentStyles = (theme = {}, accentChoice = 'theme') => {
   const isDark = theme.isDark !== false; // Default to dark if not specified
 
   if (accentChoice === 'theme') {
+    const isSunsetTheme = !isDark && theme.name === 'sunset';
     return {
       accentColor: fallbackColor,
       accentBackground: background,
-      accentText: isDark ? '#FFFFFF' : fallbackColor,
-      accentSurface: applyAlpha(fallbackColor, 0.14) || background,
+      accentText: isSunsetTheme ? (theme.text || '#2d0b00') : (isDark ? '#FFFFFF' : (theme.text || fallbackColor)),
+      accentSurface: (theme.name === 'sunset'
+        ? applyAlpha(fallbackColor, 0.2)
+        : applyAlpha(fallbackColor, 0.14)) || background,
       accentChoice,
     };
   }

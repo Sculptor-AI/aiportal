@@ -18,7 +18,6 @@ import {
   ModelSelectorsRow,
   MessageList,
   EmptyState,
-  ChatDisclaimer,
 } from './ChatWindow.styled';
 
 pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
@@ -549,7 +548,6 @@ const ChatWindow = forwardRef(({
                 onChange={handleModelChange}
                 key="model-selector"
                 theme={theme}
-                sidebarCollapsed={$sidebarCollapsed}
               />
             )}
             <ImageModelSelector
@@ -583,10 +581,6 @@ const ChatWindow = forwardRef(({
         ))}
         <div ref={messagesEndRef} />
       </MessageList>
-
-      <ChatDisclaimer>
-        Sculptor can make mistakes. Andromeda doesn't use Lakeside School AI workspace data to train its models.
-      </ChatDisclaimer>
 
       {/* Live Mode Overlay - Now sibling to MessageList */}
       {isLiveModeOpen && (
@@ -649,3 +643,4 @@ const ChatWindow = forwardRef(({
 ChatWindow.displayName = 'ChatWindow';
 
 export default ChatWindow;
+

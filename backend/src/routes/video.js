@@ -28,7 +28,7 @@ video.post('/generate', async (c) => {
 
   try {
     const body = await c.req.json();
-    const { prompt, aspectRatio, negativePrompt } = body;
+    const { prompt, aspectRatio, negativePrompt, duration } = body;
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
       return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
@@ -38,7 +38,8 @@ video.post('/generate', async (c) => {
 
     const result = await generateVideoWithVeo(prompt, apiKey, {
       aspectRatio,
-      negativePrompt
+      negativePrompt,
+      duration
     });
 
     if (!result.success) {
@@ -125,4 +126,3 @@ video.get('/download', async (c) => {
 });
 
 export default video;
-

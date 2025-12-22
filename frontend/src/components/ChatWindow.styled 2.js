@@ -6,7 +6,7 @@ export const ChatWindowContainer = styled.div`
   flex-direction: column;
   height: 100%;
   width: 100%;
-  margin-left: ${props => props.$sidebarCollapsed ? '70px' : '300px'}; /* 280px sidebar + 20px margin */
+  margin-left: ${props => props.$sidebarCollapsed ? '0' : '300px'}; /* 280px sidebar + 20px margin */
   transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   background: ${props => props.theme.sidebar};
   font-size: ${props => {
@@ -27,7 +27,7 @@ export const ChatWindowContainer = styled.div`
 `;
 
 export const ChatHeader = styled.div`
-  padding: 5px 20px 15px ${props => props.$sidebarCollapsed ? '70px' : '20px'}; // Adjust left padding based on sidebar state
+  padding: 5px 20px 15px ${props => props.$sidebarCollapsed ? '45px' : '20px'}; // Adjust left padding based on sidebar state
   display: flex;
   align-items: flex-start; // Change from center to flex-start for better alignment
   justify-content: flex-start;
@@ -88,11 +88,16 @@ export const MessageList = styled.div`
   flex-direction: column;
   width: 100%;
   position: relative;
-  background: ${props => props.theme.chat || 'transparent'};
+  background: ${props => {
+    if (props.theme.name === 'dark' || props.theme.name === 'oled') {
+      return 'transparent';
+    }
+    return props.theme.name === 'retro' ? 'transparent' : 'rgba(255, 255, 255, 0.05)';
+  }};
   
   /* Stylish scrollbar */
   &::-webkit-scrollbar {
-    width: ${props => props.theme.name === 'retro' ? '16px' : '12px'};
+    width: ${props => props.theme.name === 'retro' ? '16px' : '5px'};
   }
   
   &::-webkit-scrollbar-track {
@@ -115,14 +120,6 @@ export const MessageList = styled.div`
   filter: ${props => props.$focusModeActive ? 'blur(6px)' : 'none'};
   pointer-events: ${props => props.$focusModeActive ? 'none' : 'auto'};
   transition: opacity 0.3s ease, filter 0.3s ease;
-`;
-
-export const ChatDisclaimer = styled.div`
-  padding: 12px 0 8px;
-  font-size: 0.75rem;
-  text-align: center;
-  color: ${props => props.theme.text}aa;
-  opacity: 0.9;
 `;
 
 export const fadeIn = keyframes`
@@ -243,7 +240,7 @@ export const InputContainer = styled.div`
     const mobileBottomPosition = theme.name === 'retro' ? '30px' : '20px';
 
     const centerPosition = $sidebarCollapsed
-      ? `calc(50% + 70px)`
+      ? `calc(50%)`
       : `calc(50% + 160px)`; // Increased from 140px to 160px to account for sidebar's 20px left margin // 140px is half of sidebar width 280px
 
     if ($animateDown) {
@@ -293,18 +290,14 @@ export const InputContainer = styled.div`
 export const InputGreeting = styled.div`
   width: 100%;
   text-align: center;
-  font-size: 2rem;
-  font-weight: 400;
-  color: ${props => props.theme.text};
-  margin: 0 0 20px;
+  font-size: 1.25rem;
+  font-weight: 650;
+  color: ${props => props.theme.name === 'retro' ? props.theme.text : props.theme.text};
+  opacity: 0.95;
+  margin: 0 0 14px;
   pointer-events: none;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   transition: opacity 0.3s ease, transform 0.3s ease;
-  
-  @media (max-width: 768px) {
-    font-size: 1.75rem;
-    margin: 0 0 16px;
-  }
 `;
 
 export const MessageInputWrapper = styled.div.attrs({ 'data-shadow': 'message-bar' })`
@@ -817,7 +810,7 @@ export const MessageInput = styled.textarea`
 
 export const WaveformButton = styled.button`
   background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.accentBackground};
-  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : '#FFFFFF'};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.accentText};
   border: ${props => props.theme.name === 'retro' ?
     `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
     'none'};
@@ -873,19 +866,7 @@ export const SendButton = styled.button`
     }
     return props.disabled ? 'rgba(0, 0, 0, 0.1)' : props.theme.accentBackground;
   }};
-  color: ${props => {
-    if (props.theme.name === 'retro') {
-      return props.theme.buttonText;
-    }
-    // When disabled, use a muted accent color for visibility on light background
-    if (props.disabled) {
-      return props.theme.accentColor 
-        ? `${props.theme.accentColor}99` 
-        : 'rgba(0, 0, 0, 0.35)';
-    }
-    // When enabled, always use white for contrast on accent background
-    return '#FFFFFF';
-  }};
+  color: ${props => props.theme.name === 'retro' ? props.theme.buttonText : props.theme.accentText};
   border: ${props => props.theme.name === 'retro' ?
     `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}` :
     'none'};

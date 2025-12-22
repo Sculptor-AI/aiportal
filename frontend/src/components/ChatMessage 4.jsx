@@ -638,8 +638,8 @@ const Message = styled.div`
   margin-bottom: var(--message-spacing, 24px);
   max-width: 100%;
   width: 100%;
-  padding-left: 0;
-  padding-right: 0;
+  padding-left: ${props => props.$alignment === 'left' ? '20px' : '0'};
+  padding-right: ${props => props.$alignment === 'right' ? '30px' : '0'};
 `;
 
 const Avatar = styled.div`
@@ -649,19 +649,9 @@ const Avatar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: ${props => {
-    if (props.role === 'user') {
-      return props.$alignment === 'left' ? '6px' : '0';
-    }
-    return props.$alignment === 'right' ? '0' : '10px';
-  }};
-  margin-left: ${props => {
-    if (props.role === 'user') {
-      return props.$alignment === 'right' ? '6px' : '0';
-    }
-    return props.$alignment === 'left' ? '0' : '10px';
-  }};
-  margin-top: 2px;
+  margin-right: ${props => props.$alignment === 'right' ? '0' : (props.role === 'user' ? '18px' : '14px')};
+  margin-left: ${props => props.$alignment === 'left' ? '0' : (props.role === 'user' ? '18px' : '14px')};
+  margin-top: ${props => props.role === 'user' ? '8px' : '0'};
   font-weight: 600;
   flex-shrink: 0;
   background: ${props => props.$profilePicture
@@ -673,14 +663,13 @@ const Avatar = styled.div`
         : props.theme.secondary))};
   color: ${props => props.$profilePicture ? 'transparent' : (props.role === 'user' ? props.theme.text : 'white')};
   transition: all 0.2s ease;
-  transform: translateX(${props => getUserAvatarShift(props.$alignment, props.role)});
   box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
-  opacity: 1;
+  opacity: ${props => props.role === 'user' ? '0.6' : '1'};
   
   &:hover {
-    transform: ${props => props.role === 'user' ? getUserAvatarShift(props.$alignment, props.role) : 'scale(1.05)'};
+    transform: ${props => props.role === 'user' ? 'none' : 'scale(1.05)'};
     box-shadow: ${props => props.role === 'user' ? 'none' : '0 3px 10px rgba(0, 0, 0, 0.15)'};
-    opacity: 1;
+    opacity: ${props => props.role === 'user' ? '0.8' : '1'};
   }
   
   svg {
@@ -706,96 +695,19 @@ const DEFAULT_AI_ACCENT_BG = 'rgba(148, 163, 184, 0.1)';
 const LIGHT_THEME_USER_BG = 'rgba(59, 130, 246, 0.15)';
 
 const isCustomAccent = (theme) => theme?.accentChoice && theme.accentChoice !== 'theme';
-const getThemeAccentBackground = (theme) => {
-  if (theme?.accentChoice === 'theme') {
-    return theme.accentBackground || theme.accentGradient || theme.buttonGradient || theme.primary;
-  }
-  return null;
-};
 
 const getBubbleBackground = (role, theme) => {
   const customAccent = isCustomAccent(theme);
-  const themeGradient = getThemeAccentBackground(theme);
-  const accentBackground = theme.accentBackground || themeGradient;
-
   if (role === 'user') {
-    if (customAccent || themeGradient) return accentBackground;
+    if (customAccent) return theme.accentBackground;
     return theme.name === 'light' ? LIGHT_THEME_USER_BG : DEFAULT_USER_ACCENT_BG;
   }
-  if (customAccent || themeGradient) return accentBackground;
-  return DEFAULT_AI_ACCENT_BG;
+  return customAccent ? theme.accentBackground : DEFAULT_AI_ACCENT_BG;
 };
 
-const getBubbleBorderColor = (theme) => {
-  if (theme?.accentChoice === 'theme') {
-    return '#FFFFFF';
-  }
-  return isCustomAccent(theme) ? theme.accentColor : theme.border;
-};
+const getBubbleBorderColor = (theme) => isCustomAccent(theme) ? theme.accentColor : theme.border;
 
-const getBubbleTextColor = (theme) => {
-  const accentTextNeeded = isCustomAccent(theme) || theme?.accentChoice === 'theme';
-  return accentTextNeeded ? '#FFFFFF' : theme.text;
-};
-
-const getUserBubbleShift = (alignment, role) => {
-  if (role !== 'user') return '0px';
-  if (alignment === 'left') return '14px';
-  if (alignment === 'right') return '-14px';
-  return '0px';
-};
-
-const getUserAvatarShift = (alignment, role) => {
-  if (role !== 'user') return '0px';
-  if (alignment === 'left') return '6px';
-  if (alignment === 'right') return '-6px';
-  return '0px';
-};
-
-const getContentMaxWidth = (role, messageAlignmentPreference) => {
-  if (role === 'assistant') {
-    return 'min(800px, 100%)';
-  }
-  return 'min(800px, 100%)';
-};
-
-const getDefaultFrameOffset = (role) => {
-  const width = 800;
-  return `max((100% - ${width}px) / 2, 0px)`;
-};
-
-const applyOffsetShift = (baseOffset, shift) => {
-  if (!shift || shift === '0' || shift === '0px') {
-    return baseOffset;
-  }
-
-  if (!baseOffset || baseOffset === '0' || baseOffset === '0px') {
-    return shift;
-  }
-
-  return `calc(${baseOffset} + ${shift})`;
-};
-
-const getUserCopyOffset = (messageAlignmentPreference, bubbleStyle) => {
-  const minimalDefaultShift = bubbleStyle === 'minimal' && (messageAlignmentPreference === 'default' || messageAlignmentPreference === 'right')
-    ? '45px'
-    : '0';
-
-  if (messageAlignmentPreference === 'default') {
-    return applyOffsetShift(getDefaultFrameOffset('user'), minimalDefaultShift);
-  }
-
-  if (messageAlignmentPreference === 'left') {
-    return applyOffsetShift('37px', minimalDefaultShift);
-  }
-
-  return applyOffsetShift('0', minimalDefaultShift);
-};
-
-const getDefaultButtonSpacing = (role, shift = 160) => {
-  const width = role === 'assistant' ? 800 : 800;
-  return `calc(max((100% - ${width}px) / 2 - ${shift}px, 0px))`;
-};
+const getBubbleTextColor = (theme) => isCustomAccent(theme) ? theme.accentText : theme.text;
 
 const Content = styled.div`
   width: fit-content;
@@ -804,21 +716,17 @@ const Content = styled.div`
   line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
-  max-width: ${props => getContentMaxWidth(props.role, props.$messageAlignmentPreference || 'default')};
   margin-left: ${props => props.$alignment === 'right' ? 'auto' : '0'};
   margin-right: ${props => props.$alignment === 'left' ? 'auto' : '0'};
   position: relative;
-  text-align: ${props => props.role === 'user' ? 'left' : (props.$alignment === 'right' ? 'right' : 'left')};
-  transform: translateX(${props => getUserBubbleShift(props.$alignment, props.role)});
+  text-align: ${props => props.$alignment === 'right' ? 'right' : 'left'};
   direction: ltr;
   unicode-bidi: plaintext;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   background: ${props => getBubbleBackground(props.role, props.theme)};
-  border: ${props => props.$bubbleStyle === 'minimal' ? 'none' : `1px solid ${getBubbleBorderColor(props.theme)}`};
+  border: var(--bubble-border, 1px solid ${props => getBubbleBorderColor(props.theme)});
   border-radius: var(--bubble-radius, 18px);
-  padding: var(--bubble-padding-vertical, 14px) 18px;
-  word-break: normal;
-  overflow-wrap: break-word;
+  padding: var(--bubble-padding-vertical, 14px) var(--bubble-padding-horizontal, 18px);
   box-shadow: var(--bubble-box-shadow, 0 2px 10px ${props => props.theme.shadow});
   backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
   -webkit-backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
@@ -881,25 +789,12 @@ const MessageActions = styled.div`
   justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 8px;
   padding: 0;
   opacity: 1;
   width: ${props => props.$alignment === 'right' ? '100%' : 'fit-content'};
   max-width: 100%;
   align-self: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
-  margin-left: ${props => {
-    if (props.$messageAlignmentPreference === 'default' && props.role === 'assistant') {
-      const baseShift = 160 + (props.$sidebarCollapsed ? 160 : 0);
-      return getDefaultButtonSpacing(props.role, baseShift);
-    }
-    return props.$alignment === 'right' ? 'auto' : '0';
-  }};
-  margin-right: ${props => {
-    if (props.$messageAlignmentPreference === 'default' && props.role === 'assistant') {
-      return 'auto';
-    }
-    return props.$alignment === 'left' ? 'auto' : '0';
-  }};
 `;
 
 const ActionButton = styled.button`
@@ -924,96 +819,6 @@ const ActionButton = styled.button`
     width: 16px;
     height: 16px;
   }
-`;
-
-const CheckIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const CopyIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-  </svg>
-);
-
-const RedoIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-    <polyline points="23 4 23 10 17 10"></polyline>
-    <polyline points="1 20 1 14 7 14"></polyline>
-    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-  </svg>
-);
-
-const FlagIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="#888" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-    <path d="M4 22V2"></path>
-    <path d="M4 6h13l-2 4 2 4H4"></path>
-  </svg>
-);
-
-const ThumbsUpIcon = ({ filled }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"></path>
-    <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-  </svg>
-);
-
-const ThumbsDownIcon = ({ filled }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"></path>
-    <path d="M17 2h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
-  </svg>
-);
-
-const MoreMenuWrapper = styled.div`
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-`;
-
-const MoreMenuDropdown = styled.div`
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  background: ${props => props.theme.inputBackground};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 8px;
-  padding: 6px 0;
-  min-width: 160px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  z-index: 25;
-`;
-
-const MoreMenuItem = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: ${props => props.theme.text};
-  font-size: 0.85rem;
-  padding: 8px 16px;
-  text-align: left;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover {
-    background: ${props => props.theme.hover};
-  }
-`;
-
-const UserActionsRow = styled.div`
-  display: flex;
-  justify-content: flex-start;
-  gap: 8px;
-  margin-top: 6px;
-  margin-left: ${props => props.$leftOffset || '0'};
-  width: fit-content;
-  margin-right: auto;
 `;
 
 const ErrorMessage = styled(Content)`
@@ -1811,7 +1616,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
   );
 };
 
-const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true, sidebarCollapsed = false }) => {
+const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
   const { t } = useTranslation();
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
@@ -1865,12 +1670,6 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     }
   }, [content, role, isLoading]);
 
-  const [feedback, setFeedback] = useState(null);
-  const [copiedTarget, setCopiedTarget] = useState(null);
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const moreMenuRef = useRef(null);
-  const feedbackStorageKey = `chatFeedback-${id}`;
-
   const getAvatar = () => {
     if (role === 'user') {
       if (userProfilePicture) {
@@ -1900,7 +1699,6 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Determine alignment preference; default keeps AI left and user right
   const messageAlignmentPreference = settings.messageAlignment || 'default';
-  const bubbleStyle = settings.bubbleStyle || 'minimal';
   const messageAlignment = messageAlignmentPreference === 'default'
     ? (role === 'assistant' ? 'left' : 'right')
     : (messageAlignmentPreference === 'right' ? 'right' : 'left');
@@ -1915,6 +1713,19 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Check if there's a text file attached to the message
   const hasTextAttachment = file && file.type === 'text';
+
+  // Function to handle copying message content
+  const handleCopyText = () => {
+    const textToCopy = cleanedContent || content;
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => {
+        // Could add toast notification here if desired
+        console.log('Text copied to clipboard');
+      })
+      .catch(err => {
+        console.error('Failed to copy text: ', err);
+      });
+  };
 
   // TTS state for toggle
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1949,66 +1760,6 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       setIsSpeaking(false);
     };
   }, [content, cleanedContent]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isMoreMenuOpen && moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
-        setIsMoreMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMoreMenuOpen]);
-
-  useEffect(() => {
-    const storedFeedback = localStorage.getItem(feedbackStorageKey);
-    if (storedFeedback === 'up' || storedFeedback === 'down') {
-      setFeedback(storedFeedback);
-    } else {
-      setFeedback(null);
-    }
-  }, [feedbackStorageKey]);
-
-  const handleCopyClick = useCallback((targetRole) => {
-    const textToCopy = targetRole === 'assistant'
-      ? (cleanedContent || content || '')
-      : (content || '');
-    if (!textToCopy) return;
-
-    navigator.clipboard.writeText(textToCopy)
-      .then(() => {
-        setCopiedTarget(targetRole);
-        setTimeout(() => {
-          setCopiedTarget((prev) => (prev === targetRole ? null : prev));
-        }, 1500);
-      })
-      .catch((err) => {
-        console.error('Failed to copy text:', err);
-      });
-  }, [cleanedContent, content]);
-
-  const handleFeedbackClick = (type) => {
-    setFeedback((prev) => {
-      const next = prev === type ? null : type;
-      if (next) {
-        localStorage.setItem(feedbackStorageKey, next);
-      } else {
-        localStorage.removeItem(feedbackStorageKey);
-      }
-      return next;
-    });
-  };
-
-  const handleRedo = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('sculptor.chat.redoRequest', { detail: { messageId: id } }));
-    console.log('Requested redo for message', id);
-  }, [id]);
-
-  const userCopyOffset = getUserCopyOffset(messageAlignmentPreference, bubbleStyle);
-  const thumbColor = theme?.isDark ? '#FFFFFF' : '#000000';
 
   // Determine if the message has sources to display
   const displaySources = extractedSources.length > 0 ? extractedSources : (Array.isArray(sources) ? sources : []);
@@ -2104,21 +1855,10 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           </Avatar>
         )}
         <MessageWrapper role={role} $alignment={messageAlignment}>
-          <Content
-            role={role}
-            $alignment={messageAlignment}
-            $bubbleStyle={bubbleStyle}
-            $messageAlignmentPreference={messageAlignmentPreference}
-            className={`chat-message chat-message--${role}`}
-          >
+          <Content role={role} $alignment={messageAlignment} className={`chat-message chat-message--${role}`}>
             {generatedFlowchartContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-              <MessageActions
-                role={role}
-                $alignment={messageAlignment}
-                $messageAlignmentPreference={messageAlignmentPreference}
-                $sidebarCollapsed={sidebarCollapsed}
-              >
+              <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
                 {status === 'completed' && flowchartData && (
                   <>
@@ -2246,13 +1986,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           </Avatar>
         )}
         <MessageWrapper role={role} $alignment={messageAlignment}>
-          <Content
-            role={role}
-            $alignment={messageAlignment}
-            $bubbleStyle={bubbleStyle}
-            $messageAlignmentPreference={messageAlignmentPreference}
-            className={`chat-message chat-message--${role}`}
-          >
+          <Content role={role} $alignment={messageAlignment} className={`chat-message chat-message--${role}`}>
             {deepResearchContent}
             {/* Show sources if available */}
             {hasSources && status === 'completed' && (
@@ -2278,12 +2012,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               </SourcesContainer>
             )}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-            <MessageActions
-              role={role}
-              $alignment={messageAlignment}
-              $messageAlignmentPreference={messageAlignmentPreference}
-              $sidebarCollapsed={sidebarCollapsed}
-            >
+              <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
                 {status === 'completed' && content && (
                   <>
@@ -2354,18 +2083,11 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           <Content
             role={role}
             $alignment={messageAlignment}
-            $bubbleStyle={bubbleStyle}
-            $messageAlignmentPreference={messageAlignmentPreference}
             className={`chat-message chat-message--${role}${highContrast ? ' high-contrast' : ''}`}
           >
             {generatedImageContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-              <MessageActions
-                role={role}
-                $alignment={messageAlignment}
-                $messageAlignmentPreference={messageAlignmentPreference}
-                $sidebarCollapsed={sidebarCollapsed}
-              >
+              <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
                 {status === 'completed' && imageUrl && (
                   <>
@@ -2437,18 +2159,11 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           <Content
             role={role}
             $alignment={messageAlignment}
-            $bubbleStyle={bubbleStyle}
-            $messageAlignmentPreference={messageAlignmentPreference}
             className={`chat-message chat-message--${role}${highContrast ? ' high-contrast' : ''}`}
           >
             {generatedVideoContent}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
-              <MessageActions
-                role={role}
-                $alignment={messageAlignment}
-                $messageAlignmentPreference={messageAlignmentPreference}
-                $sidebarCollapsed={sidebarCollapsed}
-              >
+              <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
                 {status === 'completed' && videoUrl && (
                   <>
@@ -2492,8 +2207,6 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           <Content
             role={role}
             $alignment={messageAlignment}
-            $bubbleStyle={bubbleStyle}
-            $messageAlignmentPreference={messageAlignmentPreference}
             className={`chat-message chat-message--${role}${highContrast ? ' high-contrast' : ''}`}
           >
             {image && (
@@ -2626,13 +2339,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               );
             })()}
           </Content>
-          {role === 'user' && content && (
-            <UserActionsRow $leftOffset={userCopyOffset}>
-              <ActionButton onClick={() => handleCopyClick('user')} aria-label={t('chat.actions.copyInstructions', 'Copy message')}>
-                {copiedTarget === 'user' ? <CheckIcon /> : <CopyIcon />}
-              </ActionButton>
-            </UserActionsRow>
-          )}
+
 
           {/* Sources section */}
           {hasSources && !isLoading && (
@@ -2648,37 +2355,26 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
           {/* Message action buttons - only show for completed AI messages (not loading) */}
           {!isLoading && contentToProcess && role === 'assistant' && (
-            <MessageActions
-              role={role}
-              $alignment={messageAlignment}
-              $messageAlignmentPreference={messageAlignmentPreference}
-              $sidebarCollapsed={sidebarCollapsed}
-            >
+            <MessageActions role={role} $alignment={messageAlignment}>
               {timestamp && settings.showTimestamps && <Timestamp>{formatTimestamp(timestamp)}</Timestamp>}
               <div style={{ flexGrow: 1 }}></div>
-
-              <ActionButton onClick={() => handleCopyClick('assistant')} title={t('chat.actions.copyInstructions', 'Copy AI message')}>
-                {copiedTarget === 'assistant' ? <CheckIcon /> : <CopyIcon />}
+              {role === 'assistant' && (
+                <ActionButton onClick={() => window.location.reload()}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                </ActionButton>
+              )}
+              <ActionButton onClick={handleCopyText}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
               </ActionButton>
-
-              {(feedback === null || feedback === 'up') && (
-                <ActionButton
-                  onClick={() => handleFeedbackClick('up')}
-                  style={{ opacity: feedback === 'up' ? 1 : 0.6, color: thumbColor }}
-                >
-                  <ThumbsUpIcon filled={feedback === 'up'} />
-                </ActionButton>
-              )}
-              {(feedback === null || feedback === 'down') && (
-                <ActionButton
-                  onClick={() => handleFeedbackClick('down')}
-                  style={{ opacity: feedback === 'down' ? 1 : 0.6, color: thumbColor }}
-                >
-                  <ThumbsDownIcon filled={feedback === 'down'} />
-                </ActionButton>
-              )}
-
               <ActionButton onClick={() => {
+                // Share functionality
                 if (navigator.share) {
                   navigator.share({
                     title: t('chat.share.title', 'AI Chat Message'),
@@ -2694,7 +2390,20 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                 </svg>
               </ActionButton>
-
+              {role === 'assistant' && (
+                <>
+                  <ActionButton onClick={() => console.log('Thumbs up')}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                    </svg>
+                  </ActionButton>
+                  <ActionButton onClick={() => console.log('Thumbs down')}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path>
+                    </svg>
+                  </ActionButton>
+                </>
+              )}
               <ActionButton onClick={handleReadAloud} title={isSpeaking ? t('chat.actions.stopSpeaking', 'Stop speaking') : t('chat.actions.readAloud', 'Read aloud')}>
                 {isSpeaking ? (
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2710,32 +2419,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   </svg>
                 )}
               </ActionButton>
-
-              <ActionButton onClick={handleRedo} title={t('chat.actions.redo', 'Redo chat')}>
-                <RedoIcon />
+              <ActionButton onClick={() => console.log('More options')}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="1"></circle>
+                  <circle cx="19" cy="12" r="1"></circle>
+                  <circle cx="5" cy="12" r="1"></circle>
+                </svg>
               </ActionButton>
-
-              <MoreMenuWrapper ref={moreMenuRef}>
-                <ActionButton onClick={() => setIsMoreMenuOpen((prev) => !prev)} aria-label={t('chat.actions.more', 'More options')}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="1"></circle>
-                    <circle cx="19" cy="12" r="1"></circle>
-                    <circle cx="5" cy="12" r="1"></circle>
-                  </svg>
-                </ActionButton>
-                {isMoreMenuOpen && (
-                  <MoreMenuDropdown>
-                    <MoreMenuItem onClick={() => {
-                      console.log('Report message requested');
-                      setIsMoreMenuOpen(false);
-                    }}>
-                      <FlagIcon />
-                      {t('chat.actions.reportMessage', 'Report message')}
-                    </MoreMenuItem>
-                  </MoreMenuDropdown>
-                )}
-              </MoreMenuWrapper>
-
               {is3DScene && (
                 <ActionButton onClick={() => {
                   const jsonMatch = contentToProcess.match(/```json\n([\s\S]*?)\n```/);

@@ -6,7 +6,7 @@ const GameContainer = styled.div`
   position: fixed;
   top: ${props => props.$toolbarOpen ? '18%' : '20%'};
   left: ${props => {
-        const sidebarOffset = props.$sidebarCollapsed ? 0 : 160;
+        const sidebarOffset = props.$sidebarCollapsed ? 70 : 160;
         return `calc(50% + ${sidebarOffset}px)`;
     }};
   transform: translateX(-50%);
