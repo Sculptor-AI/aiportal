@@ -8,27 +8,22 @@ import { useTranslation } from '../contexts/TranslationContext';
 const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
   display: flex;
   flex-direction: column;
-  width: ${props => props.$collapsed ? '0' : '280px'};
+  width: ${props => props.$collapsed ? '50px' : '280px'};
   height: ${props => props.$sidebarStyle === 'traditional' ? '100vh' : 'calc(100vh - 40px)'};
   background: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
   border: ${props => props.$sidebarStyle === 'traditional' ? 'none' : `1px solid ${props.theme.border}`};
   border-right: ${props => props.$sidebarStyle === 'traditional' ? `1px solid ${props.theme.border}` : 'none'};
   border-radius: ${props => props.$sidebarStyle === 'traditional' ? '0' : '20px'};
-  overflow: hidden;
+  overflow: ${props => props.$collapsed ? 'visible' : 'hidden'};
   position: fixed;
   top: ${props => props.$sidebarStyle === 'traditional' ? '0' : '20px'};
-  left: ${props => {
-    if (props.$collapsed) {
-      return '-280px';
-    }
-    return props.$sidebarStyle === 'traditional' ? '0' : '20px';
-  }};
+  left: ${props => props.$sidebarStyle === 'traditional' ? '0' : '20px'};
   z-index: 101;
-  opacity: ${props => props.$collapsed ? '0' : (props.$focusModeActive ? '0.12' : '1')};
+  opacity: ${props => props.$focusModeActive ? '0.12' : '1'};
   box-shadow: ${props => props.$sidebarStyle === 'traditional' ? 'none' : '0 8px 28px rgba(0, 0, 0, 0.16)'};
   filter: ${props => props.$focusModeActive ? 'blur(6px)' : 'none'};
-  pointer-events: ${props => props.$focusModeActive ? 'none' : 'auto'};
+  pointer-events: auto;
   transition: all 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
   
   @media (max-width: 768px) {
@@ -780,8 +775,9 @@ const ProfileDropdownContainer = styled.div`
 const ProfileDropdown = styled.div`
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 0;
-  right: 0;
+  left: ${props => props.$isCollapsed ? 'calc(100% + 8px - 47px)' : '12px'};
+  right: ${props => props.$isCollapsed ? 'auto' : '12px'};
+  width: ${props => props.$isCollapsed ? '210px' : 'calc(100% - 24px)'};
   background: ${props =>
     props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' :
       props.theme.inputBackground};
@@ -845,6 +841,81 @@ const ProfileAvatar = styled.div`
   flex-shrink: 0;
 `;
 
+const CollapsedSidebarRail = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+`;
+
+const CollapsedIconGroup = styled.div`
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+`;
+
+const CollapsedIconButton = styled.button`
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: ${props => props.theme.text};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  outline: none;
+
+  &:hover {
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'};
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+`;
+
+const CollapsedProfileButton = styled.button`
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+
+  &:hover {
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'};
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+`;
+
+const CollapsedProfileAvatar = styled(ProfileAvatar)`
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  font-size: 0.65rem;
+`;
+
 // --- React Component ---
 
 const Sidebar = ({
@@ -879,6 +950,8 @@ const Sidebar = ({
     localStorage.getItem('profilePicture') || null
   );
   const location = useLocation();
+  const showFullSidebar = !$collapsed || (theme && theme.name === 'retro');
+  const showCollapsedSidebar = $collapsed && !(theme && theme.name === 'retro');
 
   // Ensure sidebar is always expanded in retro theme
   useEffect(() => {
@@ -992,6 +1065,38 @@ const Sidebar = ({
     }
   };
 
+  const renderProfileDropdownItems = () => (
+    <>
+      <ProfileDropdownItem onClick={handleSettingsClick}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>{t('sidebar.profile.settings')}</span>
+      </ProfileDropdownItem>
+
+      <ProfileDropdownItem onClick={handleInfoClick}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M12 16v-4"></path>
+          <path d="M12 8h.01"></path>
+        </svg>
+        <span>{t('sidebar.profile.info')}</span>
+      </ProfileDropdownItem>
+
+      {isLoggedIn && (
+        <ProfileDropdownItem onClick={handleSignOutClick}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>{t('sidebar.profile.signOut')}</span>
+        </ProfileDropdownItem>
+      )}
+    </>
+  );
+
   const getChatTitle = (chat) => chat.title || t('chat.list.untitled', 'Chat {{id}}', { id: chat.id.substring(0, 4) });
 
   // Filter chats based on search term
@@ -1080,32 +1185,34 @@ const Sidebar = ({
         $focusModeActive={focusModeActive}
       >
         {/* Top Bar for Desktop */}
-        <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
-          <LogoContainer>
-            <img
-              src={'/images/sculptor.svg'}
-              alt={'Sculptor AI'}
-            />
-          </LogoContainer>
+        {showFullSidebar && (
+          <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
+            <LogoContainer>
+              <img
+                src={'/images/sculptor.svg'}
+                alt={'Sculptor AI'}
+              />
+            </LogoContainer>
 
-          {/* Left Collapse Button (now on the right) - hidden for retro theme */}
-          {!$collapsed && theme && theme.name !== 'retro' && (
-            <CollapseButton
-              onClick={toggleCollapsed}
-              $collapsed={$collapsed}
-              title={t('sidebar.collapseTitle')}
-              style={{ marginLeft: 'auto' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line>
-              </svg>
-            </CollapseButton>
-          )}
-        </TopBarContainer>
+            {/* Left Collapse Button (now on the right) - hidden for retro theme */}
+            {!$collapsed && theme && theme.name !== 'retro' && (
+              <CollapseButton
+                onClick={toggleCollapsed}
+                $collapsed={$collapsed}
+                title={t('sidebar.collapseTitle')}
+                style={{ marginLeft: 'auto' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+              </CollapseButton>
+            )}
+          </TopBarContainer>
+        )}
 
         {/* New Chat Button Section */}
-        {(!$collapsed || (theme && theme.name === 'retro')) && (
-                <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
-                  <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
+        {showFullSidebar && (
+          <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
+            <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9"></path>
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
@@ -1116,7 +1223,7 @@ const Sidebar = ({
         )}
 
         {/* Persistent Search Input Section */}
-        {(!$collapsed || (theme && theme.name === 'retro')) && (
+        {showFullSidebar && (
           <SearchInputContainer>
             <SearchInputWrapper>
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '10px', opacity: 0.5, color: 'currentColor' }}>
@@ -1142,7 +1249,7 @@ const Sidebar = ({
         )}
 
         {/* --- Navigation Section --- */}
-        {(!$collapsed || (theme && theme.name === 'retro')) && (
+        {showFullSidebar && (
           <SidebarSection style={{ paddingTop: '8px', paddingBottom: '16px', borderTop: 'none' }}>
             {navLinks.map(link => {
               if (link.adminOnly && !isAdmin) {
@@ -1185,7 +1292,7 @@ const Sidebar = ({
 
         {/* --- START: Main content area (Scrollable + Bottom fixed) --- */}
         {/* This fragment wrapper is crucial for the original error fix */}
-        {(!$collapsed || (theme && theme.name === 'retro')) && (
+        {showFullSidebar && (
           <>
             {/* Scrollable Area (Models, Chats) */}
             <ScrollableContent $isExpanded={isMobileExpanded || (theme && theme.name === 'retro')}>
@@ -1295,60 +1402,83 @@ const Sidebar = ({
               {copyStatus && <div style={{ padding: '5px 10px', fontSize: '11px', color: '#aaa', textAlign: 'center' }}>{copyStatus}</div>}
             </ScrollableContent>
 
-            {/* --- Bottom Buttons Section (Profile with Dropdown) --- */}
-            {/* Rendered outside ScrollableContent to stick to bottom */}
-            <SidebarSection style={{ borderTop: 'none' }}>
-              {/* Profile / Sign In Button with Dropdown */}
-              <ProfileDropdownContainer data-profile-dropdown>
-                <ProfileButton
-                  onClick={handleProfileClick}
-                  title={isLoggedIn ? t('sidebar.profile.viewProfile', null, { username }) : t('sidebar.profile.signIn')}
-                >
-                  {isLoggedIn ? (
-                    <ProfileAvatar $profilePicture={profilePicture}>
-                      {!profilePicture && username.charAt(0).toUpperCase()}
-                    </ProfileAvatar>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                  )}
-                  <span>{isLoggedIn ? username : t('sidebar.profile.signIn')}</span>
-                </ProfileButton>
-
-                {/* Profile Dropdown Menu */}
-                <ProfileDropdown $isOpen={isProfileDropdownOpen}>
-                  <ProfileDropdownItem onClick={handleSettingsClick}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="3"></circle>
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
-                    <span>{t('sidebar.profile.settings')}</span>
-                  </ProfileDropdownItem>
-
-                  <ProfileDropdownItem onClick={handleInfoClick}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <path d="M12 16v-4"></path>
-                      <path d="M12 8h.01"></path>
-                    </svg>
-                    <span>{t('sidebar.profile.info')}</span>
-                  </ProfileDropdownItem>
-
-                  {isLoggedIn && (
-                    <ProfileDropdownItem onClick={handleSignOutClick}>
+              {/* --- Bottom Buttons Section (Profile with Dropdown) --- */}
+              {/* Rendered outside ScrollableContent to stick to bottom */}
+              <SidebarSection style={{ borderTop: 'none' }}>
+                {/* Profile / Sign In Button with Dropdown */}
+                <ProfileDropdownContainer data-profile-dropdown>
+                  <ProfileButton
+                    onClick={handleProfileClick}
+                    title={isLoggedIn ? t('sidebar.profile.viewProfile', null, { username }) : t('sidebar.profile.signIn')}
+                  >
+                    {isLoggedIn ? (
+                      <ProfileAvatar $profilePicture={profilePicture}>
+                        {!profilePicture && username.charAt(0).toUpperCase()}
+                      </ProfileAvatar>
+                    ) : (
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
                       </svg>
-                      <span>{t('sidebar.profile.signOut')}</span>
-                    </ProfileDropdownItem>
-                  )}
-                </ProfileDropdown>
-              </ProfileDropdownContainer>
-            </SidebarSection>
-          </>
+                    )}
+                    <span>{isLoggedIn ? username : t('sidebar.profile.signIn')}</span>
+                  </ProfileButton>
+
+                  {/* Profile Dropdown Menu */}
+                  <ProfileDropdown $isOpen={isProfileDropdownOpen} $isCollapsed={false}>
+                    {renderProfileDropdownItems()}
+                  </ProfileDropdown>
+                </ProfileDropdownContainer>
+              </SidebarSection>
+            </>
+          )}
+
+        {/* Collapsed sidebar rail */}
+        {showCollapsedSidebar && (
+          <CollapsedSidebarRail>
+            <CollapsedIconGroup>
+              <CollapsedIconButton
+                onClick={toggleCollapsed}
+                title={t('sidebar.collapseTitle')}
+                aria-label={t('sidebar.collapseTitle')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+              </CollapsedIconButton>
+              <CollapsedIconButton
+                onClick={createNewChat}
+                title={t('sidebar.newChat')}
+                aria-label={t('sidebar.newChat')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+              </CollapsedIconButton>
+            </CollapsedIconGroup>
+
+            <ProfileDropdownContainer data-profile-dropdown>
+              <CollapsedProfileButton
+                onClick={handleProfileClick}
+                title={isLoggedIn ? t('sidebar.profile.viewProfile', null, { username }) : t('sidebar.profile.signIn')}
+                aria-label={isLoggedIn ? t('sidebar.profile.viewProfile', null, { username }) : t('sidebar.profile.signIn')}
+              >
+                {isLoggedIn ? (
+                  <CollapsedProfileAvatar $profilePicture={profilePicture}>
+                    {!profilePicture && username.charAt(0).toUpperCase()}
+                  </CollapsedProfileAvatar>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                )}
+              </CollapsedProfileButton>
+              <ProfileDropdown $isOpen={isProfileDropdownOpen} $isCollapsed={true}>
+                {renderProfileDropdownItems()}
+              </ProfileDropdown>
+            </ProfileDropdownContainer>
+          </CollapsedSidebarRail>
         )}
         {/* --- END: Main content area --- */}
 

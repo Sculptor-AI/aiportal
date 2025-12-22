@@ -12,6 +12,7 @@ import { useTranslation } from '../contexts/TranslationContext';
 const ModelSelectorContainer = styled.div`
   position: relative;
   z-index: 105;
+  display: inline-flex;
 `;
 
 const ModelButton = styled.button`
@@ -80,12 +81,13 @@ const ModelButton = styled.button`
   
   opacity: 1;
   pointer-events: auto;
-`;
+  margin-left: ${props => props.$sidebarCollapsed ? '-70px' : '0'};
+  `;
 
 const DropdownMenu = styled.div`
   position: absolute;
   top: calc(100% + ${props => props.theme.name === 'retro' ? '1px' : '5px'});
-  left: 0;
+  left: ${props => props.$sidebarCollapsed ? '-70px' : '0'};
   background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.inputBackground};
   min-width: 200px;
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
@@ -274,7 +276,7 @@ const ProviderLogo = styled.img`
   -webkit-backdrop-filter: blur(5px);
 `;
 
-const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
+const ModelSelector = ({ selectedModel, models, onChange, theme, sidebarCollapsed = false, sidebarEdge = 300 }) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -417,11 +419,12 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
   };
 
   return (
-    <ModelSelectorContainer ref={containerRef} theme={theme}>
+    <ModelSelectorContainer ref={containerRef} theme={theme} $sidebarCollapsed={sidebarCollapsed} $sidebarEdge={sidebarEdge}>
        {currentModel ? (
          <ModelButton 
            onClick={toggleDropdown} 
            $isOpen={isOpen}
+           $sidebarCollapsed={sidebarCollapsed}
            theme={theme}
          >
            <div className="model-info">
@@ -462,11 +465,11 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
            )}
          </ModelButton>
        ) : (
-        <ModelButton disabled theme={theme}>{t('models.noModels')}</ModelButton>
+        <ModelButton disabled theme={theme} $sidebarCollapsed={sidebarCollapsed}>{t('models.noModels')}</ModelButton>
       )}
 
       {isOpen && (
-        <DropdownMenu theme={theme}>
+        <DropdownMenu theme={theme} $sidebarCollapsed={sidebarCollapsed} $sidebarEdge={sidebarEdge}>
           <SearchContainer theme={theme}>
             <SearchBar
               type="text"

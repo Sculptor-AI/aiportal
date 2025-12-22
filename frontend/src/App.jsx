@@ -90,11 +90,11 @@ const FloatingMenuButton = styled.button`
 `;
 
 // Main Greeting Component
-const MainGreeting = styled.div`
+  const MainGreeting = styled.div`
   position: fixed;
   top: ${props => props.$toolbarOpen ? '25%' : '28%'}; /* Moved up from 32%/35% */
   left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160; // Increased from 140px to 160px to account for sidebar's 20px left margin
+    const sidebarOffset = props.$sidebarCollapsed ? 70 : 160; // Increased from 140px to 160px to account for sidebar's 20px left margin
     return `calc(50% + ${sidebarOffset}px)`;
   }};
   transform: translateX(-50%);
@@ -600,6 +600,28 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   }, [settings?.language]);
 
   const createNewChat = (projectId = null) => {
+    const existingEmptyChat = chats.find(chat => !(chat.messages && chat.messages.length));
+    if (existingEmptyChat) {
+      const shouldReorder =
+        chats[0]?.id !== existingEmptyChat.id;
+      if (shouldReorder) {
+        setChats(prevChats => {
+          const reordered = [existingEmptyChat, ...prevChats.filter(chat => chat.id !== existingEmptyChat.id)];
+          try {
+            localStorage.setItem('chats', safeStringify(reordered));
+          } catch (error) {
+            console.error("Error saving chats to localStorage:", error);
+          }
+          return reordered;
+        });
+      }
+      setActiveChat(existingEmptyChat.id);
+      if (location.pathname !== '/') {
+        navigate('/');
+      }
+      return existingEmptyChat;
+    }
+
     const currentLanguage = settings?.language || getLanguagePreference();
     const newChat = {
       id: uuidv4(),

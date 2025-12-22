@@ -26,6 +26,7 @@ export const generateVideo = async (prompt, options = {}) => {
     const response = await axios.post(`${VIDEO_API_URL}/generate`, {
       prompt,
       aspectRatio: options.aspectRatio || '16:9',
+      duration: options.duration || 'auto',
       negativePrompt: options.negativePrompt
     });
     
@@ -63,4 +64,3 @@ export const getVideoDownloadUrl = (videoUri) => {
   // Use proxy endpoint to avoid CORS issues with Google storage
   return `${VIDEO_API_URL}/download?url=${encodeURIComponent(videoUri)}`;
 };
-

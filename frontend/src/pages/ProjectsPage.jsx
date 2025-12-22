@@ -392,26 +392,36 @@ const PROJECT_COLORS = [
 
 const PROJECT_ICONS = ['📁', '💼', '🎨', '🔬', '📊', '💡', '🚀', '📝', '🎯', '⚡'];
 
-const formatDate = (dateString) => {
+const PROJECT_DATE_FORMAT_OPTIONS = { month: 'short', day: 'numeric' };
+
+const formatProjectDate = (dateString, t) => {
+  if (!dateString) return '';
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
   const now = new Date();
   const diffTime = Math.abs(now - date);
+  const diffMinutes = Math.floor(diffTime / (1000 * 60));
+  const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays === 0) {
-    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
     if (diffHours === 0) {
-      const diffMinutes = Math.floor(diffTime / (1000 * 60));
-      return diffMinutes <= 1 ? 'Just now' : `${diffMinutes}m ago`;
+      if (diffMinutes <= 1) {
+        return t('projects.time.justNow', 'Just now');
+      }
+      return t('projects.time.minutesAgo', '{{count}}m ago', { count: diffMinutes });
     }
-    return `${diffHours}h ago`;
+    return t('projects.time.hoursAgo', '{{count}}h ago', { count: diffHours });
   } else if (diffDays === 1) {
-    return 'Yesterday';
+    return t('projects.time.yesterday', 'Yesterday');
   } else if (diffDays < 7) {
-    return `${diffDays}d ago`;
-  } else {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return t('projects.time.daysAgo', '{{count}}d ago', { count: diffDays });
   }
+
+  return date.toLocaleDateString(undefined, PROJECT_DATE_FORMAT_OPTIONS);
 };
 
 const ProjectsPage = ({ projects = [], createNewProject, collapsed, deleteProject, toggleProjectStar, chats = [] }) => {
@@ -566,7 +576,7 @@ const ProjectsPage = ({ projects = [], createNewProject, collapsed, deleteProjec
                       <circle cx="12" cy="12" r="10"></circle>
                       <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
-                    {formatDate(project.updatedAt || project.createdAt)}
+                    {formatProjectDate(project.updatedAt || project.createdAt, t)}
                   </MetaItem>
                 </ProjectMeta>
                 

@@ -3,7 +3,7 @@
  * Run this to verify the fixes work correctly
  */
 
-import { processCodeBlocks, hasIncompleteCodeBlock, validateCodeBlockSyntax, extractCodeBlocks } from './src/utils/codeBlockProcessor.js';
+import { processCodeBlocks, hasIncompleteCodeBlock, validateCodeBlockSyntax, extractCodeBlocks } from '../frontend/src/utils/codeBlockProcessor.js';
 
 // Test cases for code block processing
 const testCases = [
@@ -122,14 +122,18 @@ function runTests() {
   }
 }
 
-// Run the tests if this file is executed directly
+const isDirectNodeRun = typeof process !== 'undefined'
+  && process.argv
+  && process.argv[1]
+  && process.argv[1].endsWith('test-code-block-streaming.js');
+
 if (typeof window === 'undefined') {
-  // Node.js environment
-  runTests();
+  if (isDirectNodeRun) {
+    runTests();
+  }
 } else {
-  // Browser environment
   window.runCodeBlockTests = runTests;
   console.log('Code block tests loaded. Run window.runCodeBlockTests() to execute tests.');
 }
 
-export { runTests }; 
+export { runTests };

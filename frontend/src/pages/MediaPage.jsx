@@ -60,6 +60,13 @@ const glow = keyframes`
   50% { opacity: 0.85; }
 `;
 
+const durationOptions = [
+  { value: 'auto', labelKey: 'media.settings.duration.auto', defaultLabel: '5-8 seconds (Auto)' },
+  { value: 'short', labelKey: 'media.settings.duration.short', defaultLabel: '4 seconds (Short)' },
+  { value: 'medium', labelKey: 'media.settings.duration.medium', defaultLabel: '6 seconds (Medium)' },
+  { value: 'long', labelKey: 'media.settings.duration.long', defaultLabel: '10 seconds (Extended)' },
+];
+
 // ============================================================================
 // MAIN LAYOUT
 // ============================================================================
@@ -627,6 +634,7 @@ const MediaPage = ({ collapsed }) => {
   
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('16:9');
+  const [duration, setDuration] = useState('auto');
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeOperation, setActiveOperation] = useState(null);
   
@@ -661,10 +669,16 @@ const MediaPage = ({ collapsed }) => {
             setActiveOperation(null);
             
             if (status.error) {
-              toast.showErrorToast('Generation Failed', status.error);
+              toast.showErrorToast(
+                t('media.toast.generationFailed.title', 'Generation Failed'),
+                status.error || t('media.toast.error.description', 'Unable to generate video.')
+              );
               updateVideoStatus(activeOperation.localId, 'failed', null);
             } else {
-              toast.showSuccessToast('Video Ready', 'Your video has been generated successfully!');
+              toast.showSuccessToast(
+                t('media.toast.success.title', 'Video Ready'),
+                t('media.toast.success.description', 'Your video has been generated successfully!')
+              );
               const downloadUrl = getVideoDownloadUrl(status.videoUri);
               updateVideoStatus(activeOperation.localId, 'completed', downloadUrl);
             }
@@ -699,6 +713,7 @@ const MediaPage = ({ collapsed }) => {
       id: localId,
       prompt,
       aspectRatio,
+      duration,
       status: 'generating',
       createdAt: new Date().toISOString(),
       url: null
@@ -707,14 +722,17 @@ const MediaPage = ({ collapsed }) => {
     setVideos(prev => [newVideo, ...prev]);
 
     try {
-      const result = await generateVideo(prompt, { aspectRatio });
+      const result = await generateVideo(prompt, { aspectRatio, duration });
 
       if (result.success && result.operationName) {
         setActiveOperation({
           id: result.operationName,
           localId
         });
-        toast.showInfoToast('Generation Started', 'Your video is being created. This may take a few minutes.');
+        toast.showInfoToast(
+          t('media.toast.generationStarted.title', 'Generation Started'),
+          t('media.toast.generationStarted.description', 'Your video is being created. This may take a few minutes.')
+        );
       } else {
         throw new Error(result.error || 'Failed to start generation');
       }
@@ -722,7 +740,10 @@ const MediaPage = ({ collapsed }) => {
       console.error('Error generating video:', error);
       setIsGenerating(false);
       updateVideoStatus(localId, 'failed', null);
-      toast.showErrorToast('Error', typeof error === 'string' ? error : 'Failed to generate video. Please try again.');
+      toast.showErrorToast(
+        t('media.toast.error.title', 'Error'),
+        typeof error === 'string' ? error : t('media.toast.error.description', 'Failed to generate video. Please try again.')
+      );
     }
   };
 
@@ -731,9 +752,22 @@ const MediaPage = ({ collapsed }) => {
   };
 
   const handleClearAll = () => {
-    if (confirm('Are you sure you want to delete all videos?')) {
+    if (confirm(t('media.confirm.clearAll', 'Are you sure you want to delete all videos?'))) {
       setVideos([]);
     }
+  };
+
+  const getVideoStatusLabel = (status) => {
+    if (status === 'generating') {
+      return t('media.status.processing', 'Processing');
+    }
+    if (status === 'completed') {
+      return t('media.status.completed', 'Completed');
+    }
+    if (status === 'failed') {
+      return t('media.status.failed', 'Failed');
+    }
+    return status;
   };
 
   const handleDownload = (video) => {
@@ -748,10 +782,10 @@ const MediaPage = ({ collapsed }) => {
         <Header>
           <TitleSection>
             <PageTitle>
-              Media Studio
-              <BetaTag>Veo 2</BetaTag>
+              {t('media.title', 'Media Studio')}
+              <BetaTag>{t('media.betaTag', 'Veo 2')}</BetaTag>
             </PageTitle>
-            <Subtitle>Create AI-generated videos with Google's Veo 2 model</Subtitle>
+            <Subtitle>{t('media.subtitle', "Create AI-generated videos with Google's Veo 2 model")}</Subtitle>
           </TitleSection>
         </Header>
 
@@ -763,11 +797,11 @@ const MediaPage = ({ collapsed }) => {
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
               </svg>
             </PromptIcon>
-            <PromptTitle>Create New Video</PromptTitle>
+            <PromptTitle>{t('media.prompt.title', 'Create New Video')}</PromptTitle>
           </PromptHeader>
 
           <TextArea 
-            placeholder="Describe your video in detail... (e.g., A cinematic drone shot of a futuristic city at night with neon lights reflecting in puddles, slow motion, 8K quality)"
+            placeholder={t('media.prompt.placeholder', 'Describe your video in detail... (e.g., A cinematic drone shot of a futuristic city at night with neon lights reflecting in puddles, slow motion, 8K quality)')}
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             disabled={isGenerating}
@@ -775,22 +809,30 @@ const MediaPage = ({ collapsed }) => {
 
           <SettingsRow>
             <SettingGroup>
-              <Label>Aspect Ratio</Label>
+              <Label>{t('media.settings.aspectRatio.label', 'Aspect Ratio')}</Label>
               <Select 
                 value={aspectRatio} 
                 onChange={e => setAspectRatio(e.target.value)}
                 disabled={isGenerating}
               >
-                <option value="16:9">16:9 Landscape</option>
-                <option value="9:16">9:16 Portrait</option>
-                <option value="1:1">1:1 Square</option>
+                <option value="16:9">{t('media.settings.aspectRatio.landscape', '16:9 Landscape')}</option>
+                <option value="9:16">{t('media.settings.aspectRatio.portrait', '9:16 Portrait')}</option>
+                <option value="1:1">{t('media.settings.aspectRatio.square', '1:1 Square')}</option>
               </Select>
             </SettingGroup>
             
             <SettingGroup>
-              <Label>Duration</Label>
-              <Select disabled>
-                <option>5-8 seconds (Auto)</option>
+              <Label>{t('media.settings.duration.label', 'Duration')}</Label>
+              <Select
+                value={duration}
+                onChange={e => setDuration(e.target.value)}
+                disabled={isGenerating}
+              >
+                {durationOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {t(option.labelKey, option.defaultLabel)}
+                  </option>
+                ))}
               </Select>
             </SettingGroup>
 
@@ -800,14 +842,14 @@ const MediaPage = ({ collapsed }) => {
             >
               {isGenerating ? (
                 <>
-                  <Spinner /> Generating...
+                  <Spinner /> {t('media.generate.processing', 'Generating...')}
                 </>
               ) : (
                 <>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polygon points="5 3 19 12 5 21 5 3" />
                   </svg>
-                  Generate Video
+                  {t('media.generate.button', 'Generate Video')}
                 </>
               )}
             </GenerateButton>
@@ -818,15 +860,15 @@ const MediaPage = ({ collapsed }) => {
           <>
             <GalleryHeader>
               <GalleryTitle>
-                Your Videos
+                {t('media.gallery.title', 'Your Videos')}
                 <VideoCount>{videos.length}</VideoCount>
               </GalleryTitle>
               <ClearButton onClick={handleClearAll}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-                Clear All
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              {t('media.gallery.clear', 'Clear All')}
               </ClearButton>
             </GalleryHeader>
 
@@ -845,12 +887,12 @@ const MediaPage = ({ collapsed }) => {
                               <line x1="15" y1="9" x2="9" y2="15" />
                               <line x1="9" y1="9" x2="15" y2="15" />
                             </svg>
-                            <PlaceholderText>Generation Failed</PlaceholderText>
+                            <PlaceholderText>{t('media.placeholder.failed', 'Generation Failed')}</PlaceholderText>
                           </>
                         ) : (
                           <>
                             <Spinner style={{ width: 32, height: 32 }} />
-                            <PlaceholderText>Generating your video...</PlaceholderText>
+                            <PlaceholderText>{t('media.placeholder.processing', 'Generating your video...')}</PlaceholderText>
                             <ProgressBarContainer>
                               <ProgressBar />
                             </ProgressBarContainer>
@@ -863,11 +905,11 @@ const MediaPage = ({ collapsed }) => {
                     <VideoPrompt>{video.prompt}</VideoPrompt>
                     <CardFooter>
                       <StatusBadge $status={video.status}>
-                        {video.status === 'generating' ? 'Processing' : video.status}
+                        {getVideoStatusLabel(video.status)}
                       </StatusBadge>
                       <CardActions>
                         {video.status === 'completed' && (
-                          <IconButton onClick={() => handleDownload(video)} title="Download">
+                          <IconButton onClick={() => handleDownload(video)} title={t('media.action.download', 'Download')}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                               <polyline points="7 10 12 15 17 10" />
@@ -875,7 +917,7 @@ const MediaPage = ({ collapsed }) => {
                             </svg>
                           </IconButton>
                         )}
-                        <IconButton className="delete" onClick={() => handleDelete(video.id)} title="Delete">
+                        <IconButton className="delete" onClick={() => handleDelete(video.id)} title={t('media.action.delete', 'Delete')}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="3 6 5 6 21 6" />
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -898,9 +940,9 @@ const MediaPage = ({ collapsed }) => {
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
               </svg>
             </EmptyIcon>
-            <EmptyTitle>No videos yet</EmptyTitle>
+            <EmptyTitle>{t('media.empty.title', 'No videos yet')}</EmptyTitle>
             <EmptyDescription>
-              Create your first AI-generated video by entering a detailed prompt above. Veo 2 can generate stunning 5-8 second videos from your descriptions.
+              {t('media.empty.description', 'Create your first AI-generated video by entering a detailed prompt above. Veo 2 can generate stunning 5-8 second videos from your descriptions.')}
             </EmptyDescription>
           </EmptyState>
         )}

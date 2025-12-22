@@ -13,7 +13,8 @@
     "dev:backend": "cd backend && npm run dev",
     "build": "cd frontend && npm run build",
     "deploy": "cd backend && npm run deploy",
-    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "test": "node tests/run-tests.js"
   },
   "keywords": [],
   "author": "",

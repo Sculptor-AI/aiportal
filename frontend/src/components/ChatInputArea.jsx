@@ -746,7 +746,7 @@ const ChatInputArea = forwardRef(({
     >
       {showGreetingMessage && (
         <InputGreeting>
-          What can I help with?
+          {t('composer.greeting.prompt', 'What can I help with?')}
         </InputGreeting>
       )}
 

@@ -268,6 +268,14 @@ const formatDate = (dateString) => {
   }
 };
 
+const formatThemeName = (themeName) => {
+  if (!themeName) return '';
+  return themeName
+    .split(/[-_]/)
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+};
+
 const ProfileModal = ({ closeModal }) => {
   const { user, adminUser, logout, adminLogout } = useAuth();
   const { t } = useTranslation();
@@ -325,6 +333,11 @@ const ProfileModal = ({ closeModal }) => {
     }
   };
 
+  const themeName = user.settings?.theme;
+  const themeLabel = themeName
+    ? t(`settings.themeOptions.${themeName}`, formatThemeName(themeName))
+    : t('account.themeDefault');
+
   const handleOutsideClick = (e) => {
     if (e.target === e.currentTarget) {
       closeModal();
@@ -377,7 +390,7 @@ const ProfileModal = ({ closeModal }) => {
           </InfoItem>
           <InfoItem>
             <InfoLabel>{t('account.theme')}</InfoLabel>
-            <InfoValue style={{ textTransform: 'capitalize' }}>{user.settings?.theme || t('account.themeDefault')}</InfoValue>
+            <InfoValue style={{ textTransform: 'capitalize' }}>{themeLabel}</InfoValue>
           </InfoItem>
           <InfoItem>
             <InfoLabel>{t('account.status')}</InfoLabel>

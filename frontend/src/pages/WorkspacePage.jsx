@@ -54,7 +54,18 @@ const shimmer = keyframes`
   100% { background-position: 200% 0; }
 `;
 
-// ============================================================================
+const MODEL_COLOR_PALETTE = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B500', '#6C5CE7', '#00B894', '#E17055', '#81ECEC', '#A29BFE'];
+const getRandomColor = () => MODEL_COLOR_PALETTE[Math.floor(Math.random() * MODEL_COLOR_PALETTE.length)];
+const deriveStableColor = (model = {}) => {
+  if (model.avatarColor) return model.avatarColor;
+  const seedSource = model.id ?? model.name ?? Date.now();
+  const seedString = typeof seedSource === 'number' ? seedSource.toString() : String(seedSource);
+  const hash = seedString.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const index = hash % MODEL_COLOR_PALETTE.length;
+  return MODEL_COLOR_PALETTE[index];
+};
+
+// ============================================================================ 
 // MAIN LAYOUT
 // ============================================================================
 
@@ -242,10 +253,10 @@ const FilterTab = styled.button`
     ? (props.theme.accentSurface || `${props.theme.primary}15`)
     : 'transparent'};
   color: ${props => props.$active
-    ? (props.theme.accentColor || props.theme.primary)
-    : (props.theme.textSecondary || `${props.theme.text}80`)};
+    ? '#FFFFFF'
+    : (props.theme.isDark ? '#F5F5F5' : '#050505')};
   border: 1px solid ${props => props.$active
-    ? (props.theme.accentColor || props.theme.primary)
+    ? '#FFFFFF'
     : props.theme.border};
   border-radius: 20px;
   font-size: 0.8125rem;
@@ -256,7 +267,12 @@ const FilterTab = styled.button`
   &:hover {
     background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
     border-color: ${props => props.theme.accentColor || props.theme.primary};
-    color: ${props => props.theme.accentColor || props.theme.primary};
+    color: #FFFFFF;
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.accentColor || props.theme.primary};
+    outline-offset: 2px;
   }
 `;
 
@@ -880,9 +896,9 @@ const WorkspacePage = ({ collapsed }) => {
   const avatarOptions = ['🤖', '✍️', '🎨', '💡', '🔬', '📚', '🎭', '🎯', '🚀', '💻', '🎵', '🏥', '🧠', '⚡', '🌟', '🔮'];
 
   const filters = [
-    { id: 'all', label: 'All Models' },
-    { id: 'enabled', label: 'Enabled' },
-    { id: 'disabled', label: 'Disabled' },
+    { id: 'all', labelKey: 'workspace.filters.all', defaultLabel: 'All Models' },
+    { id: 'enabled', labelKey: 'workspace.filters.enabled', defaultLabel: 'Enabled' },
+    { id: 'disabled', labelKey: 'workspace.filters.disabled', defaultLabel: 'Disabled' },
   ];
 
   // Load available base models
@@ -911,14 +927,16 @@ const WorkspacePage = ({ collapsed }) => {
     const savedModels = localStorage.getItem('customModels');
     if (savedModels) {
       const parsedModels = JSON.parse(savedModels);
-      const modelsWithBaseModel = parsedModels.map(model => ({
+      const normalizedModels = parsedModels.map(model => ({
         ...model,
-        baseModel: model.baseModel || (availableBaseModels.length > 0 ? availableBaseModels[0].id : 'gpt-3.5-turbo')
+        baseModel: model.baseModel || (availableBaseModels.length > 0 ? availableBaseModels[0].id : 'gpt-3.5-turbo'),
+        avatarColor: deriveStableColor(model),
       }));
-      setModels(modelsWithBaseModel);
-      setFilteredModels(modelsWithBaseModel);
-      if (parsedModels.some(m => !m.baseModel)) {
-        localStorage.setItem('customModels', JSON.stringify(modelsWithBaseModel));
+      setModels(normalizedModels);
+      setFilteredModels(normalizedModels);
+      const shouldPersist = parsedModels.some(model => !model.baseModel || !model.avatarColor);
+      if (shouldPersist) {
+        localStorage.setItem('customModels', JSON.stringify(normalizedModels));
       }
     }
   }, [availableBaseModels]);
@@ -986,7 +1004,7 @@ const WorkspacePage = ({ collapsed }) => {
       avatarImage: model.avatarImage || null,
       systemPrompt: model.systemPrompt || '',
       baseModel: model.baseModel || (availableBaseModels.length > 0 ? availableBaseModels[0].id : ''),
-      avatarColor: model.avatarColor || getRandomColor()
+      avatarColor: model.avatarColor || deriveStableColor(model)
     });
     setPanelVisible(true);
   };
@@ -1086,7 +1104,7 @@ const WorkspacePage = ({ collapsed }) => {
               {t('workspace.title')}
               <ModelCount>{models.length}</ModelCount>
             </PageTitle>
-            <Subtitle>Create custom AI personalities with unique system prompts</Subtitle>
+            <Subtitle>{t('workspace.subtitle', 'Create custom AI personalities with unique system prompts')}</Subtitle>
           </TitleSection>
 
           <HeaderActions>
@@ -1113,17 +1131,17 @@ const WorkspacePage = ({ collapsed }) => {
           </HeaderActions>
         </Header>
 
-        <FilterContainer>
-          {filters.map(filter => (
-            <FilterTab
-              key={filter.id}
-              $active={activeFilter === filter.id}
-              onClick={() => setActiveFilter(filter.id)}
-            >
-              {filter.label}
-            </FilterTab>
-          ))}
-        </FilterContainer>
+          <FilterContainer>
+            {filters.map(filter => (
+              <FilterTab
+                key={filter.id}
+                $active={activeFilter === filter.id}
+                onClick={() => setActiveFilter(filter.id)}
+              >
+                {t(filter.labelKey, filter.defaultLabel)}
+              </FilterTab>
+            ))}
+          </FilterContainer>
 
         {filteredModels.length === 0 ? (
           <EmptyState>
@@ -1135,16 +1153,16 @@ const WorkspacePage = ({ collapsed }) => {
                 <path d="M10 15h4"/>
               </svg>
             </EmptyIcon>
-            <EmptyTitle>No custom models yet</EmptyTitle>
+            <EmptyTitle>{t('workspace.emptyTitle', 'No custom models yet')}</EmptyTitle>
             <EmptyDescription>
-              Create your first custom AI model with a unique personality, specialized knowledge, and custom instructions.
+              {t('workspace.emptyDescription', 'Create your first custom AI model with a unique personality, specialized knowledge, and custom instructions.')}
             </EmptyDescription>
             <CreateButton onClick={handleNewModel}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="12" y1="5" x2="12" y2="19"/>
                 <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              Create Your First Model
+              {t('workspace.empty.createButton', 'Create Your First Model')}
             </CreateButton>
           </EmptyState>
         ) : (
@@ -1172,7 +1190,7 @@ const WorkspacePage = ({ collapsed }) => {
                     </ModelAvatar>
                     <ModelInfo>
                       <ModelName>{model.name}</ModelName>
-                      <ModelDescription>{model.description || 'No description'}</ModelDescription>
+                      <ModelDescription>{model.description || t('workspace.modelDescriptionFallback', 'No description')}</ModelDescription>
                     </ModelInfo>
                   </CardHeader>
 
@@ -1196,7 +1214,9 @@ const WorkspacePage = ({ collapsed }) => {
                       <ToggleSwitch
                         $enabled={model.enabled}
                         onClick={(e) => toggleModel(e, model.id)}
-                        title={model.enabled ? 'Disable model' : 'Enable model'}
+                        title={model.enabled
+                          ? t('workspace.toggle.disable', 'Disable model')
+                          : t('workspace.toggle.enable', 'Enable model')}
                       />
                     </CardActions>
                   </CardFooter>
@@ -1240,7 +1260,7 @@ const WorkspacePage = ({ collapsed }) => {
                     <polyline points="17 8 12 3 7 8"/>
                     <line x1="12" y1="3" x2="12" y2="15"/>
                   </svg>
-                  Upload Image
+                  {t('workspace.modal.uploadImage', 'Upload Image')}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1250,7 +1270,7 @@ const WorkspacePage = ({ collapsed }) => {
                 </UploadButton>
                 {formData.avatarImage && (
                   <RemoveImageButton onClick={handleRemoveImage}>
-                    Remove image
+                    {t('workspace.modal.removeImage', 'Remove image')}
                   </RemoveImageButton>
                 )}
               </AvatarActions>
