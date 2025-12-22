@@ -30,7 +30,8 @@ export const ChatHeader = styled.div`
   padding: 5px 20px 15px ${props => props.$sidebarCollapsed ? '45px' : '20px'}; // Adjust left padding based on sidebar state
   display: flex;
   align-items: flex-start; // Change from center to flex-start for better alignment
-  justify-content: flex-start;
+  justify-content: space-between;
+  gap: 16px;
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
   z-index: 101; // Changed from 10 to 101
@@ -66,6 +67,159 @@ export const ChatTitle = styled.h2`
   color: ${props => props.theme.name === 'retro' ? '#FFFFFF' : props.theme.text};
   flex: 1;
   line-height: 1.4; // Improve line height for better visual balance
+`;
+
+export const ChatActions = styled.div`
+  display: flex;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0;
+`;
+
+export const ActionMenuButton = styled.button`
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 999px;
+  width: 40px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  color: ${props => props.theme.text};
+
+  img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  &:hover {
+    background: ${props => props.theme.hover || props.theme.inputBackground};
+    border-color: ${props => props.theme.text}40;
+  }
+`;
+
+export const ActionMenu = styled.div`
+  position: absolute;
+  top: 42px;
+  right: 0;
+  min-width: 200px;
+  background: ${props => props.theme.panelBackground || props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 14px;
+  padding: 4px 0;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  z-index: 210;
+`;
+
+export const ActionIcon = styled.span`
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+
+  svg,
+  img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    background: transparent;
+  }
+`;
+
+export const TrashIcon = styled.span`
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  background-image: url('/images/transparentclosedtrashcan.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: transparent;
+  transition: background-image 0.15s ease;
+`;
+
+export const ActionMenuItem = styled.button`
+  width: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: ${props => props.theme.text};
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: left;
+
+  &:hover {
+    background: ${props => props.theme.hover || 'rgba(0, 0, 0, 0.06)'};
+  }
+
+  &:hover ${TrashIcon} {
+    background-image: url('/images/transparentopentrashcan.png');
+  }
+`;
+
+export const ConfirmationCard = styled.div`
+  position: absolute;
+  top: 58px;
+  right: 0;
+  width: 280px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  z-index: 220;
+`;
+
+export const ConfirmationTitle = styled.h3`
+  margin: 0;
+  font-size: 1rem;
+`;
+
+export const ConfirmationBody = styled.p`
+  margin: 8px 0 16px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}b3`};
+`;
+
+export const ConfirmationActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+`;
+
+export const ConfirmationCancelButton = styled.button`
+  border: 1px solid ${props => props.theme.border};
+  background: transparent;
+  color: ${props => props.theme.text};
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+`;
+
+export const ConfirmationDeleteButton = styled.button`
+  border: none;
+  background: #ff4d4f;
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #e04345;
+  }
 `;
 
 export const ModelSelectorWrapper = styled.div`

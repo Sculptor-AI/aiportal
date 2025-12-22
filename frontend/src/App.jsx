@@ -235,6 +235,45 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const safeStringify = (obj) => {
+    const seen = new WeakSet();
+    return JSON.stringify(obj, (key, value) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return undefined;
+        }
+        seen.add(value);
+      }
+      if (typeof value === 'function' || value instanceof Window || value instanceof Document || value instanceof HTMLElement) {
+        return undefined;
+      }
+      return value;
+    });
+  };
+
+  const reorderChatsWithPinned = (chatList = []) => {
+    const pinned = [];
+    const unpinned = [];
+    chatList.forEach(chat => {
+      if (chat?.pinned) {
+        pinned.push(chat);
+      } else {
+        unpinned.push(chat);
+      }
+    });
+    return [...pinned, ...unpinned];
+  };
+
+  const finalizeChats = (chatList) => {
+    const sorted = reorderChatsWithPinned(chatList);
+    try {
+      localStorage.setItem('chats', safeStringify(sorted));
+    } catch (error) {
+      console.error('Error saving chats to localStorage:', error);
+    }
+    return sorted;
+  };
+
   const getLanguagePreference = () => {
     if (user?.settings?.language) {
       return user.settings.language;
@@ -553,8 +592,14 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       setActiveChat(chats[0].id);
     } else if (!currentChat && chats.length === 0) {
       // If no chats exist, create a new one
-      const newChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
-      setChats([newChat]);
+      const newChat = {
+        id: uuidv4(),
+        title: getDefaultChatTitle(getLanguagePreference()),
+        messages: [],
+        pinned: false,
+      };
+      const sorted = finalizeChats([newChat]);
+      setChats(sorted);
       setActiveChat(newChat.id);
     }
   }, [chats, activeChat]);
@@ -605,17 +650,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       id: uuidv4(),
       title: getDefaultChatTitle(currentLanguage),
       messages: [],
+      pinned: false,
       projectId: projectId,
     };
-    setChats(prevChats => {
-      const updatedChats = [newChat, ...prevChats];
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
-      return updatedChats;
-    });
+    setChats(prevChats => finalizeChats([newChat, ...prevChats]));
     setActiveChat(newChat.id);
 
     // Navigate to chat tab if not already there
@@ -700,28 +738,33 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       const newChat = {
         id: uuidv4(),
         title: getDefaultChatTitle(settings?.language || getLanguagePreference()),
-        messages: []
+        messages: [],
+        pinned: false,
       };
-      setChats([newChat]);
+      const sorted = finalizeChats([newChat]);
+      setChats(sorted);
       setActiveChat(newChat.id);
-      try {
-        localStorage.setItem('chats', safeStringify([newChat]));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
     } else {
-      setChats(updatedChats);
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      const sorted = finalizeChats(updatedChats);
+      setChats(sorted);
 
       // If the deleted chat was the active one, set a new active chat
       if (chatId === activeChat) {
-        setActiveChat(updatedChats.length > 0 ? updatedChats[0].id : null);
+        setActiveChat(sorted.length > 0 ? sorted[0].id : null);
       }
     }
+  };
+
+  const togglePinChat = (chatId) => {
+    setChats(prevChats => {
+      const updatedChats = prevChats.map(chat => {
+        if (chat.id === chatId) {
+          return { ...chat, pinned: !chat.pinned };
+        }
+        return chat;
+      });
+      return finalizeChats(updatedChats);
+    });
   };
 
   const deleteProject = (projectId) => {
@@ -737,12 +780,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
         return chat;
       });
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
-      return updatedChats;
+      return finalizeChats(updatedChats);
     });
   };
 
@@ -762,15 +800,14 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
         return chat;
       });
-      localStorage.setItem('chats', safeStringify(updatedChats));
-      return updatedChats;
+      return finalizeChats(updatedChats);
     });
   };
 
   // New function to update a specific message within a chat
   const updateMessage = (chatId, messageId, updates) => {
     setChats(prevChats => {
-      return prevChats.map(chat => {
+      const updatedChats = prevChats.map(chat => {
         if (chat.id === chatId) {
           return {
             ...chat,
@@ -781,7 +818,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
         return chat;
       });
-      // Note: No need to save to localStorage here, as `chats` useEffect will handle it
+      return finalizeChats(updatedChats);
     });
   };
 
@@ -871,12 +908,17 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
   // Function to reset chats and start fresh
   const resetChats = () => {
-    const newChat = { id: uuidv4(), title: getDefaultChatTitle(settings?.language || getLanguagePreference()), messages: [] };
-    setChats([newChat]);
-    setActiveChat(newChat.id);
-    // Clear localStorage to start fresh
+    const newChat = {
+      id: uuidv4(),
+      title: getDefaultChatTitle(settings?.language || getLanguagePreference()),
+      messages: [],
+      pinned: false,
+    };
     localStorage.removeItem('chats');
     localStorage.removeItem('activeChat');
+    const sorted = finalizeChats([newChat]);
+    setChats(sorted);
+    setActiveChat(newChat.id);
     console.log('Chats reset to fresh state');
   };
 
@@ -938,36 +980,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
     return () => clearTimeout(timer);
   }, []);
-
-  // Helper function to safely serialize objects for localStorage
-  const safeStringify = (obj) => {
-    const seen = new WeakSet();
-    return JSON.stringify(obj, (key, value) => {
-      // Handle circular references
-      if (typeof value === 'object' && value !== null) {
-        if (seen.has(value)) {
-          return undefined; // Remove circular reference
-        }
-        seen.add(value);
-      }
-
-      // Remove non-serializable values
-      if (typeof value === 'function') {
-        return undefined;
-      }
-      if (value instanceof Window) {
-        return undefined;
-      }
-      if (value instanceof Document) {
-        return undefined;
-      }
-      if (value instanceof HTMLElement) {
-        return undefined;
-      }
-
-      return value;
-    });
-  };
 
   // Render logic
   const currentChat = getCurrentChat();
@@ -1072,6 +1084,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               setActiveChat={setActiveChat}
               createNewChat={createNewChat}
               deleteChat={deleteChat}
+              togglePinChat={togglePinChat}
               availableModels={availableModels}
               selectedModel={selectedModel}
               setSelectedModel={setSelectedModel}
@@ -1085,6 +1098,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               setCollapsed={setCollapsed}
               settings={settings}
               onSignOut={logout}
+              updateChatTitle={updateChatTitle}
               focusModeActive={isFocusModeActive}
             />
             {console.log('Available models for ChatWindow:', availableModels)}
@@ -1121,6 +1135,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   onToolbarToggle={setIsToolbarOpen}
                   onUserTyping={handleUserTyping}
                   focusModeActive={isFocusModeActive}
+                  onTogglePinChat={togglePinChat}
+                  onDeleteChat={deleteChat}
                   onMessageSent={handleMessageSent}
                 />
               } />
