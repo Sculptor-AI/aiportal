@@ -695,6 +695,7 @@ const MessageWrapper = styled.div`
   max-width: ${props => props.role === 'user' ? '70%' : 'calc(100% - 60px)'};
   flex: ${props => props.role === 'user' ? '0 1 auto' : '1'};
   align-items: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
+  min-width: 0;
   
   @media (max-width: 768px) {
     max-width: ${props => props.role === 'user' ? '85%' : 'calc(100% - 60px)'};
@@ -804,6 +805,7 @@ const Content = styled.div`
   line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
+  min-width: 0;
   max-width: ${props => getContentMaxWidth(props.role, props.$messageAlignmentPreference || 'default')};
   margin-left: ${props => props.$alignment === 'right' ? 'auto' : '0'};
   margin-right: ${props => props.$alignment === 'left' ? 'auto' : '0'};
@@ -817,8 +819,8 @@ const Content = styled.div`
   border: ${props => props.$bubbleStyle === 'minimal' ? 'none' : `1px solid ${getBubbleBorderColor(props.theme)}`};
   border-radius: var(--bubble-radius, 18px);
   padding: var(--bubble-padding-vertical, 14px) 18px;
-  word-break: normal;
-  overflow-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   box-shadow: var(--bubble-box-shadow, 0 2px 10px ${props => props.theme.shadow});
   backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
   -webkit-backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
