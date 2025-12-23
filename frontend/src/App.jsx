@@ -41,7 +41,9 @@ import useEasterEggs from './hooks/useEasterEggs';
 
 const AppContainer = styled.div`
   display: flex;
-  height: 100vh;
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   position: relative;
   background: ${props => props.theme.sidebar};

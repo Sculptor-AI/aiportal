@@ -496,6 +496,15 @@ export const GlobalStyles = createGlobalStyle`
   * {
     box-sizing: border-box;
   }
+
+  html, body, #root {
+    height: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    overscroll-behavior: none;
+    background: ${props => props.theme.background};
+  }
   
   body {
     background: ${props => props.theme.background};
