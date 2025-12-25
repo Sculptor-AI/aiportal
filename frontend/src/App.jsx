@@ -972,13 +972,30 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   // Render logic
   const currentChat = getCurrentChat();
   const currentTheme = useMemo(() => {
-    const baseTheme = getTheme(settings.theme);
+    const buildCustomTheme = () => {
+      if (settings.theme !== 'custom') return null;
+      const base = getTheme('light');
+      const overrides = settings.customTheme || {};
+      return {
+        ...base,
+        name: 'custom',
+        background: overrides.background || base.background,
+        sidebar: overrides.background || base.sidebar,
+        chat: overrides.background || base.chat,
+        text: overrides.text || base.text,
+        border: overrides.border || base.border,
+        primary: overrides.border || base.primary,
+        inputBackground: overrides.background || base.inputBackground
+      };
+    };
+
+    const baseTheme = buildCustomTheme() || getTheme(settings.theme);
     const resolvedFontFamily = baseTheme.name === 'retro'
       ? baseTheme.fontFamily
       : getFontFamilyValue(settings.fontFamily || 'system');
     const accentStyles = getAccentStyles(baseTheme, settings.accentColor || 'theme');
     return { ...baseTheme, ...accentStyles, fontFamily: resolvedFontFamily };
-  }, [settings.theme, settings.fontFamily, settings.accentColor]);
+  }, [settings.theme, settings.customTheme, settings.fontFamily, settings.accentColor]);
 
   // AUTHENTICATION CHECKS - After all hooks are declared
   // Show loading spinner while checking authentication
