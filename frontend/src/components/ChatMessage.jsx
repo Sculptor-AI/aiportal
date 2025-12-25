@@ -1617,7 +1617,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 };
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
 
@@ -1727,30 +1727,65 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       });
   };
 
-  // TTS state for toggle
+  const speechLanguage = useMemo(() => {
+    const lang = (language || '').toLowerCase();
+    if (lang.startsWith('zh')) return 'zh-CN';
+    if (lang.startsWith('de')) return 'de-DE';
+    if (lang.startsWith('fr')) return 'fr-FR';
+    if (lang.startsWith('es')) return 'es-ES';
+    if (lang.startsWith('en')) return 'en-US';
+    return 'en-US';
+  }, [language]);
+
   const [isSpeaking, setIsSpeaking] = useState(false);
   const speechSynthesisRef = useRef(null);
 
-  // Function to handle text-to-speech (toggle)
-  const handleReadAloud = () => {
-    if ('speechSynthesis' in window) {
-      if (isSpeaking) {
-        window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-        return;
-      }
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      const textToRead = cleanedContent || content;
-      const utterance = new window.SpeechSynthesisUtterance(textToRead);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      setIsSpeaking(true);
-      window.speechSynthesis.speak(utterance);
-      speechSynthesisRef.current = utterance;
-    } else {
-      console.error('Text-to-speech not supported in this browser');
+  const getPreferredVoice = useCallback((lang) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      return null;
     }
+    const synth = window.speechSynthesis;
+    const voices = synth.getVoices() || [];
+    if (!voices.length) {
+      return null;
+    }
+    const normalizedLang = (lang || '').toLowerCase();
+    const baseLang = normalizedLang.split('-')[0];
+    let matchedVoice = voices.find(voice => voice.lang.toLowerCase() === normalizedLang);
+    if (!matchedVoice && baseLang) {
+      matchedVoice = voices.find(voice => voice.lang.toLowerCase().startsWith(baseLang));
+    }
+    if (!matchedVoice && baseLang) {
+      matchedVoice = voices.find(voice => voice.lang.toLowerCase().includes(baseLang));
+    }
+    return matchedVoice;
+  }, []);
+
+  const handleReadAloud = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      console.error('Text-to-speech not supported in this browser');
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const textToRead = cleanedContent || content;
+    const utterance = new window.SpeechSynthesisUtterance(textToRead);
+    utterance.lang = speechLanguage;
+    const preferredVoice = getPreferredVoice(speechLanguage);
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+    speechSynthesisRef.current = utterance;
   };
 
   // Ensure TTS state resets if user navigates away or message changes
