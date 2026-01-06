@@ -1000,17 +1000,65 @@ const WorkspacePage = ({ collapsed }) => {
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
+    if (!file) return;
+
+    // Validate file type - only JPEG and PNG allowed
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a JPEG or PNG image file.');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Validate file size (max 2MB to keep localStorage reasonable)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size should be less than 2MB.');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      // Create an image to resize if needed
+      const img = new Image();
+      img.onload = () => {
+        // Resize to max 200x200 to save localStorage space
+        const maxSize = 200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = (height / width) * maxSize;
+            width = maxSize;
+          } else {
+            width = (width / height) * maxSize;
+            height = maxSize;
+          }
+        }
+
+        // Create canvas and resize
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to base64 (use JPEG for smaller size)
+        const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
         setFormData(prev => ({
           ...prev,
-          avatarImage: event.target.result,
+          avatarImage: resizedDataUrl,
           avatar: '' // Clear emoji when image is set
         }));
       };
-      reader.readAsDataURL(file);
-    }
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
@@ -1244,7 +1292,7 @@ const WorkspacePage = ({ collapsed }) => {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png"
                     onChange={handleImageUpload}
                   />
                 </UploadButton>
