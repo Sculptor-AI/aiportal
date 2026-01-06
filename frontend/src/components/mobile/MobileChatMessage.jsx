@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import StreamingMarkdownRenderer from '../StreamingMarkdownRenderer';
-import SculptorSpinner from '../SculptorSpinner';
 import { processCodeBlocks } from '../../utils/codeBlockProcessor';
 import { useTranslation } from '../../contexts/TranslationContext';
 
@@ -256,6 +255,34 @@ const LoadingIndicator = styled.div`
   margin-top: 4px;
 `;
 
+const LoadingDots = styled.div`
+  display: flex;
+  gap: 2px;
+  
+  span {
+    width: 4px;
+    height: 4px;
+    background: ${props => props.theme.text}88;
+    border-radius: 50%;
+    animation: loading 1.4s infinite ease-in-out;
+    
+    &:nth-child(1) { animation-delay: -0.32s; }
+    &:nth-child(2) { animation-delay: -0.16s; }
+    &:nth-child(3) { animation-delay: 0; }
+  }
+  
+  @keyframes loading {
+    0%, 80%, 100% {
+      transform: scale(0);
+      opacity: 0.5;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+`;
+
 const MessageTimestamp = styled.div`
   font-size: 12px;
   color: ${props => props.theme.text}66;
@@ -385,8 +412,13 @@ const MobileChatMessage = ({ message, settings, theme = {} }) => {
         </MessageContent>
         
         {message.isLoading && !message.content && (
-          <LoadingIndicator role="status" aria-live="polite" aria-label={t('chat.status.thinking')}>
-            <SculptorSpinner $size="32px" aria-hidden="true" />
+          <LoadingIndicator>
+            <LoadingDots>
+              <span></span>
+              <span></span>
+              <span></span>
+            </LoadingDots>
+            {t('chat.status.thinking')}
           </LoadingIndicator>
         )}
         

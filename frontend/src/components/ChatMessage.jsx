@@ -3,7 +3,6 @@ import styled, { keyframes, css } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
-import SculptorSpinner from './SculptorSpinner';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
 import { processCodeBlocks } from '../utils/codeBlockProcessor';
 import CodeBlockWithExecution from './CodeBlockWithExecution';
@@ -833,12 +832,26 @@ const pulse = keyframes`
   100% { opacity: 0.5; }
 `;
 
+const spin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
 const ThinkingContainer = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
   opacity: 0.7;
   font-style: italic;
+`;
+
+const SpinnerIcon = styled.div`
+  width: 16px;
+  height: 16px;
+  border: 2px solid ${props => props.theme.text}40;
+  border-top: 2px solid ${props => props.theme.text};
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: ${spin} 1s linear infinite;
 `;
 
 const LoadingDots = styled.span`
@@ -1788,7 +1801,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     if (status === 'loading') {
       generatedFlowchartContent = (
         <ThinkingContainer>
-          <SculptorSpinner $size="36px" aria-hidden="true" />
+          <SpinnerIcon />
           {t('chat.flowchart.creating', { prompt: prompt || t('chat.labels.yourRequest') })}
         </ThinkingContainer>
       );
@@ -1874,7 +1887,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       deepResearchContent = (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <SculptorSpinner $size="36px" aria-hidden="true" />
+            <SpinnerIcon />
             <span>{t('chat.research.performing')}</span>
           </div>
           <div style={{ fontSize: '0.9em', opacity: 0.7 }}>
@@ -2027,7 +2040,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     if (status === 'loading') {
       generatedImageContent = (
         <ThinkingContainer>
-          <SculptorSpinner $size="36px" aria-hidden="true" />
+          <SpinnerIcon />
           {t('chat.image.generating', { prompt: imagePrompt || t('chat.labels.yourPrompt') })}
         </ThinkingContainer>
       );
@@ -2103,7 +2116,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     if (status === 'loading') {
       generatedVideoContent = (
         <ThinkingContainer>
-          <SculptorSpinner $size="36px" aria-hidden="true" />
+          <SpinnerIcon />
           {t('chat.video.generating', { prompt: imagePrompt || t('chat.labels.yourPrompt') })}
         </ThinkingContainer>
       );
@@ -2230,8 +2243,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               // If loading and no content yet, show thinking indicator
               if (isLoading && !content) {
                 return (
-                  <ThinkingContainer role="status" aria-live="polite" aria-label={t('chat.status.thinking')}>
-                    <SculptorSpinner $size="36px" aria-hidden="true" />
+                  <ThinkingContainer>
+                    <SpinnerIcon />
+                    {t('chat.status.thinking')}
                   </ThinkingContainer>
                 );
               }

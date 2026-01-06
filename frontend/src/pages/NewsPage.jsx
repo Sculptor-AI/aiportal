@@ -3,7 +3,6 @@ import styled, { keyframes, css } from 'styled-components';
 import { fetchArticlesByCategory, fetchArticleContent } from '../services/rssService';
 import { sendMessageToBackend } from '../services/aiService';
 import { useTranslation } from '../contexts/TranslationContext';
-import SculptorSpinner from '../components/SculptorSpinner';
 
 // ============================================================================
 // ANIMATIONS
@@ -499,21 +498,6 @@ const SkeletonLine = styled.div`
   animation: ${pulse} 1.5s infinite;
 `;
 
-const LoadingSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-`;
-
-const LoadingBanner = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px 0 4px;
-  color: ${props => props.theme.textSecondary || `${props.theme.text}70`};
-`;
-
 const EmptyState = styled.div`
   grid-column: 1 / -1;
   display: flex;
@@ -763,6 +747,17 @@ const LoadingIndicator = styled.div`
   padding: 20px 0;
   color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
   font-size: 0.9375rem;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
 `;
 
 // ============================================================================
@@ -848,16 +843,6 @@ const filterOptions = [
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-const MIN_NEWS_LOADING_DURATION_MS = 1000;
-const MIN_SUMMARY_LOADING_DURATION_MS = 5000;
-
-const waitForMinimum = async (startTime, minimumMs) => {
-  const elapsed = Date.now() - startTime;
-  if (minimumMs && elapsed < minimumMs) {
-    await new Promise(resolve => setTimeout(resolve, minimumMs - elapsed));
-  }
-};
 
 const getTimeAgo = (dateString) => {
   const now = new Date();
@@ -956,7 +941,6 @@ const ArticleDetailView = ({ article, onClose }) => {
 
   useEffect(() => {
     const loadContent = async () => {
-      const startTime = Date.now();
       setLoading(true);
       setSummary('');
 
@@ -993,7 +977,6 @@ const ArticleDetailView = ({ article, onClose }) => {
           }
         }
       } finally {
-        await waitForMinimum(startTime, MIN_SUMMARY_LOADING_DURATION_MS);
         setLoading(false);
       }
     };
@@ -1060,8 +1043,10 @@ const ArticleDetailView = ({ article, onClose }) => {
           <DetailTitle>{article.title}</DetailTitle>
 
           {loading ? (
-            <LoadingIndicator role="status" aria-live="polite">
-              <SculptorSpinner $size="30px" aria-hidden="true" />
+            <LoadingIndicator>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 12a9 9 0 11-6.219-8.56" />
+              </svg>
               {t('news.generatingSummary', 'Generating summary...')}
             </LoadingIndicator>
           ) : summary ? (
@@ -1112,7 +1097,6 @@ const NewsPage = ({ collapsed }) => {
   });
 
   const loadArticles = async (showLoading = true) => {
-    const startTime = Date.now();
     if (showLoading) setLoading(true);
     setError(null);
 
@@ -1124,10 +1108,7 @@ const NewsPage = ({ collapsed }) => {
       setError(err.message || t('news.error.fetch'));
       setArticles([]);
     } finally {
-      if (showLoading) {
-        await waitForMinimum(startTime, MIN_NEWS_LOADING_DURATION_MS);
-        setLoading(false);
-      }
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -1172,13 +1153,9 @@ const NewsPage = ({ collapsed }) => {
           </TitleSection>
 
           <RefreshButton onClick={() => loadArticles()} disabled={loading} $loading={loading}>
-            {loading ? (
-              <SculptorSpinner $size="24px" aria-hidden="true" />
-            ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.3" />
-              </svg>
-            )}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.3" />
+            </svg>
             {loading ? t('news.refreshing', 'Refreshing...') : t('news.refresh', 'Refresh')}
           </RefreshButton>
         </Header>
@@ -1199,25 +1176,20 @@ const NewsPage = ({ collapsed }) => {
         </FilterContainer>
 
         {loading ? (
-          <LoadingSection>
-            <LoadingBanner role="status" aria-live="polite">
-              <SculptorSpinner $size="56px" aria-hidden="true" />
-            </LoadingBanner>
-            <ArticlesGrid>
-              {[...Array(6)].map((_, i) => (
-                <SkeletonCard key={i}>
-                  <SkeletonImage />
-                  <SkeletonContent>
-                    <SkeletonLine $width="30%" $height="12px" />
-                    <SkeletonLine $width="90%" $height="18px" />
-                    <SkeletonLine $width="70%" $height="18px" />
-                    <SkeletonLine $width="100%" />
-                    <SkeletonLine $width="80%" />
-                  </SkeletonContent>
-                </SkeletonCard>
-              ))}
-            </ArticlesGrid>
-          </LoadingSection>
+          <ArticlesGrid>
+            {[...Array(6)].map((_, i) => (
+              <SkeletonCard key={i}>
+                <SkeletonImage />
+                <SkeletonContent>
+                  <SkeletonLine $width="30%" $height="12px" />
+                  <SkeletonLine $width="90%" $height="18px" />
+                  <SkeletonLine $width="70%" $height="18px" />
+                  <SkeletonLine $width="100%" />
+                  <SkeletonLine $width="80%" />
+                </SkeletonContent>
+              </SkeletonCard>
+            ))}
+          </ArticlesGrid>
         ) : error ? (
           <ErrorState>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
