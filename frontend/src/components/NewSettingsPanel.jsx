@@ -1188,6 +1188,7 @@ const NewSettingsPanel = ({ settings, updateSettings, closeModal, onRestartOnboa
                   <option value="desert">Desert</option>
                   <option value="matrix">Matrix</option>
                   <option value="comic-book">Comic Book</option>
+                  <option value="night">Night</option>
                 </SelectBox>
               </SettingsRow>
               

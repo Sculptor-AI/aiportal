@@ -339,6 +339,29 @@ export const desertTheme = {
   cardBackground: 'rgba(235, 200, 160, 0.8)'
 };
 
+// Night theme - Very dark (#000000) but with softer, warmer colors for late-night use
+export const nightTheme = {
+  name: 'night',
+  background: '#000000', // Pure black background
+  sidebar: '#000000', // Pure black sidebar
+  chat: '#000000', // Pure black chat area
+  text: '#d4d4d4', // Soft, warm gray text (easier on eyes than bright white)
+  border: 'rgba(255, 255, 255, 0.04)', // Very subtle borders
+  messageUser: 'rgba(20, 20, 20, 0.9)', // Very dark gray for user messages
+  messageAi: 'rgba(10, 10, 10, 0.9)', // Even darker for AI messages
+  hover: 'rgba(30, 30, 30, 0.6)', // Subtle hover effect
+  primary: '#4a5568', // Muted, softer blue-gray (not bright)
+  primaryGradient: 'linear-gradient(145deg, #4a5568, #5a6578)', // Soft gradient
+  secondary: 'linear-gradient(145deg, #5a6578, #6a7588)', // Softer secondary
+  shadow: 'rgba(0, 0, 0, 0.5)', // Strong shadow for depth
+  glassBlur: '8px',
+  glassEffect: 'blur(8px) saturate(100%)', // Less saturation for easier viewing
+  inputBackground: 'rgba(15, 15, 15, 1.0)', // Very dark input background
+  buttonGradient: 'linear-gradient(145deg, #4a5568, #5a6578)', // Soft button colors
+  buttonHoverGradient: 'linear-gradient(145deg, #5a6578, #6a7588)', // Subtle hover
+  cardBackground: 'rgba(10, 10, 10, 0.8)' // Very dark cards
+};
+
 // Windows 98 "Retro" Theme
 export const retroTheme = {
   name: 'retro',
@@ -380,6 +403,8 @@ export const retroTheme = {
   checkmarkColor: '#000000',
   fontFamily: "'MSW98UI', 'MS Sans Serif', 'Tahoma', 'Microsoft Sans Serif', 'Arial', sans-serif",
 };
+
+
 
 // Custom theme for the model icons with enhanced gradients
 export const modelThemes = {
@@ -445,6 +470,7 @@ export const getTheme = (themeName) => {
     case 'desert': return desertTheme;
     case 'lakeside': return lakesideTheme;
     case 'retro': return retroTheme;
+    case 'night': return nightTheme;
     default: return lightTheme;
   }
 };
