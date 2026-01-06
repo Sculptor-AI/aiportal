@@ -294,6 +294,7 @@ const NavItem = styled.div`
 const MainContent = styled.div`
   flex: 1;
   padding: 30px;
+  padding-bottom: 50px;
   overflow-y: auto;
   max-height: 650px;
   background-color: ${props => 

@@ -8,7 +8,6 @@ export const ChatWindowContainer = styled.div`
   width: 100%;
   margin-left: ${props => props.$sidebarCollapsed ? '0' : '300px'}; /* 280px sidebar + 20px margin */
   transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  background: ${props => props.theme.sidebar};
   font-size: ${props => {
     switch (props.fontSize) {
       case 'small': return '0.9rem';
