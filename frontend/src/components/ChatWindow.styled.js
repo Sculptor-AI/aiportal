@@ -502,6 +502,7 @@ export const FilePreviewChip = styled.div`
   position: relative;
   max-width: 180px;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: ${props => props.$isClickable ? 'pointer' : 'default'};
 
   &:hover {
     background: ${props => props.theme.name === 'retro' ? props.theme.inputBackground : 'rgba(0, 0, 0, 0.03)'};
