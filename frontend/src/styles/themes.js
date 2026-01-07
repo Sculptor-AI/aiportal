@@ -422,6 +422,39 @@ export const oceanBreezeTheme = {
   highlightBorder: 'linear-gradient(to right, #2EA8E2, #85C9F2)', // Border for active elements
 };
 
+// Ultra-dark night theme - optimized for late-night use (3am sessions)
+// Features: Ultra dark backgrounds, warm tones, reduced blue light, lower contrast
+export const nightTheme = {
+  name: 'night',
+  isDark: true,
+  // Ultra dark background - almost black with subtle warm tint
+  background: 'linear-gradient(145deg, #080808, #0a0a0a)',
+  sidebar: 'rgba(12, 12, 12, 1)', // Slightly lighter than background for subtle separation
+  chat: 'rgba(10, 10, 10, 1)', // Ultra dark chat area
+  // Warm, dim text color - easier on eyes than bright white
+  text: '#d4c5b8', // Warm beige-gray, much softer than pure white
+  border: 'rgba(200, 180, 160, 0.08)', // Very subtle warm borders
+  // Soft, warm message backgrounds
+  messageUser: 'rgba(20, 18, 16, 0.9)', // Very dark with warm tint
+  messageAi: 'rgba(15, 14, 12, 0.9)', // Even darker for AI messages
+  hover: 'rgba(30, 28, 25, 0.6)', // Subtle warm hover effect
+  // Warm, muted accent colors - amber/orange tones instead of bright blue
+  primary: '#c49a6c', // Muted warm amber
+  primaryGradient: 'linear-gradient(145deg, #c49a6c, #b8875a)', // Warm gradient
+  secondary: 'linear-gradient(145deg, #b8875a, #a67548)', // Warmer secondary
+  shadow: 'rgba(0, 0, 0, 0.5)', // Softer shadows
+  glassBlur: '8px', // Less blur for clarity
+  glassEffect: 'blur(8px) saturate(100%)', // Reduced saturation
+  inputBackground: 'rgba(15, 14, 12, 1.0)', // Ultra dark input background
+  buttonGradient: 'linear-gradient(145deg, #c49a6c, #b8875a)', // Warm button gradient
+  buttonHoverGradient: 'linear-gradient(145deg, #b8875a, #a67548)', // Warmer hover
+  cardBackground: 'rgba(12, 11, 10, 0.9)', // Ultra dark cards
+  // Additional night-mode specific properties
+  textSecondary: '#a89a8f', // Dimmer secondary text
+  accentColor: '#d4a574', // Slightly brighter accent for important elements
+  accentSurface: 'rgba(196, 154, 108, 0.1)', // Very subtle accent highlights
+};
+
 // Custom theme for the model icons with enhanced gradients
 export const modelThemes = {
   'gemini-2-flash': {
@@ -488,6 +521,7 @@ export const getTheme = (themeName) => {
     case 'lakeside': return lakesideTheme;
     case 'retro': return retroTheme;
     case 'ocean-breeze': return oceanBreezeTheme;
+    case 'night': return nightTheme;
     default: return lightTheme;
   }
 };

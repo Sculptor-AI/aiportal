@@ -576,6 +576,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
       options: [
         { id: 'light', label: 'Light', className: 'light-theme', icon: '☀️' },
         { id: 'dark', label: 'Dark', className: 'dark-theme', icon: '🌙' },
+        { id: 'night', label: 'Night', className: 'night-theme', icon: '🌃' },
         { id: 'oled', label: 'OLED', className: 'oled-theme', icon: '🖥️' },
         { id: 'ocean', label: 'Ocean', className: 'ocean-theme', icon: '🌊' },
         { id: 'forest', label: 'Forest', className: 'forest-theme', icon: '🌲' },
