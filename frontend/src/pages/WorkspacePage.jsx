@@ -197,8 +197,8 @@ const CreateButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: ${props => props.theme.accentBackground || props.theme.primary};
-  color: ${props => props.theme.accentText || '#fff'};
+  background: ${props => props.theme.buttonGradient || props.theme.primary};
+  color: #fff;
   border: none;
   border-radius: 12px;
   font-size: 0.875rem;
@@ -209,7 +209,8 @@ const CreateButton = styled.button`
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 16px ${props => props.theme.accentColor || props.theme.primary}40;
+    background: ${props => props.theme.buttonHoverGradient || props.theme.primary};
+    box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
   }
 
   &:active {
@@ -816,12 +817,13 @@ const Button = styled.button`
 `;
 
 const PrimaryButton = styled(Button)`
-  background: ${props => props.theme.accentBackground || props.theme.primary};
-  color: ${props => props.theme.accentText || '#fff'};
+  background: ${props => props.theme.buttonGradient || props.theme.primary};
+  color: #fff;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px ${props => props.theme.accentColor || props.theme.primary}40;
+    background: ${props => props.theme.buttonHoverGradient || props.theme.primary};
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
   }
 
   &:disabled {
