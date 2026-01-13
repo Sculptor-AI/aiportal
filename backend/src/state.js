@@ -1,10 +1,12 @@
 /**
  * In-memory state management
- * Persists for the lifetime of the worker instance
+ * Note: User data is now stored in Cloudflare KV
+ * This file is kept for any temporary in-memory state needs
  */
 
 export const state = {
-  users: new Map(),
+  // API keys are now stored in KV
+  // This is kept for backwards compatibility during transition
   apiKeys: new Map()
 };
 
@@ -12,44 +14,3 @@ export const state = {
  * Get current ISO timestamp
  */
 export const nowIso = () => new Date().toISOString();
-
-/**
- * Seed initial demo users
- */
-export const seedUsers = () => {
-  if (state.users.size > 0) return;
-  
-  const seededAt = nowIso();
-  const seed = [
-    {
-      id: 'admin-1',
-      username: 'admin',
-      email: 'admin@example.com',
-      password: 'admin123',
-      status: 'admin',
-      role: 'admin'
-    },
-    {
-      id: 'user-1',
-      username: 'demo',
-      email: 'demo@example.com',
-      password: 'demo123',
-      status: 'active',
-      role: 'user'
-    }
-  ];
-  
-  seed.forEach((u) => {
-    state.users.set(u.id, {
-      ...u,
-      created_at: seededAt,
-      updated_at: seededAt,
-      last_login: null,
-      settings: { theme: 'light' }
-    });
-  });
-};
-
-// Initialize on import
-seedUsers();
-

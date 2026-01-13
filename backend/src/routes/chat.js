@@ -1,6 +1,6 @@
 /**
  * Chat Completion Routes
- * 
+ *
  * Unified chat endpoint that routes to the appropriate provider:
  * - OpenRouter (default for most models)
  * - Gemini (direct Google API)
@@ -14,8 +14,12 @@ import { handleGeminiChat, handleGeminiChatNonStreaming } from '../services/gemi
 import { handleAnthropicChat } from '../services/anthropic.js';
 import { handleOpenAIChat } from '../services/openai.js';
 import { validateToolsForProvider } from '../config/index.js';
+import { requireAuthAndApproved } from '../middleware/auth.js';
 
 const chat = new Hono();
+
+// Apply auth middleware to all chat routes
+chat.use('/*', requireAuthAndApproved);
 
 /**
  * Determine which provider to use based on model ID

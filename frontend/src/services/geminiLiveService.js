@@ -4,7 +4,10 @@
  * This keeps API keys secure on the backend
  *
  * Backend endpoint: /api/v1/live
+ * Requires authentication token
  */
+
+import { getCurrentUser } from './authService';
 
 class GeminiLiveService {
   constructor() {
@@ -40,7 +43,7 @@ class GeminiLiveService {
   }
 
   /**
-   * Get WebSocket URL for backend proxy
+   * Get WebSocket URL for backend proxy (includes auth token)
    */
   _getWebSocketUrl() {
     const backendUrl = import.meta.env.VITE_BACKEND_API_URL || '';
@@ -57,7 +60,16 @@ class GeminiLiveService {
       wsUrl = `${protocol}//${window.location.host}`;
     }
 
-    return `${wsUrl}/api/v1/live`;
+    // Get auth token and include in URL
+    const user = getCurrentUser();
+    const token = user?.accessToken;
+
+    if (!token) {
+      console.error('No auth token available for WebSocket connection');
+      return null;
+    }
+
+    return `${wsUrl}/api/v1/live?token=${encodeURIComponent(token)}`;
   }
 
   /**
@@ -72,7 +84,14 @@ class GeminiLiveService {
     }
 
     const wsUrl = this._getWebSocketUrl();
-    console.log('Connecting to backend WebSocket:', wsUrl);
+
+    if (!wsUrl) {
+      const error = new Error('Authentication required. Please log in to use Gemini Live.');
+      this.onErrorCallback?.(error.message);
+      throw error;
+    }
+
+    console.log('Connecting to backend WebSocket:', wsUrl.replace(/token=[^&]+/, 'token=[REDACTED]'));
 
     return new Promise((resolve, reject) => {
       try {

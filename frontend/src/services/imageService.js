@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getCurrentUser, getAuthHeaders } from './authService';
 
 // Prefer environment variable, otherwise default to same-origin
 const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
@@ -46,12 +47,13 @@ export const generateImageApi = async (prompt, model, history = []) => {
     const config = {
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
     };
 
     const body = { prompt };
     if (model) body.model = model;
-    
+
     // Include conversation history for multi-turn image generation/editing
     if (history && history.length > 0) {
       body.history = history;
@@ -80,6 +82,7 @@ export const generateVideoApi = async (prompt) => {
     const config = {
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
     };
 
@@ -92,4 +95,4 @@ export const generateVideoApi = async (prompt) => {
     }
     throw new Error(error.message || 'Network error or server unresponsive');
   }
-}; 
+};

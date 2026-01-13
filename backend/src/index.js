@@ -17,7 +17,7 @@ import videoRoutes from './routes/video.js';
 import staticRoutes from './routes/static.js';
 // Note: Gemini Live WebSocket is handled directly in worker.js
 
-// Initialize state (seeds demo users)
+// State module (user data now in KV)
 import './state.js';
 
 // Create main app

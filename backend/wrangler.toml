@@ -13,3 +13,8 @@ binding = "ASSETS"
 routes = [
 	{ pattern = "ai.sculptorai.org/*", custom_domain = true }
 ]
+
+# KV Namespace for sessions and user data
+[[kv_namespaces]]
+binding = "KV"
+id = "2c3ee1f2bc814ca7b2e0759397135228"
