@@ -11,5 +11,5 @@ binding = "ASSETS"
 
 # Custom domain routing
 routes = [
-	{ pattern = "ai.kaileh.dev/*", custom_domain = true }
+	{ pattern = "ai.sculptorai.org/*", custom_domain = true }
 ]
