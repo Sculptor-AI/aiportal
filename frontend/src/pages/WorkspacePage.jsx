@@ -1050,8 +1050,15 @@ const WorkspacePage = ({ collapsed }) => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convert to base64 (use JPEG for smaller size)
-        const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        // Convert to base64
+        let resizedDataUrl;
+        if (file.type === 'image/png') {
+          // Preserve transparency for PNG images
+          resizedDataUrl = canvas.toDataURL('image/png');
+        } else {
+          // Use JPEG for smaller size for JPEG uploads
+          resizedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        }
         setFormData(prev => ({
           ...prev,
           avatarImage: resizedDataUrl,
