@@ -3,10 +3,16 @@
  * Create Admin User Script
  *
  * This script generates the KV commands to create an initial admin user.
- * Run with: node scripts/create-admin.js <username> <email> <password>
- *
- * Then copy the output and run it with wrangler:
- * npx wrangler kv put --namespace-id=2c3ee1f2bc814ca7b2e0759397135228 "user:<id>" '<json>'
+ * 
+ * Usage:
+ *   node scripts/create-admin.js <username> <email> <password>
+ * 
+ * Environment Variables:
+ *   KV_NAMESPACE_ID - Your Cloudflare KV namespace ID (required)
+ *                     Get it from wrangler.toml or: npx wrangler kv namespace list
+ * 
+ * Example:
+ *   KV_NAMESPACE_ID=abc123 node scripts/create-admin.js admin admin@example.com MyPassword123
  */
 
 // PBKDF2 settings (must match crypto.js)
@@ -114,8 +120,23 @@ async function main() {
   const tempFile = path.join(process.cwd(), `admin-user-${id}.json`);
   await fs.writeFile(tempFile, userJson, 'utf-8');
 
-  // Get KV namespace ID from env or use default
-  const kvNamespaceId = process.env.KV_NAMESPACE_ID || '2c3ee1f2bc814ca7b2e0759397135228';
+  // Get KV namespace ID from environment variable
+  const kvNamespaceId = process.env.KV_NAMESPACE_ID;
+  
+  if (!kvNamespaceId) {
+    console.error('');
+    console.error('ERROR: KV_NAMESPACE_ID environment variable is required.');
+    console.error('');
+    console.error('Get your KV namespace ID from wrangler.toml or run:');
+    console.error('  npx wrangler kv namespace list');
+    console.error('');
+    console.error('Then run this script with:');
+    console.error(`  KV_NAMESPACE_ID=<your-id> node scripts/create-admin.js ${username} ${email} <password>`);
+    console.error('');
+    // Clean up the temp file
+    await fs.unlink(tempFile).catch(() => {});
+    process.exit(1);
+  }
 
   console.log('');
   console.log('=== Admin User Created ===');
