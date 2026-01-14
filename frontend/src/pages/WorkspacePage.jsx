@@ -1048,6 +1048,10 @@ const WorkspacePage = ({ collapsed }) => {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          console.error('Unable to obtain 2D canvas context for avatar image resizing.');
+          return;
+        }
         ctx.drawImage(img, 0, 0, width, height);
 
         // Convert to base64
