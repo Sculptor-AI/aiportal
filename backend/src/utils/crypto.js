@@ -110,7 +110,7 @@ export const verifyPassword = async (password, storedHash, salt) => {
  * @returns {string}
  */
 export const generateToken = (prefix = 'sk') => {
-  // Use two UUIDs for extra entropy (256 bits total)
+  // Use UUID + partial UUID for ~154 bits of entropy (122 from full UUID + ~32 from 8 hex chars)
   const randomPart1 = crypto.randomUUID().replace(/-/g, '');
   const randomPart2 = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
   return `${prefix}_${randomPart1}${randomPart2}`;

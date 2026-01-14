@@ -49,9 +49,9 @@ admin.post('/auth/login', async (c) => {
   const tokenHash = await hashToken(adminToken);
 
   // Store admin session with 8-hour TTL
+  // Note: Admin status is determined by user.role/user.status, not session data
   const sessionData = {
     userId: adminUser.id,
-    isAdmin: true,
     createdAt: nowIso(),
     expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
   };
@@ -274,13 +274,21 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
     passwordChanged = true;
   }
 
-  if (body.role) {
+  let roleChanged = false;
+  let oldRole = user.role;
+  if (body.role && body.role !== user.role) {
     // Validate role
     const validRoles = ['user', 'admin'];
     if (!validRoles.includes(body.role)) {
       return c.json({ error: 'Invalid role. Must be one of: ' + validRoles.join(', ') }, 400);
     }
+    oldRole = user.role;
     user.role = body.role;
+    roleChanged = true;
+    
+    // Audit log for role changes (security-relevant action)
+    const actingAdmin = c.get('user');
+    console.log(`[AUDIT] Role change: user=${userId}, from=${oldRole}, to=${body.role}, by=${actingAdmin?.id || 'unknown'}, at=${nowIso()}`);
   }
 
   user.updated_at = nowIso();

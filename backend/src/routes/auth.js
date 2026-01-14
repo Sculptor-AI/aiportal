@@ -137,8 +137,9 @@ auth.post('/register', async (c) => {
     return c.json({ error: 'Failed to create user account' }, 500);
   }
 
-  // Log new registration for admin notification
-  console.log(`[AUTH] New user registration pending approval: id=${id}, username=${username}, email=${email.toLowerCase()}`);
+  // Log new registration for admin notification (email redacted for privacy)
+  const redactedEmail = email.toLowerCase().replace(/^(.).*(@.*)$/, '$1***$2');
+  console.log(`[AUTH] New user registration pending approval: id=${id}, username=${username}, email=${redactedEmail}`);
 
   return c.json({
     success: true,

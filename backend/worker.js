@@ -155,6 +155,47 @@ async function handleGeminiLiveWebSocket(request, env) {
   });
 }
 
+/**
+ * Helper to extract and validate auth token from request
+ * @param {Request} request - The incoming request
+ * @param {URL} url - Parsed URL
+ * @param {Object} env - Environment bindings
+ * @param {boolean} allowQueryParam - Whether to allow token in query parameter
+ * @returns {Promise<{user: Object|null, error: Response|null}>}
+ */
+async function authenticateRequest(request, url, env, allowQueryParam = false) {
+  // Prefer Authorization header (more secure) over query parameter
+  let token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  
+  // Fall back to query param if allowed (for WebSocket clients that can't set headers)
+  if (!token && allowQueryParam) {
+    token = url.searchParams.get('token');
+  }
+
+  if (!token) {
+    return {
+      user: null,
+      error: new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      })
+    };
+  }
+
+  const user = await validateToken(env.KV, token);
+  if (!user) {
+    return {
+      user: null,
+      error: new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      })
+    };
+  }
+
+  return { user, error: null };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -163,54 +204,17 @@ export default {
     if (url.pathname === '/api/v1/live') {
       const upgradeHeader = request.headers.get('Upgrade');
       if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
-        // Authenticate the WebSocket request
-        // Prefer Authorization header (more secure) over query parameter
-        // Query param is supported for WebSocket clients that can't set headers
-        const token = request.headers.get('Authorization')?.replace('Bearer ', '') ||
-                      url.searchParams.get('token');
-
-        if (!token) {
-          return new Response(JSON.stringify({ error: 'Authentication required' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-
-        // Validate the token
-        const user = await validateToken(env.KV, token);
-        if (!user) {
-          return new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
+        // Authenticate WebSocket request (allow query param for WS clients)
+        const { user, error } = await authenticateRequest(request, url, env, true);
+        if (error) return error;
 
         // WebSocket proxy only works in production Cloudflare Workers
         return handleGeminiLiveWebSocket(request, env);
       }
 
-      // Non-WebSocket request - return status (but don't expose if not authenticated)
-      const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-      if (!token) {
-        return new Response(JSON.stringify({ error: 'Authentication required' }), {
-          status: 401,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          }
-        });
-      }
-
-      const user = await validateToken(env.KV, token);
-      if (!user) {
-        return new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
-          status: 401,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          }
-        });
-      }
+      // Non-WebSocket request - return status (requires auth)
+      const { user, error } = await authenticateRequest(request, url, env, false);
+      if (error) return error;
 
       return new Response(JSON.stringify({
         available: !!env.GEMINI_API_KEY,

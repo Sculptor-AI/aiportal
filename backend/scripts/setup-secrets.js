@@ -140,9 +140,11 @@ async function setSecret(name, value) {
 }
 
 /**
- * Prompt user for input (with optional hidden input for secrets)
+ * Prompt user for input
+ * Note: Input is visible in terminal. For sensitive values like API keys,
+ * consider using `wrangler secret put <NAME>` directly which provides hidden input.
  */
-function prompt(question, hidden = false) {
+function prompt(question) {
   return new Promise((resolve) => {
     const rl = createInterface({
       input: process.stdin,
