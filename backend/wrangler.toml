@@ -27,7 +27,7 @@ routes = [
 # ============================================================================
 [[kv_namespaces]]
 binding = "KV"
-id = "YOUR_KV_NAMESPACE_ID_HERE"  # Replace with your KV namespace ID
+id = "2c3ee1f2bc814ca7b2e0759397135228"
 
 # ============================================================================
 # Environment Variables / Secrets
