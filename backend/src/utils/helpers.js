@@ -1,6 +1,13 @@
 /**
  * Common utility functions
  * Note: User data is now stored in Cloudflare KV
+ * 
+ * Username/Email Case Handling:
+ * - Lookups are case-INSENSITIVE (stored index keys are lowercase)
+ * - User objects preserve ORIGINAL casing for display purposes
+ * - This prevents "Admin" and "admin" from being different users
+ * - Example: User registers as "JohnDoe", index key is "username:johndoe",
+ *   but user.username remains "JohnDoe" for display
  */
 
 /**
@@ -14,6 +21,7 @@ export const sanitizeUser = (user) => {
 
 /**
  * Find user by username (KV-based)
+ * Note: Lookup is case-insensitive, but returned user preserves original casing
  */
 export const findUserByUsername = async (kv, username) => {
   if (!kv || !username) return null;
@@ -25,6 +33,7 @@ export const findUserByUsername = async (kv, username) => {
 
 /**
  * Find user by email (KV-based)
+ * Note: Lookup is case-insensitive, but returned user preserves original casing
  */
 export const findUserByEmail = async (kv, email) => {
   if (!kv || !email) return null;
@@ -85,6 +94,7 @@ export const updateUser = async (kv, user) => {
 
 /**
  * Check if email is already taken by another user
+ * Note: Check is case-insensitive ("User@Example.com" and "user@example.com" are the same)
  */
 export const isEmailTaken = async (kv, email, excludeUserId = null) => {
   if (!kv || !email) return false;
@@ -96,6 +106,7 @@ export const isEmailTaken = async (kv, email, excludeUserId = null) => {
 
 /**
  * Check if username is already taken by another user
+ * Note: Check is case-insensitive ("Admin" and "admin" are considered the same)
  */
 export const isUsernameTaken = async (kv, username, excludeUserId = null) => {
   if (!kv || !username) return false;

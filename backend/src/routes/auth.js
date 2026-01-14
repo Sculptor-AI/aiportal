@@ -98,12 +98,14 @@ auth.post('/register', async (c) => {
   const { hash, salt } = await hashPassword(password);
 
   // Create user
+  // Note: Username preserves original casing for display, email is normalized to lowercase
+  // Index keys are always lowercase for case-insensitive lookups
   const id = crypto.randomUUID();
   const now = nowIso();
   const user = {
     id,
-    username,
-    email: email.toLowerCase(),
+    username,                    // Preserves original casing (e.g., "JohnDoe")
+    email: email.toLowerCase(),  // Normalized to lowercase
     passwordHash: hash,
     passwordSalt: salt,
     status: 'pending', // New users require approval
@@ -114,11 +116,11 @@ auth.post('/register', async (c) => {
     settings: { theme: 'light' }
   };
 
-  // Store user and indexes
+  // Store user and indexes (index keys are lowercase for case-insensitive lookups)
   await Promise.all([
     kv.put(`user:${id}`, JSON.stringify(user)),
-    kv.put(`username:${username.toLowerCase()}`, id),
-    kv.put(`email:${email.toLowerCase()}`, id)
+    kv.put(`username:${username.toLowerCase()}`, id),  // "johndoe" -> user ID
+    kv.put(`email:${email.toLowerCase()}`, id)         // "john@example.com" -> user ID
   ]);
 
   return c.json({
