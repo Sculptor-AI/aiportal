@@ -186,15 +186,27 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
 
   const body = await c.req.json().catch(() => ({}));
 
-  // Validate email is not already taken by another user
+  // Validate email format and check if already taken
   if (body.email && body.email.toLowerCase() !== user.email.toLowerCase()) {
+    // Validate email format (same as registration)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email)) {
+      return c.json({ error: 'Invalid email address format' }, 400);
+    }
     if (await isEmailTaken(kv, body.email, userId)) {
       return c.json({ error: 'Email already in use by another user' }, 409);
     }
   }
 
-  // Validate username is not already taken by another user
+  // Validate username format and check if already taken
   if (body.username && body.username.toLowerCase() !== user.username.toLowerCase()) {
+    const newUsername = String(body.username);
+    // Validate username format (same as registration)
+    if (newUsername.length < 3 || newUsername.length > 30) {
+      return c.json({ error: 'Username must be between 3 and 30 characters' }, 400);
+    }
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$/.test(newUsername)) {
+      return c.json({ error: 'Username must start and end with a letter or number, and can only contain letters, numbers, underscores, and hyphens' }, 400);
+    }
     if (await isUsernameTaken(kv, body.username, userId)) {
       return c.json({ error: 'Username already in use by another user' }, 409);
     }
@@ -244,6 +256,8 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
       }
       user.email = oldEmail;
       user.username = oldUsername;
+      // Persist the rollback to KV to ensure data consistency
+      await updateUser(kv, user).catch(() => {});
       return c.json({ error: 'Failed to update user identity fields' }, 500);
     }
   }

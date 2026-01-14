@@ -37,7 +37,10 @@ ANTHROPIC_API_KEY="sk-ant-your-anthropic-key-here"
 OPENAI_API_KEY="sk-your-openai-key-here"
 
 # ----------------------------------------------------------------------------
-# KV Namespace ID (for create-admin.js script)
+# KV Namespace ID (for create-admin.js script only)
 # ----------------------------------------------------------------------------
-# Get this from wrangler.toml or by running: npx wrangler kv namespace list
-# KV_NAMESPACE_ID="your-kv-namespace-id-here"
+# This is NOT loaded by wrangler dev - it's only used by the create-admin.js script.
+# Get your namespace ID by running: npx wrangler kv namespace list
+# Then set it when running the script:
+#   KV_NAMESPACE_ID=your-id node scripts/create-admin.js admin admin@example.com password
+KV_NAMESPACE_ID="YOUR_KV_NAMESPACE_ID_HERE"

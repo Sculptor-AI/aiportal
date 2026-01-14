@@ -74,7 +74,8 @@ auth.post('/register', async (c) => {
   }
 
   // Username must start and end with alphanumeric, can contain underscores/hyphens in middle
-  if (!/^[a-zA-Z0-9]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/.test(username)) {
+  // Requires 2+ chars (but length check above enforces 3+ minimum)
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*[a-zA-Z0-9]$/.test(username)) {
     return c.json({ error: 'Username must start and end with a letter or number, and can only contain letters, numbers, underscores, and hyphens' }, 400);
   }
 
@@ -264,17 +265,17 @@ auth.post('/api-keys', requireAuth, async (c) => {
   const body = await c.req.json().catch(() => ({}));
   
   // Validate API key name
-  let name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (name) {
-    if (name.length > 100) {
+  let keyName = typeof body.name === 'string' ? body.name.trim() : '';
+  if (keyName) {
+    if (keyName.length > 100) {
       return c.json({ error: 'API key name must be at most 100 characters long' }, 400);
     }
     // Allow letters, numbers, spaces, underscores, hyphens, and periods
-    if (!/^[\w .-]+$/.test(name)) {
+    if (!/^[\w .-]+$/.test(keyName)) {
       return c.json({ error: 'API key name contains invalid characters' }, 400);
     }
   } else {
-    name = `API Key ${Date.now()}`;
+    keyName = `API Key ${Date.now()}`;
   }
 
   // Generate API key
@@ -285,7 +286,7 @@ auth.post('/api-keys', requireAuth, async (c) => {
   const keyData = {
     id: crypto.randomUUID(),
     userId: user.id,
-    name,
+    name: keyName,
     keyHash,
     keyPrefix,
     created_at: nowIso(),
