@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono';
 import { nowIso } from '../state.js';
-import { sanitizeUser, findUserByUsername, findUserById, getAllUsers, updateUser } from '../utils/helpers.js';
+import { sanitizeUser, findUserByUsername, findUserById, getAllUsers, updateUser, isEmailTaken, isUsernameTaken, invalidateUserSessions, deleteUserApiKeys } from '../utils/helpers.js';
 import { hashPassword, verifyPassword, generateSessionToken, hashToken } from '../utils/crypto.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
@@ -144,9 +144,15 @@ admin.put('/users/:userId/status', requireAuth, requireAdmin, async (c) => {
     return c.json({ error: 'Invalid status. Must be one of: ' + validStatuses.join(', ') }, 400);
   }
 
+  const oldStatus = user.status;
   user.status = body.status;
   user.updated_at = nowIso();
   await updateUser(kv, user);
+
+  // Invalidate all sessions if user is suspended or banned
+  if ((body.status === 'suspended' || body.status === 'banned') && oldStatus !== body.status) {
+    await invalidateUserSessions(kv, userId);
+  }
 
   return c.json({ success: true, data: { id: userId, status: user.status } });
 });
@@ -169,25 +175,41 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
 
   const body = await c.req.json().catch(() => ({}));
 
+  // Validate email is not already taken by another user
+  if (body.email && body.email.toLowerCase() !== user.email.toLowerCase()) {
+    if (await isEmailTaken(kv, body.email, userId)) {
+      return c.json({ error: 'Email already in use by another user' }, 409);
+    }
+  }
+
+  // Validate username is not already taken by another user
+  if (body.username && body.username.toLowerCase() !== user.username.toLowerCase()) {
+    if (await isUsernameTaken(kv, body.username, userId)) {
+      return c.json({ error: 'Username already in use by another user' }, 409);
+    }
+  }
+
   // Update allowed fields
-  if (body.email) {
+  if (body.email && body.email.toLowerCase() !== user.email.toLowerCase()) {
     // Update email index
     await kv.delete(`email:${user.email.toLowerCase()}`);
     user.email = body.email.toLowerCase();
     await kv.put(`email:${user.email}`, user.id);
   }
 
-  if (body.username) {
+  if (body.username && body.username.toLowerCase() !== user.username.toLowerCase()) {
     // Update username index
     await kv.delete(`username:${user.username.toLowerCase()}`);
     user.username = body.username;
     await kv.put(`username:${user.username.toLowerCase()}`, user.id);
   }
 
+  let passwordChanged = false;
   if (body.password) {
     const { hash, salt } = await hashPassword(body.password);
     user.passwordHash = hash;
     user.passwordSalt = salt;
+    passwordChanged = true;
   }
 
   if (body.role) {
@@ -196,6 +218,11 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
 
   user.updated_at = nowIso();
   await updateUser(kv, user);
+
+  // Invalidate all sessions if password was changed
+  if (passwordChanged) {
+    await invalidateUserSessions(kv, userId);
+  }
 
   return c.json({ success: true, data: { user: sanitizeUser(user) } });
 });
@@ -216,12 +243,17 @@ admin.delete('/users/:userId', requireAuth, requireAdmin, async (c) => {
     return c.json({ error: 'User not found' }, 404);
   }
 
+  // Invalidate all sessions and delete API keys for the user
+  await Promise.all([
+    invalidateUserSessions(kv, userId),
+    deleteUserApiKeys(kv, userId)
+  ]);
+
   // Delete user and indexes
   await Promise.all([
     kv.delete(`user:${userId}`),
     kv.delete(`username:${user.username.toLowerCase()}`),
-    kv.delete(`email:${user.email.toLowerCase()}`),
-    kv.delete(`userkeys:${userId}`)
+    kv.delete(`email:${user.email.toLowerCase()}`)
   ]);
 
   return c.json({ success: true });

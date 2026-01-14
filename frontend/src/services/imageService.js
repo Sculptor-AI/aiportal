@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getCurrentUser, getAuthHeaders } from './authService';
+import { getAuthHeaders } from './authService';
 
 // Prefer environment variable, otherwise default to same-origin
 const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';

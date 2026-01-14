@@ -14,7 +14,7 @@ const PBKDF2_ITERATIONS = 100000;
 const SALT_LENGTH = 16;
 const HASH_LENGTH = 32;
 
-async function bufferToHex(buffer) {
+function bufferToHex(buffer) {
   return Array.from(new Uint8Array(buffer))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
@@ -23,7 +23,7 @@ async function bufferToHex(buffer) {
 function hexToBuffer(hex) {
   const bytes = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16);
   }
   return bytes;
 }
@@ -107,8 +107,15 @@ async function main() {
     settings: { theme: 'light' }
   };
 
+  // Write user data to a temporary file instead of logging sensitive data
   const userJson = JSON.stringify(user);
-  const kvNamespaceId = '2c3ee1f2bc814ca7b2e0759397135228';
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  const tempFile = path.join(process.cwd(), `admin-user-${id}.json`);
+  await fs.writeFile(tempFile, userJson, 'utf-8');
+
+  // Get KV namespace ID from env or use default
+  const kvNamespaceId = process.env.KV_NAMESPACE_ID || '2c3ee1f2bc814ca7b2e0759397135228';
 
   console.log('');
   console.log('=== Admin User Created ===');
@@ -116,10 +123,18 @@ async function main() {
   console.log(`Email: ${email}`);
   console.log(`User ID: ${id}`);
   console.log('');
+  console.log(`User data (including password hash) written to: ${tempFile}`);
+  console.log('');
+  console.log('IMPORTANT: Delete this file after importing to KV!');
+  console.log('');
   console.log('Run the following commands to add the admin user to KV:');
   console.log('');
-  console.log('# Add user data');
-  console.log(`npx wrangler kv put --namespace-id=${kvNamespaceId} "user:${id}" '${userJson}'`);
+  console.log('# Add user data (reads from file to avoid logging sensitive data)');
+  if (process.platform === 'win32') {
+    console.log(`$content = Get-Content "${tempFile}" -Raw; npx wrangler kv put --namespace-id=${kvNamespaceId} "user:${id}" $content`);
+  } else {
+    console.log(`npx wrangler kv put --namespace-id=${kvNamespaceId} "user:${id}" "$(cat '${tempFile}')"`);
+  }
   console.log('');
   console.log('# Add username index');
   console.log(`npx wrangler kv put --namespace-id=${kvNamespaceId} "username:${username.toLowerCase()}" "${id}"`);
@@ -127,9 +142,12 @@ async function main() {
   console.log('# Add email index');
   console.log(`npx wrangler kv put --namespace-id=${kvNamespaceId} "email:${email.toLowerCase()}" "${id}"`);
   console.log('');
-  console.log('Or run all at once:');
-  console.log('');
-  console.log(`npx wrangler kv put --namespace-id=${kvNamespaceId} "user:${id}" '${userJson}' && npx wrangler kv put --namespace-id=${kvNamespaceId} "username:${username.toLowerCase()}" "${id}" && npx wrangler kv put --namespace-id=${kvNamespaceId} "email:${email.toLowerCase()}" "${id}"`);
+  console.log('# Delete the temporary file after import');
+  if (process.platform === 'win32') {
+    console.log(`Remove-Item "${tempFile}"`);
+  } else {
+    console.log(`rm '${tempFile}'`);
+  }
 }
 
 main().catch(console.error);

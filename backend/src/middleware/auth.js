@@ -33,15 +33,38 @@ const getTokenFromRequest = (c) => {
 };
 
 /**
+ * Get user from API key
+ * @param {Object} kv - KV namespace
+ * @param {string} apiKey - API key
+ * @returns {Promise<Object|null>} User object or null
+ */
+const getUserFromApiKey = async (kv, apiKey) => {
+  try {
+    const keyHash = await hashToken(apiKey);
+    const keyData = await kv.get(`apikey:${keyHash}`, 'json');
+
+    if (!keyData) return null;
+
+    // Update last_used timestamp
+    keyData.last_used = new Date().toISOString();
+    await kv.put(`apikey:${keyHash}`, JSON.stringify(keyData));
+
+    // Get the user
+    const user = await kv.get(`user:${keyData.userId}`, 'json');
+    return user;
+  } catch (error) {
+    console.error('Error getting user from API key:', error);
+    return null;
+  }
+};
+
+/**
  * Get user from session token
- * @param {Object} c - Hono context
+ * @param {Object} kv - KV namespace
  * @param {string} token - Session token
  * @returns {Promise<Object|null>} User object or null
  */
-const getUserFromToken = async (c, token) => {
-  const kv = c.env.KV;
-  if (!kv || !token) return null;
-
+const getUserFromSessionToken = async (kv, token) => {
   try {
     // Hash the token to look up session
     const tokenHash = await hashToken(token);
@@ -63,9 +86,28 @@ const getUserFromToken = async (c, token) => {
 
     return user;
   } catch (error) {
-    console.error('Error getting user from token:', error);
+    console.error('Error getting user from session token:', error);
     return null;
   }
+};
+
+/**
+ * Get user from token (session token or API key)
+ * @param {Object} c - Hono context
+ * @param {string} token - Session token or API key
+ * @returns {Promise<Object|null>} User object or null
+ */
+const getUserFromToken = async (c, token) => {
+  const kv = c.env.KV;
+  if (!kv || !token) return null;
+
+  // Check if it's an API key (prefixed with 'ak_')
+  if (token.startsWith('ak_')) {
+    return getUserFromApiKey(kv, token);
+  }
+
+  // Otherwise treat as session token
+  return getUserFromSessionToken(kv, token);
 };
 
 /**
@@ -181,24 +223,41 @@ export const requireAuthAndApproved = async (c, next) => {
 /**
  * Validate a token without middleware context
  * Useful for WebSocket authentication
+ * Supports both session tokens and API keys
  */
 export const validateToken = async (kv, token) => {
   if (!kv || !token) return null;
 
   try {
-    const tokenHash = await hashToken(token);
-    const sessionKey = `session:${tokenHash}`;
-    const sessionData = await kv.get(sessionKey, 'json');
+    let user = null;
 
-    if (!sessionData) return null;
+    // Check if it's an API key (prefixed with 'ak_')
+    if (token.startsWith('ak_')) {
+      const keyHash = await hashToken(token);
+      const keyData = await kv.get(`apikey:${keyHash}`, 'json');
 
-    if (sessionData.expiresAt && new Date(sessionData.expiresAt) < new Date()) {
-      await kv.delete(sessionKey);
-      return null;
+      if (!keyData) return null;
+
+      // Update last_used timestamp
+      keyData.last_used = new Date().toISOString();
+      await kv.put(`apikey:${keyHash}`, JSON.stringify(keyData));
+
+      user = await kv.get(`user:${keyData.userId}`, 'json');
+    } else {
+      // Treat as session token
+      const tokenHash = await hashToken(token);
+      const sessionKey = `session:${tokenHash}`;
+      const sessionData = await kv.get(sessionKey, 'json');
+
+      if (!sessionData) return null;
+
+      if (sessionData.expiresAt && new Date(sessionData.expiresAt) < new Date()) {
+        await kv.delete(sessionKey);
+        return null;
+      }
+
+      user = await kv.get(`user:${sessionData.userId}`, 'json');
     }
-
-    const userKey = `user:${sessionData.userId}`;
-    const user = await kv.get(userKey, 'json');
 
     if (!user) return null;
 
