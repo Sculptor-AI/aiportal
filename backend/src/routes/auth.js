@@ -73,15 +73,17 @@ auth.post('/register', async (c) => {
     return c.json({ error: 'Username must be between 3 and 30 characters' }, 400);
   }
 
-  if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-    return c.json({ error: 'Username can only contain letters, numbers, underscores, and hyphens' }, 400);
+  // Username must start and end with alphanumeric, can contain underscores/hyphens in middle
+  if (!/^[a-zA-Z0-9]([a-zA-Z0-9_-]*[a-zA-Z0-9])?$/.test(username)) {
+    return c.json({ error: 'Username must start and end with a letter or number, and can only contain letters, numbers, underscores, and hyphens' }, 400);
   }
 
-  if (password.length < 8) {
-    return c.json({ error: 'Password must be at least 8 characters long' }, 400);
+  if (password.length < 12) {
+    return c.json({ error: 'Password must be at least 12 characters long' }, 400);
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  // Email validation with minimum 2-character TLD
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
     return c.json({ error: 'Invalid email address' }, 400);
   }
 
@@ -116,17 +118,32 @@ auth.post('/register', async (c) => {
     settings: { theme: 'light' }
   };
 
-  // Store user and indexes (index keys are lowercase for case-insensitive lookups)
-  await Promise.all([
-    kv.put(`user:${id}`, JSON.stringify(user)),
-    kv.put(`username:${username.toLowerCase()}`, id),  // "johndoe" -> user ID
-    kv.put(`email:${email.toLowerCase()}`, id)         // "john@example.com" -> user ID
-  ]);
+  // Store user and indexes with rollback on failure
+  try {
+    await kv.put(`user:${id}`, JSON.stringify(user));
+    await kv.put(`username:${username.toLowerCase()}`, id);
+    await kv.put(`email:${email.toLowerCase()}`, id);
+  } catch (err) {
+    // Best-effort rollback
+    try {
+      await kv.delete(`user:${id}`);
+      await kv.delete(`username:${username.toLowerCase()}`);
+      await kv.delete(`email:${email.toLowerCase()}`);
+    } catch (_) {
+      // Swallow rollback errors
+    }
+    console.error('Failed to create user:', err);
+    return c.json({ error: 'Failed to create user account' }, 500);
+  }
+
+  // Log new registration for admin notification
+  console.log(`[AUTH] New user registration pending approval: id=${id}, username=${username}, email=${email.toLowerCase()}`);
 
   return c.json({
     success: true,
-    message: 'Registration successful. Your account is pending approval.',
-    userId: id
+    message: 'Registration successful. Your account is pending admin approval. You will not be able to log in until an administrator activates your account.',
+    userId: id,
+    status: user.status
   });
 });
 
@@ -245,7 +262,20 @@ auth.post('/api-keys', requireAuth, async (c) => {
   }
 
   const body = await c.req.json().catch(() => ({}));
-  const name = body.name || `API Key ${Date.now()}`;
+  
+  // Validate API key name
+  let name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (name) {
+    if (name.length > 100) {
+      return c.json({ error: 'API key name must be at most 100 characters long' }, 400);
+    }
+    // Allow letters, numbers, spaces, underscores, hyphens, and periods
+    if (!/^[\w .-]+$/.test(name)) {
+      return c.json({ error: 'API key name contains invalid characters' }, 400);
+    }
+  } else {
+    name = `API Key ${Date.now()}`;
+  }
 
   // Generate API key
   const apiKey = generateApiKey();
@@ -262,30 +292,41 @@ auth.post('/api-keys', requireAuth, async (c) => {
     last_used: null
   };
 
-  // Store the API key
-  await kv.put(`apikey:${keyHash}`, JSON.stringify(keyData));
+  // Store the API key with rollback on failure
+  try {
+    await kv.put(`apikey:${keyHash}`, JSON.stringify(keyData));
 
-  // Store reference in user's key list (include keyHash for efficient deletion)
-  const userKeysKey = `userkeys:${user.id}`;
-  const existingKeys = await kv.get(userKeysKey, 'json') || [];
-  existingKeys.push({
-    id: keyData.id,
-    name: keyData.name,
-    keyPrefix: keyData.keyPrefix,
-    keyHash: keyData.keyHash,
-    created_at: keyData.created_at
-  });
-  await kv.put(userKeysKey, JSON.stringify(existingKeys));
-
-  return c.json({
-    success: true,
-    data: {
-      key: apiKey, // Only shown once
+    // Store reference in user's key list (include keyHash for efficient deletion)
+    const userKeysKey = `userkeys:${user.id}`;
+    const existingKeys = await kv.get(userKeysKey, 'json') || [];
+    existingKeys.push({
       id: keyData.id,
       name: keyData.name,
-      prefix: keyData.keyPrefix
+      keyPrefix: keyData.keyPrefix,
+      keyHash: keyData.keyHash,
+      created_at: keyData.created_at
+    });
+    await kv.put(userKeysKey, JSON.stringify(existingKeys));
+
+    return c.json({
+      success: true,
+      data: {
+        key: apiKey, // Only shown once
+        id: keyData.id,
+        name: keyData.name,
+        prefix: keyData.keyPrefix
+      }
+    });
+  } catch (err) {
+    // Rollback API key creation if updating the user's key list fails
+    try {
+      await kv.delete(`apikey:${keyHash}`);
+    } catch (rollbackErr) {
+      console.error('Failed to rollback API key creation:', rollbackErr);
     }
-  });
+    console.error('Failed to create API key:', err);
+    return c.json({ error: 'Failed to create API key' }, 500);
+  }
 });
 
 /**

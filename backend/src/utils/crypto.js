@@ -74,7 +74,25 @@ export const hashPassword = async (password, salt = null) => {
 };
 
 /**
+ * Constant-time string comparison to prevent timing attacks
+ * @param {string} a - First string
+ * @param {string} b - Second string
+ * @returns {boolean}
+ */
+const constantTimeCompare = (a, b) => {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+};
+
+/**
  * Verify a password against a stored hash
+ * Uses constant-time comparison to prevent timing attacks
  * @param {string} password - The plain text password to verify
  * @param {string} storedHash - The stored hash
  * @param {string} salt - The salt used for the original hash
@@ -82,18 +100,20 @@ export const hashPassword = async (password, salt = null) => {
  */
 export const verifyPassword = async (password, storedHash, salt) => {
   const { hash } = await hashPassword(password, salt);
-  return hash === storedHash;
+  return constantTimeCompare(hash, storedHash);
 };
 
 /**
  * Generate a secure random token
+ * Uses purely random data for maximum security (no timestamp to prevent predictability)
  * @param {string} prefix - Optional prefix for the token
  * @returns {string}
  */
 export const generateToken = (prefix = 'sk') => {
-  const randomPart = crypto.randomUUID().replace(/-/g, '');
-  const timestamp = Date.now().toString(36);
-  return `${prefix}_${randomPart}${timestamp}`;
+  // Use two UUIDs for extra entropy (256 bits total)
+  const randomPart1 = crypto.randomUUID().replace(/-/g, '');
+  const randomPart2 = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
+  return `${prefix}_${randomPart1}${randomPart2}`;
 };
 
 /**

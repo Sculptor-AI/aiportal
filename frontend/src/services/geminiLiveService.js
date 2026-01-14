@@ -44,6 +44,15 @@ class GeminiLiveService {
 
   /**
    * Get WebSocket URL for backend proxy (includes auth token)
+   * 
+   * SECURITY NOTE: The token is passed as a query parameter because the WebSocket API
+   * does not support custom headers during the initial handshake. The backend also
+   * accepts the Authorization header for clients that support it. The token in the URL
+   * is redacted in console logs but may appear in:
+   * - Browser history (mitigated: URLs are session-specific)
+   * - Server access logs (backend should filter sensitive params)
+   * 
+   * The token is short-lived (24h session) and can be revoked by logging out.
    */
   _getWebSocketUrl() {
     const backendUrl = import.meta.env.VITE_BACKEND_API_URL || '';
@@ -61,6 +70,7 @@ class GeminiLiveService {
     }
 
     // Get auth token and include in URL
+    // Note: WebSocket API doesn't support custom headers, so we use query param
     const user = getCurrentUser();
     const token = user?.accessToken;
 

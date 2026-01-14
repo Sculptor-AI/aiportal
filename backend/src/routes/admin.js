@@ -251,8 +251,8 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
   let passwordChanged = false;
   if (body.password) {
     // Validate password meets minimum requirements
-    if (body.password.length < 8) {
-      return c.json({ error: 'Password must be at least 8 characters long' }, 400);
+    if (body.password.length < 12) {
+      return c.json({ error: 'Password must be at least 12 characters long' }, 400);
     }
     const { hash, salt } = await hashPassword(body.password);
     user.passwordHash = hash;

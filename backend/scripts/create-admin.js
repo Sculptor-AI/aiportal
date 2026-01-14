@@ -88,8 +88,8 @@ async function main() {
     process.exit(1);
   }
 
-  if (password.length < 8) {
-    console.error('Error: Password must be at least 8 characters');
+  if (password.length < 12) {
+    console.error('Error: Password must be at least 12 characters');
     process.exit(1);
   }
 
@@ -119,6 +119,22 @@ async function main() {
   const path = await import('path');
   const tempFile = path.join(process.cwd(), `admin-user-${id}.json`);
   await fs.writeFile(tempFile, userJson, 'utf-8');
+
+  // Register cleanup handlers for automatic temp file deletion
+  const cleanupTempFile = () => {
+    fs.unlink(tempFile).catch(() => {
+      // Ignore errors during cleanup (file may already be deleted)
+    });
+  };
+  process.on('exit', cleanupTempFile);
+  process.on('SIGINT', () => {
+    cleanupTempFile();
+    process.exit(1);
+  });
+  process.on('SIGTERM', () => {
+    cleanupTempFile();
+    process.exit(1);
+  });
 
   // Get KV namespace ID from environment variable
   const kvNamespaceId = process.env.KV_NAMESPACE_ID;

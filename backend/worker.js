@@ -164,8 +164,10 @@ export default {
       const upgradeHeader = request.headers.get('Upgrade');
       if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
         // Authenticate the WebSocket request
-        const token = url.searchParams.get('token') ||
-                      request.headers.get('Authorization')?.replace('Bearer ', '');
+        // Prefer Authorization header (more secure) over query parameter
+        // Query param is supported for WebSocket clients that can't set headers
+        const token = request.headers.get('Authorization')?.replace('Bearer ', '') ||
+                      url.searchParams.get('token');
 
         if (!token) {
           return new Response(JSON.stringify({ error: 'Authentication required' }), {
@@ -222,8 +224,10 @@ export default {
       });
     }
 
-    // REMOVED: /api/v1/live/config endpoint - was exposing API key!
-    // Clients should use the proxied WebSocket endpoint instead
+    // SECURITY FIX: The /api/v1/live/config endpoint was removed because it exposed
+    // the Gemini API key to clients. This comment is retained to prevent accidental
+    // re-introduction. Clients must use the authenticated WebSocket proxy at /api/v1/live
+    // which keeps the API key secure on the server side.
 
     // Pass all other requests to Hono app
     return app.fetch(request, env, ctx);

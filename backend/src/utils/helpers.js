@@ -53,7 +53,12 @@ export const findUserById = async (kv, userId) => {
 
 /**
  * Get all users (KV-based)
- * Note: This requires listing keys, which can be slow for large datasets
+ * 
+ * WARNING: This function scans all user keys and fetches each user individually.
+ * It should only be used for admin dashboards with small user bases.
+ * For large user bases, consider implementing pagination or caching.
+ * 
+ * Performance: O(n) KV operations where n = number of users
  */
 export const getAllUsers = async (kv) => {
   if (!kv) return [];
@@ -118,13 +123,19 @@ export const isUsernameTaken = async (kv, username, excludeUserId = null) => {
 
 /**
  * Invalidate all sessions for a user
- * Note: This requires listing all sessions, which can be slow
+ * 
+ * Note: This scans all sessions which can be slow with many active sessions.
+ * Future optimization: Store a "usersessions:{userId}" index containing session hashes.
+ * 
+ * @param {Object} kv - KV namespace
+ * @param {string} userId - User ID whose sessions should be invalidated
  */
 export const invalidateUserSessions = async (kv, userId) => {
   if (!kv || !userId) return;
 
   try {
     // List all sessions and find ones belonging to this user
+    // TODO: Consider storing usersessions:{userId} index for O(1) lookup
     const list = await kv.list({ prefix: 'session:' });
     const deletePromises = [];
 
@@ -145,6 +156,8 @@ export const invalidateUserSessions = async (kv, userId) => {
 
 /**
  * Delete all API keys for a user (including the actual key data)
+ * Uses stored keyHash in user's key list for efficient O(n) deletion
+ * where n = number of keys for this user (not total keys)
  */
 export const deleteUserApiKeys = async (kv, userId) => {
   if (!kv || !userId) return;
