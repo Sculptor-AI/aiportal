@@ -139,9 +139,7 @@ export const deleteUserApiKeys = async (kv, userId) => {
   if (!kv || !userId) return;
 
   try {
-    // Get user's key list
     const userKeysKey = `userkeys:${userId}`;
-    const existingKeys = await kv.get(userKeysKey, 'json') || [];
 
     // We need to find and delete the actual apikey entries
     // Since we don't store the keyHash in the user's key list, we need to list all apikeys

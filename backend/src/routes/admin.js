@@ -23,6 +23,10 @@ admin.post('/auth/login', async (c) => {
   const body = await c.req.json().catch(() => ({}));
   const { username, password } = body;
 
+  if (!username || !password) {
+    return c.json({ error: 'Username and password are required' }, 400);
+  }
+
   const adminUser = await findUserByUsername(kv, username);
 
   if (!adminUser) {
@@ -126,7 +130,14 @@ admin.put('/users/:userId/status', requireAuth, requireAdmin, async (c) => {
     return c.json({ error: 'Storage not configured' }, 500);
   }
 
+  const currentUser = c.get('user');
   const userId = c.req.param('userId');
+
+  // Prevent admins from modifying their own status
+  if (currentUser.id === userId) {
+    return c.json({ error: 'Cannot modify your own status' }, 403);
+  }
+
   const user = await findUserById(kv, userId);
 
   if (!user) {
@@ -206,6 +217,10 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
 
   let passwordChanged = false;
   if (body.password) {
+    // Validate password meets minimum requirements
+    if (body.password.length < 8) {
+      return c.json({ error: 'Password must be at least 8 characters long' }, 400);
+    }
     const { hash, salt } = await hashPassword(body.password);
     user.passwordHash = hash;
     user.passwordSalt = salt;
@@ -213,6 +228,11 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
   }
 
   if (body.role) {
+    // Validate role
+    const validRoles = ['user', 'admin'];
+    if (!validRoles.includes(body.role)) {
+      return c.json({ error: 'Invalid role. Must be one of: ' + validRoles.join(', ') }, 400);
+    }
     user.role = body.role;
   }
 
@@ -236,7 +256,14 @@ admin.delete('/users/:userId', requireAuth, requireAdmin, async (c) => {
     return c.json({ error: 'Storage not configured' }, 500);
   }
 
+  const currentUser = c.get('user');
   const userId = c.req.param('userId');
+
+  // Prevent admins from deleting themselves
+  if (currentUser.id === userId) {
+    return c.json({ error: 'Cannot delete your own account' }, 403);
+  }
+
   const user = await findUserById(kv, userId);
 
   if (!user) {

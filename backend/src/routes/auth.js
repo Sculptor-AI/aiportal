@@ -263,13 +263,14 @@ auth.post('/api-keys', requireAuth, async (c) => {
   // Store the API key
   await kv.put(`apikey:${keyHash}`, JSON.stringify(keyData));
 
-  // Store reference in user's key list
+  // Store reference in user's key list (include keyHash for efficient deletion)
   const userKeysKey = `userkeys:${user.id}`;
   const existingKeys = await kv.get(userKeysKey, 'json') || [];
   existingKeys.push({
     id: keyData.id,
     name: keyData.name,
     keyPrefix: keyData.keyPrefix,
+    keyHash: keyData.keyHash,
     created_at: keyData.created_at
   });
   await kv.put(userKeysKey, JSON.stringify(existingKeys));
@@ -300,9 +301,12 @@ auth.get('/api-keys', requireAuth, async (c) => {
   const userKeysKey = `userkeys:${user.id}`;
   const keys = await kv.get(userKeysKey, 'json') || [];
 
+  // Remove keyHash from response (don't expose to client)
+  const safeKeys = keys.map(({ keyHash, ...rest }) => rest);
+
   return c.json({
     success: true,
-    data: keys
+    data: safeKeys
   });
 });
 
@@ -323,12 +327,31 @@ auth.delete('/api-keys/:keyId', requireAuth, async (c) => {
   const userKeysKey = `userkeys:${user.id}`;
   const existingKeys = await kv.get(userKeysKey, 'json') || [];
 
-  // Find and remove the key
+  // Find the key to delete
   const keyIndex = existingKeys.findIndex(k => k.id === keyId);
   if (keyIndex === -1) {
     return c.json({ error: 'API key not found' }, 404);
   }
 
+  const keyToDelete = existingKeys[keyIndex];
+
+  // Delete the actual API key entry
+  // Try using stored keyHash first (new keys), fallback to scanning (legacy keys)
+  if (keyToDelete.keyHash) {
+    await kv.delete(`apikey:${keyToDelete.keyHash}`);
+  } else {
+    // Fallback: scan for legacy keys without stored keyHash
+    const apiKeyList = await kv.list({ prefix: 'apikey:' });
+    for (const key of apiKeyList.keys) {
+      const keyData = await kv.get(key.name, 'json');
+      if (keyData && keyData.id === keyId && keyData.userId === user.id) {
+        await kv.delete(key.name);
+        break;
+      }
+    }
+  }
+
+  // Remove from user's key list
   existingKeys.splice(keyIndex, 1);
   await kv.put(userKeysKey, JSON.stringify(existingKeys));
 

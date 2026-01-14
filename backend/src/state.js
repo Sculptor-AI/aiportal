@@ -1,14 +1,8 @@
 /**
  * In-memory state management
- * Note: User data is now stored in Cloudflare KV
- * This file is kept for any temporary in-memory state needs
+ * Note: User data and API keys are now stored in Cloudflare KV
+ * This file is kept for utility functions
  */
-
-export const state = {
-  // API keys are now stored in KV
-  // This is kept for backwards compatibility during transition
-  apiKeys: new Map()
-};
 
 /**
  * Get current ISO timestamp
