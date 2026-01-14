@@ -13,3 +13,35 @@ binding = "ASSETS"
 routes = [
 	{ pattern = "ai.sculptorai.org/*", custom_domain = true }
 ]
+
+# ============================================================================
+# KV Namespace Configuration
+# ============================================================================
+# IMPORTANT: Replace the ID below with your own KV namespace ID.
+# 
+# To create a KV namespace:
+#   npx wrangler kv namespace create "SESSIONS"
+# 
+# Then copy the generated ID here.
+# Do NOT commit your real namespace ID to public repositories.
+# ============================================================================
+[[kv_namespaces]]
+binding = "KV"
+id = "YOUR_KV_NAMESPACE_ID_HERE"  # Replace with your KV namespace ID
+
+# ============================================================================
+# Environment Variables / Secrets
+# ============================================================================
+# API keys and sensitive configuration should be stored as Cloudflare secrets.
+# 
+# Run the setup script to configure all secrets:
+#   node scripts/setup-secrets.js
+# 
+# Or set them manually:
+#   npx wrangler secret put OPENROUTER_API_KEY
+#   npx wrangler secret put GEMINI_API_KEY
+#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put OPENAI_API_KEY
+#
+# For local development, create a .dev.vars file (see .dev.vars.example)
+# ============================================================================

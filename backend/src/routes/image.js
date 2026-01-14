@@ -1,6 +1,6 @@
 /**
  * Image Generation Routes
- * 
+ *
  * Supports multiple providers:
  * - Google Imagen (via Gemini API)
  * - OpenAI DALL-E
@@ -12,8 +12,13 @@ import { generateImageWithImagen } from '../services/gemini.js';
 import { generateImageWithDALLE, editImageWithDALLE } from '../services/openai.js';
 import { listImageModels, getDefaultImageModel } from '../config/index.js';
 import modelsConfig from '../config/models.json';
+import { requireAuthAndApproved } from '../middleware/auth.js';
 
 const image = new Hono();
+
+// Apply auth middleware to generate and edit routes (models list is public)
+image.use('/generate', requireAuthAndApproved);
+image.use('/edit', requireAuthAndApproved);
 
 /**
  * Look up model info from models.json

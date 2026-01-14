@@ -6,8 +6,7 @@
  *
  * File Structure:
  * - src/index.js         - Main app with route mounting
- * - src/state.js         - In-memory state management
- * - src/middleware/      - Middleware (CORS, etc.)
+ * - src/middleware/      - Middleware (CORS, auth)
  * - src/routes/          - Route handlers
  *   - health.js          - Health check & models
  *   - auth.js            - User authentication
@@ -19,14 +18,14 @@
  *   - static.js          - Static assets & SPA
  * - src/services/        - Business logic services
  *   - gemini.js          - Gemini API handling
- *   - geminiLive.js      - Gemini Live WebSocket proxy
- *   - rss.js             - RSS feed parsing
  * - src/utils/           - Utility functions
  *   - helpers.js         - Common helpers
  *   - auth.js            - Auth utilities
+ *   - crypto.js          - Cryptographic utilities
  */
 
 import app from './src/index.js';
+import { validateToken } from './src/middleware/auth.js';
 
 const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent';
 
@@ -156,6 +155,47 @@ async function handleGeminiLiveWebSocket(request, env) {
   });
 }
 
+/**
+ * Helper to extract and validate auth token from request
+ * @param {Request} request - The incoming request
+ * @param {URL} url - Parsed URL
+ * @param {Object} env - Environment bindings
+ * @param {boolean} allowQueryParam - Whether to allow token in query parameter
+ * @returns {Promise<{user: Object|null, error: Response|null}>}
+ */
+async function authenticateRequest(request, url, env, allowQueryParam = false) {
+  // Prefer Authorization header (more secure) over query parameter
+  let token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  
+  // Fall back to query param if allowed (for WebSocket clients that can't set headers)
+  if (!token && allowQueryParam) {
+    token = url.searchParams.get('token');
+  }
+
+  if (!token) {
+    return {
+      user: null,
+      error: new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      })
+    };
+  }
+
+  const user = await validateToken(env.KV, token);
+  if (!user) {
+    return {
+      user: null,
+      error: new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      })
+    };
+  }
+
+  return { user, error: null };
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -164,15 +204,22 @@ export default {
     if (url.pathname === '/api/v1/live') {
       const upgradeHeader = request.headers.get('Upgrade');
       if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
+        // Authenticate WebSocket request (allow query param for WS clients)
+        const { user, error } = await authenticateRequest(request, url, env, true);
+        if (error) return error;
+
         // WebSocket proxy only works in production Cloudflare Workers
-        // For local dev, use /api/v1/live/config to get connection info
         return handleGeminiLiveWebSocket(request, env);
       }
-      // Non-WebSocket request - return status
+
+      // Non-WebSocket request - return status (requires auth)
+      const { user, error } = await authenticateRequest(request, url, env, false);
+      if (error) return error;
+
       return new Response(JSON.stringify({
         available: !!env.GEMINI_API_KEY,
         endpoint: '/api/v1/live',
-        hint: 'Connect via WebSocket to use Gemini Live'
+        hint: 'Connect via WebSocket with token query param to use Gemini Live'
       }), {
         headers: {
           'Content-Type': 'application/json',
@@ -181,41 +228,10 @@ export default {
       });
     }
 
-    // Provide Gemini Live config for direct connection (local dev fallback)
-    if (url.pathname === '/api/v1/live/config') {
-      // Handle CORS preflight
-      if (request.method === 'OPTIONS') {
-        return new Response(null, {
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-          }
-        });
-      }
-
-      const apiKey = env.GEMINI_API_KEY;
-      if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'Gemini API key not configured' }), {
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          }
-        });
-      }
-
-      // Return the WebSocket URL with API key for direct connection
-      return new Response(JSON.stringify({
-        wsUrl: `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`,
-        model: 'models/gemini-2.5-flash-preview-native-audio'
-      }), {
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        }
-      });
-    }
+    // SECURITY FIX: The /api/v1/live/config endpoint was removed because it exposed
+    // the Gemini API key to clients. This comment is retained to prevent accidental
+    // re-introduction. Clients must use the authenticated WebSocket proxy at /api/v1/live
+    // which keeps the API key secure on the server side.
 
     // Pass all other requests to Hono app
     return app.fetch(request, env, ctx);

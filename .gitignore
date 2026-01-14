@@ -48,6 +48,9 @@ lerna-debug.log*
 !.dev.vars.example
 .dev.vars
 
+# Temporary admin user files (created by create-admin.js)
+admin-user-*.json
+
 # Cloudflare Workers
 .wrangler
 .wrangler-state

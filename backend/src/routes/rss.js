@@ -4,8 +4,12 @@
 
 import { Hono } from 'hono';
 import { RSS_FEEDS, fetchArticlesByCategory, fetchArticleContent } from '../services/rss.js';
+import { requireAuthAndApproved } from '../middleware/auth.js';
 
 const rss = new Hono();
+
+// Apply auth middleware to all RSS routes
+rss.use('/*', requireAuthAndApproved);
 
 /**
  * Get articles by category

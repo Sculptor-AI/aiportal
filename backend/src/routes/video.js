@@ -1,13 +1,17 @@
 /**
  * Video Generation Routes
- * 
+ *
  * Supports Google Veo 2 via Gemini API
  */
 
 import { Hono } from 'hono';
 import { generateVideoWithVeo, checkOperationStatus } from '../services/gemini.js';
+import { requireAuthAndApproved } from '../middleware/auth.js';
 
 const video = new Hono();
+
+// Apply auth middleware to all video routes
+video.use('/*', requireAuthAndApproved);
 
 /**
  * Generate video
