@@ -200,19 +200,52 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
     }
   }
 
-  // Update allowed fields
-  if (body.email && body.email.toLowerCase() !== user.email.toLowerCase()) {
-    // Update email index
-    await kv.delete(`email:${user.email.toLowerCase()}`);
-    user.email = body.email.toLowerCase();
-    await kv.put(`email:${user.email}`, user.id);
-  }
+  // Update allowed fields (email/username) with simple rollback on failure
+  const oldEmail = user.email;
+  const oldUsername = user.username;
+  const shouldUpdateEmail =
+    body.email && body.email.toLowerCase() !== user.email.toLowerCase();
+  const shouldUpdateUsername =
+    body.username && body.username.toLowerCase() !== user.username.toLowerCase();
 
-  if (body.username && body.username.toLowerCase() !== user.username.toLowerCase()) {
-    // Update username index
-    await kv.delete(`username:${user.username.toLowerCase()}`);
-    user.username = body.username;
-    await kv.put(`username:${user.username.toLowerCase()}`, user.id);
+  if (shouldUpdateEmail || shouldUpdateUsername) {
+    try {
+      if (shouldUpdateEmail) {
+        const newEmail = body.email.toLowerCase();
+        // Update email index
+        await kv.delete(`email:${oldEmail.toLowerCase()}`);
+        await kv.put(`email:${newEmail}`, user.id);
+        user.email = newEmail;
+      }
+
+      if (shouldUpdateUsername) {
+        const newUsername = body.username;
+        // Update username index
+        await kv.delete(`username:${oldUsername.toLowerCase()}`);
+        await kv.put(`username:${newUsername.toLowerCase()}`, user.id);
+        user.username = newUsername;
+      }
+    } catch (err) {
+      // Best-effort rollback to previous indices/state
+      try {
+        if (shouldUpdateEmail) {
+          // Remove any partially written new email index and restore old one
+          const attemptedNewEmail = body.email.toLowerCase();
+          await kv.delete(`email:${attemptedNewEmail}`);
+          await kv.put(`email:${oldEmail.toLowerCase()}`, user.id);
+        }
+        if (shouldUpdateUsername) {
+          const attemptedNewUsername = body.username.toLowerCase();
+          await kv.delete(`username:${attemptedNewUsername}`);
+          await kv.put(`username:${oldUsername.toLowerCase()}`, user.id);
+        }
+      } catch (_) {
+        // Swallow rollback errors; original error path continues
+      }
+      user.email = oldEmail;
+      user.username = oldUsername;
+      return c.json({ error: 'Failed to update user identity fields' }, 500);
+    }
   }
 
   let passwordChanged = false;
