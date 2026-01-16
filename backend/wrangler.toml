@@ -3,25 +3,30 @@ main = "./worker.js"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
+# Custom domain routing (must be defined before [assets] section)
+routes = [
+	{ pattern = "ai.sculptorai.org", custom_domain = true }
+]
+
 # Static Assets Configuration
 # The frontend build is copied here by GitHub Actions before deploy
 [assets]
 directory = "./dist"
 binding = "ASSETS"
-
-# Custom domain routing
-routes = [
-	{ pattern = "ai.sculptorai.org/*", custom_domain = true }
-]
+# CRITICAL: Run the Worker first for API routes, otherwise static assets
+# intercept all requests and serve the SPA HTML for /api/* paths
+run_worker_first = ["/api/*"]
+# Handle SPA routing - serve index.html for non-existent paths (client-side routing)
+not_found_handling = "single-page-application"
 
 # ============================================================================
 # KV Namespace Configuration
 # ============================================================================
 # IMPORTANT: Replace the ID below with your own KV namespace ID.
-# 
+#
 # To create a KV namespace:
 #   npx wrangler kv namespace create "SESSIONS"
-# 
+#
 # Then copy the generated ID here.
 # Do NOT commit your real namespace ID to public repositories.
 # ============================================================================
@@ -33,10 +38,10 @@ id = "bc070ecd1947448d9bfe56316a18ab9d"
 # Environment Variables / Secrets
 # ============================================================================
 # API keys and sensitive configuration should be stored as Cloudflare secrets.
-# 
+#
 # Run the setup script to configure all secrets:
 #   node scripts/setup-secrets.js
-# 
+#
 # Or set them manually:
 #   npx wrangler secret put OPENROUTER_API_KEY
 #   npx wrangler secret put GEMINI_API_KEY
