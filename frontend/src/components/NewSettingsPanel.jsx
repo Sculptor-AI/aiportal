@@ -1196,6 +1196,7 @@ const SettingDescription = styled.p`
   // Add a helper function to determine if in dark mode
   const isDarkMode = () => {
     return localSettings.theme === 'dark' || 
+           localSettings.theme === 'night' ||
            localSettings.theme === 'oled' || 
            localSettings.theme === 'bisexual' ||
     localSettings.theme === 'ocean' ||
@@ -1277,6 +1278,7 @@ const SettingDescription = styled.p`
   const themeOptionValues = [
     'light',
     'dark',
+    'night',
     'oled',
     'ocean',
     'forest',

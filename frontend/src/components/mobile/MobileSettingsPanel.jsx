@@ -223,6 +223,7 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
   const themeOptions = [
     { value: 'light', label: 'Light', color: '#ffffff' },
     { value: 'dark', label: 'Dark', color: '#1a1a1a' },
+    { value: 'night', label: 'Night', color: '#080808' },
     { value: 'oled', label: 'OLED', color: '#000000' },
     { value: 'bisexual', label: 'Bisexual', color: '#d60270' },
     { value: 'lakeside', label: 'Lakeside', color: '#5b0019' },
