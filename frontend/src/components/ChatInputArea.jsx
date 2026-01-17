@@ -45,6 +45,7 @@ const ChatInputArea = forwardRef(({
   uploadedFile,      // Renamed from uploadedFileData for clarity as prop
   onClearAttachment, // Prop for clearUploadedFile
   onRemoveFile,      // Prop for removing individual files
+  onFilePreview,     // Prop for previewing files
   resetFileUploadTrigger, // Renamed from resetFileUpload
   availableModels, // Needed for model-specific logic if any remains or for sub-components
   currentModel, // Current selected model ID
@@ -862,6 +863,9 @@ const ChatInputArea = forwardRef(({
               const isImage = file.type?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'].includes(ext);
               const isPDF = file.type === 'application/pdf' || ext === 'pdf';
               const hasVisualPreview = isImage || (isPDF && file.pdfThumbnail);
+              const isText = file.type === 'text' || file.type === 'code' || file.type === 'text/plain' || file.isPastedText ||
+                ['txt', 'md', 'markdown', 'rst', 'log', 'rtf', 'json', 'yaml', 'yml', 'toml', 'xml', 'html', 'css', 'scss', 'sass', 'less', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'rb', 'php', 'swift', 'sh', 'bash', 'zsh', 'fish', 'sql', 'r', 'lua', 'pl', 'ex', 'hs', 'dart'].includes(ext);
+              const isPreviewable = isImage || isPDF || isText;
 
               // Get preview URL for images
               const getPreviewUrl = () => {
@@ -1125,7 +1129,12 @@ const ChatInputArea = forwardRef(({
               };
 
               return (
-                <FilePreviewChip key={index} theme={theme}>
+                <FilePreviewChip
+                  key={index}
+                  theme={theme}
+                  $isClickable={isPreviewable}
+                  onClick={isPreviewable ? () => onFilePreview && onFilePreview(file, index) : undefined}
+                >
                   <FilePreviewIcon theme={theme} $hasPreview={hasVisualPreview || !isImage}>
                     {previewUrl ? (
                       <img src={previewUrl} alt="Preview" />
@@ -1134,7 +1143,12 @@ const ChatInputArea = forwardRef(({
                     )}
                   </FilePreviewIcon>
                   <FilePreviewName>{file.name}</FilePreviewName>
-                  <FilePreviewRemove onClick={() => onRemoveFile && onRemoveFile(index)}>
+                  <FilePreviewRemove
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onRemoveFile && onRemoveFile(index);
+                    }}
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
