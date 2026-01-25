@@ -803,6 +803,13 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     }
   }, [settings.focusMode, isFocusModeActive]);
 
+  useEffect(() => {
+    const isProjectDetail = location.pathname.startsWith('/projects/') && location.pathname !== '/projects';
+    if (isProjectDetail && !collapsed) {
+      setCollapsed(true);
+    }
+  }, [location.pathname, collapsed]);
+
   // Update settings
   const updateSettings = (newSettings) => {
     setSettings(newSettings);
