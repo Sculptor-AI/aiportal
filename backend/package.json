@@ -8,7 +8,7 @@
     "build": "npm run build --prefix ../frontend && shx rm -rf dist && shx cp -r ../frontend/dist ./dist"
   },
   "dependencies": {
-    "hono": "^4.11.4"
+    "hono": "^4.11.7"
   },
   "devDependencies": {
     "shx": "^0.4.0",
