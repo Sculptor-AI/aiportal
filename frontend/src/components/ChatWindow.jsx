@@ -15,10 +15,21 @@ import {
   ChatWindowContainer,
   ChatHeader,
   ChatTitleSection,
-  ChatTitle,
   ModelSelectorsRow,
   MessageList,
   EmptyState,
+  ChatActions,
+  ActionMenuButton,
+  ActionMenu,
+  ActionMenuItem,
+  ActionIcon,
+  TrashIcon,
+  ConfirmationCard,
+  ConfirmationTitle,
+  ConfirmationBody,
+  ConfirmationActions,
+  ConfirmationCancelButton,
+  ConfirmationDeleteButton,
 } from './ChatWindow.styled';
 
 pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
@@ -52,6 +63,8 @@ const ChatWindow = forwardRef(({
   onCloseSandbox3D,
   onToolbarToggle,
   onUserTyping,
+  onTogglePinChat,
+  onDeleteChat,
   focusModeActive = false,
   onMessageSent,
 }, ref) => {
@@ -76,6 +89,12 @@ const ChatWindow = forwardRef(({
     }
   });
 
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const actionMenuRef = useRef(null);
+  const actionButtonRef = useRef(null);
+  const confirmationRef = useRef(null);
+
   // Image generation model state
   const [isImagePromptMode, setIsImagePromptMode] = useState(false);
   const [availableImageModels, setAvailableImageModels] = useState([]);
@@ -99,6 +118,23 @@ const ChatWindow = forwardRef(({
   const shouldStartAnimationThisRender = useMemo(() => {
     return prevIsEmptyRef.current && !chatIsEmpty;
   }, [chatIsEmpty]);
+
+  const chatDisplayTitle = useMemo(() => {
+    if (!chat) return '';
+    if (chat.title && chat.title.trim().length > 0) {
+      return chat.title;
+    }
+    return t('chat.list.untitled', 'Chat {{id}}', { id: chat.id ? chat.id.substring(0, 4) : '…' });
+  }, [chat, t]);
+
+  const pinActionLabel = useMemo(() => {
+    if (chat?.pinned) {
+      return t('chat.actions.unpin', 'Unpin chat');
+    }
+    return t('chat.actions.pin', 'Pin chat');
+  }, [chat, t]);
+
+  const pinIconSrc = chat?.pinned ? '/images/transparentunpin.png' : '/images/transparentpin.png';
 
   const effectiveAnimateDownSignal = useMemo(() => {
     return animateDown || shouldStartAnimationThisRender;
@@ -376,6 +412,39 @@ const ChatWindow = forwardRef(({
     setIsLiveModeOpen(false);
   }, []);
 
+  const handleActionButtonClick = useCallback(() => {
+    setIsActionMenuOpen(prev => {
+      const next = !prev;
+      if (next) {
+        setIsDeleteConfirmOpen(false);
+      }
+      return next;
+    });
+  }, []);
+
+  const handlePinAction = useCallback(() => {
+    if (chat && onTogglePinChat) {
+      onTogglePinChat(chat.id);
+    }
+    setIsActionMenuOpen(false);
+  }, [chat, onTogglePinChat]);
+
+  const handleDeleteAction = useCallback(() => {
+    setIsActionMenuOpen(false);
+    setIsDeleteConfirmOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (chat && onDeleteChat) {
+      onDeleteChat(chat.id);
+    }
+    setIsDeleteConfirmOpen(false);
+  }, [chat, onDeleteChat]);
+
+  const handleCancelDelete = useCallback(() => {
+    setIsDeleteConfirmOpen(false);
+  }, []);
+
   const handleStartEditing = useCallback(() => {
     setIsEditingTitle(true);
     setEditedTitle(chat?.title || newConversationLabel);
@@ -520,6 +589,30 @@ const ChatWindow = forwardRef(({
     }
   }), [handleFileSelected]);
 
+  useEffect(() => {
+    if (!isActionMenuOpen && !isDeleteConfirmOpen) {
+      return undefined;
+    }
+    const handleClickOutside = (event) => {
+      if (
+        actionMenuRef.current?.contains(event.target) ||
+        actionButtonRef.current?.contains(event.target) ||
+        confirmationRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      setIsActionMenuOpen(false);
+      setIsDeleteConfirmOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isActionMenuOpen, isDeleteConfirmOpen]);
+
+  useEffect(() => {
+    setIsActionMenuOpen(false);
+    setIsDeleteConfirmOpen(false);
+  }, [chat?.id]);
+
   // Early return for no chat - after all hooks
   if (!chat) {
     return (
@@ -598,6 +691,48 @@ const ChatWindow = forwardRef(({
             />
           </ModelSelectorsRow>
         </ChatTitleSection>
+        <ChatActions>
+          <ActionMenuButton
+            ref={actionButtonRef}
+            onClick={handleActionButtonClick}
+            aria-haspopup="menu"
+            aria-expanded={isActionMenuOpen}
+            aria-label={t('chat.actions.moreOptions', 'Chat actions')}
+            type="button"
+          >
+            <img src="/images/transparentmenu.png" alt={t('chat.actions.moreOptions', 'Chat actions')} />
+          </ActionMenuButton>
+          {isActionMenuOpen && (
+            <ActionMenu ref={actionMenuRef}>
+              <ActionMenuItem type="button" onClick={handlePinAction}>
+                <ActionIcon>
+                  <img src={pinIconSrc} alt={pinActionLabel} />
+                </ActionIcon>
+                <span>{pinActionLabel}</span>
+              </ActionMenuItem>
+              <ActionMenuItem type="button" onClick={handleDeleteAction}>
+                <TrashIcon />
+                <span>{t('chat.actions.deleteChat', 'Delete chat')}</span>
+              </ActionMenuItem>
+            </ActionMenu>
+          )}
+          {isDeleteConfirmOpen && (
+            <ConfirmationCard ref={confirmationRef}>
+              <ConfirmationTitle>{t('chat.actions.deleteConfirmationTitle', 'Delete chat?')}</ConfirmationTitle>
+              <ConfirmationBody>
+                {t('chat.actions.deleteConfirmationSubtitle', 'This will delete {{chatName}}.', { chatName: chatDisplayTitle })}
+              </ConfirmationBody>
+              <ConfirmationActions>
+                <ConfirmationCancelButton type="button" onClick={handleCancelDelete}>
+                  {t('common.cancel')}
+                </ConfirmationCancelButton>
+                <ConfirmationDeleteButton type="button" onClick={handleConfirmDelete}>
+                  {t('chat.actions.deleteConfirmationDelete', 'Delete')}
+                </ConfirmationDeleteButton>
+              </ConfirmationActions>
+            </ConfirmationCard>
+          )}
+        </ChatActions>
       </ChatHeader>
 
       {(showGreeting && (showEmptyStateStatic || animateEmptyStateOut)) && !isLiveModeOpen && (

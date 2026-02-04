@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -266,7 +266,8 @@ const ChatItem = styled.div`
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
   background: ${props => {
     if (!props.$active) return 'transparent';
     if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.1)';
@@ -317,88 +318,211 @@ const ChatTitle = styled.div`
   }
 `;
 
-const ShareButton = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+const ChatRenameInput = styled.input`
+  flex: 1;
+  min-width: 0;
+  margin-right: 8px;
+  padding: 4px 8px;
+  font-size: calc(var(--font-size, 1rem) * 0.8125);
+  font-weight: 400;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
+  color: ${props => props.theme.text};
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 8px;
+  opacity: ${props => props.$collapsed ? '0' : '1'};
+  visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  line-height: 1.4;
 
-  ${ChatItem}:hover & {
-      opacity: ${props => props.$collapsed ? '0' : '0.6'};
-      visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-  }
-
-  &:hover {
-    opacity: 1 !important;
-    background-color: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
-  }
-
-  @media (max-width: 768px) {
-      opacity: 0.6;
-      visibility: visible;
+  &:focus {
+    border-color: ${props => props.theme.text}80;
+    box-shadow: 0 0 0 3px ${props => `${props.theme.text}20`};
   }
 `;
 
-const DeleteButton = styled.button`
-  background: none;
-  border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
-  cursor: pointer;
-  padding: 4px;
+const ChatItemActions = styled.div`
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
   flex-shrink: 0;
-
-  ${ChatItem}:hover & {
-      opacity: ${props => props.$collapsed ? '0' : '0.6'};
-      visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
-  }
-
-  &:hover {
-    opacity: 1 !important;
-    background-color: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
-  }
-
-  @media (max-width: 768px) {
-      opacity: 0.6;
-      visibility: visible;
-  }
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0.2s ease;
 
   ${ChatItem}:hover & {
-      opacity: ${props => props.$collapsed ? '0' : '1'};
-      visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
+    opacity: ${props => props.$collapsed ? '0' : '1'};
+    visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   }
 
-  @media (max-width: 768px) {
-      opacity: 1;
-      visibility: visible;
+  ${props => props.$isOpen && `
+    opacity: 1;
+    visibility: visible;
+  `}
+`;
+
+const ChatActionMenuButton = styled.button`
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground};
+  color: ${props => props.theme.text};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background: ${props => props.theme.hover || props.theme.inputBackground};
+    border-color: ${props => props.theme.text}30;
+  }
+
+  img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
   }
 `;
+
+const PinnedIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  svg,
+  img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
+`;
+
+const ActionIcon = styled.span`
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+
+  svg,
+  img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    background: transparent;
+  }
+`;
+
+const DeleteIcon = styled.span`
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  background-image: url('/images/transparentclosedtrashcan.png');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  transition: background-image 0.15s ease;
+`;
+
+const ChatActionMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 170px;
+  background: ${props => props.theme.panelBackground || props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  z-index: 120;
+`;
+
+const ChatActionMenuItem = styled.button`
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: ${props => props.theme.text};
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: ${props => props.theme.hover || 'rgba(0, 0, 0, 0.06)'};
+  }
+
+  &:hover ${DeleteIcon} {
+    background-image: url('/images/transparentopentrashcan.png');
+  }
+`;
+
+const SidebarConfirmationCard = styled.div`
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 260px;
+  background: ${props => props.theme.panelBackground || props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  z-index: 130;
+`;
+
+const SidebarConfirmationTitle = styled.h3`
+  margin: 0;
+  font-size: 1rem;
+`;
+
+const SidebarConfirmationText = styled.p`
+  margin: 8px 0 16px;
+  font-size: 0.9rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}b3`};
+  line-height: 1.4;
+`;
+
+const SidebarConfirmationActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+`;
+
+const SidebarCancelButton = styled.button`
+  border: 1px solid ${props => props.theme.border};
+  background: transparent;
+  color: ${props => props.theme.text};
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+`;
+
+const SidebarDeleteButton = styled.button`
+  border: none;
+  background: #ff4d4f;
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #e04345;
+  }
+`;
+
 
 const BottomSection = styled.div`
   padding: ${props => props.$collapsed ? '8px' : '12px 16px'};
@@ -853,6 +977,8 @@ const Sidebar = ({
   setActiveChat,
   createNewChat,
   deleteChat,
+  togglePinChat,
+  updateChatTitle,
   availableModels = [], // Default to empty array
   selectedModel,
   setSelectedModel,
@@ -878,6 +1004,11 @@ const Sidebar = ({
   const [profilePicture, setProfilePicture] = useState(
     localStorage.getItem('profilePicture') || null
   );
+  const [openChatMenuId, setOpenChatMenuId] = useState(null);
+  const [pendingDeleteChat, setPendingDeleteChat] = useState(null);
+  const [editingChatId, setEditingChatId] = useState(null);
+  const [editingChatTitle, setEditingChatTitle] = useState('');
+  const renameInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -918,6 +1049,26 @@ const Sidebar = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isProfileDropdownOpen, isModelDropdownOpen]);
+
+  useEffect(() => {
+    if (!openChatMenuId && !pendingDeleteChat) return undefined;
+    const handleClickOutside = (event) => {
+      if (event.target.closest('[data-chat-menu]') || event.target.closest('[data-chat-confirm]')) {
+        return;
+      }
+      setOpenChatMenuId(null);
+      setPendingDeleteChat(null);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openChatMenuId, pendingDeleteChat]);
+
+  useEffect(() => {
+    if (editingChatId && renameInputRef.current) {
+      renameInputRef.current.focus();
+      renameInputRef.current.select();
+    }
+  }, [editingChatId]);
 
   // Toggle mobile content visibility
   const toggleMobileExpanded = () => {
@@ -964,6 +1115,96 @@ const Sidebar = ({
       setCopyStatus(t('sidebar.copyFailure'));
       setTimeout(() => setCopyStatus(''), 3000);
     }
+  };
+
+  const toggleChatMenu = (chatId, event) => {
+    event.stopPropagation();
+    setPendingDeleteChat(null);
+    setOpenChatMenuId(prev => prev === chatId ? null : chatId);
+  };
+
+  const handleShareFromMenu = (chatId, event) => {
+    event.stopPropagation();
+    setOpenChatMenuId(null);
+    handleShareChat(chatId);
+  };
+
+  const handlePinFromMenu = (chatId, event) => {
+    event.stopPropagation();
+    setOpenChatMenuId(null);
+    setPendingDeleteChat(null);
+    if (togglePinChat) {
+      togglePinChat(chatId);
+    }
+  };
+
+  const cancelRename = useCallback(() => {
+    setEditingChatId(null);
+    setEditingChatTitle('');
+  }, []);
+
+  const commitRename = useCallback(() => {
+    if (!editingChatId) return;
+    const trimmed = editingChatTitle.trim();
+    if (trimmed.length > 0 && updateChatTitle) {
+      updateChatTitle(editingChatId, trimmed);
+    }
+    cancelRename();
+  }, [editingChatId, editingChatTitle, updateChatTitle, cancelRename]);
+
+  const handleRenameInputChange = useCallback((event) => {
+    setEditingChatTitle(event.target.value);
+  }, []);
+
+  const handleRenameInputKeyDown = useCallback((event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitRename();
+    } else if (event.key === 'Escape') {
+      event.stopPropagation();
+      cancelRename();
+    }
+  }, [commitRename, cancelRename]);
+
+  const handleRenameInputBlur = useCallback(() => {
+    commitRename();
+  }, [commitRename]);
+
+  const startChatRename = useCallback((chatId, chatTitle) => {
+    if (!chatId) return;
+    setEditingChatId(chatId);
+    setEditingChatTitle(
+      chatTitle &&
+        chatTitle.trim().length > 0
+        ? chatTitle
+        : t('chat.list.untitled', 'Chat {{id}}', { id: chatId.substring(0, 4) })
+    );
+  }, [t]);
+
+  const handleRenameFromMenu = (chatId, chatTitle, event) => {
+    event.stopPropagation();
+    setOpenChatMenuId(null);
+    setPendingDeleteChat(null);
+    startChatRename(chatId, chatTitle);
+  };
+
+  const handleDeleteFromMenu = (chatId, chatTitle, event) => {
+    event.stopPropagation();
+    setOpenChatMenuId(null);
+    setPendingDeleteChat({ id: chatId, title: chatTitle });
+  };
+
+  const confirmSidebarDelete = () => {
+    if (pendingDeleteChat) {
+      deleteChat(pendingDeleteChat.id);
+      setPendingDeleteChat(null);
+      setOpenChatMenuId(null);
+    }
+  };
+
+  const cancelSidebarDelete = () => {
+    setPendingDeleteChat(null);
+    setOpenChatMenuId(null);
   };
 
   // Handle search functionality
@@ -1240,6 +1481,13 @@ const Sidebar = ({
                 )}
                 {filteredChats.map(chat => {
                   const chatTitle = getChatTitle(chat);
+                  const isMenuOpen = openChatMenuId === chat.id;
+                  const isDeletePending = pendingDeleteChat?.id === chat.id;
+                  const pinMenuLabel = chat.pinned
+                    ? t('chat.actions.unpin', 'Unpin chat')
+                    : t('chat.actions.pin', 'Pin chat');
+                  const pinIconSrc = chat.pinned ? '/images/transparentunpin.png' : '/images/transparentpin.png';
+                  const isRenaming = editingChatId === chat.id;
                   return (
                   <ChatItem
                     key={chat.id}
@@ -1249,41 +1497,101 @@ const Sidebar = ({
                     title={chatTitle}
                   >
                     {/* TODO: Add chat icon if desired */}
-                    <ChatTitle $collapsed={$collapsed}>{chatTitle}</ChatTitle>
-                    {/* Container for action buttons */}
-                    <ButtonContainer $collapsed={$collapsed}>
-                      <ShareButton
-                        title={t('sidebar.button.share')}
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent chat selection
-                          handleShareChat(chat.id);
-                        }}
+                    {isRenaming ? (
+                      <ChatRenameInput
+                        ref={renameInputRef}
+                        value={editingChatTitle}
+                        onChange={handleRenameInputChange}
+                        onKeyDown={handleRenameInputKeyDown}
+                        onBlur={handleRenameInputBlur}
+                        placeholder={t('chat.actions.renamePrompt', 'Enter a new name for this chat')}
                         $collapsed={$collapsed}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label={t('chat.actions.rename', 'Rename chat')}
+                      />
+                    ) : (
+                      <ChatTitle $collapsed={$collapsed}>{chatTitle}</ChatTitle>
+                    )}
+                    {chat.pinned && (
+                      <PinnedIndicator title={t('chat.actions.pinned', 'Pinned')}>
+                        <img src="/images/transparentfilledpin.png" alt={t('chat.actions.pinned', 'Pinned')} />
+                      </PinnedIndicator>
+                    )}
+                    <ChatItemActions
+                      $collapsed={$collapsed}
+                      $isOpen={isMenuOpen || isDeletePending}
+                      data-chat-menu={chat.id}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ChatActionMenuButton
+                        type="button"
+                        title={t('chat.actions.moreOptions')}
+                        onClick={(event) => toggleChatMenu(chat.id, event)}
+                        data-chat-menu
                       >
-                        {/* Share Icon (Feather Icons) */}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
-                          <polyline points="16 6 12 2 8 6"></polyline>
-                          <line x1="12" y1="2" x2="12" y2="15"></line>
-                        </svg>
-                      </ShareButton>
-                      <DeleteButton
-                        title={t('sidebar.button.delete')}
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent chat selection
-                          deleteChat(chat.id);
-                        }}
-                        $collapsed={$collapsed}
-                      >
-                        {/* Trash Icon (Feather Icons) */}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2v2"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
-                      </DeleteButton>
-                    </ButtonContainer>
+                        <img src="/images/transparentmenu.png" alt={t('chat.actions.moreOptions', 'Chat actions')} />
+                      </ChatActionMenuButton>
+                      {isMenuOpen && (
+                        <ChatActionMenu data-chat-menu>
+                          <ChatActionMenuItem
+                            type="button"
+                            onClick={(event) => handleRenameFromMenu(chat.id, chatTitle, event)}
+                          >
+                            <ActionIcon>
+                              <img src="/images/transparentrename.png" alt={t('chat.actions.rename', 'Rename chat')} />
+                            </ActionIcon>
+                            <span>{t('chat.actions.rename', 'Rename chat')}</span>
+                          </ChatActionMenuItem>
+                          <ChatActionMenuItem
+                            type="button"
+                            onClick={(event) => handlePinFromMenu(chat.id, event)}
+                          >
+                            <ActionIcon>
+                              <img src={pinIconSrc} alt={pinMenuLabel} />
+                            </ActionIcon>
+                            <span>{pinMenuLabel}</span>
+                          </ChatActionMenuItem>
+                          <ChatActionMenuItem
+                            type="button"
+                            onClick={(event) => handleShareFromMenu(chat.id, event)}
+                          >
+                            <ActionIcon>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                                <polyline points="16 6 12 2 8 6"></polyline>
+                                <line x1="12" y1="2" x2="12" y2="15"></line>
+                              </svg>
+                            </ActionIcon>
+                            <span>{t('sidebar.button.share')}</span>
+                          </ChatActionMenuItem>
+                          <ChatActionMenuItem
+                            type="button"
+                            onClick={(event) => handleDeleteFromMenu(chat.id, chatTitle, event)}
+                          >
+                            <DeleteIcon />
+                            <span>{t('sidebar.button.delete')}</span>
+                          </ChatActionMenuItem>
+                        </ChatActionMenu>
+                      )}
+                      {isDeletePending && (
+                        <SidebarConfirmationCard data-chat-confirm>
+                          <SidebarConfirmationTitle>
+                            {t('chat.actions.deleteConfirmationTitle', 'Delete chat?')}
+                          </SidebarConfirmationTitle>
+                          <SidebarConfirmationText>
+                            {t('chat.actions.deleteConfirmationSubtitle', 'This will delete {{chatName}}.', { chatName: pendingDeleteChat?.title })}
+                          </SidebarConfirmationText>
+                          <SidebarConfirmationActions>
+                            <SidebarCancelButton type="button" onClick={cancelSidebarDelete}>
+                              {t('common.cancel')}
+                            </SidebarCancelButton>
+                            <SidebarDeleteButton type="button" onClick={confirmSidebarDelete}>
+                              {t('chat.actions.deleteConfirmationDelete', 'Delete chat')}
+                            </SidebarDeleteButton>
+                          </SidebarConfirmationActions>
+                        </SidebarConfirmationCard>
+                      )}
+                    </ChatItemActions>
                   </ChatItem>
                   );
                 })}
