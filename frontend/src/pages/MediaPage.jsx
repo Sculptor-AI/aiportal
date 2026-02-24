@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
 import { generateVideo, pollVideoStatus, getVideoDownloadUrl } from '../services/videoService';
@@ -13,7 +13,7 @@ const fadeIn = keyframes`
   to { opacity: 1; }
 `;
 
-const slideUp = keyframes`
+const riseUp = keyframes`
   from {
     opacity: 0;
     transform: translateY(24px);
@@ -35,19 +35,21 @@ const scaleIn = keyframes`
   }
 `;
 
-const float = keyframes`
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+const drift = keyframes`
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+    opacity: 1;
+  }
 `;
 
-const shimmer = keyframes`
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-`;
-
-const pulse = keyframes`
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+const skeletonShimmer = keyframes`
+  0% { transform: translateX(-100%); opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { transform: translateX(200%); opacity: 0.5; }
 `;
 
 const spin = keyframes`
@@ -55,10 +57,16 @@ const spin = keyframes`
   100% { transform: rotate(360deg); }
 `;
 
-const glow = keyframes`
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
+const subtleGlow = keyframes`
+  0%, 100% { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); }
+  50% { box-shadow: 0 12px 42px rgba(0, 0, 0, 0.2); }
 `;
+
+const PROMPT_TEMPLATES = [
+  'A cinematic close-up of a rainy neon metropolis at night, ultra-realistic, dramatic lighting',
+  'A minimalist product demo with clean white studio setup, soft shadows, product in motion',
+  'Vintage sci-fi spaceship launch sequence, sweeping camera movement, editorial motion',
+];
 
 // ============================================================================
 // MAIN LAYOUT
@@ -67,10 +75,15 @@ const glow = keyframes`
 const PageContainer = styled.div`
   flex: 1;
   min-height: 100vh;
+  position: relative;
   color: ${props => props.theme.text};
   overflow-y: auto;
   overflow-x: hidden;
   transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  background:
+    radial-gradient(circle at 10% 15%, rgba(255, 255, 255, 0.16), transparent 40%),
+    radial-gradient(circle at 85% 5%, rgba(255, 255, 255, 0.10), transparent 35%),
+    linear-gradient(155deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.03));
 
   width: ${props => props.$collapsed ? '100%' : 'calc(100% - 320px)'};
   margin-left: ${props => props.$collapsed ? '0' : '320px'};
@@ -82,9 +95,11 @@ const PageContainer = styled.div`
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1400px;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 48px 40px 80px;
+  padding: 42px 44px 80px;
+  position: relative;
+  z-index: 1;
 
   @media (max-width: 768px) {
     padding: 32px 20px 60px;
@@ -116,7 +131,7 @@ const TitleSection = styled.div`
 `;
 
 const PageTitle = styled.h1`
-  font-size: 2.25rem;
+  font-size: 2.2rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
@@ -133,15 +148,16 @@ const PageTitle = styled.h1`
 const BetaTag = styled.span`
   font-size: 0.75rem;
   padding: 4px 10px;
-  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
-  color: ${props => props.theme.accentColor || props.theme.primary};
+  background: rgba(255, 255, 255, 0.15);
+  color: ${props => props.theme.text};
   border-radius: 20px;
   font-weight: 600;
   letter-spacing: 0.02em;
+  text-transform: uppercase;
 `;
 
 const Subtitle = styled.p`
-  font-size: 0.9375rem;
+  font-size: 0.96rem;
   color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   margin: 0;
   letter-spacing: -0.01em;
@@ -152,15 +168,18 @@ const Subtitle = styled.p`
 // ============================================================================
 
 const PromptCard = styled.div`
-  background: ${props => props.theme.sidebar};
+  position: relative;
+  background: ${props => `linear-gradient(150deg, ${props.theme.sidebar} 0%, ${props.theme.background} 120%)`};
   border: 1px solid ${props => props.theme.border};
   border-radius: 20px;
-  padding: 32px;
+  padding: 30px;
   margin-bottom: 40px;
-  animation: ${slideUp} 0.5s ease-out;
+  animation: ${riseUp} 0.45s ease-out, ${subtleGlow} 7s ease-in-out infinite;
   animation-delay: 0.1s;
   animation-fill-mode: backwards;
   transition: border-color 0.3s ease;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
 
   ${props => props.$generating && css`
     border-color: ${props.theme.accentColor || props.theme.primary}60;
@@ -175,9 +194,9 @@ const PromptHeader = styled.div`
 `;
 
 const PromptIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
   background: ${props => props.theme.primary};
   display: flex;
   align-items: center;
@@ -199,22 +218,22 @@ const PromptTitle = styled.h2`
 
 const TextArea = styled.textarea`
   width: 100%;
-  min-height: 140px;
-  padding: 16px 20px;
+  min-height: 132px;
+  padding: 16px 18px;
   background: ${props => props.theme.inputBackground || props.theme.background};
   border: 1px solid ${props => props.theme.border};
   border-radius: 16px;
-  color: ${props => props.theme.text};
   font-size: 1rem;
   line-height: 1.6;
   resize: vertical;
   transition: all 0.2s ease;
   font-family: inherit;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 
   &:focus {
     outline: none;
     border-color: ${props => props.theme.accentColor || props.theme.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}18`};
   }
 
   &::placeholder {
@@ -247,6 +266,33 @@ const SettingGroup = styled.div`
   min-width: 180px;
 `;
 
+const TemplateStrip = styled.div`
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+`;
+
+const TemplateTag = styled.button`
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground || props.theme.background};
+  color: ${props => props.theme.text};
+  font-size: 0.78rem;
+  letter-spacing: -0.005em;
+  line-height: 1.3;
+  padding: 9px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: ${props => props.theme.text};
+    transform: translateY(-1px);
+    color: ${props => props.theme.text};
+  }
+`;
+
 const Label = styled.label`
   font-size: 0.8125rem;
   font-weight: 600;
@@ -256,11 +302,11 @@ const Label = styled.label`
 `;
 
 const Select = styled.select`
-  padding: 12px 16px;
+  padding: 12px 40px 12px 14px;
   background: ${props => props.theme.inputBackground || props.theme.background};
+  color: ${props => props.theme.text};
   border: 1px solid ${props => props.theme.border};
   border-radius: 12px;
-  color: ${props => props.theme.text};
   font-size: 0.9375rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -288,8 +334,8 @@ const GenerateButton = styled.button`
   justify-content: center;
   gap: 10px;
   padding: 14px 28px;
-  background: ${props => props.theme.primary};
-  color: ${props => props.theme.primaryForeground || 'white'};
+  background: linear-gradient(120deg, ${props => props.theme.primary}, ${props => props.theme.accentColor || props.theme.primary});
+  color: #0f172a;
   border: none;
   border-radius: 14px;
   font-size: 1rem;
@@ -301,7 +347,7 @@ const GenerateButton = styled.button`
   min-width: 180px;
 
   &:hover:not(:disabled) {
-    filter: brightness(1.1);
+    filter: translateY(-1px) saturate(1.1);
   }
 
   &:active:not(:disabled) {
@@ -329,7 +375,7 @@ const Spinner = styled.div`
   width: 18px;
   height: 18px;
   border: 2px solid rgba(255,255,255,0.3);
-  border-top: 2px solid white;
+  border-top: 2px solid ${props => props.theme.primaryForeground || '#0f172a'};
   border-radius: 50%;
   animation: ${spin} 0.8s linear infinite;
 `;
@@ -343,7 +389,7 @@ const GalleryHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  animation: ${slideUp} 0.5s ease-out;
+  animation: ${riseUp} 0.5s ease-out;
   animation-delay: 0.2s;
   animation-fill-mode: backwards;
 `;
@@ -361,7 +407,7 @@ const VideoCount = styled.span`
   font-size: 0.875rem;
   font-weight: 500;
   padding: 4px 10px;
-  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+  background: rgba(15, 23, 42, 0.1);
   color: ${props => props.theme.accentColor || props.theme.primary};
   border-radius: 20px;
 `;
@@ -394,7 +440,7 @@ const ClearButton = styled.button`
 
 const VideoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 24px;
 
   @media (max-width: 640px) {
@@ -408,7 +454,7 @@ const VideoCard = styled.article`
   border: 1px solid ${props => props.theme.border};
   border-radius: 16px;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.28s ease, border-color 0.28s ease;
   animation: ${scaleIn} 0.4s ease-out;
   animation-delay: ${props => props.$index * 0.05}s;
   animation-fill-mode: backwards;
@@ -426,7 +472,7 @@ const VideoCard = styled.article`
 
 const VideoPreview = styled.div`
   position: relative;
-  background: ${props => props.theme.isDark ? '#0a0a0a' : '#000'};
+  background: ${props => props.theme.text === '#fff' ? '#0a0a0a' : '#0f172a'};
   aspect-ratio: 16/9;
   overflow: hidden;
 `;
@@ -474,13 +520,7 @@ const ProgressBar = styled.div`
   width: 30%;
   background: ${props => props.theme.primary};
   border-radius: 2px;
-  animation: loading 2s infinite ease-in-out;
-  
-  @keyframes loading {
-    0% { transform: translateX(-100%); width: 30%; }
-    50% { width: 60%; }
-    100% { transform: translateX(200%); width: 30%; }
-  }
+  animation: ${skeletonShimmer} 2s infinite ease-in-out;
 `;
 
 const CardContent = styled.div`
@@ -518,6 +558,7 @@ const StatusBadge = styled.span`
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
   background: ${props => {
     switch (props.$status) {
       case 'completed': return 'rgba(34, 197, 94, 0.15)';
@@ -581,6 +622,9 @@ const EmptyState = styled.div`
   padding: 80px 40px;
   text-align: center;
   animation: ${fadeIn} 0.5s ease-out;
+  border: 1px dashed ${props => props.theme.border};
+  border-radius: 16px;
+  background: ${props => props.theme.sidebar};
 `;
 
 const EmptyIcon = styled.div`
@@ -592,7 +636,7 @@ const EmptyIcon = styled.div`
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
-  animation: ${float} 3s ease-in-out infinite;
+  animation: ${drift} 3s ease-in-out infinite;
 
   svg {
     width: 56px;
@@ -742,6 +786,11 @@ const MediaPage = ({ collapsed }) => {
     }
   };
 
+  const handleUseTemplate = (template) => {
+    if (isGenerating) return;
+    setPrompt(template);
+  };
+
   return (
     <PageContainer $collapsed={collapsed}>
       <ContentWrapper>
@@ -772,6 +821,13 @@ const MediaPage = ({ collapsed }) => {
             onChange={e => setPrompt(e.target.value)}
             disabled={isGenerating}
           />
+          <TemplateStrip>
+            {PROMPT_TEMPLATES.map((template) => (
+              <TemplateTag key={template} onClick={() => handleUseTemplate(template)} disabled={isGenerating}>
+                {template}
+              </TemplateTag>
+            ))}
+          </TemplateStrip>
 
           <SettingsRow>
             <SettingGroup>

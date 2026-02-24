@@ -563,61 +563,64 @@ const processItalic = (text, theme = {}) => {
 };
 
 const CodeBlock = styled.div`
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  border-radius: 12px;
-  margin: 12px 0;
+  background: ${props => props.theme.name === 'light' ? '#f8f9fb' : 'rgba(24, 24, 27, 0.95)'};
+  border-radius: 10px;
+  margin: 14px 0;
   overflow: hidden;
-  border: 1px solid ${props => props.theme.border};
+  border: 1px solid ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'};
   max-width: 100%;
   width: 100%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 `;
 
 const CodeHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
-  border-bottom: 1px solid ${props => props.theme.border};
+  align-items: center;
+  padding: 8px 14px;
+  background: ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)'};
+  border-bottom: 1px solid ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'};
 `;
 
 const CodeLanguage = styled.div`
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: ${props => props.theme.text};
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: ${props => `${props.theme.text}88`};
+  letter-spacing: 0.01em;
+  text-transform: lowercase;
 `;
 
 const CopyButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.primary.split(',')[0].replace('linear-gradient(145deg', '').trim()};
-  font-size: 0.85rem;
+  color: ${props => `${props.theme.text}66`};
+  font-size: 0.78rem;
   cursor: pointer;
-  padding: 0;
+  padding: 2px 6px;
   font-weight: 500;
+  border-radius: 4px;
+  transition: all 0.15s ease;
   
   &:hover {
-    text-decoration: underline;
+    color: ${props => props.theme.text};
+    background: ${props => `${props.theme.text}0a`};
   }
 `;
 
 const Pre = styled.pre`
   margin: 0;
-  padding: 14px;
+  padding: 14px 16px;
   overflow-x: auto;
-  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.84rem;
+  line-height: 1.6;
   max-width: 100%;
   word-wrap: normal;
   white-space: pre;
   text-overflow: ellipsis;
+  color: ${props => props.theme.text};
   
-  /* Stylish scrollbar */
   &::-webkit-scrollbar {
-    height: 6px;
+    height: 5px;
   }
   
   &::-webkit-scrollbar-track {
@@ -625,7 +628,7 @@ const Pre = styled.pre`
   }
   
   &::-webkit-scrollbar-thumb {
-    background: ${props => props.theme.border};
+    background: ${props => `${props.theme.text}18`};
     border-radius: 3px;
   }
 `;
@@ -635,23 +638,23 @@ const Message = styled.div`
   flex-direction: ${props => props.$alignment === 'right' ? 'row-reverse' : 'row'};
   align-items: flex-start;
   justify-content: flex-start;
-  margin-bottom: var(--message-spacing, 24px);
-  max-width: 100%;
+  margin-bottom: var(--message-spacing, 28px);
+  max-width: 780px;
   width: 100%;
-  padding-left: ${props => props.$alignment === 'left' ? '12px' : '0'};
-  padding-right: ${props => props.$alignment === 'right' ? '12px' : '0'};
+  padding-left: ${props => props.$alignment === 'left' ? '16px' : '16px'};
+  padding-right: ${props => props.$alignment === 'right' ? '16px' : '16px'};
 `;
 
 const Avatar = styled.div`
-  width: ${props => props.role === 'user' ? '24px' : '36px'};
-  height: ${props => props.role === 'user' ? '24px' : '36px'};
-  border-radius: 50%;
+  width: ${props => props.role === 'user' ? '26px' : '28px'};
+  height: ${props => props.role === 'user' ? '26px' : '28px'};
+  border-radius: ${props => props.role === 'user' ? '50%' : '8px'};
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: ${props => props.$alignment === 'right' ? '0' : '10px'};
-  margin-left: ${props => props.$alignment === 'left' ? '0' : '10px'};
-  margin-top: 4px;
+  margin-right: ${props => props.$alignment === 'right' ? '0' : '12px'};
+  margin-left: ${props => props.$alignment === 'left' ? '0' : '12px'};
+  margin-top: 2px;
   font-weight: 600;
   flex-shrink: 0;
   background: ${props => props.$profilePicture
@@ -659,40 +662,34 @@ const Avatar = styled.div`
     : (props.$useModelIcon
       ? 'transparent'
       : (props.role === 'user'
-        ? props.theme.buttonGradient
+        ? `${props.theme.text}12`
         : props.theme.secondary))};
-  color: ${props => props.$profilePicture ? 'transparent' : (props.role === 'user' ? props.theme.text : 'white')};
+  color: ${props => props.$profilePicture ? 'transparent' : (props.role === 'user' ? `${props.theme.text}70` : 'white')};
   transition: all 0.2s ease;
-  box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
-  opacity: ${props => props.role === 'user' ? '0.6' : '1'};
+  box-shadow: none;
+  opacity: 1;
   
   &:hover {
-    transform: ${props => props.role === 'user' ? 'none' : 'scale(1.05)'};
-    box-shadow: ${props => props.role === 'user' ? 'none' : '0 3px 10px rgba(0, 0, 0, 0.15)'};
-    opacity: ${props => props.role === 'user' ? '0.8' : '1'};
+    opacity: 0.85;
   }
   
   svg {
-    width: ${props => props.role === 'user' ? '16px' : '20px'};
-    height: ${props => props.role === 'user' ? '16px' : '20px'};
+    width: ${props => props.role === 'user' ? '14px' : '18px'};
+    height: ${props => props.role === 'user' ? '14px' : '18px'};
   }
 `;
 
 const MessageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  max-width: ${props => props.role === 'user' ? '70%' : 'calc(100% - 60px)'};
+  max-width: ${props => props.role === 'user' ? '72%' : 'calc(100% - 52px)'};
   flex: ${props => props.role === 'user' ? '0 1 auto' : '1'};
   align-items: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   
   @media (max-width: 768px) {
-    max-width: ${props => props.role === 'user' ? '85%' : 'calc(100% - 60px)'};
+    max-width: ${props => props.role === 'user' ? '85%' : 'calc(100% - 52px)'};
   }
 `;
-
-const DEFAULT_USER_ACCENT_BG = 'rgba(148, 163, 184, 0.18)';
-const DEFAULT_AI_ACCENT_BG = 'rgba(148, 163, 184, 0.1)';
-const LIGHT_THEME_USER_BG = 'rgba(59, 130, 246, 0.15)';
 
 const isCustomAccent = (theme) => theme?.accentChoice && theme.accentChoice !== 'theme';
 
@@ -700,20 +697,23 @@ const getBubbleBackground = (role, theme) => {
   const customAccent = isCustomAccent(theme);
   if (role === 'user') {
     if (customAccent) return theme.accentBackground;
-    return theme.name === 'light' ? LIGHT_THEME_USER_BG : DEFAULT_USER_ACCENT_BG;
+    return theme.name === 'light' ? `${theme.text}08` : `${theme.text}0c`;
   }
-  return customAccent ? theme.accentBackground : DEFAULT_AI_ACCENT_BG;
+  return 'transparent';
 };
 
-const getBubbleBorderColor = (theme) => isCustomAccent(theme) ? theme.accentColor : theme.border;
+const getBubbleBorderColor = (role, theme) => {
+  if (role !== 'user') return 'transparent';
+  return isCustomAccent(theme) ? theme.accentColor : theme.border;
+};
 
 const getBubbleTextColor = (theme) => isCustomAccent(theme) ? '#FFFFFF' : theme.text;
 
 const Content = styled.div`
-  width: fit-content;
+  width: ${props => props.role === 'user' ? 'fit-content' : '100%'};
   white-space: pre-wrap;
   color: ${props => getBubbleTextColor(props.theme)};
-  line-height: var(--line-height, 1.6);
+  line-height: var(--line-height, 1.65);
   overflow: hidden;
   flex: 1;
   margin-left: ${props => props.$alignment === 'right' ? 'auto' : '0'};
@@ -722,16 +722,23 @@ const Content = styled.div`
   text-align: ${props => props.$alignment === 'right' ? 'right' : 'left'};
   direction: ltr;
   unicode-bidi: plaintext;
-  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
   background: ${props => getBubbleBackground(props.role, props.theme)};
-  border: var(--bubble-border, 1px solid ${props => getBubbleBorderColor(props.theme)});
-  border-radius: var(--bubble-radius, 18px);
-  padding: var(--bubble-padding-vertical, 14px) var(--bubble-padding-horizontal, 18px);
-  box-shadow: var(--bubble-box-shadow, 0 2px 10px ${props => props.theme.shadow});
-  backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
-  -webkit-backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
+  border: ${props => props.role === 'user'
+    ? `var(--bubble-border, 1px solid ${getBubbleBorderColor(props.role, props.theme)})`
+    : 'none'};
+  border-radius: ${props => props.role === 'user'
+    ? 'var(--bubble-radius, 20px)'
+    : '0'};
+  padding: ${props => props.role === 'user'
+    ? 'var(--bubble-padding-vertical, 12px) var(--bubble-padding-horizontal, 18px)'
+    : '2px 0'};
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-size: 0.94rem;
+  letter-spacing: -0.008em;
   
-  /* Special border for bisexual theme */
   ${props => props.theme.name === 'bisexual' && props.role === 'user' && `
     border: none !important;
     &::before {
@@ -742,28 +749,26 @@ const Content = styled.div`
       right: -1px;
       bottom: -1px;
       background: linear-gradient(145deg, #D60270, #9B4F96);
-      border-radius: 19px;
+      border-radius: 21px;
       z-index: -1;
       opacity: 0.3;
     }
   `}
   
-  /* Force code blocks to stay within container width */
   & > ${CodeBlock} {
     max-width: 100%;
     text-align: left;
     direction: ltr;
   }
   
-  /* Style for AI model signatures */
   & > em:last-child {
     display: block;
     margin-top: 12px;
-    opacity: 0.7;
-    font-size: 0.85em;
+    opacity: 0.5;
+    font-size: 0.82em;
     text-align: right;
     font-style: normal;
-    color: ${props => props.theme.text}aa;
+    color: ${props => props.theme.text}99;
     ${props => props.theme.name === 'bisexual' && `
       background: ${props.theme.accentGradient};
       -webkit-background-clip: text;
@@ -778,52 +783,60 @@ const Content = styled.div`
 `;
 
 const Timestamp = styled.div`
-  font-size: 0.75rem;
-  color: ${props => props.theme.text}80;
+  font-size: 0.72rem;
+  color: ${props => `${props.theme.text}55`};
   display: flex;
   align-items: center;
+  letter-spacing: 0.01em;
 `;
 
 const MessageActions = styled.div`
   display: flex;
   justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 4px;
+  margin-top: 4px;
   padding: 0;
-  opacity: 1;
+  opacity: 0.7;
   width: ${props => props.$alignment === 'right' ? '100%' : 'fit-content'};
   max-width: 100%;
   align-self: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
+  transition: opacity 0.15s ease;
+  
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const ActionButton = styled.button`
   background: none;
   border: none;
-  font-size: 0.8rem;
-  color: ${props => props.theme.text}60;
+  font-size: 0.78rem;
+  color: ${props => `${props.theme.text}50`};
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
   padding: 4px 8px;
-  border-radius: 8px;
-  transition: all 0.2s;
+  border-radius: 6px;
+  transition: all 0.15s ease;
   
   &:hover {
-    background: ${props => props.theme.text}10;
-    color: ${props => props.theme.text}90;
+    background: ${props => `${props.theme.text}08`};
+    color: ${props => `${props.theme.text}90`};
   }
   
   svg {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 `;
 
 const ErrorMessage = styled(Content)`
-  background: rgba(255, 240, 240, 0.8);
-  border: 1px solid rgba(255, 200, 200, 0.4);
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
 `;
 
 const pulse = keyframes`
@@ -871,13 +884,14 @@ const Italic = styled.span`
 `;
 
 const Heading1 = styled.h1`
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin: 1.5rem 0 1rem 0;
+  font-size: 1.55rem;
+  font-weight: 650;
+  margin: 1.5rem 0 0.85rem 0;
   color: ${props => props.theme.text};
-  border-bottom: 2px solid ${props => props.theme.border};
-  padding-bottom: 0.5rem;
+  border-bottom: 1px solid ${props => props.theme.border};
+  padding-bottom: 0.45rem;
   line-height: 1.3;
+  letter-spacing: -0.025em;
   
   &:first-child {
     margin-top: 0;
@@ -885,13 +899,12 @@ const Heading1 = styled.h1`
 `;
 
 const Heading2 = styled.h2`
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 1.3rem 0 0.8rem 0;
+  font-size: 1.3rem;
+  font-weight: 620;
+  margin: 1.3rem 0 0.7rem 0;
   color: ${props => props.theme.text};
-  border-bottom: 1px solid ${props => props.theme.border};
-  padding-bottom: 0.4rem;
-  line-height: 1.3;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
   
   &:first-child {
     margin-top: 0;
@@ -899,11 +912,12 @@ const Heading2 = styled.h2`
 `;
 
 const Heading3 = styled.h3`
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  margin: 1.1rem 0 0.6rem 0;
+  margin: 1.1rem 0 0.5rem 0;
   color: ${props => props.theme.text};
-  line-height: 1.3;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
   
   &:first-child {
     margin-top: 0;
@@ -947,8 +961,8 @@ const Heading6 = styled.h6`
 `;
 
 const Paragraph = styled.p`
-  margin: 0.8rem 0;
-  line-height: 1.6;
+  margin: 0.65rem 0;
+  line-height: 1.65;
   color: ${props => props.theme.text};
   
   &:first-child {
@@ -963,22 +977,22 @@ const Paragraph = styled.p`
 const BulletList = styled.ul`
   list-style-type: none;
   padding-left: 0;
-  margin: 0.8rem 0;
+  margin: 0.7rem 0;
   
   li {
     position: relative;
-    padding-left: 1.5em;
-    margin: 0.5em 0;
-    line-height: 1.6;
+    padding-left: 1.4em;
+    margin: 0.4em 0;
+    line-height: 1.65;
     color: ${props => props.theme.text};
     
     &:before {
       content: "•";
       position: absolute;
-      left: 0.3em;
-      color: ${props => props.theme.primary};
+      left: 0.2em;
+      color: ${props => `${props.theme.text}44`};
       font-weight: bold;
-      font-size: 1.2em;
+      font-size: 1.1em;
     }
   }
 `;
@@ -995,28 +1009,29 @@ const NumberedList = styled.ol`
 `;
 
 const Blockquote = styled.blockquote`
-  border-left: 4px solid ${props => props.theme.primary};
+  border-left: 3px solid ${props => `${props.theme.text}22`};
   margin: 1rem 0;
-  padding: 0.8rem 0 0.8rem 1.2rem;
-  background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
-  border-radius: 0 8px 8px 0;
+  padding: 0.6rem 0 0.6rem 1rem;
+  background: transparent;
+  border-radius: 0;
   font-style: italic;
-  color: ${props => props.theme.text};
+  color: ${props => `${props.theme.text}cc`};
   
   p {
     margin: 0;
-    line-height: 1.6;
+    line-height: 1.65;
   }
 `;
 
 const Link = styled.a`
-  color: ${props => props.theme.primary};
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-bottom-color 0.2s ease;
+  color: ${props => props.theme.accentColor || props.theme.primary};
+  text-decoration: underline;
+  text-decoration-color: ${props => `${props.theme.accentColor || props.theme.primary}44`};
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s ease;
   
   &:hover {
-    border-bottom-color: ${props => props.theme.primary};
+    text-decoration-color: ${props => props.theme.accentColor || props.theme.primary};
   }
 `;
 
@@ -1027,22 +1042,23 @@ const Table = styled.table`
   border: 1px solid ${props => props.theme.border};
   border-radius: 8px;
   overflow: hidden;
-  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: transparent;
+  font-size: 0.88rem;
 `;
 
 const TableHeader = styled.th`
-  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
-  padding: 12px;
+  background: ${props => `${props.theme.text}06`};
+  padding: 10px 14px;
   text-align: left;
   font-weight: 600;
-  color: ${props => props.theme.text};
+  font-size: 0.82rem;
+  color: ${props => `${props.theme.text}cc`};
   border-bottom: 1px solid ${props => props.theme.border};
+  letter-spacing: 0.01em;
 `;
 
 const TableCell = styled.td`
-  padding: 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid ${props => props.theme.border};
   color: ${props => props.theme.text};
   
@@ -1057,7 +1073,7 @@ const TableRow = styled.tr`
   }
   
   &:hover {
-    background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
+    background: ${props => `${props.theme.text}04`};
   }
 `;
 
@@ -1208,12 +1224,14 @@ const ThinkingDropdownContainer = styled.div`
 const ThinkingHeader = styled.div`
   display: flex;
   align-items: center;
-  padding: 10px 0;
+  padding: 8px 0;
   cursor: pointer;
   user-select: none;
   font-weight: 500;
-  color: ${props => props.theme.text}aa;
+  font-size: 0.85rem;
+  color: ${props => `${props.theme.text}88`};
   justify-content: flex-start;
+  transition: color 0.15s ease;
   
   &:hover {
     color: ${props => props.theme.text};
@@ -1231,15 +1249,17 @@ const ThinkingArrow = styled.span`
 `;
 
 const ThinkingContent = styled.div`
-  padding: ${props => props.expanded ? '10px 0 10px 16px' : '0'};
+  padding: ${props => props.expanded ? '8px 0 8px 14px' : '0'};
   max-height: ${props => props.expanded ? '1000px' : '0'};
   opacity: ${props => props.expanded ? '1' : '0'};
   transition: all 0.3s ease;
   overflow: hidden;
   border-top: none;
-  margin-bottom: ${props => props.expanded ? '15px' : '0'};
-  margin-left: 10px;
-  border-left: ${props => props.expanded ? `2px solid ${props.theme.text}30` : 'none'};
+  margin-bottom: ${props => props.expanded ? '12px' : '0'};
+  margin-left: 8px;
+  border-left: ${props => props.expanded ? `2px solid ${props.theme.text}18` : 'none'};
+  font-size: 0.88rem;
+  color: ${props => `${props.theme.text}cc`};
 `;
 
 const ToolActivitySection = styled.div`

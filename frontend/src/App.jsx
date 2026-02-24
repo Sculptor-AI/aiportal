@@ -91,91 +91,93 @@ const FloatingMenuButton = styled.button`
 // Main Greeting Component
 const MainGreeting = styled.div`
   position: fixed;
-  top: ${props => props.$toolbarOpen ? '25%' : '28%'}; /* Moved up from 32%/35% */
+  top: ${props => props.$toolbarOpen ? '25%' : '28%'};
   left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160; // Increased from 140px to 160px to account for sidebar's 20px left margin
+    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160;
     return `calc(50% + ${sidebarOffset}px)`;
   }};
   transform: translateX(-50%);
-  max-width: 800px; /* Keep a max width */
-  width: 90%; /* Use percentage width for better flexibility */
+  max-width: 800px;
+  width: 90%;
   text-align: center;
   z-index: 102;
   pointer-events: none;
-  padding: 0 20px; /* Horizontal padding */
-  box-sizing: border-box; /* Include padding in width calculation */
-  transition: all 0.3s ease-out; /* Transition all properties including left */
+  padding: 0 20px;
+  box-sizing: border-box;
+  transition: all 0.3s ease-out;
   
-  /* Flexbox container for logo and text */
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px; /* Increased gap for bigger look */
+  gap: 12px;
   
   .logo {
-    width: 64px; /* Increased from 48px */
-    height: 64px; /* Increased from 48px */
-    flex-shrink: 0; /* Prevent logo from shrinking */
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
     pointer-events: auto;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    opacity: 0.7;
+    transition: opacity 0.2s ease, transform 0.2s ease;
     
     &:hover {
+      opacity: 0.9;
       transform: scale(1.05);
     }
   }
   
   h1 {
-    font-size: min(3.2rem, 8vw); /* Increased from 2.2rem, 6vw */
-    font-weight: 500;
+    font-size: min(2.4rem, 7vw);
+    font-weight: 550;
     color: ${props => props.theme.text};
     margin: 0;
     padding: 0;
-    line-height: 1.2; 
-    word-wrap: break-word; /* Ensure long words break if needed */
-    overflow-wrap: break-word; /* More modern property for word breaking */
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
     pointer-events: auto;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: opacity 0.2s ease;
+    opacity: 0.88;
     
     &:hover {
-      transform: scale(1.02);
+      opacity: 1;
     }
   }
 
-  /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
-    left: 50% !important; /* Always center on mobile */
-    top: ${props => props.$toolbarOpen ? '22%' : '25%'}; /* Moved up from 27%/30% */
-    max-width: 90%; /* Reduce max-width on smaller screens */
+    left: 50% !important;
+    top: ${props => props.$toolbarOpen ? '22%' : '25%'};
+    max-width: 90%;
     padding: 0 15px; 
-    gap: 16px; /* Increased gap on mobile */
+    gap: 10px;
     
     .logo {
-      width: 56px; /* Increased from 40px */
-      height: 56px; /* Increased from 40px */
+      width: 38px;
+      height: 38px;
     }
     
     h1 {
-      font-size: min(2.8rem, 7vw); /* Increased from 2rem, 5.5vw */
+      font-size: min(2rem, 6vw);
     }
   }
 
-  /* Adjustments for very small screens */
   @media (max-width: 480px) {
-    left: 50% !important; /* Always center on mobile */
-    top: ${props => props.$toolbarOpen ? '22%' : '25%'}; /* Moved up from 27%/30% */
-    max-width: 95%; /* Allow slightly more width on very small screens */
+    left: 50% !important;
+    top: ${props => props.$toolbarOpen ? '22%' : '25%'};
+    max-width: 95%;
     padding: 0 10px; 
-    gap: 14px; /* Increased gap on very small screens */
+    gap: 8px;
     
     .logo {
-      width: 48px; /* Increased from 36px */
-      height: 48px; /* Increased from 36px */
+      width: 34px;
+      height: 34px;
     }
     
     h1 {
-      font-size: min(2.2rem, 6vw); /* Increased from 1.7rem, 5vw */
+      font-size: min(1.75rem, 5.5vw);
     }
   }
 `;
