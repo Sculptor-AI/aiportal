@@ -13,29 +13,47 @@ if (cleanedBase.endsWith('/api')) {
 }
 
 const BACKEND_API_BASE = `${cleanedBase}/api`;
+const SAME_ORIGIN_API_BASE = '/api';
 
 console.log('[authService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
 
 // Helper function to build API URLs
-const buildApiUrl = (endpoint) => {
-  console.log('[authService] buildApiUrl called with endpoint:', endpoint);
-  console.log('[authService] BACKEND_API_BASE:', BACKEND_API_BASE);
-  
-  if (!endpoint) return BACKEND_API_BASE;
+const buildApiUrlWithBase = (base, endpoint) => {
+  if (!endpoint) return base;
 
   // Normalize endpoint to remove a leading slash if it exists
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
 
   // Prevent double "api" segment
   if (normalizedEndpoint.startsWith('api/')) {
-    const result = `${BACKEND_API_BASE}/${normalizedEndpoint.substring(4)}`;
-    console.log('[authService] Detected api/ prefix, returning:', result);
-    return result;
+    return `${base}/${normalizedEndpoint.substring(4)}`;
   }
 
-  const result = `${BACKEND_API_BASE}/${normalizedEndpoint}`;
-  console.log('[authService] Normal endpoint, returning:', result);
+  return `${base}/${normalizedEndpoint}`;
+};
+
+const buildApiUrl = (endpoint) => {
+  console.log('[authService] buildApiUrl called with endpoint:', endpoint);
+  console.log('[authService] BACKEND_API_BASE:', BACKEND_API_BASE);
+  const result = buildApiUrlWithBase(BACKEND_API_BASE, endpoint);
+  console.log('[authService] Returning:', result);
   return result;
+};
+
+const fetchWithFallback = async (endpoint, options) => {
+  const primaryUrl = buildApiUrl(endpoint);
+
+  try {
+    return await fetch(primaryUrl, options);
+  } catch (error) {
+    if (BACKEND_API_BASE === SAME_ORIGIN_API_BASE) {
+      throw error;
+    }
+
+    const fallbackUrl = buildApiUrlWithBase(SAME_ORIGIN_API_BASE, endpoint);
+    console.warn(`[authService] Primary API request failed (${primaryUrl}). Retrying same-origin at ${fallbackUrl}`);
+    return fetch(fallbackUrl, options);
+  }
 };
 
 // Google login (placeholder - can be implemented later if needed)
@@ -46,7 +64,7 @@ export const loginWithGoogle = () => {
 // Register a new user
 export const registerUser = async (username, password, email) => {
   try {
-    const response = await fetch(buildApiUrl('/auth/register'), {
+    const response = await fetchWithFallback('/auth/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +99,7 @@ export const loginUser = async (username, password) => {
     const loginUrl = buildApiUrl('/auth/login');
     console.log('[authService] Login URL being used:', loginUrl);
     
-    const response = await fetch(loginUrl, {
+    const response = await fetchWithFallback('/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -152,7 +170,7 @@ export const generateApiKey = async (keyName) => {
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(buildApiUrl('/auth/api-keys'), {
+    const response = await fetchWithFallback('/auth/api-keys', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -184,7 +202,7 @@ export const listApiKeys = async () => {
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(buildApiUrl('/auth/api-keys'), {
+    const response = await fetchWithFallback('/auth/api-keys', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${user.accessToken}`
@@ -225,7 +243,7 @@ export const updateUserSettings = (username, newSettings) => {
 // Admin login
 export const adminLogin = async (username, password) => {
   try {
-    const response = await fetch(buildApiUrl('/admin/auth/login'), {
+    const response = await fetchWithFallback('/admin/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -266,7 +284,7 @@ export const adminLogout = async () => {
   try {
     const adminUser = getCurrentAdminUser();
     if (adminUser && adminUser.adminToken) {
-      await fetch(buildApiUrl('/admin/auth/logout'), {
+      await fetchWithFallback('/admin/auth/logout', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${adminUser.adminToken}`
@@ -302,7 +320,7 @@ export const getAdminAuthHeaders = () => {
 // Get all users
 export const getAllUsers = async () => {
   try {
-    const response = await fetch(buildApiUrl('/admin/users'), {
+    const response = await fetchWithFallback('/admin/users', {
       method: 'GET',
       headers: getAdminAuthHeaders()
     });
@@ -323,7 +341,7 @@ export const getAllUsers = async () => {
 // Get user by ID
 export const getUserById = async (userId) => {
   try {
-    const response = await fetch(buildApiUrl(`/admin/users/${userId}`), {
+    const response = await fetchWithFallback(`/admin/users/${userId}`, {
       method: 'GET',
       headers: getAdminAuthHeaders()
     });
@@ -344,7 +362,7 @@ export const getUserById = async (userId) => {
 // Update user status
 export const updateUserStatus = async (userId, status) => {
   try {
-    const response = await fetch(buildApiUrl(`/admin/users/${userId}/status`), {
+    const response = await fetchWithFallback(`/admin/users/${userId}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -369,7 +387,7 @@ export const updateUserStatus = async (userId, status) => {
 // Update user details
 export const updateUserDetails = async (userId, updates) => {
   try {
-    const response = await fetch(buildApiUrl(`/admin/users/${userId}`), {
+    const response = await fetchWithFallback(`/admin/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -394,7 +412,7 @@ export const updateUserDetails = async (userId, updates) => {
 // Get dashboard stats
 export const getDashboardStats = async () => {
   try {
-    const response = await fetch(buildApiUrl('/admin/dashboard/stats'), {
+    const response = await fetchWithFallback('/admin/dashboard/stats', {
       method: 'GET',
       headers: getAdminAuthHeaders()
     });

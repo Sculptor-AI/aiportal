@@ -167,10 +167,8 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
-    const url = buildApiUrl('/v1/chat/completions');
-
     // Use fetch with streaming
-    const response = await fetch(url, {
+    const response = await fetchWithFallback('/v1/chat/completions', {
       method: 'POST',
       headers,
       body: JSON.stringify(requestPayload)
@@ -394,11 +392,9 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 
 // Legacy code removed - all models now go through backend API
 
-// Prefer environment variable, otherwise check if we're in dev mode
-// In dev mode (Vite dev server), use empty string to leverage Vite's proxy
-// In production, default to the production backend API
-const isDev = import.meta.env.DEV;
+// Prefer environment variable and default to same-origin /api
 const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+const SAME_ORIGIN_API_BASE = '/api';
 
 // Remove trailing slashes
 let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
@@ -412,19 +408,39 @@ const BACKEND_API_BASE = `${cleanedBase}/api`;
 
 console.log('[aiService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
 
-// Remove duplicated /api in endpoint paths
-const buildApiUrl = (endpoint) => {
-  if (!endpoint) return BACKEND_API_BASE;
+const buildApiUrlWithBase = (base, endpoint) => {
+  if (!endpoint) return base;
 
   // Normalize endpoint to remove a leading slash if it exists
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
 
   // Prevent double "api" segment
   if (normalizedEndpoint.startsWith('api/')) {
-    return `${BACKEND_API_BASE}/${normalizedEndpoint.substring(4)}`;
+    return `${base}/${normalizedEndpoint.substring(4)}`;
   }
 
-  return `${BACKEND_API_BASE}/${normalizedEndpoint}`;
+  return `${base}/${normalizedEndpoint}`;
+};
+
+// Remove duplicated /api in endpoint paths
+const buildApiUrl = (endpoint) => {
+  return buildApiUrlWithBase(BACKEND_API_BASE, endpoint);
+};
+
+const fetchWithFallback = async (endpoint, options) => {
+  const primaryUrl = buildApiUrl(endpoint);
+
+  try {
+    return await fetch(primaryUrl, options);
+  } catch (error) {
+    if (BACKEND_API_BASE === SAME_ORIGIN_API_BASE) {
+      throw error;
+    }
+
+    const fallbackUrl = buildApiUrlWithBase(SAME_ORIGIN_API_BASE, endpoint);
+    console.warn(`[aiService] Primary API request failed (${primaryUrl}). Retrying same-origin at ${fallbackUrl}`);
+    return fetch(fallbackUrl, options);
+  }
 };
 
 /**
@@ -478,12 +494,12 @@ export const fetchModelsFromBackend = async () => {
           headers['Authorization'] = `Bearer ${user.accessToken}`;
         }
         
-        response = await fetch(endpointUrl, { headers });
+        response = await fetchWithFallback('/models', { headers });
       } else {
         // If no user is logged in, use the fallback API key
         console.log('No user authentication available, using fallback API key');
         const headers = { 'X-API-Key': apiKey };
-        response = await fetch(endpointUrl, { headers });
+        response = await fetchWithFallback('/models', { headers });
       }
       
       if (!response.ok) {
