@@ -8,8 +8,8 @@ workers_dev = true
 
 # Custom domain routing
 routes = [
-	{ pattern = "ai.sculptorai.org", custom_domain = true },
-	{ pattern = "api.sculptorai.org", custom_domain = true }
+	{ pattern = "ai.sculptorai.org/*", zone_name = "sculptorai.org" },
+	{ pattern = "api.sculptorai.org/*", zone_name = "sculptorai.org" }
 ]
 
 # Static Assets Configuration
