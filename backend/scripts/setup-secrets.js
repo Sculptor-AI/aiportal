@@ -55,6 +55,13 @@ const SECRETS = [
     url: 'https://platform.openai.com/api-keys',
     prefix: 'sk-',
     required: false
+  },
+  {
+    name: 'GOOGLE_CLIENT_ID',
+    description: 'Google OAuth Client ID for Sign in with Google',
+    url: 'https://console.cloud.google.com/apis/credentials',
+    prefix: null,
+    required: false
   }
 ];
 

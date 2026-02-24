@@ -150,6 +150,167 @@ auth.post('/register', async (c) => {
 });
 
 /**
+ * Helper: Get user by email
+ */
+const getUserByEmail = async (kv, email) => {
+  const key = `email:${email.toLowerCase()}`;
+  const userId = await kv.get(key);
+  if (!userId) return null;
+  return await kv.get(`user:${userId}`, 'json');
+};
+
+/**
+ * Google OAuth login
+ * POST /api/auth/google
+ * Accepts a Google ID token, verifies it, and creates/logs in the user
+ */
+auth.post('/google', async (c) => {
+  const kv = c.env.KV;
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const { idToken } = body;
+
+  if (!idToken) {
+    return c.json({ error: 'Google ID token is required' }, 400);
+  }
+
+  // Verify the ID token with Google
+  let googleUser;
+  try {
+    const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
+    const resp = await fetch(verifyUrl);
+
+    if (!resp.ok) {
+      return c.json({ error: 'Invalid Google token' }, 401);
+    }
+
+    googleUser = await resp.json();
+
+    // Verify the audience matches our client ID (if configured)
+    const expectedClientId = c.env.GOOGLE_CLIENT_ID;
+    if (expectedClientId && googleUser.aud !== expectedClientId) {
+      return c.json({ error: 'Token was not issued for this application' }, 401);
+    }
+
+    if (!googleUser.email || !googleUser.email_verified) {
+      return c.json({ error: 'Google account email is not verified' }, 401);
+    }
+  } catch (err) {
+    console.error('Google token verification failed:', err);
+    return c.json({ error: 'Failed to verify Google token' }, 500);
+  }
+
+  const email = googleUser.email.toLowerCase();
+  const googleName = googleUser.name || email.split('@')[0];
+
+  // Check if user already exists with this email
+  let user = await getUserByEmail(kv, email);
+
+  if (!user) {
+    // Create a new user from Google account
+    const id = crypto.randomUUID();
+    const now = nowIso();
+
+    // Generate a username from Google name/email
+    let baseUsername = googleName.replace(/[^a-zA-Z0-9_-]/g, '').substring(0, 25) || 'user';
+    // Ensure username is at least 3 chars
+    if (baseUsername.length < 3) {
+      baseUsername = baseUsername + '_' + id.substring(0, 4);
+    }
+    // Ensure uniqueness
+    let username = baseUsername;
+    let attempt = 0;
+    while (await usernameExists(kv, username)) {
+      attempt++;
+      username = `${baseUsername}${attempt}`;
+    }
+
+    user = {
+      id,
+      username,
+      email,
+      passwordHash: null,
+      passwordSalt: null,
+      googleId: googleUser.sub,
+      authProvider: 'google',
+      status: 'active', // Google-verified users are auto-approved
+      role: 'user',
+      created_at: now,
+      updated_at: now,
+      last_login: now,
+      settings: { theme: 'light' }
+    };
+
+    try {
+      await kv.put(`user:${id}`, JSON.stringify(user));
+      await kv.put(`username:${username.toLowerCase()}`, id);
+      await kv.put(`email:${email}`, id);
+    } catch (err) {
+      try {
+        await kv.delete(`user:${id}`);
+        await kv.delete(`username:${username.toLowerCase()}`);
+        await kv.delete(`email:${email}`);
+      } catch (_) {}
+      console.error('Failed to create Google user:', err);
+      return c.json({ error: 'Failed to create user account' }, 500);
+    }
+
+    console.log(`[AUTH] New Google user created: id=${id}, username=${username}`);
+  } else {
+    // Existing user — check status
+    if (user.status === 'pending') {
+      return c.json({
+        error: 'Account pending approval',
+        message: 'Your account is awaiting admin approval. Please try again later.'
+      }, 403);
+    }
+
+    if (user.status === 'suspended' || user.status === 'banned') {
+      return c.json({
+        error: 'Account suspended',
+        message: 'Your account has been suspended. Please contact an administrator.'
+      }, 403);
+    }
+
+    // Update Google ID if not set (user registered with email/password previously)
+    if (!user.googleId) {
+      user.googleId = googleUser.sub;
+      user.authProvider = user.authProvider || 'google';
+    }
+
+    user.last_login = nowIso();
+    user.updated_at = nowIso();
+    await kv.put(`user:${user.id}`, JSON.stringify(user));
+  }
+
+  // Generate session token
+  const accessToken = generateSessionToken();
+  const tokenHash = await hashToken(accessToken);
+
+  const sessionData = {
+    userId: user.id,
+    createdAt: nowIso(),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  };
+
+  await kv.put(`session:${tokenHash}`, JSON.stringify(sessionData), {
+    expirationTtl: 86400
+  });
+
+  return c.json({
+    success: true,
+    data: {
+      user: sanitizeUser(user),
+      accessToken,
+      refreshToken: null
+    }
+  });
+});
+
+/**
  * User login
  * POST /api/auth/login
  */

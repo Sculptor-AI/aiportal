@@ -3,12 +3,13 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  envDir: '..',
   server: {
     port: 3009,
     headers: {
       'Content-Security-Policy': [
         "default-src 'self' https://73.118.140.130:3000;",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://www.gstatic.com;",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
         "img-src 'self' data: blob: https://*.googleusercontent.com https://images.unsplash.com https://image.pollinations.ai https://loremflickr.com https://picsum.photos;",
         "font-src 'self' data: https://fonts.gstatic.com;",

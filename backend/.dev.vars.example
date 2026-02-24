@@ -37,6 +37,16 @@ ANTHROPIC_API_KEY="sk-ant-your-anthropic-key-here"
 OPENAI_API_KEY="sk-your-openai-key-here"
 
 # ----------------------------------------------------------------------------
+# Google OAuth (for "Sign in with Google")
+# ----------------------------------------------------------------------------
+
+# Google OAuth Client ID - Required for Google Sign-In
+# Get yours at: https://console.cloud.google.com/apis/credentials
+# Create an OAuth 2.0 Client ID (Web application type)
+# Add your domain to Authorized JavaScript Origins
+GOOGLE_CLIENT_ID="your-google-client-id-here.apps.googleusercontent.com"
+
+# ----------------------------------------------------------------------------
 # KV Namespace ID (for create-admin.js script only)
 # ----------------------------------------------------------------------------
 # This is NOT loaded by wrangler dev - it's only used by the create-admin.js script.

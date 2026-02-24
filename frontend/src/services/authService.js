@@ -38,9 +38,120 @@ const buildApiUrl = (endpoint) => {
   return result;
 };
 
-// Google login (placeholder - can be implemented later if needed)
+// Handle Google OAuth callback — if this page loaded with an id_token in the hash
+// (i.e. we are the popup that Google redirected back to), send the token to the
+// parent window via postMessage and close ourselves.
+(function handleGoogleCallback() {
+  const hash = window.location.hash;
+  if (hash && hash.includes('id_token=') && window.opener) {
+    const params = new URLSearchParams(hash.substring(1));
+    const idToken = params.get('id_token');
+    if (idToken) {
+      window.opener.postMessage({ type: 'google-auth', idToken }, window.location.origin);
+      window.close();
+    }
+  }
+})();
+
+// Google login using a direct OAuth popup
 export const loginWithGoogle = () => {
-  return Promise.reject(new Error('Google login not implemented in backend yet'));
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    return Promise.reject(new Error('Google Client ID is not configured'));
+  }
+
+  return new Promise((resolve, reject) => {
+    const redirectUri = window.location.origin;
+    const nonce = Math.random().toString(36).substring(2);
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(clientId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=id_token` +
+      `&scope=openid email profile` +
+      `&nonce=${nonce}` +
+      `&prompt=select_account`;
+
+    // Open popup
+    const width = 500;
+    const height = 600;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+    const popup = window.open(
+      authUrl,
+      'google-login',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+    );
+
+    if (!popup) {
+      reject(new Error('Popup was blocked. Please allow popups for this site and try again.'));
+      return;
+    }
+
+    // Listen for the token from the popup via postMessage
+    const onMessage = async (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== 'google-auth') return;
+
+      window.removeEventListener('message', onMessage);
+      clearInterval(closedCheck);
+      clearTimeout(timeout);
+
+      const { idToken } = event.data;
+      if (!idToken) {
+        reject(new Error('No ID token received from Google'));
+        return;
+      }
+
+      try {
+        const res = await fetch(buildApiUrl('/auth/google'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          reject(new Error(data.error || 'Google login failed'));
+          return;
+        }
+
+        if (data.success && data.data) {
+          const user = {
+            ...data.data.user,
+            accessToken: data.data.accessToken,
+            refreshToken: data.data.refreshToken
+          };
+          sessionStorage.setItem('ai_portal_current_user', JSON.stringify(user));
+          resolve(user);
+        } else {
+          reject(new Error('Invalid response format'));
+        }
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    window.addEventListener('message', onMessage);
+
+    // Check if popup was closed manually
+    const closedCheck = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(closedCheck);
+        window.removeEventListener('message', onMessage);
+        clearTimeout(timeout);
+        reject(new Error('Google sign-in was cancelled.'));
+      }
+    }, 1000);
+
+    // Timeout after 2 minutes
+    const timeout = setTimeout(() => {
+      clearInterval(closedCheck);
+      window.removeEventListener('message', onMessage);
+      if (!popup.closed) popup.close();
+      reject(new Error('Google sign-in timed out.'));
+    }, 120000);
+  });
 };
 
 // Register a new user
