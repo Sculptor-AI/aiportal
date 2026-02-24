@@ -7,8 +7,9 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
 # Custom domain routing
+# NOTE: ai.sculptorai.org is served by Cloudflare Pages (Git CI/CD)
+# The Worker only handles the API subdomain
 routes = [
-	{ pattern = "ai.sculptorai.org/*", zone_name = "sculptorai.org" },
 	{ pattern = "api.sculptorai.org/*", zone_name = "sculptorai.org" }
 ]
 
