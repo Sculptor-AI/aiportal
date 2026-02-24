@@ -12,7 +12,7 @@
     "@pkasila/react-katex": "^1.2.2",
     "@react-three/drei": "^10.4.2",
     "@react-three/fiber": "^9.2.0",
-    "axios": "^1.7.9",
+    "axios": "^1.13.5",
     "html-to-image": "^1.11.13",
     "katex": "^0.16.22",
     "pdfjs-dist": "^4.8.69",
