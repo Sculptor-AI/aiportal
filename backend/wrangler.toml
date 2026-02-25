@@ -1,39 +1,14 @@
-name = "ai-portal"
-main = "./worker.js"
+name = "aiportal"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# Enable workers.dev subdomain
-workers_dev = true
-
-# Custom domain routing
-# NOTE: ai.sculptorai.org is served by Cloudflare Pages (Git CI/CD)
-# The Worker only handles the API subdomain
-routes = [
-	{ pattern = "api.sculptorai.org/*", zone_name = "sculptorai.org" }
-]
-
-# Static Assets Configuration
-# The frontend build is copied here by GitHub Actions before deploy
-[assets]
-directory = "./dist"
-binding = "ASSETS"
-# CRITICAL: Run the Worker first for API routes, otherwise static assets
-# intercept all requests and serve the SPA HTML for /api/* paths
-run_worker_first = ["/api/*"]
-# Handle SPA routing - serve index.html for non-existent paths (client-side routing)
-not_found_handling = "single-page-application"
+# Pages full-stack deployment
+# Frontend static assets + _worker.js for API are both in ./dist
+# Pages Git CI/CD auto-deploys on push to main
+pages_build_output_dir = "./dist"
 
 # ============================================================================
 # KV Namespace Configuration
-# ============================================================================
-# IMPORTANT: Replace the ID below with your own KV namespace ID.
-#
-# To create a KV namespace:
-#   npx wrangler kv namespace create "SESSIONS"
-#
-# Then copy the generated ID here.
-# Do NOT commit your real namespace ID to public repositories.
 # ============================================================================
 [[kv_namespaces]]
 binding = "KV"
@@ -42,16 +17,14 @@ id = "2c3ee1f2bc814ca7b2e0759397135228"
 # ============================================================================
 # Environment Variables / Secrets
 # ============================================================================
-# API keys and sensitive configuration should be stored as Cloudflare secrets.
+# API keys are stored as encrypted secrets in the Pages project settings.
+# Manage via CLI:
+#   npx wrangler pages secret put OPENROUTER_API_KEY --project-name=aiportal
+#   npx wrangler pages secret put GEMINI_API_KEY --project-name=aiportal
+#   npx wrangler pages secret put ANTHROPIC_API_KEY --project-name=aiportal
+#   npx wrangler pages secret put OPENAI_API_KEY --project-name=aiportal
 #
-# Run the setup script to configure all secrets:
-#   node scripts/setup-secrets.js
-#
-# Or set them manually:
-#   npx wrangler secret put OPENROUTER_API_KEY
-#   npx wrangler secret put GEMINI_API_KEY
-#   npx wrangler secret put ANTHROPIC_API_KEY
-#   npx wrangler secret put OPENAI_API_KEY
+# Or via Cloudflare dashboard: Pages > aiportal > Settings > Environment variables
 #
 # For local development, create a .dev.vars file (see .dev.vars.example)
 # ============================================================================
