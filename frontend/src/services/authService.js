@@ -109,6 +109,12 @@ export const loginWithGoogle = () => {
           body: JSON.stringify({ idToken })
         });
 
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          reject(new Error('Server returned an unexpected response. The backend may be unavailable.'));
+          return;
+        }
+
         const data = await res.json();
 
         if (!res.ok) {
@@ -169,6 +175,11 @@ export const registerUser = async (username, password, email) => {
       })
     });
 
+    const ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      throw new Error('Server returned an unexpected response. The backend may be unavailable.');
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
@@ -202,6 +213,11 @@ export const loginUser = async (username, password) => {
         password
       })
     });
+
+    const ct = response.headers.get('content-type') || '';
+    if (!ct.includes('application/json')) {
+      throw new Error('Server returned an unexpected response. The backend may be unavailable.');
+    }
 
     const data = await response.json();
 
