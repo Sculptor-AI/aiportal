@@ -119,8 +119,8 @@ export async function handleOpenRouterChat(c, body, apiKey) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenRouter API Error:', errorText);
-      return c.json({ error: `OpenRouter API Error: ${errorText}` }, response.status);
+      console.error('OpenRouter API Error:', response.status, errorText.slice(0, 500));
+      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
     // For non-streaming, return JSON directly
@@ -139,7 +139,7 @@ export async function handleOpenRouterChat(c, body, apiKey) {
     });
   } catch (error) {
     console.error('OpenRouter handler error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 }
 

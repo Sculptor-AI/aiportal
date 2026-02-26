@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getAuthHeaders } from './authService';
 
 // Prefer environment variable, otherwise default to same-origin
 const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
@@ -27,6 +28,10 @@ export const generateVideo = async (prompt, options = {}) => {
       prompt,
       aspectRatio: options.aspectRatio || '16:9',
       negativePrompt: options.negativePrompt
+    }, {
+      headers: {
+        ...getAuthHeaders()
+      }
     });
     
     return response.data; // { success: true, operationName: '...' }
@@ -44,7 +49,10 @@ export const pollVideoStatus = async (operationName) => {
   try {
     // Pass name via query param to handle special chars/slashes safely
     const response = await axios.get(`${VIDEO_API_URL}/status`, {
-      params: { name: operationName }
+      params: { name: operationName },
+      headers: {
+        ...getAuthHeaders()
+      }
     });
     
     return response.data; // { done: boolean, videoUri: string, ... }
@@ -62,5 +70,42 @@ export const getVideoDownloadUrl = (videoUri) => {
   if (!videoUri) return '';
   // Use proxy endpoint to avoid CORS issues with Google storage
   return `${VIDEO_API_URL}/download?url=${encodeURIComponent(videoUri)}`;
+};
+
+/**
+ * Download a generated video using authenticated request headers.
+ * @param {string} downloadUrl - Download URL returned by getVideoDownloadUrl().
+ */
+export const downloadGeneratedVideo = async (downloadUrl) => {
+  if (!downloadUrl) {
+    throw new Error('Download URL is required');
+  }
+
+  const response = await fetch(downloadUrl, {
+    headers: {
+      ...getAuthHeaders()
+    }
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to download video';
+    try {
+      const payload = await response.json();
+      errorMessage = payload?.error || errorMessage;
+    } catch {
+      // Ignore JSON parse errors and use generic message
+    }
+    throw new Error(errorMessage);
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = 'generated-video.mp4';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
 };
 

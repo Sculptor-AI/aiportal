@@ -28,6 +28,56 @@ import app from './src/index.js';
 import { validateToken } from './src/middleware/auth.js';
 
 const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent';
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://sculptorai.org',
+  'https://www.sculptorai.org',
+  'http://localhost:3000',
+  'http://localhost:3009',
+  'http://localhost:5173',
+  'https://localhost:3000',
+  'https://localhost:3009',
+  'https://localhost:5173'
+];
+
+const parseAllowedOrigins = (env) => {
+  const rawOrigins = env?.CORS_ALLOWED_ORIGINS;
+  if (!rawOrigins || typeof rawOrigins !== 'string') {
+    return DEFAULT_ALLOWED_ORIGINS;
+  }
+
+  const parsed = rawOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return parsed.length > 0 ? parsed : DEFAULT_ALLOWED_ORIGINS;
+};
+
+const resolveCorsOrigin = (request, env) => {
+  const origin = request.headers.get('Origin');
+  const allowedOrigins = parseAllowedOrigins(env);
+  if (!origin) return allowedOrigins[0];
+  return allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+};
+
+const applySecurityHeaders = (response, requestUrl) => {
+  const headers = new Headers(response.headers);
+
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('X-Frame-Options', 'DENY');
+  headers.set('Referrer-Policy', 'no-referrer');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  if (requestUrl.protocol === 'https:') {
+    headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+};
 
 /**
  * Handle WebSocket upgrade for Gemini Live
@@ -114,7 +164,7 @@ async function handleGeminiLiveWebSocket(request, env) {
       console.error('[GeminiLive] Connection error:', error);
       if (server.readyState === WebSocket.OPEN) {
         server.send(JSON.stringify({
-          error: { message: `Failed to connect to Gemini: ${error.message}` }
+          error: { message: 'Failed to connect to Gemini service' }
         }));
       }
     }
@@ -166,6 +216,10 @@ async function handleGeminiLiveWebSocket(request, env) {
 async function authenticateRequest(request, url, env, allowQueryParam = false) {
   // Prefer Authorization header (more secure) over query parameter
   let token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) {
+    token = request.headers.get('X-API-Key') || request.headers.get('x-api-key');
+  }
+  const corsOrigin = resolveCorsOrigin(request, env);
   
   // Fall back to query param if allowed (for WebSocket clients that can't set headers)
   if (!token && allowQueryParam) {
@@ -177,7 +231,11 @@ async function authenticateRequest(request, url, env, allowQueryParam = false) {
       user: null,
       error: new Response(JSON.stringify({ error: 'Authentication required' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': corsOrigin,
+          'Vary': 'Origin'
+        }
       })
     };
   }
@@ -188,7 +246,11 @@ async function authenticateRequest(request, url, env, allowQueryParam = false) {
       user: null,
       error: new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
         status: 401,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': corsOrigin,
+          'Vary': 'Origin'
+        }
       })
     };
   }
@@ -202,30 +264,42 @@ export default {
 
     // Handle WebSocket upgrade for Gemini Live (production only)
     if (url.pathname === '/api/v1/live') {
+      if (request.method === 'OPTIONS') {
+        const preflightResponse = new Response(null, { status: 204 });
+        preflightResponse.headers.set('Access-Control-Allow-Origin', resolveCorsOrigin(request, env));
+        preflightResponse.headers.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        preflightResponse.headers.set('Access-Control-Allow-Headers', 'Authorization, X-API-Key, Content-Type');
+        preflightResponse.headers.set('Access-Control-Max-Age', '86400');
+        preflightResponse.headers.set('Vary', 'Origin');
+        return applySecurityHeaders(preflightResponse, url);
+      }
+
       const upgradeHeader = request.headers.get('Upgrade');
       if (upgradeHeader && upgradeHeader.toLowerCase() === 'websocket') {
         // Authenticate WebSocket request (allow query param for WS clients)
-        const { user, error } = await authenticateRequest(request, url, env, true);
-        if (error) return error;
+        const { error } = await authenticateRequest(request, url, env, true);
+        if (error) return applySecurityHeaders(error, url);
 
         // WebSocket proxy only works in production Cloudflare Workers
         return handleGeminiLiveWebSocket(request, env);
       }
 
       // Non-WebSocket request - return status (requires auth)
-      const { user, error } = await authenticateRequest(request, url, env, false);
-      if (error) return error;
+      const { error } = await authenticateRequest(request, url, env, false);
+      if (error) return applySecurityHeaders(error, url);
 
-      return new Response(JSON.stringify({
+      const statusResponse = new Response(JSON.stringify({
         available: !!env.GEMINI_API_KEY,
         endpoint: '/api/v1/live',
         hint: 'Connect via WebSocket with token query param to use Gemini Live'
       }), {
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': resolveCorsOrigin(request, env),
+          'Vary': 'Origin'
         }
       });
+      return applySecurityHeaders(statusResponse, url);
     }
 
     // SECURITY FIX: The /api/v1/live/config endpoint was removed because it exposed
@@ -234,6 +308,7 @@ export default {
     // which keeps the API key secure on the server side.
 
     // Pass all other requests to Hono app
-    return app.fetch(request, env, ctx);
+    const response = await app.fetch(request, env, ctx);
+    return applySecurityHeaders(response, url);
   }
 };

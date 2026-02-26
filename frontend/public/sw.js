@@ -31,6 +31,8 @@ const NETWORK_FIRST_PATTERNS = [
   /\.json$/
 ];
 
+const isApiRequest = (requestUrl) => requestUrl.pathname.includes('/api/');
+
 self.addEventListener('install', (event) => {
   console.log('[SW] Install event');
   
@@ -137,11 +139,13 @@ async function cacheFirst(request) {
 
 // Network-first strategy (for API calls)
 async function networkFirst(request) {
+  const requestUrl = new URL(request.url);
+
   try {
     const networkResponse = await fetch(request);
-    
-    // Cache successful responses for offline access
-    if (networkResponse.status === 200) {
+
+    // Never cache API responses that can contain authenticated/sensitive data.
+    if (networkResponse.status === 200 && !isApiRequest(requestUrl)) {
       const cache = await caches.open(DYNAMIC_CACHE_NAME);
       cache.put(request, networkResponse.clone());
     }
@@ -149,7 +153,14 @@ async function networkFirst(request) {
     return networkResponse;
   } catch (error) {
     console.log('[SW] Network-first failed, trying cache:', error);
-    
+
+    if (isApiRequest(requestUrl)) {
+      return new Response(JSON.stringify({ error: 'Offline' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       return cachedResponse;

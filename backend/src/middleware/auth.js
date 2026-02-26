@@ -4,6 +4,7 @@
  */
 
 import { hashToken } from '../utils/crypto.js';
+import { removeUserSessionIndex } from '../utils/helpers.js';
 
 /**
  * Parse Bearer token from Authorization header
@@ -14,7 +15,7 @@ const parseBearer = (value) => {
 };
 
 /**
- * Get token from request (header or query param)
+ * Get token from request headers
  */
 const getTokenFromRequest = (c) => {
   // Try Authorization header first
@@ -24,10 +25,6 @@ const getTokenFromRequest = (c) => {
   // Try X-API-Key header
   const apiKey = c.req.header('X-API-Key');
   if (apiKey) return apiKey;
-
-  // Try query parameter (for WebSocket)
-  const queryToken = c.req.query('token');
-  if (queryToken) return queryToken;
 
   return null;
 };
@@ -51,6 +48,13 @@ const getUserFromApiKey = async (kv, apiKey) => {
 
     // Get the user
     const user = await kv.get(`user:${keyData.userId}`, 'json');
+    if (!user) return null;
+
+    // Suspended/banned/pending users should not authenticate via API keys.
+    if (user.status === 'pending' || user.status === 'suspended' || user.status === 'banned') {
+      return null;
+    }
+
     return user;
   } catch (error) {
     console.error('Error getting user from API key:', error);
@@ -76,7 +80,10 @@ const getUserFromSessionToken = async (kv, token) => {
     // Check if session is expired
     if (sessionData.expiresAt && new Date(sessionData.expiresAt) < new Date()) {
       // Session expired, delete it
-      await kv.delete(sessionKey);
+      await Promise.all([
+        kv.delete(sessionKey),
+        removeUserSessionIndex(kv, sessionData.userId, tokenHash)
+      ]);
       return null;
     }
 
@@ -127,6 +134,10 @@ export const requireAuth = async (c, next) => {
     return c.json({ error: 'Invalid or expired session' }, 401);
   }
 
+  if (user.status === 'pending' || user.status === 'suspended' || user.status === 'banned') {
+    return c.json({ error: 'Account is not active' }, 403);
+  }
+
   // Attach user to context for downstream handlers
   c.set('user', user);
   c.set('token', token);
@@ -175,8 +186,12 @@ export const requireAdmin = async (c, next) => {
     return c.json({ error: 'Authentication required' }, 401);
   }
 
-  if (user.role !== 'admin' && user.status !== 'admin') {
+  if (user.role !== 'admin') {
     return c.json({ error: 'Admin access required' }, 403);
+  }
+
+  if (user.status === 'pending' || user.status === 'suspended' || user.status === 'banned') {
+    return c.json({ error: 'Admin account is not active' }, 403);
   }
 
   await next();
@@ -252,7 +267,10 @@ export const validateToken = async (kv, token) => {
       if (!sessionData) return null;
 
       if (sessionData.expiresAt && new Date(sessionData.expiresAt) < new Date()) {
-        await kv.delete(sessionKey);
+        await Promise.all([
+          kv.delete(sessionKey),
+          removeUserSessionIndex(kv, sessionData.userId, tokenHash)
+        ]);
         return null;
       }
 

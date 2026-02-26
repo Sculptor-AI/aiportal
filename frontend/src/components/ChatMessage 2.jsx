@@ -4,6 +4,7 @@ import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
+import { openExternalUrl } from '../utils/urlSecurity';
 import { processCodeBlocks } from '../utils/codeBlockProcessor';
 import CodeBlockWithExecution from './CodeBlockWithExecution';
 import useSupportedLanguages from '../hooks/useSupportedLanguages';
@@ -1991,7 +1992,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 {displaySources.map((source, index) => (
                   <SourceButton
                     key={index}
-                    onClick={() => window.open(source.url, '_blank')}
+                  onClick={() => openExternalUrl(source.url)}
                     title={source.title}
                   >
                     <SourceFavicon
@@ -2327,7 +2328,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           {hasSources && !isLoading && (
             <SourcesContainer>
               {displaySources.map((source, index) => (
-                <SourceButton key={`source-${index}`} onClick={() => window.open(source.url, '_blank')}>
+                <SourceButton key={`source-${index}`} onClick={() => openExternalUrl(source.url)}>
                   <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src = 'https://www.google.com/s2/favicons?domain=' + source.url} />
                   {source.domain || extractDomain(source.url)}
                 </SourceButton>

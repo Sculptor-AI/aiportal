@@ -923,7 +923,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
           left: '20px',
           useTheme: true,
           onClick: () => {
-            window.open('https://www.google.com/chrome/', '_blank');
+            window.open('https://www.google.com/chrome/', '_blank', 'noopener,noreferrer');
           }
         }
       );

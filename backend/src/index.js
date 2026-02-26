@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono';
 import { apiCors } from './middleware/cors.js';
+import { apiSecurityHeaders } from './middleware/securityHeaders.js';
 
 // Import route modules
 import healthRoutes from './routes/health.js';
@@ -27,6 +28,7 @@ const app = new Hono();
 // CORS Middleware
 // ============================================
 app.use('/api/*', apiCors);
+app.use('/api/*', apiSecurityHeaders);
 
 // ============================================
 // Mount Route Modules

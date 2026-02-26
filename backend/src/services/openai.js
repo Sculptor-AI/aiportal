@@ -183,8 +183,8 @@ export async function handleOpenAIChat(c, body, apiKey) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API Error:', errorText);
-      return c.json({ error: `OpenAI API Error: ${errorText}` }, response.status);
+      console.error('OpenAI API Error:', response.status, errorText.slice(0, 500));
+      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
     // Handle non-streaming response
@@ -207,7 +207,7 @@ export async function handleOpenAIChat(c, body, apiKey) {
 
   } catch (error) {
     console.error('OpenAI handler error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 }
 

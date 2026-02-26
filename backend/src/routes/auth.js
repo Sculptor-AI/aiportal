@@ -6,8 +6,21 @@
 import { Hono } from 'hono';
 import { hashPassword, verifyPassword, generateSessionToken, generateApiKey, hashToken, getTokenPrefix } from '../utils/crypto.js';
 import { requireAuth } from '../middleware/auth.js';
+import { authLoginRateLimit, authRegisterRateLimit } from '../middleware/rateLimit.js';
+import { addUserSessionIndex, removeUserSessionIndex } from '../utils/helpers.js';
 
 const auth = new Hono();
+const MAX_PASSWORD_LENGTH = 128;
+
+const isPasswordComplexEnough = (password) => {
+  if (typeof password !== 'string') return false;
+  return (
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+};
 
 /**
  * Helper: Get current ISO timestamp
@@ -55,7 +68,7 @@ const getUserByUsername = async (kv, username) => {
  * User registration
  * POST /api/auth/register
  */
-auth.post('/register', async (c) => {
+auth.post('/register', authRegisterRateLimit, async (c) => {
   const kv = c.env.KV;
   if (!kv) {
     return c.json({ error: 'Storage not configured' }, 500);
@@ -82,6 +95,14 @@ auth.post('/register', async (c) => {
   if (password.length < 12) {
     return c.json({ error: 'Password must be at least 12 characters long' }, 400);
   }
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    return c.json({ error: `Password must be at most ${MAX_PASSWORD_LENGTH} characters long` }, 400);
+  }
+  if (!isPasswordComplexEnough(password)) {
+    return c.json({
+      error: 'Password must include at least one uppercase letter, one lowercase letter, one number, and one special character'
+    }, 400);
+  }
 
   // Email validation with minimum 2-character TLD
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
@@ -89,12 +110,8 @@ auth.post('/register', async (c) => {
   }
 
   // Check for existing username/email
-  if (await usernameExists(kv, username)) {
-    return c.json({ error: 'Username already exists' }, 409);
-  }
-
-  if (await emailExists(kv, email)) {
-    return c.json({ error: 'Email already exists' }, 409);
+  if (await usernameExists(kv, username) || await emailExists(kv, email)) {
+    return c.json({ error: 'Registration failed. Account may already exist.' }, 409);
   }
 
   // Hash the password
@@ -153,7 +170,7 @@ auth.post('/register', async (c) => {
  * User login
  * POST /api/auth/login
  */
-auth.post('/login', async (c) => {
+auth.post('/login', authLoginRateLimit, async (c) => {
   const kv = c.env.KV;
   if (!kv) {
     return c.json({ error: 'Storage not configured' }, 500);
@@ -207,6 +224,7 @@ auth.post('/login', async (c) => {
   await kv.put(`session:${tokenHash}`, JSON.stringify(sessionData), {
     expirationTtl: 86400 // 24 hours in seconds
   });
+  await addUserSessionIndex(kv, user.id, tokenHash);
 
   // Update last login
   user.last_login = nowIso();
@@ -230,10 +248,12 @@ auth.post('/login', async (c) => {
 auth.post('/logout', requireAuth, async (c) => {
   const kv = c.env.KV;
   const token = c.get('token');
+  const user = c.get('user');
 
-  if (kv && token) {
+  if (kv && token && token.startsWith('sess_')) {
     const tokenHash = await hashToken(token);
     await kv.delete(`session:${tokenHash}`);
+    await removeUserSessionIndex(kv, user?.id, tokenHash);
   }
 
   return c.json({ success: true });

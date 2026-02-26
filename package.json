@@ -18,5 +18,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "AI Portal - Frontend (React/Vite) and Backend (Cloudflare Worker)"
+  "description": "AI Portal - Frontend (React/Vite) and Backend (Cloudflare Worker)",
+  "devDependencies": {
+    "@rollup/rollup-win32-x64-msvc": "^4.53.3"
+  }
 }

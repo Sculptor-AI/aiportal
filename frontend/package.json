@@ -19,7 +19,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^6.29.0",
+    "react-router-dom": "^6.30.3",
     "reactflow": "^11.11.4",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",

@@ -1,6 +1,3 @@
-import { fetchEventSource } from '@microsoft/fetch-event-source'; // Use a robust SSE client library
-import axios from 'axios';
-
 // All models now go through backend API - no direct API keys needed
 
 // All models now go through backend API - no direct API configurations needed
@@ -28,44 +25,30 @@ const isBackendModel = (modelId, availableModels = []) => {
   return true; // All models go through backend
 };
 
-// New backend streaming function
-export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null) {
-  // Get user's assigned backend API key from session
-  let apiKey = null;
-  let user = null;
-  let isLoggedIn = false;
-  
+const getCurrentUserSession = () => {
   try {
     const userJSON = sessionStorage.getItem('ai_portal_current_user');
-    if (userJSON) {
-      user = JSON.parse(userJSON);
-      isLoggedIn = true;
-      console.log('[aiService] User found in session:', user.username);
-      
-      // User's assigned backend API key should be stored as their accessToken
-      if (user.accessToken && user.accessToken.startsWith('ak_')) {
-        apiKey = user.accessToken;
-        console.log('[aiService] Using user API key');
-      } else if (user.accessToken) {
-        // Use JWT token if available
-        apiKey = user.accessToken;
-        console.log('[aiService] Using user JWT token');
-      }
-    } else {
-      console.log('[aiService] No user session found');
-    }
-  } catch (e) {
-    console.error('Error getting user session:', e);
+    return userJSON ? JSON.parse(userJSON) : null;
+  } catch (error) {
+    console.error('Error getting user session:', error);
+    return null;
   }
+};
 
-  // Fallback API key for development/testing - but warn about it
-  if (!apiKey) {
-    console.warn('[aiService] No user authentication found, using fallback API key');
-    apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+const buildAuthHeaders = (accessToken) => {
+  if (!accessToken) return null;
+  if (accessToken.startsWith('ak_')) {
+    return { 'X-API-Key': accessToken };
   }
+  return { 'Authorization': `Bearer ${accessToken}` };
+};
 
+// New backend streaming function
+export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null) {
+  const user = getCurrentUserSession();
+  const apiKey = user?.accessToken || null;
   if (!apiKey) {
-    throw new Error('Backend API key is required. Please log in to use AI features.');
+    throw new Error('Authentication required. Please log in to use AI features.');
   }
 
   try {
@@ -155,17 +138,16 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     }
 
     // Prepare headers based on token type
+    const authHeaders = buildAuthHeaders(apiKey);
+    if (!authHeaders) {
+      throw new Error('Authentication required. Please log in to use AI features.');
+    }
+
     const headers = {
       'Content-Type': 'application/json',
-      'Accept': 'text/event-stream'
+      'Accept': 'text/event-stream',
+      ...authHeaders
     };
-    
-    // Use appropriate auth header based on token type
-    if (apiKey.startsWith('ak_')) {
-      headers['X-API-Key'] = apiKey;
-    } else {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
 
     // Use fetch with streaming
     const response = await fetchWithFallback('/v1/chat/completions', {
@@ -449,58 +431,19 @@ const fetchWithFallback = async (endpoint, options) => {
  */
 export const fetchModelsFromBackend = async () => {
   try {
-    // Get user's assigned backend API key from session
-    let apiKey = null;
-    let user = null;
-    try {
-      const userJSON = sessionStorage.getItem('ai_portal_current_user');
-      if (userJSON) {
-        user = JSON.parse(userJSON);
-        // User's assigned backend API key should be stored as their accessToken
-        if (user.accessToken && user.accessToken.startsWith('ak_')) {
-          apiKey = user.accessToken;
-        }
-      }
-    } catch (e) {
-      console.error('Error getting user session:', e);
+    const user = getCurrentUserSession();
+    const accessToken = user?.accessToken || null;
+    if (!accessToken) {
+      return [];
     }
-
-    // Fallback API key for development/testing
-    if (!apiKey) {
-      apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
-    }
-
-    // if (!apiKey) {
-    //   console.log('No backend API key available, skipping backend models');
-    //   return [];
-    // }
 
     // Use the main models endpoint that returns all available models
     const endpointUrl = buildApiUrl('/models');
     console.log('Fetching models from:', endpointUrl);
     
     try {
-      // This endpoint requires authentication, so only try if user is logged in
-      let response;
-      if (user && user.accessToken) {
-        const headers = {};
-        
-        // Check if the access token is an API key (starts with ak_) or a JWT token
-        if (user.accessToken.startsWith('ak_')) {
-          // Use API key authentication
-          headers['X-API-Key'] = user.accessToken;
-        } else {
-          // Use JWT Bearer authentication
-          headers['Authorization'] = `Bearer ${user.accessToken}`;
-        }
-        
-        response = await fetchWithFallback('/models', { headers });
-      } else {
-        // If no user is logged in, use the fallback API key
-        console.log('No user authentication available, using fallback API key');
-        const headers = { 'X-API-Key': apiKey };
-        response = await fetchWithFallback('/models', { headers });
-      }
+      const headers = buildAuthHeaders(accessToken) || {};
+      const response = await fetchWithFallback('/models', { headers });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -564,12 +507,6 @@ This only needs to be done once per browser session.
   }
 };
 
-// Helper function to get current user (import from authService)
-const getCurrentUser = () => {
-  const userJSON = sessionStorage.getItem('ai_portal_current_user');
-  return userJSON ? JSON.parse(userJSON) : null;
-};
-
 /**
  * Send a message to the backend
  * @param {string} modelId - The model ID to use
@@ -597,28 +534,9 @@ export const sendMessageToBackend = async (modelId, message, search = false, cod
 
 // Generate chat title function
 export const generateChatTitle = async (userPrompt, assistantResponse) => {
-  // Get user's assigned backend API key from session
-  let apiKey = null;
-  try {
-    const userJSON = sessionStorage.getItem('ai_portal_current_user');
-    if (userJSON) {
-      const user = JSON.parse(userJSON);
-      // User's assigned backend API key should be stored as their accessToken
-      if (user.accessToken && user.accessToken.startsWith('ak_')) {
-        apiKey = user.accessToken;
-      }
-    }
-  } catch (e) {
-    console.error('Error getting user session:', e);
-  }
-
-  // Fallback API key for development/testing
-  if (!apiKey) {
-    apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
-  }
-
-  if (!apiKey) {
-    console.log('Skipping chat title generation - no backend API key');
+  const user = getCurrentUserSession();
+  if (!user?.accessToken) {
+    console.log('Skipping chat title generation - no authenticated session');
     return null;
   }
   

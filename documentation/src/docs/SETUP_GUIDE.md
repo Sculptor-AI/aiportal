@@ -41,11 +41,6 @@ Open the `.env` file and add the following variables. Replace the placeholder va
 ```
 # Frontend Environment Variables
 VITE_BACKEND_API_URL=http://localhost:8787 # Default for `wrangler dev`
-VITE_OPENAI_API_KEY=sk-...
-VITE_ANTHROPIC_API_KEY=sk-ant-...
-VITE_GOOGLE_API_KEY=AIzaSy...
-VITE_CUSTOM_GGUF_API_URL=http://localhost:8000
-VITE_BRAVE_API_KEY=...
 
 # Backend/Wrangler Environment Variables
 # These are also used by `wrangler dev` from the same .env file
@@ -54,8 +49,11 @@ NODE_ENV=development
 JWT_SECRET=your-super-secret-jwt-key
 DATABASE_PATH=./database/aiportal.db
 OPENROUTER_API_KEY=sk-or-v1-your-key
+GEMINI_API_KEY=your-gemini-key
+ANTHROPIC_API_KEY=sk-ant-your-key
+OPENAI_API_KEY=sk-your-openai-key
 ```
-**Note:** The `README.md` mentions other API keys. Add them to the `.env` file as needed.
+**Security Note:** Never place provider keys in `VITE_*` frontend variables. `VITE_*` values are embedded into browser bundles.
 
 ## Running the Application
 
