@@ -823,7 +823,8 @@ const PrimaryButton = styled(Button)`
   &:hover {
     transform: translateY(-1px);
     background: ${props => props.theme.buttonHoverGradient || props.theme.primary};
-    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+    box-shadow: ${props =>
+      props.theme.buttonShadow || `0 4px 12px ${props.theme.primary}40`};
   }
 
   &:disabled {
