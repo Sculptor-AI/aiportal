@@ -210,7 +210,7 @@ const CreateButton = styled.button`
   &:hover {
     transform: translateY(-1px);
     background: ${props => props.theme.buttonHoverGradient || props.theme.primary};
-    box-shadow: 0 4px 16px rgba(0, 122, 255, 0.3);
+    box-shadow: 0 4px 16px ${props => props.theme.buttonShadow || `${props.theme.primary}4D`};
   }
 
   &:active {
