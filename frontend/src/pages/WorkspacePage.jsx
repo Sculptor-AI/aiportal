@@ -1070,6 +1070,12 @@ const WorkspacePage = ({ collapsed }) => {
           avatar: '' // Clear emoji when image is set
         }));
       };
+      img.onerror = () => {
+        alert('Invalid or corrupted image file. Please choose another image.');
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      };
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
