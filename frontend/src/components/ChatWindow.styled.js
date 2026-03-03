@@ -334,6 +334,44 @@ export const MessageInputWrapper = styled.div.attrs({ 'data-shadow': 'message-ba
   }
 `;
 
+export const ReasoningEffortRow = styled.div`
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px 0 14px;
+  box-sizing: border-box;
+`;
+
+export const ReasoningEffortLabel = styled.label`
+  font-size: 12px;
+  color: ${props => `${props.theme.text}aa`};
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+`;
+
+export const ReasoningEffortSelect = styled.select`
+  min-width: 120px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '999px'};
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground};
+  color: ${props => props.theme.text};
+  font-size: 12px;
+  outline: none;
+
+  &:focus {
+    border-color: ${props => `${props.theme.text}33`};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
 export const ChipsDock = styled.div`
   width: 100%;
   pointer-events: ${props => props.$visible ? 'auto' : 'none'};

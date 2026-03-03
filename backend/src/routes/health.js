@@ -82,8 +82,8 @@ health.get('/capabilities', (c) => {
       // Web search
       web_search: {
         google: ['gemini'],
-        anthropic: ['claude-sonnet-4.5'],
-        openai: ['gpt-5.2', 'gpt-4o'],
+        anthropic: ['claude-sonnet-4.6'],
+        openai: ['chatgpt-5.3-instant', 'chatgpt-5.2-reasoning', 'gpt-4o'],
         openrouter: true
       },
 
@@ -95,7 +95,7 @@ health.get('/capabilities', (c) => {
       // Reasoning/Thinking
       reasoning: {
         display_thinking: ['gemini', 'anthropic'],
-        reasoning_effort: ['openai']
+        reasoning_effort: ['chatgpt-5.2-reasoning']
       },
 
       // Structured outputs

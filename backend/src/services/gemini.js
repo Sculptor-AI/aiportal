@@ -397,7 +397,7 @@ function createGeminiStreamTransformer(encoder) {
  * Handle streaming chat completion via Gemini API
  */
 export async function handleGeminiChat(c, body, apiKey) {
-  const modelId = body.model?.replace('google/', '') || 'gemini-3-pro';
+  const modelId = body.model?.replace('google/', '') || 'gemini-3.1-pro';
   const targetModel = resolveModel('gemini', modelId);
 
   console.log(`Gemini request: ${body.model} -> ${targetModel}`);
@@ -440,7 +440,7 @@ export async function handleGeminiChat(c, body, apiKey) {
  * Handle non-streaming chat completion via Gemini API
  */
 export async function handleGeminiChatNonStreaming(c, body, apiKey) {
-  const modelId = body.model?.replace('google/', '') || 'gemini-3-pro';
+  const modelId = body.model?.replace('google/', '') || 'gemini-3.1-pro';
   const targetModel = resolveModel('gemini', modelId);
 
   const geminiBody = buildGeminiBody(body);

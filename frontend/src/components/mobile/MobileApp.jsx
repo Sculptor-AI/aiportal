@@ -14,6 +14,7 @@ import ModelIcon from '../ModelIcon';
 import OnboardingFlow from '../OnboardingFlow';
 import { getDefaultChatTitle, isDefaultChatTitle } from '../../utils/chatLocalization';
 import { useTranslation } from '../../contexts/TranslationContext';
+import { getPreferredModelId } from '../../config/modelConfig';
 
 const MobileAppContainer = styled.div`
   display: flex;
@@ -321,7 +322,7 @@ const MobileAppContent = () => {
 
           const currentSelectedModelIsValid = backendModels.some(m => m.id === selectedModel);
           if (!currentSelectedModelIsValid && backendModels.length > 0) {
-            setSelectedModel(backendModels[0].id);
+            setSelectedModel(getPreferredModelId(backendModels));
           }
         } else {
           setAvailableModels([]);

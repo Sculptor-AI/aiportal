@@ -300,7 +300,7 @@ const ModelSelector = ({ selectedModel, models, onChange, theme }) => {
       return `${model.provider} (via Backend)`;
     }
     
-    if (modelId.includes('gemini-2.5-pro')) return 'Google AI (2.5 Pro)';
+    if (modelId.includes('gemini-3.1-pro')) return 'Google AI (3.1 Pro)';
     if (modelId.includes('gemini')) return 'Google AI';
     if (modelId.includes('claude')) return 'Anthropic';
     if (modelId.includes('gpt') || modelId.includes('chatgpt')) return 'OpenAI';

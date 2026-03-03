@@ -38,6 +38,7 @@ import DinosaurRunGame from './components/DinosaurRunGame';
 import ConfettiExplosion from './components/ConfettiExplosion';
 import MatrixRain from './components/MatrixRain';
 import useEasterEggs from './hooks/useEasterEggs';
+import { DEFAULT_CUSTOM_BASE_MODEL_ID, getPreferredModelId } from './config/modelConfig';
 
 const AppContainer = styled.div`
   display: flex;
@@ -345,7 +346,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 avatar: model.avatar,
                 provider: 'Custom Model',
                 isBackendModel: false, // Custom models are frontend models
-                baseModel: model.baseModel || 'gpt-3.5-turbo' // More common fallback
+                baseModel: model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID
               }));
           } catch (err) {
             console.error('Error parsing custom models:', err);
@@ -362,7 +363,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
           // Set default model if none is selected or the selected one is no longer available
           const currentSelectedModelIsValid = allModels.some(m => m.id === selectedModel);
           if (!currentSelectedModelIsValid && allModels.length > 0) {
-            const defaultModel = allModels[0].id;
+            const defaultModel = getPreferredModelId(allModels);
             setSelectedModel(defaultModel);
             localStorage.setItem('selectedModel', defaultModel);
             console.log(`Set default model to: ${defaultModel}`);
@@ -393,7 +394,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 avatar: model.avatar,
                 provider: 'Custom Model',
                 isBackendModel: false,
-                baseModel: model.baseModel || 'gpt-3.5-turbo' // More common fallback
+                baseModel: model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID
               }));
           } catch (err) {
             console.error('Error parsing custom models:', err);
@@ -402,8 +403,9 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
         setAvailableModels(enabledCustomModels);
         if (enabledCustomModels.length > 0 && !enabledCustomModels.some(m => m.id === selectedModel)) {
-          setSelectedModel(enabledCustomModels[0].id);
-          localStorage.setItem('selectedModel', enabledCustomModels[0].id);
+          const defaultModel = getPreferredModelId(enabledCustomModels);
+          setSelectedModel(defaultModel);
+          localStorage.setItem('selectedModel', defaultModel);
         }
       }
     };

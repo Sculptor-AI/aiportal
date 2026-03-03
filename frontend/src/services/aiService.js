@@ -1,6 +1,7 @@
 // All models now go through backend API - no direct API keys needed
 
 // All models now go through backend API - no direct API configurations needed
+import { TITLE_GENERATION_MODEL_ID } from '../config/modelConfig';
 
 // Helper function to parse SSE data chunks
 // This needs to handle different formats potentially sent by APIs
@@ -44,7 +45,7 @@ const buildAuthHeaders = (accessToken) => {
 };
 
 // New backend streaming function
-export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null) {
+export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null, requestOptions = {}) {
   const user = getCurrentUserSession();
   const apiKey = user?.accessToken || null;
   if (!apiKey) {
@@ -115,6 +116,14 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       messages: messages,
       stream: true
     };
+
+    if (requestOptions?.provider) {
+      requestPayload.provider = requestOptions.provider;
+    }
+
+    if (requestOptions?.reasoningEffort && requestOptions.reasoningEffort !== 'none') {
+      requestPayload.reasoning_effort = requestOptions.reasoningEffort;
+    }
 
     // Add system prompt as top-level parameter if provided
     if (systemPrompt) {
@@ -356,7 +365,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
 }
 
 // Updated main sendMessage function that routes everything to backend
-export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null) { 
+export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null, requestOptions = {}) { 
   console.log(`sendMessage (streaming) called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`, 
     imageData ? `imageData: Present` : '',
@@ -369,7 +378,7 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 
   // All models now route to backend (backend acts as unified gateway)
   console.log(`Routing to backend for model: ${modelId}`);
-  yield* sendMessageToBackendStream(message, modelId, history, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt);
+  yield* sendMessageToBackendStream(message, modelId, history, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt, requestOptions);
 }
 
 // Legacy code removed - all models now go through backend API
@@ -461,7 +470,7 @@ export const fetchModelsFromBackend = async () => {
           name: model.name || model.id.split('/').pop(),
           provider: model.provider,
           description: model.description,
-          capabilities: model.capabilities || [],
+          capabilities: model.capabilities || {},
           isBackendModel: true,
           source: model.source,
           context_length: model.context_length,
@@ -476,7 +485,7 @@ export const fetchModelsFromBackend = async () => {
           name: model.name || model.id.split('/').pop(),
           provider: model.owned_by,
           description: model.description,
-          capabilities: model.capabilities || [],
+          capabilities: model.capabilities || {},
           isBackendModel: true
         }));
       }
@@ -520,10 +529,10 @@ This only needs to be done once per browser session.
  * @param {string} mode - Optional mode for the request
  * @returns {Promise<Object>} The response
  */
-export const sendMessageToBackend = async (modelId, message, search = false, codeExecution = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null, conversationHistory = []) => {
+export const sendMessageToBackend = async (modelId, message, search = false, codeExecution = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null, conversationHistory = [], requestOptions = {}) => {
   const chunks = [];
   try {
-    for await (const chunk of sendMessageToBackendStream(message, modelId, conversationHistory, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt)) {
+    for await (const chunk of sendMessageToBackendStream(message, modelId, conversationHistory, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt, requestOptions)) {
       chunks.push(chunk);
     }
     return { response: chunks.join('') };
@@ -544,7 +553,7 @@ export const generateChatTitle = async (userPrompt, assistantResponse) => {
     `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\nTitle:`;
   try {
     const result = await sendMessageToBackend(
-      'gemini-2.5-flash', // Use available model from config
+      TITLE_GENERATION_MODEL_ID,
       titlePrompt
     );
     if (result && result.response) {

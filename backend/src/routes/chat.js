@@ -35,7 +35,7 @@ function getProvider(modelId, body) {
   if (modelId.startsWith('claude') || modelId.startsWith('anthropic/')) {
     return 'anthropic';
   }
-  if (modelId.startsWith('gpt') || modelId.startsWith('o1') || modelId.startsWith('o3') || modelId.startsWith('o4') || modelId.startsWith('openai/')) {
+  if (modelId.startsWith('gpt') || modelId.startsWith('chatgpt') || modelId.startsWith('o1') || modelId.startsWith('o3') || modelId.startsWith('o4') || modelId.startsWith('openai/')) {
     // Check if we should use direct OpenAI or OpenRouter
     if (body.use_direct_api || body.provider === 'openai') {
       return 'openai';

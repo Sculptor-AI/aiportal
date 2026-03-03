@@ -4,6 +4,7 @@ import ModelIcon from './ModelIcon';
 import useGeminiLive from '../hooks/useGeminiLive';
 import AudioVisualizer from './AudioVisualizer';
 import { useTranslation } from '../contexts/TranslationContext';
+import { GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID } from '../config/modelConfig';
 
 // --- Animations ---
 
@@ -348,7 +349,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
     startRecording,
     stopRecording,
   } = useGeminiLive({
-    model: selectedModel?.includes('gemini') ? selectedModel : 'gemini-2.5-flash-preview-native-audio',
+    model: selectedModel?.includes('gemini') ? selectedModel : GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID,
     responseModality: 'audio', // Use audio for voice responses
     voiceName: 'Aoede', // Default voice
     systemInstruction: 'You are a helpful AI assistant having a voice conversation. Be concise, friendly, and conversational.',

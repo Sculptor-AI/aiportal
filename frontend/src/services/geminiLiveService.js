@@ -8,6 +8,7 @@
  */
 
 import { getCurrentUser } from './authService';
+import { GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID } from '../config/modelConfig';
 
 class GeminiLiveService {
   constructor() {
@@ -35,7 +36,7 @@ class GeminiLiveService {
 
     // Configuration
     this.config = {
-      model: 'models/gemini-2.5-flash-preview-native-audio',
+      model: `models/${GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID}`,
       responseModalities: ['AUDIO'],
       voiceName: 'Aoede',
       systemInstruction: 'You are a helpful AI assistant. Be concise and friendly.'

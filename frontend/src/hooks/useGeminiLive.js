@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import GeminiLiveService from '../services/geminiLiveService';
+import { GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID } from '../config/modelConfig';
 
 /**
  * React hook for Gemini Live WebSocket API
@@ -18,7 +19,7 @@ const useGeminiLive = (options = {}) => {
 
   const serviceRef = useRef(null);
   const {
-    model = 'gemini-2.5-flash-preview-native-audio',
+    model = GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID,
     responseModality = 'audio',
     voiceName = 'Aoede',
     systemInstruction = null,

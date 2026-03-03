@@ -9,7 +9,7 @@
  * - Code interpreter
  * - File search
  * - JSON mode/structured outputs
- * - Reasoning tokens display (o1, o3, o4)
+ * - Reasoning effort controls (for reasoning-capable models)
  * - DALL-E image generation
  * - Responses API (multi-turn with built-in tools)
  */
@@ -73,7 +73,7 @@ function convertContentToOpenAI(content) {
  * Build OpenAI chat request body
  */
 function buildOpenAIBody(body) {
-  const modelId = body.model?.replace('openai/', '') || 'gpt-4o';
+  const modelId = body.model?.replace('openai/', '') || 'chatgpt-5.3-instant';
   const model = resolveModel('openai', modelId);
 
   const openAIBody = {
@@ -125,7 +125,7 @@ function buildOpenAIBody(body) {
     };
   }
 
-  // Reasoning effort (for o1, o3, o4 models)
+  // Reasoning effort (for reasoning-capable models, e.g. GPT-5.2 reasoning)
   if (body.reasoning_effort) {
     openAIBody.reasoning_effort = body.reasoning_effort; // 'low', 'medium', 'high'
   }
@@ -233,8 +233,8 @@ export async function generateImageWithDALLE(prompt, apiKey, options = {}) {
     requestBody.n = 1;
   }
 
-  // gpt-image-1 specific options
-  if (model === 'gpt-image-1') {
+  // GPT Image family specific options
+  if (model === 'gpt-image-1' || model === 'gpt-image-1.5' || model === 'chatgpt-image-latest') {
     if (options.background) requestBody.background = options.background;
     if (options.moderation) requestBody.moderation = options.moderation;
     if (options.output_compression) requestBody.output_compression = options.output_compression;

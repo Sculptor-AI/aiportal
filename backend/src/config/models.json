@@ -1,16 +1,20 @@
 {
   "_description": "Centralized model configuration. Update this file when models change.",
-  "_lastUpdated": "2025-12-14",
+  "_lastUpdated": "2026-03-03",
 
-  "default": "gpt-5.2",
+  "default": "chatgpt-5.3-instant",
 
   "chat": {
     "openai": {
       "models": {
-        "gpt-5.2": "gpt-5.2-chat-latest",
-        "gpt-5.2-pro": "gpt-5.2-pro-2025-12-11",
-        "gpt-5.2-nano": "gpt-5-nano-2025-08-07",
+        "chatgpt-5.3-instant": "gpt-5.3-chat-latest",
+        "chatgpt-5.2-reasoning": "gpt-5.2",
         "gpt-4o": "chatgpt-4o-latest"
+      },
+      "modelCapabilities": {
+        "chatgpt-5.2-reasoning": {
+          "reasoning_effort": true
+        }
       },
       "capabilities": {
         "web_search": true,
@@ -21,8 +25,8 @@
 
     "anthropic": {
       "models": {
-        "claude-opus-4.5": "claude-opus-4-5",
-        "claude-sonnet-4.5": "claude-sonnet-4-5",
+        "claude-opus-4.6": "claude-opus-4-6",
+        "claude-sonnet-4.6": "claude-sonnet-4-6",
         "claude-haiku-4.5": "claude-haiku-4-5"
       },
       "capabilities": {
@@ -34,8 +38,9 @@
 
     "gemini": {
       "models": {
-        "gemini-3-pro": "gemini-3-pro-preview",
-        "gemini-2.5-flash": "gemini-flash-latest"
+        "gemini-3.1-pro": "gemini-3.1-pro-preview",
+        "gemini-3-flash": "gemini-3-flash-preview",
+        "gemini-3.1-flash-lite": "gemini-3.1-flash-lite-preview"
       },
       "capabilities": {
         "web_search": true,
@@ -46,18 +51,22 @@
   },
 
   "image": {
-    "default": "nano-banana",
+    "default": "gemini-3.1-flash-image",
     "google": {
       "models": {
+        "gemini-3.1-flash-image": "gemini-3.1-flash-image-preview",
+        "gemini-3-pro-image": "gemini-3-pro-image-preview",
         "imagen-4.0": "imagen-4.0-generate-001",
         "imagen-4.0-fast": "imagen-4.0-fast-generate-001",
         "imagen-4.0-ultra": "imagen-4.0-ultra-generate-001",
-        "nano-banana": "gemini-2.5-flash-image",
+        "nano-banana": "gemini-3.1-flash-image-preview",
         "nano-banana-pro": "gemini-3-pro-image-preview"
       }
     },
     "openai": {
       "models": {
+        "gpt-image-1.5": "gpt-image-1.5",
+        "chatgpt-image-latest": "chatgpt-image-latest",
         "gpt-image": "gpt-image-1"
       }
     }

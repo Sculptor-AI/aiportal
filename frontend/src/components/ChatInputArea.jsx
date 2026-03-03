@@ -30,7 +30,10 @@ import {
   FileTypeIcon,
   OverflowChipButton,
   OverflowDropdown,
-  InputGreeting
+  InputGreeting,
+  ReasoningEffortRow,
+  ReasoningEffortLabel,
+  ReasoningEffortSelect
 } from './ChatWindow.styled';
 
 const ChatInputArea = forwardRef(({
@@ -92,9 +95,14 @@ const ChatInputArea = forwardRef(({
   const [showOverflowDropdown, setShowOverflowDropdown] = useState(false);
   const [chipsExpanded, setChipsExpanded] = useState(chatIsEmpty);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [reasoningEffort, setReasoningEffort] = useState(() => {
+    const savedEffort = localStorage.getItem('reasoningEffort');
+    return savedEffort || 'medium';
+  });
   const dragCounterRef = useRef(0);
   const greetingEnabled = settings?.showGreeting !== false;
   const showGreetingMessage = greetingEnabled && chatIsEmpty && !animateDown;
+  const supportsReasoningEffort = modelCapabilities?.reasoning_effort === true;
 
   // Use image mode from prop (state managed by parent)
   const isImagePromptMode = isImagePromptModeProp || false;
@@ -143,6 +151,10 @@ const ChatInputArea = forwardRef(({
       onToolbarToggle(showToolbar);
     }
   }, [showToolbar, onToolbarToggle]);
+
+  useEffect(() => {
+    localStorage.setItem('reasoningEffort', reasoningEffort);
+  }, [reasoningEffort]);
 
   useEffect(() => {
     const wasEmpty = prevChatIsEmptyRef.current;
@@ -315,7 +327,8 @@ const ChatInputArea = forwardRef(({
       file: uploadedFile,
       actionChip: selectedActionChip,
       mode: thinkingMode,
-      createType: createType
+      createType: createType,
+      reasoningEffort: supportsReasoningEffort ? reasoningEffort : null
     });
     setInputMessage(''); // Clear input after submission attempt
     if (onMessageSent) {
@@ -1144,6 +1157,26 @@ const ChatInputArea = forwardRef(({
               );
             })}
           </FilesPreviewContainer>
+
+          {supportsReasoningEffort && (
+            <ReasoningEffortRow theme={theme}>
+              <ReasoningEffortLabel theme={theme}>
+                {t('composer.reasoningEffort.label', 'Reasoning effort')}
+              </ReasoningEffortLabel>
+              <ReasoningEffortSelect
+                theme={theme}
+                value={reasoningEffort}
+                onChange={(event) => setReasoningEffort(event.target.value)}
+                disabled={isLoading || isProcessingFile}
+                aria-label={t('composer.reasoningEffort.label', 'Reasoning effort')}
+              >
+                <option value="low">{t('composer.reasoningEffort.low', 'Low')}</option>
+                <option value="medium">{t('composer.reasoningEffort.medium', 'Medium')}</option>
+                <option value="high">{t('composer.reasoningEffort.high', 'High')}</option>
+                <option value="xhigh">{t('composer.reasoningEffort.xhigh', 'X-High')}</option>
+              </ReasoningEffortSelect>
+            </ReasoningEffortRow>
+          )}
 
           <InputRow>
             <FileUploadButton

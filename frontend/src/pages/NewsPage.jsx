@@ -3,6 +3,7 @@ import styled, { keyframes, css } from 'styled-components';
 import { fetchArticlesByCategory, fetchArticleContent } from '../services/rssService';
 import { sendMessageToBackend } from '../services/aiService';
 import { useTranslation } from '../contexts/TranslationContext';
+import { NEWS_ASSIST_MODEL_ID } from '../config/modelConfig';
 
 // ============================================================================
 // ANIMATIONS
@@ -951,7 +952,7 @@ const ArticleDetailView = ({ article, onClose }) => {
         if (textContent && textContent.length > 20) {
           try {
             const prompt = `Please provide a concise, well-structured summary of the following news article. Focus on the key points and main takeaways:\n\n---\n\n${textContent}`;
-            const result = await sendMessageToBackend('gemini-2.5-flash', prompt);
+            const result = await sendMessageToBackend(NEWS_ASSIST_MODEL_ID, prompt);
             if (result?.response) {
               setSummary(result.response);
             } else {
@@ -968,7 +969,7 @@ const ArticleDetailView = ({ article, onClose }) => {
         if (article.description && article.description.length > 20) {
           try {
             const prompt = `Please provide a concise summary and analysis of: ${article.title}\n\n${article.description}`;
-            const result = await sendMessageToBackend('gemini-2.5-flash', prompt);
+            const result = await sendMessageToBackend(NEWS_ASSIST_MODEL_ID, prompt);
             if (result?.response) {
               setSummary(result.response);
             }

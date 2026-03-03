@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
+import { DEFAULT_CUSTOM_BASE_MODEL_ID, getPreferredModelId } from '../config/modelConfig';
 
 // ============================================================================
 // ANIMATIONS
@@ -895,7 +896,7 @@ const WorkspacePage = ({ collapsed }) => {
         if (backendModels && backendModels.length > 0) {
           setAvailableBaseModels(backendModels);
           if (!formData.baseModel) {
-            setFormData(prev => ({ ...prev, baseModel: backendModels[0].id }));
+            setFormData(prev => ({ ...prev, baseModel: getPreferredModelId(backendModels, DEFAULT_CUSTOM_BASE_MODEL_ID) }));
           }
         }
       } catch (error) {
@@ -913,7 +914,7 @@ const WorkspacePage = ({ collapsed }) => {
       const parsedModels = JSON.parse(savedModels);
       const modelsWithBaseModel = parsedModels.map(model => ({
         ...model,
-        baseModel: model.baseModel || (availableBaseModels.length > 0 ? availableBaseModels[0].id : 'gpt-3.5-turbo')
+        baseModel: model.baseModel || getPreferredModelId(availableBaseModels, DEFAULT_CUSTOM_BASE_MODEL_ID)
       }));
       setModels(modelsWithBaseModel);
       setFilteredModels(modelsWithBaseModel);

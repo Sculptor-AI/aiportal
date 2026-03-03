@@ -11,6 +11,7 @@ import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 import ChatInputArea from './ChatInputArea';
 import LiveModeUI from './LiveModeUI';
 import useMessageSender from '../hooks/useMessageSender';
+import { DEFAULT_CHAT_MODEL_ID } from '../config/modelConfig';
 import {
   ChatWindowContainer,
   ChatHeader,
@@ -56,7 +57,7 @@ const ChatWindow = forwardRef(({
   onMessageSent,
 }, ref) => {
   // All hooks at the top level - no conditional returns before this
-  const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
+  const [selectedModel, setSelectedModel] = useState(initialSelectedModel || DEFAULT_CHAT_MODEL_ID);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);

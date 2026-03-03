@@ -330,6 +330,10 @@ const useMessageSender = ({
           role: msg.role,
           content: msg.content
         }));
+        const flowchartModelObj = (availableModels || []).find(model => model.id === selectedModel);
+        const flowchartRequestOptions = flowchartModelObj?.provider
+          ? { provider: flowchartModelObj.provider }
+          : {};
         
         let streamedContent = '';
         const messageGenerator = sendMessage(
@@ -341,7 +345,8 @@ const useMessageSender = ({
           false, // not search
           false, // not deep research
           false, // not create image
-          combinedSystemPrompt // combined system prompt
+          combinedSystemPrompt, // combined system prompt
+          flowchartRequestOptions
         );
         
         for await (const chunk of messageGenerator) {
@@ -399,6 +404,7 @@ const useMessageSender = ({
     const actionChip = messagePayload.actionChip;
     const thinkingMode = messagePayload.mode;
     const createType = messagePayload.createType;
+    const reasoningEffort = messagePayload.reasoningEffort;
     
     const messageToSend = messageText ? messageText.trim() : '';
     
@@ -429,13 +435,18 @@ const useMessageSender = ({
     const currentChatId = chat.id;
     const currentModel = selectedModel;
     const currentHistory = chat.messages;
-    const currentModelObj = availableModels.find(model => model.id === currentModel);
+    const currentModelObj = (availableModels || []).find(model => model.id === currentModel);
     const isBackendModel = currentModelObj?.isBackendModel === true;
+    const supportsReasoningEffort = currentModelObj?.capabilities?.reasoning_effort === true;
 
     // For custom models, use the base model ID for the API call
     const modelIdForApi = currentModelObj?.isCustomModel && currentModelObj?.baseModel 
       ? currentModelObj.baseModel 
       : currentModel;
+    const requestOptions = {
+      ...(currentModelObj?.provider ? { provider: currentModelObj.provider } : {}),
+      ...(supportsReasoningEffort && reasoningEffort ? { reasoningEffort } : {})
+    };
 
     // All models now go through backend API - no local API key validation needed
 
@@ -548,7 +559,8 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
         const messageGenerator = sendMessage(
           messageToSend, modelIdForApi, formattedHistory, imageDataToSend, fileTextToSend,
           currentActionChip === 'search', currentActionChip === 'analysis-tool', currentActionChip === 'create-image',
-          systemPromptToUse
+          systemPromptToUse,
+          requestOptions
         );
         
         let messageSources = [];
