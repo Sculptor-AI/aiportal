@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import axios from 'axios';
 
 // Helper function to get API base URL
 const getApiBaseUrl = () => {
@@ -15,26 +14,20 @@ const getApiBaseUrl = () => {
 
 // Helper function to get authentication headers
 const getAuthHeaders = () => {
-  let apiKey = null;
-  let user = null;
+  let accessToken = null;
   
   try {
     const userJSON = sessionStorage.getItem('ai_portal_current_user');
     if (userJSON) {
-      user = JSON.parse(userJSON);
-      if (user.accessToken && user.accessToken.startsWith('ak_')) {
-        apiKey = user.accessToken;
-      } else if (user.accessToken) {
-        apiKey = user.accessToken;
-      }
+      const user = JSON.parse(userJSON);
+      accessToken = user?.accessToken || null;
     }
   } catch (e) {
     console.error('Error getting user session:', e);
   }
 
-  // Fallback API key for development/testing
-  if (!apiKey) {
-    apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+  if (!accessToken) {
+    throw new Error('Authentication required. Please log in to use deep research.');
   }
 
   const headers = {
@@ -42,10 +35,10 @@ const getAuthHeaders = () => {
     'Accept': 'text/event-stream'
   };
 
-  if (apiKey.startsWith('ak_')) {
-    headers['x-api-key'] = apiKey;
+  if (accessToken.startsWith('ak_')) {
+    headers['x-api-key'] = accessToken;
   } else {
-    headers['Authorization'] = `Bearer ${apiKey}`;
+    headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
   return headers;

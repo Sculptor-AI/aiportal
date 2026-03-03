@@ -15,6 +15,7 @@ import { handleAnthropicChat } from '../services/anthropic.js';
 import { handleOpenAIChat } from '../services/openai.js';
 import { validateToolsForProvider } from '../config/index.js';
 import { requireAuthAndApproved } from '../middleware/auth.js';
+import { chatGenerationRateLimit } from '../middleware/rateLimit.js';
 
 const chat = new Hono();
 
@@ -96,7 +97,7 @@ function validateToolRequest(provider, body, c) {
  * - Thinking/reasoning (thinking: true, reasoning: true)
  * - Provider routing (provider: 'gemini'|'anthropic'|'openai'|'openrouter')
  */
-chat.post('/chat/completions', async (c) => {
+chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
   const env = c.env;
 
   try {
@@ -174,7 +175,7 @@ chat.post('/chat/completions', async (c) => {
     }
   } catch (error) {
     console.error('Chat completion error:', error);
-    return c.json({ error: error.message || 'Internal server error' }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 

@@ -2,6 +2,8 @@
  * RSS Feed Service
  */
 
+import { validateOutboundUrl } from '../utils/urlValidation.js';
+
 // RSS Feed Configuration
 export const RSS_FEEDS = {
   top: [
@@ -37,6 +39,43 @@ export const RSS_FEEDS = {
 };
 
 const CARD_SIZES = ['featured', 'wide', 'tall', 'compact', 'standard'];
+const COMMON_MULTI_LABEL_TLDS = ['co.uk', 'org.uk', 'ac.uk', 'com.au', 'co.jp', 'com.br'];
+
+const getBaseDomain = (hostname) => {
+  const lowerHost = hostname.toLowerCase();
+  const parts = lowerHost.split('.');
+  if (parts.length < 2) return lowerHost;
+
+  const tail = parts.slice(-2).join('.');
+  if (COMMON_MULTI_LABEL_TLDS.includes(tail) && parts.length >= 3) {
+    return parts.slice(-3).join('.');
+  }
+
+  return tail;
+};
+
+const ALLOWED_ARTICLE_HOST_PATTERNS = (() => {
+  const hosts = new Set();
+  Object.values(RSS_FEEDS).flat().forEach((feedUrl) => {
+    try {
+      const host = new URL(feedUrl).hostname.toLowerCase();
+      hosts.add(host);
+      hosts.add(`*.${host}`);
+
+      const baseDomain = getBaseDomain(host);
+      hosts.add(baseDomain);
+      hosts.add(`*.${baseDomain}`);
+    } catch {
+      // Ignore invalid feed URL entry
+    }
+  });
+  return Array.from(hosts);
+})();
+
+export const isAllowedArticleUrl = (url) => {
+  const validation = validateOutboundUrl(url, ALLOWED_ARTICLE_HOST_PATTERNS);
+  return validation.valid;
+};
 
 /**
  * Extract content from XML tag
@@ -142,9 +181,19 @@ export async function fetchArticlesByCategory(category, limit = 20) {
  * Fetch article content from URL
  */
 export async function fetchArticleContent(url) {
-  const response = await fetch(url, {
+  const validation = validateOutboundUrl(url, ALLOWED_ARTICLE_HOST_PATTERNS);
+  if (!validation.valid) {
+    throw new Error('Invalid article URL');
+  }
+
+  const response = await fetch(validation.url.toString(), {
+    redirect: 'manual',
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' }
   });
+
+  if (response.status >= 300 && response.status < 400) {
+    throw new Error('Redirects are not allowed');
+  }
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   let content = await response.text();
   

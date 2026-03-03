@@ -405,8 +405,6 @@ export async function handleGeminiChat(c, body, apiKey) {
   const geminiBody = buildGeminiBody(body);
   const url = `${GEMINI_BASE_URL}/models/${targetModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-  console.log('Gemini request body:', JSON.stringify(geminiBody, null, 2));
-
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -416,8 +414,8 @@ export async function handleGeminiChat(c, body, apiKey) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API Error:', errorText);
-      return c.json({ error: `Gemini API Error: ${errorText}` }, response.status);
+      console.error('Gemini API Error:', response.status, errorText.slice(0, 500));
+      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
     // Transform Gemini stream to OpenAI-compatible SSE
@@ -434,7 +432,7 @@ export async function handleGeminiChat(c, body, apiKey) {
 
   } catch (error) {
     console.error('Gemini handler error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 }
 
@@ -457,7 +455,8 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return c.json({ error: `Gemini API Error: ${errorText}` }, response.status);
+      console.error('Gemini non-stream API Error:', response.status, errorText.slice(0, 500));
+      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
     const result = await response.json();
@@ -487,7 +486,7 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
 
   } catch (error) {
     console.error('Gemini handler error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 }
 
@@ -553,7 +552,7 @@ function buildGeminiImageContents(prompt, history = []) {
  */
 async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
   const hasHistory = options.history && options.history.length > 0;
-  console.log(`[Gemini Image] Generating with model: ${model}, history: ${hasHistory ? options.history.length + ' items' : 'none'}`);
+  console.log(`[Gemini Image] Generating with model: ${model}, history: ${hasHistory ? `${options.history.length} items` : 'none'}`);
 
   // Build contents with conversation history for multi-turn editing
   const contents = buildGeminiImageContents(prompt, options.history);
@@ -577,7 +576,7 @@ async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
 
     if (response.ok) {
       const result = await response.json();
-      console.log(`[Gemini Image] Response received`);
+      console.log('[Gemini Image] Response received');
 
       // Extract images from the response
       const images = [];
@@ -607,12 +606,12 @@ async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
       }
     } else {
       const errorText = await response.text();
-      console.log(`[Gemini Image] Model ${model} returned status: ${response.status}`, errorText);
-      return { success: false, error: `Status ${response.status}: ${errorText}` };
+      console.log(`[Gemini Image] Model ${model} returned status: ${response.status}`, errorText.slice(0, 300));
+      return { success: false, error: `Image generation failed (status ${response.status})` };
     }
   } catch (e) {
     console.error(`[Gemini Image] Model ${model} failed:`, e.message);
-    return { success: false, error: e.message };
+    return { success: false, error: 'Image generation failed' };
   }
 
   return { success: false, error: 'Unknown error' };
@@ -661,11 +660,12 @@ async function generateWithImagen(prompt, apiKey, model, options = {}) {
     } else {
       console.log(`[Imagen] Model ${model} returned status: ${response.status}`);
       const errorText = await response.text();
-      return { success: false, error: `Status ${response.status}: ${errorText}` };
+      console.log('[Imagen] Error payload:', errorText.slice(0, 300));
+      return { success: false, error: `Image generation failed (status ${response.status})` };
     }
   } catch (e) {
     console.error(`[Imagen] Model ${model} failed:`, e.message);
-    return { success: false, error: e.message };
+    return { success: false, error: 'Image generation failed' };
   }
 
   return { success: false, error: 'Unknown error' };
@@ -720,8 +720,6 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
   const model = 'veo-2.0-generate-001';
   
   console.log(`[Veo Video] Generating with model: ${model}`);
-  console.log(`[Veo Video] Prompt: "${prompt.substring(0, 100)}..."`);
-  console.log(`[Veo Video] Options:`, options);
 
   const requestBody = {
     instances: [{ 
@@ -732,8 +730,6 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
       ...(options.negativePrompt && { negativePrompt: options.negativePrompt })
     }
   };
-
-  console.log(`[Veo Video] Request body:`, JSON.stringify(requestBody, null, 2));
 
   try {
     const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
@@ -748,7 +744,7 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
     const result = await response.json();
     
     if (!response.ok) {
-      console.error(`[Veo Video] API Error (${response.status}):`, JSON.stringify(result, null, 2));
+      console.error(`[Veo Video] API Error (${response.status})`);
       
       // Provide more helpful error messages
       let errorMessage = result.error?.message || `API returned status ${response.status}`;
@@ -776,7 +772,7 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
         model
       };
     } else {
-      console.error(`[Veo Video] Unexpected response structure:`, JSON.stringify(result, null, 2));
+      console.error('[Veo Video] Unexpected response structure');
       return { success: false, error: 'Unexpected API response - no operation name returned' };
     }
   } catch (e) {
@@ -802,14 +798,14 @@ export async function checkOperationStatus(operationName, apiKey) {
     const result = await response.json();
     
     if (!response.ok) {
-      console.error(`[Veo Status] Error (${response.status}):`, JSON.stringify(result, null, 2));
+      console.error(`[Veo Status] Error (${response.status})`);
       return { 
         success: false, 
         error: result.error?.message || `Status ${response.status}: Unknown error` 
       };
     }
 
-    console.log(`[Veo Status] Response done=${result.done}:`, JSON.stringify(result, null, 2).substring(0, 500));
+    console.log(`[Veo Status] Response done=${result.done}`);
 
     // Check if done
     if (result.done) {
@@ -839,7 +835,7 @@ export async function checkOperationStatus(operationName, apiKey) {
       }
       
       if (!videoUri) {
-        console.log('[Veo Status] Completed but could not find video URI. Full response:', JSON.stringify(result, null, 2));
+        console.log('[Veo Status] Completed but could not find video URI.');
       } else {
         console.log(`[Veo Status] Video ready at: ${videoUri}`);
       }

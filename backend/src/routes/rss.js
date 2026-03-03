@@ -3,7 +3,7 @@
  */
 
 import { Hono } from 'hono';
-import { RSS_FEEDS, fetchArticlesByCategory, fetchArticleContent } from '../services/rss.js';
+import { RSS_FEEDS, fetchArticlesByCategory, fetchArticleContent, isAllowedArticleUrl } from '../services/rss.js';
 import { requireAuthAndApproved } from '../middleware/auth.js';
 
 const rss = new Hono();
@@ -43,10 +43,14 @@ rss.get('/article-content', async (c) => {
   if (!articleUrl) {
     return c.json({ error: 'URL parameter required' }, 400);
   }
+  if (!isAllowedArticleUrl(articleUrl)) {
+    return c.json({ error: 'Invalid article URL' }, 400);
+  }
   try {
     const content = await fetchArticleContent(articleUrl);
     return c.json(content);
   } catch (error) {
+    console.error('Article content fetch failed:', error);
     return c.json({ error: 'Failed to fetch article content' }, 500);
   }
 });

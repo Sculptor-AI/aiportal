@@ -9,6 +9,7 @@ import {
   listChatModels, 
   listImageModels
 } from '../config/index.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const health = new Hono();
 
@@ -44,7 +45,7 @@ health.get('/models', (c) => {
  * Get raw models configuration
  * Useful for debugging and frontend model selection
  */
-health.get('/models/config', (c) => {
+health.get('/models/config', requireAuth, requireAdmin, (c) => {
   return c.json(getModelsConfig());
 });
 
@@ -119,7 +120,7 @@ health.get('/capabilities', (c) => {
 /**
  * Get API key status (without exposing keys)
  */
-health.get('/status', (c) => {
+health.get('/status', requireAuth, requireAdmin, (c) => {
   const env = c.env;
 
   return c.json({

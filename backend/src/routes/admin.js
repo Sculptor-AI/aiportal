@@ -5,16 +5,27 @@
 
 import { Hono } from 'hono';
 import { nowIso } from '../state.js';
-import { sanitizeUser, findUserByUsername, findUserById, getAllUsers, updateUser, isEmailTaken, isUsernameTaken, invalidateUserSessions, deleteUserApiKeys } from '../utils/helpers.js';
+import { sanitizeUser, findUserByUsername, findUserById, getAllUsers, updateUser, isEmailTaken, isUsernameTaken, invalidateUserSessions, deleteUserApiKeys, addUserSessionIndex, removeUserSessionIndex } from '../utils/helpers.js';
 import { hashPassword, verifyPassword, generateSessionToken, hashToken } from '../utils/crypto.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { adminLoginRateLimit } from '../middleware/rateLimit.js';
 
 const admin = new Hono();
+const MAX_PASSWORD_LENGTH = 128;
+const isPasswordComplexEnough = (password) => {
+  if (typeof password !== 'string') return false;
+  return (
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+};
 
 /**
  * Admin login
  */
-admin.post('/auth/login', async (c) => {
+admin.post('/auth/login', adminLoginRateLimit, async (c) => {
   const kv = c.env.KV;
   if (!kv) {
     return c.json({ error: 'Storage not configured' }, 500);
@@ -39,8 +50,12 @@ admin.post('/auth/login', async (c) => {
     return c.json({ error: 'Invalid admin credentials' }, 401);
   }
 
-  // Check if user is admin
-  if (adminUser.role !== 'admin' && adminUser.status !== 'admin') {
+  // Check if user is admin and account is active
+  if (adminUser.role !== 'admin') {
+    return c.json({ error: 'Invalid admin credentials' }, 401);
+  }
+
+  if (adminUser.status === 'pending' || adminUser.status === 'suspended' || adminUser.status === 'banned') {
     return c.json({ error: 'Invalid admin credentials' }, 401);
   }
 
@@ -49,7 +64,7 @@ admin.post('/auth/login', async (c) => {
   const tokenHash = await hashToken(adminToken);
 
   // Store admin session with 8-hour TTL
-  // Note: Admin status is determined by user.role/user.status, not session data
+  // Note: Admin status is determined by user.role, not session data
   const sessionData = {
     userId: adminUser.id,
     createdAt: nowIso(),
@@ -59,6 +74,7 @@ admin.post('/auth/login', async (c) => {
   await kv.put(`session:${tokenHash}`, JSON.stringify(sessionData), {
     expirationTtl: 28800 // 8 hours in seconds
   });
+  await addUserSessionIndex(kv, adminUser.id, tokenHash);
 
   // Update last login
   adminUser.last_login = nowIso();
@@ -77,13 +93,15 @@ admin.post('/auth/login', async (c) => {
 /**
  * Admin logout
  */
-admin.post('/auth/logout', requireAuth, async (c) => {
+admin.post('/auth/logout', requireAuth, requireAdmin, async (c) => {
   const kv = c.env.KV;
   const token = c.get('token');
+  const user = c.get('user');
 
-  if (kv && token) {
+  if (kv && token && token.startsWith('sess_')) {
     const tokenHash = await hashToken(token);
     await kv.delete(`session:${tokenHash}`);
+    await removeUserSessionIndex(kv, user?.id, tokenHash);
   }
 
   return c.json({ success: true });
@@ -150,7 +168,7 @@ admin.put('/users/:userId/status', requireAuth, requireAdmin, async (c) => {
   }
 
   // Validate status
-  const validStatuses = ['pending', 'active', 'suspended', 'banned', 'admin'];
+  const validStatuses = ['pending', 'active', 'suspended', 'banned'];
   if (!validStatuses.includes(body.status)) {
     return c.json({ error: 'Invalid status. Must be one of: ' + validStatuses.join(', ') }, 400);
   }
@@ -160,9 +178,12 @@ admin.put('/users/:userId/status', requireAuth, requireAdmin, async (c) => {
   user.updated_at = nowIso();
   await updateUser(kv, user);
 
-  // Invalidate all sessions if user is suspended or banned
+  // Invalidate all sessions and revoke API keys if user is suspended or banned
   if ((body.status === 'suspended' || body.status === 'banned') && oldStatus !== body.status) {
-    await invalidateUserSessions(kv, userId);
+    await Promise.all([
+      invalidateUserSessions(kv, userId),
+      deleteUserApiKeys(kv, userId)
+    ]);
   }
 
   return c.json({ success: true, data: { id: userId, status: user.status } });
@@ -268,6 +289,14 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
     if (body.password.length < 12) {
       return c.json({ error: 'Password must be at least 12 characters long' }, 400);
     }
+    if (body.password.length > MAX_PASSWORD_LENGTH) {
+      return c.json({ error: `Password must be at most ${MAX_PASSWORD_LENGTH} characters long` }, 400);
+    }
+    if (!isPasswordComplexEnough(body.password)) {
+      return c.json({
+        error: 'Password must include at least one uppercase letter, one lowercase letter, one number, and one special character'
+      }, 400);
+    }
     const { hash, salt } = await hashPassword(body.password);
     user.passwordHash = hash;
     user.passwordSalt = salt;
@@ -362,7 +391,7 @@ admin.get('/dashboard/stats', requireAuth, requireAdmin, async (c) => {
     totalUsers += 1;
     if (user.status === 'pending') pendingUsers += 1;
     if (user.status === 'active') activeUsers += 1;
-    if (user.status === 'admin' || user.role === 'admin') adminUsers += 1;
+    if (user.role === 'admin') adminUsers += 1;
     if (user.status === 'suspended' || user.status === 'banned') suspendedUsers += 1;
   }
 

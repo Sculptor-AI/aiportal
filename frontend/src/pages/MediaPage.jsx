@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
-import { generateVideo, pollVideoStatus, getVideoDownloadUrl } from '../services/videoService';
+import { generateVideo, pollVideoStatus, getVideoDownloadUrl, downloadGeneratedVideo } from '../services/videoService';
 import { useToast } from '../contexts/ToastContext';
 
 // ============================================================================
@@ -780,9 +780,13 @@ const MediaPage = ({ collapsed }) => {
     }
   };
 
-  const handleDownload = (video) => {
+  const handleDownload = async (video) => {
     if (video.url) {
-      window.open(video.url, '_blank');
+      try {
+        await downloadGeneratedVideo(video.url);
+      } catch (error) {
+        toast.showErrorToast('Download Failed', error.message || 'Unable to download video');
+      }
     }
   };
 

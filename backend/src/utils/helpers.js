@@ -98,6 +98,49 @@ export const updateUser = async (kv, user) => {
 };
 
 /**
+ * Add a session hash to the user's session index for efficient invalidation.
+ */
+export const addUserSessionIndex = async (kv, userId, tokenHash) => {
+  if (!kv || !userId || !tokenHash) return;
+
+  try {
+    const indexKey = `usersessions:${userId}`;
+    const current = await kv.get(indexKey, 'json');
+    const sessionHashes = Array.isArray(current) ? current : [];
+
+    if (!sessionHashes.includes(tokenHash)) {
+      sessionHashes.push(tokenHash);
+      await kv.put(indexKey, JSON.stringify(sessionHashes));
+    }
+  } catch (error) {
+    console.error('Error updating user session index:', error);
+  }
+};
+
+/**
+ * Remove a session hash from the user's session index.
+ */
+export const removeUserSessionIndex = async (kv, userId, tokenHash) => {
+  if (!kv || !userId || !tokenHash) return;
+
+  try {
+    const indexKey = `usersessions:${userId}`;
+    const current = await kv.get(indexKey, 'json');
+    const sessionHashes = Array.isArray(current) ? current : [];
+    const filtered = sessionHashes.filter((hash) => hash !== tokenHash);
+
+    if (filtered.length === 0) {
+      await kv.delete(indexKey);
+      return;
+    }
+
+    await kv.put(indexKey, JSON.stringify(filtered));
+  } catch (error) {
+    console.error('Error removing user session index entry:', error);
+  }
+};
+
+/**
  * Check if email is already taken by another user
  * Note: Check is case-insensitive ("User@Example.com" and "user@example.com" are the same)
  */
@@ -122,11 +165,11 @@ export const isUsernameTaken = async (kv, username, excludeUserId = null) => {
 };
 
 /**
- * Invalidate all sessions for a user
- * 
- * Note: This scans all sessions which can be slow with many active sessions.
- * Future optimization: Store a "usersessions:{userId}" index containing session hashes.
- * 
+ * Invalidate all sessions for a user.
+ *
+ * Uses a user session index for O(k) invalidation where k is the number of
+ * sessions for that user. Falls back to legacy full scan if index is missing.
+ *
  * @param {Object} kv - KV namespace
  * @param {string} userId - User ID whose sessions should be invalidated
  */
@@ -134,20 +177,32 @@ export const invalidateUserSessions = async (kv, userId) => {
   if (!kv || !userId) return;
 
   try {
-    // List all sessions and find ones belonging to this user
-    // TODO: Consider storing usersessions:{userId} index for O(1) lookup
+    const sessionIndexKey = `usersessions:${userId}`;
+    const indexedHashes = await kv.get(sessionIndexKey, 'json');
+
+    if (Array.isArray(indexedHashes) && indexedHashes.length > 0) {
+      await Promise.all([
+        ...indexedHashes.map((hash) => kv.delete(`session:${hash}`)),
+        kv.delete(sessionIndexKey)
+      ]);
+      return;
+    }
+
+    // Backward-compatible fallback for legacy sessions without an index.
     const list = await kv.list({ prefix: 'session:' });
-    const deletePromises = [];
+    const matchingSessionHashes = [];
 
     for (const key of list.keys) {
       const sessionData = await kv.get(key.name, 'json');
       if (sessionData && sessionData.userId === userId) {
-        deletePromises.push(kv.delete(key.name));
+        const hash = key.name.slice('session:'.length);
+        matchingSessionHashes.push(hash);
       }
     }
 
-    if (deletePromises.length > 0) {
-      await Promise.all(deletePromises);
+    if (matchingSessionHashes.length > 0) {
+      await Promise.all(matchingSessionHashes.map((hash) => kv.delete(`session:${hash}`)));
+      await kv.delete(sessionIndexKey);
     }
   } catch (error) {
     console.error('Error invalidating user sessions:', error);

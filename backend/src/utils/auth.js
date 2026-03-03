@@ -24,13 +24,13 @@ export const getUserFromContext = (c) => {
  */
 export const isAdmin = (user) => {
   if (!user) return false;
-  return user.role === 'admin' || user.status === 'admin';
+  return user.role === 'admin';
 };
 
 /**
- * Check if user is approved (active or admin)
+ * Check if user is approved (active status and not suspended/banned)
  */
 export const isApproved = (user) => {
   if (!user) return false;
-  return user.status === 'active' || user.status === 'admin';
+  return user.status === 'active';
 };

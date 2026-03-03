@@ -263,6 +263,7 @@ const GraphingModal = ({ isOpen, onClose, theme }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [initialOffset, setInitialOffset] = useState({ x: 0, y: 0 }); // offset at start of drag
+  const compiledExpressionsRef = useRef(new Map());
 
   const colors = ['#c74440', '#2d70b3', '#388c46', '#e68d39', '#9147b1', '#47a5a5'];
 
@@ -408,41 +409,200 @@ const GraphingModal = ({ isOpen, onClose, theme }) => {
     });
   };
 
+  const normalizeExpression = (expression) => {
+    if (!expression || typeof expression !== 'string') return null;
+
+    let normalized = expression.toLowerCase().replace(/\s+/g, '');
+    normalized = normalized.replace(/^y=/, '');
+    normalized = normalized.replace(/×/g, '*').replace(/÷/g, '/');
+
+    // Handle common implicit multiplication patterns: 2x, 2sin(x), x2, x(y), )(, etc.
+    normalized = normalized.replace(/(\d)(pi|x|e|[a-z]+(?=\())/g, '$1*$2');
+    normalized = normalized.replace(/(x|pi|e|\))(\d)/g, '$1*$2');
+    normalized = normalized.replace(/(x|pi|e)(\()/g, '$1*$2');
+    normalized = normalized.replace(/(\))(pi|x|e|[a-z]+(?=\())/g, '$1*$2');
+    normalized = normalized.replace(/\)\(/g, ')*(');
+
+    if (/[^0-9a-z+\-*/^().,]/.test(normalized)) {
+      return null;
+    }
+
+    const allowedIdentifiers = new Set([
+      'x', 'pi', 'e',
+      'sin', 'cos', 'tan',
+      'asin', 'acos', 'atan',
+      'sqrt', 'log', 'ln', 'abs', 'exp'
+    ]);
+    const identifiers = normalized.match(/[a-z]+/g) || [];
+    if (identifiers.some((identifier) => !allowedIdentifiers.has(identifier))) {
+      return null;
+    }
+
+    return normalized;
+  };
+
+  const tokenizeExpression = (expression) => {
+    const tokens = [];
+    let index = 0;
+
+    while (index < expression.length) {
+      const char = expression[index];
+
+      if (/[0-9.]/.test(char)) {
+        let numberLiteral = char;
+        index += 1;
+        while (index < expression.length && /[0-9.]/.test(expression[index])) {
+          numberLiteral += expression[index];
+          index += 1;
+        }
+        const value = Number(numberLiteral);
+        if (!Number.isFinite(value)) return null;
+        tokens.push({ type: 'number', value });
+        continue;
+      }
+
+      if (/[a-z]/.test(char)) {
+        let identifier = char;
+        index += 1;
+        while (index < expression.length && /[a-z]/.test(expression[index])) {
+          identifier += expression[index];
+          index += 1;
+        }
+        tokens.push({ type: 'identifier', value: identifier });
+        continue;
+      }
+
+      if ('+-*/^(),'.includes(char)) {
+        tokens.push({ type: 'operator', value: char });
+        index += 1;
+        continue;
+      }
+
+      return null;
+    }
+
+    return tokens;
+  };
+
+  const evaluateTokens = (tokens, x) => {
+    let position = 0;
+
+    const functionMap = {
+      sin: Math.sin,
+      cos: Math.cos,
+      tan: Math.tan,
+      asin: Math.asin,
+      acos: Math.acos,
+      atan: Math.atan,
+      sqrt: Math.sqrt,
+      log: Math.log10,
+      ln: Math.log,
+      abs: Math.abs,
+      exp: Math.exp
+    };
+
+    const peek = () => tokens[position];
+    const consume = () => tokens[position++];
+    const matchOperator = (operator) => peek()?.type === 'operator' && peek()?.value === operator;
+
+    const parsePrimary = () => {
+      const token = consume();
+      if (!token) return NaN;
+
+      if (token.type === 'number') {
+        return token.value;
+      }
+
+      if (token.type === 'identifier') {
+        if (token.value === 'x') return x;
+        if (token.value === 'pi') return Math.PI;
+        if (token.value === 'e') return Math.E;
+
+        if (functionMap[token.value] && matchOperator('(')) {
+          consume(); // (
+          const argument = parseExpressionNode();
+          if (!matchOperator(')')) return NaN;
+          consume(); // )
+          return functionMap[token.value](argument);
+        }
+
+        return NaN;
+      }
+
+      if (token.type === 'operator' && token.value === '(') {
+        const value = parseExpressionNode();
+        if (!matchOperator(')')) return NaN;
+        consume(); // )
+        return value;
+      }
+
+      return NaN;
+    };
+
+    const parseUnary = () => {
+      if (matchOperator('+')) {
+        consume();
+        return parseUnary();
+      }
+      if (matchOperator('-')) {
+        consume();
+        return -parseUnary();
+      }
+      return parsePrimary();
+    };
+
+    const parsePower = () => {
+      const left = parseUnary();
+      if (matchOperator('^')) {
+        consume();
+        const right = parsePower(); // Right-associative exponentiation
+        return Math.pow(left, right);
+      }
+      return left;
+    };
+
+    const parseTerm = () => {
+      let value = parsePower();
+      while (matchOperator('*') || matchOperator('/')) {
+        const operator = consume().value;
+        const right = parsePower();
+        value = operator === '*' ? value * right : value / right;
+      }
+      return value;
+    };
+
+    const parseExpressionNode = () => {
+      let value = parseTerm();
+      while (matchOperator('+') || matchOperator('-')) {
+        const operator = consume().value;
+        const right = parseTerm();
+        value = operator === '+' ? value + right : value - right;
+      }
+      return value;
+    };
+
+    const result = parseExpressionNode();
+    if (position !== tokens.length) return NaN;
+    return Number.isFinite(result) ? result : NaN;
+  };
+
   const evaluateExpression = (expr, x) => {
     try {
-      // Pre-process for convenience
-      // Support standard math notation like 2x instead of 2*x
-      // Replace 'x' with value, handle implicit multiplication
-      let cleanExpr = expr.toLowerCase();
+      const normalized = normalizeExpression(expr);
+      if (!normalized) return NaN;
 
-      // Handle common constants and functions
-      // Must perform replacements carefully to avoid sub-string matches
-      // Ideally use a math parser library, but we use a simple regex replacer for now
+      if (!compiledExpressionsRef.current.has(normalized)) {
+        const compiled = tokenizeExpression(normalized);
+        if (!compiled) return NaN;
+        compiledExpressionsRef.current.set(normalized, compiled);
+        if (compiledExpressionsRef.current.size > 200) {
+          compiledExpressionsRef.current.clear();
+          compiledExpressionsRef.current.set(normalized, compiled);
+        }
+      }
 
-      // 1. Insert * between a number and a variable (2x -> 2*x)
-      cleanExpr = cleanExpr.replace(/(\d)(x)/g, '$1*$2');
-      // 2. Insert * between number and function (2sin -> 2*sin)
-      cleanExpr = cleanExpr.replace(/(\d)([a-z])/g, '$1*$2');
-      // 3. Insert * between ) and (  ((a)(b) -> (a)*(b))
-      cleanExpr = cleanExpr.replace(/\)\(/g, ')*(');
-
-      // Replace math functions with Math.
-      cleanExpr = cleanExpr
-        .replace(/\^/g, '**')
-        .replace(/\bsin\b/g, 'Math.sin')
-        .replace(/\bcos\b/g, 'Math.cos')
-        .replace(/\btan\b/g, 'Math.tan')
-        .replace(/\blog\b/g, 'Math.log10')
-        .replace(/\bln\b/g, 'Math.log')
-        .replace(/\bsqrt\b/g, 'Math.sqrt')
-        .replace(/\bpi\b/g, 'Math.PI')
-        .replace(/\be\b/g, 'Math.E');
-
-      // Execute safely
-      // Note: Using Function constructor has security implications in general, 
-      // but here it's client-side only and confined to math.
-      const f = new Function('x', `return ${cleanExpr}`);
-      return f(x);
+      const compiled = compiledExpressionsRef.current.get(normalized);
+      return evaluateTokens(compiled, x);
     } catch (e) {
       return NaN;
     }

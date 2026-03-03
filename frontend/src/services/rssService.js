@@ -1,9 +1,9 @@
 // RSS feed sources for different categories
 const RSS_FEEDS = {
   top: [
-    'http://feeds.bbci.co.uk/news/rss.xml',
+    'https://feeds.bbci.co.uk/news/rss.xml',
     'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
-    'http://rss.cnn.com/rss/cnn_topstories.rss',
+    'https://rss.cnn.com/rss/cnn_topstories.rss',
     'https://feeds.npr.org/1001/rss.xml'
   ],
   tech: [
@@ -14,7 +14,7 @@ const RSS_FEEDS = {
   ],
   sports: [
     'https://www.espn.com/espn/rss/news',
-    'http://feeds.bbci.co.uk/sport/rss.xml',
+    'https://feeds.bbci.co.uk/sport/rss.xml',
     'https://sports.yahoo.com/rss/'
   ],
   finance: [

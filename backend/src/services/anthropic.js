@@ -579,8 +579,8 @@ export async function handleAnthropicChat(c, body, apiKey) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Anthropic API Error:', errorText);
-      return c.json({ error: `Anthropic API Error: ${errorText}` }, response.status);
+      console.error('Anthropic API Error:', response.status, errorText.slice(0, 500));
+      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
     // Handle non-streaming response
@@ -639,7 +639,7 @@ export async function handleAnthropicChat(c, body, apiKey) {
 
   } catch (error) {
     console.error('Anthropic handler error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 }
 

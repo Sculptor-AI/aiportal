@@ -15,8 +15,6 @@ if (cleanedBase.endsWith('/api')) {
 const BACKEND_API_BASE = `${cleanedBase}/api`;
 const SAME_ORIGIN_API_BASE = '/api';
 
-console.log('[authService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
-
 // Helper function to build API URLs
 const buildApiUrlWithBase = (base, endpoint) => {
   if (!endpoint) return base;
@@ -33,11 +31,7 @@ const buildApiUrlWithBase = (base, endpoint) => {
 };
 
 const buildApiUrl = (endpoint) => {
-  console.log('[authService] buildApiUrl called with endpoint:', endpoint);
-  console.log('[authService] BACKEND_API_BASE:', BACKEND_API_BASE);
-  const result = buildApiUrlWithBase(BACKEND_API_BASE, endpoint);
-  console.log('[authService] Returning:', result);
-  return result;
+  return buildApiUrlWithBase(BACKEND_API_BASE, endpoint);
 };
 
 const fetchWithFallback = async (endpoint, options) => {
@@ -96,9 +90,6 @@ export const registerUser = async (username, password, email) => {
 // Login user
 export const loginUser = async (username, password) => {
   try {
-    const loginUrl = buildApiUrl('/auth/login');
-    console.log('[authService] Login URL being used:', loginUrl);
-    
     const response = await fetchWithFallback('/auth/login', {
       method: 'POST',
       headers: {
@@ -137,12 +128,30 @@ export const loginUser = async (username, password) => {
   }
 };
 
-// Logout user
-export const logoutUser = () => {
-  return new Promise((resolve) => {
+const buildAuthHeaders = (token) => {
+  if (!token) return {};
+  if (token.startsWith('ak_')) {
+    return { 'X-API-Key': token };
+  }
+  return { 'Authorization': `Bearer ${token}` };
+};
+
+// Logout user and revoke server-side session/token
+export const logoutUser = async () => {
+  try {
+    const user = getCurrentUser();
+    if (user?.accessToken) {
+      await fetchWithFallback('/auth/logout', {
+        method: 'POST',
+        headers: buildAuthHeaders(user.accessToken)
+      });
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
     sessionStorage.removeItem('ai_portal_current_user');
-    resolve(true);
-  });
+  }
+  return true;
 };
 
 // Check if user is logged in
@@ -155,9 +164,7 @@ export const getCurrentUser = () => {
 export const getAuthHeaders = () => {
   const user = getCurrentUser();
   if (user && user.accessToken) {
-    return {
-      'Authorization': `Bearer ${user.accessToken}`
-    };
+    return buildAuthHeaders(user.accessToken);
   }
   return {};
 };
