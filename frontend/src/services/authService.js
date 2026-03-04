@@ -1,18 +1,8 @@
 // authService.js
 // Backend authentication service for AI Portal
 
-// Prefer environment variable, otherwise default to same-origin (empty string)
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+import { getBackendApiBase } from './backendConfig';
 
-// Remove any trailing slashes
-let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
-
-// If the cleaned base already ends with /api, remove it
-if (cleanedBase.endsWith('/api')) {
-  cleanedBase = cleanedBase.slice(0, -4); // remove '/api'
-}
-
-const BACKEND_API_BASE = `${cleanedBase}/api`;
 const SAME_ORIGIN_API_BASE = '/api';
 
 // Helper function to build API URLs
@@ -30,17 +20,16 @@ const buildApiUrlWithBase = (base, endpoint) => {
   return `${base}/${normalizedEndpoint}`;
 };
 
-const buildApiUrl = (endpoint) => {
-  return buildApiUrlWithBase(BACKEND_API_BASE, endpoint);
-};
+const buildApiUrl = (endpoint) => buildApiUrlWithBase(getBackendApiBase(), endpoint);
 
 const fetchWithFallback = async (endpoint, options) => {
+  const backendBase = getBackendApiBase();
   const primaryUrl = buildApiUrl(endpoint);
 
   try {
     return await fetch(primaryUrl, options);
   } catch (error) {
-    if (BACKEND_API_BASE === SAME_ORIGIN_API_BASE) {
+    if (backendBase === SAME_ORIGIN_API_BASE) {
       throw error;
     }
 

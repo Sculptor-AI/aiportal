@@ -1,19 +1,8 @@
 import axios from 'axios';
 import { getAuthHeaders } from './authService';
+import { getBackendApiBase } from './backendConfig';
 
-// Prefer environment variable, otherwise default to same-origin
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
-
-// Remove trailing slashes
-let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
-
-// Remove a trailing /api if present
-if (cleanedBase.endsWith('/api')) {
-  cleanedBase = cleanedBase.slice(0, -4);
-}
-
-const BACKEND_API_BASE = `${cleanedBase}/api`;
-const VIDEO_API_URL = `${BACKEND_API_BASE}/video`;
+const getVideoApiUrl = () => `${getBackendApiBase()}/video`;
 
 /**
  * Generate a video using Veo 2
@@ -24,7 +13,7 @@ const VIDEO_API_URL = `${BACKEND_API_BASE}/video`;
  */
 export const generateVideo = async (prompt, options = {}) => {
   try {
-    const response = await axios.post(`${VIDEO_API_URL}/generate`, {
+    const response = await axios.post(`${getVideoApiUrl()}/generate`, {
       prompt,
       aspectRatio: options.aspectRatio || '16:9',
       negativePrompt: options.negativePrompt
@@ -48,7 +37,7 @@ export const generateVideo = async (prompt, options = {}) => {
 export const pollVideoStatus = async (operationName) => {
   try {
     // Pass name via query param to handle special chars/slashes safely
-    const response = await axios.get(`${VIDEO_API_URL}/status`, {
+    const response = await axios.get(`${getVideoApiUrl()}/status`, {
       params: { name: operationName },
       headers: {
         ...getAuthHeaders()
@@ -69,7 +58,7 @@ export const pollVideoStatus = async (operationName) => {
 export const getVideoDownloadUrl = (videoUri) => {
   if (!videoUri) return '';
   // Use proxy endpoint to avoid CORS issues with Google storage
-  return `${VIDEO_API_URL}/download?url=${encodeURIComponent(videoUri)}`;
+    return `${getVideoApiUrl()}/download?url=${encodeURIComponent(videoUri)}`;
 };
 
 /**

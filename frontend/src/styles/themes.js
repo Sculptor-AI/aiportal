@@ -8,11 +8,13 @@ export const lightTheme = {
   sidebar: 'rgba(255, 255, 255, 1)',
   chat: 'rgba(255, 255, 255, 1)',
   text: '#1d1d1f',
+  textSecondary: '#86868b',
   border: 'rgba(0, 0, 0, 0.06)',
   messageUser: 'rgba(255, 255, 255, 0.8)',
   messageAi: 'rgba(236, 246, 254, 0.8)',
   hover: 'rgba(255, 255, 255, 0.9)',
   primary: '#007AFF',
+  primaryForeground: '#ffffff',
   primaryGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   secondary: 'linear-gradient(145deg, #05a3ff, #0099e6)',
   shadow: 'rgba(0, 0, 0, 0.05)',
@@ -21,6 +23,10 @@ export const lightTheme = {
   inputBackground: 'rgba(255, 255, 255, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #1E90FF, #007AFF)',
+  accentColor: '#007AFF',
+  accentBackground: '#007AFF',
+  accentText: '#ffffff',
+  accentSurface: 'rgba(0, 122, 255, 0.08)',
 };
 
 export const darkTheme = {
@@ -30,11 +36,13 @@ export const darkTheme = {
   sidebar: 'rgba(30, 30, 30, 1)',
   chat: 'rgba(30, 30, 30, 1)',
   text: '#f0f2f5',
+  textSecondary: '#86868b',
   border: 'rgba(255, 255, 255, 0.06)',
   messageUser: 'rgba(50, 50, 50, 0.8)',
   messageAi: 'rgba(35, 45, 60, 0.8)',
   hover: 'rgba(60, 60, 60, 0.9)',
   primary: '#0A84FF',
+  primaryForeground: '#ffffff',
   primaryGradient: 'linear-gradient(145deg, #0A84FF, #38B0FF)',
   secondary: 'linear-gradient(145deg, #38B0FF, #50C8FF)',
   shadow: 'rgba(0, 0, 0, 0.2)',
@@ -43,21 +51,28 @@ export const darkTheme = {
   inputBackground: 'rgba(40, 40, 40, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #0A84FF, #38B0FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #38B0FF, #0A84FF)',
+  accentColor: '#0A84FF',
+  accentBackground: '#0A84FF',
+  accentText: '#ffffff',
+  accentSurface: 'rgba(10, 132, 255, 0.12)',
 };
 
 // Add a new OLED theme definition after the darkTheme
 export const oledTheme = {
   name: 'oled',
   isDark: true,
-  background: '#000000', // True black background
+  background: '#000000',
   sidebar: 'rgba(10, 10, 10, 1)',
   chat: 'rgba(10, 10, 10, 1)',
   text: '#f0f2f5',
+  textSecondary: '#86868b',
   border: 'rgba(255, 255, 255, 0.06)',
   messageUser: 'rgba(30, 30, 30, 0.8)',
   messageAi: 'rgba(15, 15, 15, 0.8)',
   hover: 'rgba(40, 40, 40, 0.5)',
-  primary: 'linear-gradient(145deg, #007AFF, #1E90FF)',
+  primary: '#007AFF',
+  primaryForeground: '#ffffff',
+  primaryGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   secondary: 'linear-gradient(145deg, #05a3ff, #0099e6)',
   shadow: 'rgba(0, 0, 0, 0.3)',
   glassBlur: '10px',
@@ -65,7 +80,11 @@ export const oledTheme = {
   inputBackground: 'rgba(20, 20, 20, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #1E90FF, #007AFF)',
-  cardBackground: 'rgba(15, 15, 15, 0.7)'
+  cardBackground: 'rgba(15, 15, 15, 0.7)',
+  accentColor: '#007AFF',
+  accentBackground: '#007AFF',
+  accentText: '#ffffff',
+  accentSurface: 'rgba(0, 122, 255, 0.12)',
 };
 
 // Update the oceanTheme sidebar style

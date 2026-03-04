@@ -1,115 +1,182 @@
 import React, { useState, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { getAllUsers, updateUserStatus, updateUserDetails, getDashboardStats } from '../services/authService';
 import AdminLoginModal from '../components/AdminLoginModal';
 
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
 const AdminContainer = styled.div`
   flex: 1;
-  padding: 40px;
-  background-color: ${props => props.theme.background};
+  min-height: 100vh;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   color: ${props => props.theme.text};
   overflow-y: auto;
-  width: ${props => (props.$collapsed ? '100%' : 'calc(100% - 320px)')};
-  margin-left: ${props => (props.$collapsed ? '0' : '320px')};
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  overflow-x: hidden;
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+
+  padding-left: ${props => (props.$collapsed ? '0' : '300px')};
+
+  @media (max-width: 1024px) {
+    padding-left: 0;
+  }
+`;
+
+const ContentWrapper = styled.div`
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 48px 40px 80px;
+
+  @media (max-width: 768px) {
+    padding: 32px 20px 60px;
+  }
 `;
 
 const Header = styled.div`
-  margin-bottom: 30px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  margin-bottom: 40px;
+  gap: 24px;
+  animation: ${fadeIn} 0.5s ease-out;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    gap: 20px;
+  }
+`;
+
+const TitleSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const Title = styled.h1`
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0;
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 16px;
+
+  @media (max-width: 640px) {
+    font-size: 1.875rem;
+  }
+`;
+
+const Subtitle = styled.p`
+  font-size: 0.9375rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  margin: 0;
+  letter-spacing: -0.01em;
 `;
 
 const UserCount = styled.span`
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-left: 20px;
-  opacity: 0.7;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+  color: ${props => props.theme.accentColor || props.theme.primary};
+  border-radius: 20px;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 const SearchContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  position: relative;
+  width: 280px;
+
+  @media (max-width: 768px) {
+    flex: 1;
+  }
 `;
 
 const SearchInput = styled.input`
-  background-color: ${props => props.theme.inputBackground || props.theme.sidebar};
-  color: ${props => props.theme.text};
+  width: 100%;
+  padding: 10px 16px 10px 42px;
+  background: ${props => props.theme.inputBackground || props.theme.sidebar};
   border: 1px solid ${props => props.theme.border};
-  padding: 10px 40px 10px 15px;
-  border-radius: 8px;
-  font-size: 1rem;
-  width: 300px;
+  border-radius: 12px;
+  color: ${props => props.theme.text};
+  font-size: 0.875rem;
   transition: all 0.2s ease;
-
-  &::placeholder {
-    color: ${props => props.theme.textSecondary || '#888'};
-  }
 
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.primary || '#007bff'};
-    box-shadow: 0 0 0 3px ${props => props.theme.primary || '#007bff'}20;
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+  }
+
+  &::placeholder {
+    color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
   }
 `;
 
-const SearchIcon = styled.div`
+const SearchIcon = styled.svg`
   position: absolute;
-  right: 15px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: ${props => props.theme.textSecondary || '#888'};
+  width: 16px;
+  height: 16px;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
   pointer-events: none;
 `;
 
-const SearchWrapper = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-`;
-
 const AddButton = styled.button`
-  background-color: ${props => props.theme.primary || '#007bff'};
-  color: white;
-  border: none;
-  border-radius: 8px;
-  width: 40px;
-  height: 40px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: ${props => props.theme.accentBackground || props.theme.primary};
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 
   &:hover {
-    background-color: ${props => props.theme.primaryHover || '#0056b3'};
     transform: translateY(-1px);
+    box-shadow: 0 4px 16px ${props => props.theme.accentColor || props.theme.primary}40;
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
   }
 `;
 
 const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  background-color: ${props => props.theme.sidebar};
-  border-radius: 12px;
+  background: ${props => props.theme.sidebar};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 `;
 
 const TableHeader = styled.thead`
@@ -217,62 +284,70 @@ const TimeText = styled.span`
   color: ${props => props.theme.textSecondary || '#888'};
 `;
 
-// Modal styles
 const ModalOverlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background: ${props => props.theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)'};
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(5px);
+  animation: ${fadeIn} 0.2s ease;
 `;
 
 const ModalContainer = styled.div`
-  background-color: ${props => props.theme.sidebar};
-  border-radius: 12px;
+  background: ${props => props.theme.sidebar};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 16px;
   width: 90%;
   max-width: 500px;
-  padding: 30px;
+  padding: 0;
   position: relative;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px ${props => props.theme.shadow || 'rgba(0,0,0,0.3)'};
   color: ${props => props.theme.text};
+  overflow: hidden;
 `;
 
 const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
+  padding: 24px;
+  border-bottom: 1px solid ${props => props.theme.border};
 `;
 
 const ModalTitle = styled.h2`
-  font-size: 1.8rem;
+  font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+  letter-spacing: -0.02em;
+`;
+
+const ModalBody = styled.div`
+  padding: 24px;
 `;
 
 const CloseButton = styled.button`
-  background: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   border: none;
-  color: ${props => props.theme.textSecondary || '#888'};
+  background: ${props => props.theme.hover || props.theme.inputBackground};
+  color: ${props => props.theme.text};
   cursor: pointer;
-  padding: 5px;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
 
   &:hover {
-    color: ${props => props.theme.text};
-    background-color: rgba(255, 255, 255, 0.1);
+    background: ${props => props.theme.border};
   }
 
   svg {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
   }
 `;
 
@@ -314,78 +389,97 @@ const UserProfileDate = styled.span`
   color: ${props => props.theme.textSecondary || '#888'};
 `;
 
+const ModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  padding: 20px 24px;
+  border-top: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground || props.theme.background};
+`;
+
 const FormGroup = styled.div`
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 `;
 
 const FormLabel = styled.label`
   display: block;
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-bottom: 8px;
-  color: ${props => props.theme.textSecondary || '#888'};
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
 `;
 
 const FormInput = styled.input`
   width: 100%;
-  padding: 12px 15px;
+  padding: 12px 16px;
+  background: ${props => props.theme.inputBackground || props.theme.background};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 8px;
-  background-color: ${props => props.theme.inputBackground || props.theme.background};
+  border-radius: 10px;
   color: ${props => props.theme.text};
-  font-size: 1rem;
+  font-size: 0.9375rem;
   transition: all 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.primary || '#007bff'};
-    box-shadow: 0 0 0 3px ${props => props.theme.primary || '#007bff'}20;
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
   }
 
   &::placeholder {
-    color: ${props => props.theme.textSecondary || '#888'};
+    color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
   }
 `;
 
 const FormSelect = styled.select`
   width: 100%;
-  padding: 12px 15px;
+  padding: 12px 16px;
+  background: ${props => props.theme.inputBackground || props.theme.background};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 8px;
-  background-color: ${props => props.theme.inputBackground || props.theme.background};
+  border-radius: 10px;
   color: ${props => props.theme.text};
-  font-size: 1rem;
-  transition: all 0.2s ease;
+  font-size: 0.9375rem;
   cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
 
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.primary || '#007bff'};
-    box-shadow: 0 0 0 3px ${props => props.theme.primary || '#007bff'}20;
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
   }
 
   option {
-    background-color: ${props => props.theme.inputBackground || props.theme.background};
+    background: ${props => props.theme.sidebar};
     color: ${props => props.theme.text};
   }
 `;
 
 const SaveButton = styled.button`
-  background-color: ${props => props.theme.primary || '#007bff'};
-  color: white;
+  padding: 12px 24px;
+  border-radius: 10px;
   border: none;
-  border-radius: 8px;
-  padding: 12px 30px;
-  font-size: 1rem;
-  font-weight: 500;
+  font-size: 0.9375rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  float: right;
-  margin-top: 10px;
+  background: ${props => props.theme.accentBackground || props.theme.primary};
+  color: #fff;
 
   &:hover {
-    background-color: ${props => props.theme.primaryHover || '#0056b3'};
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px ${props => props.theme.accentColor || props.theme.primary}40;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
@@ -651,49 +745,47 @@ const AdminPage = ({ collapsed }) => {
 
   return (
     <AdminContainer $collapsed={collapsed}>
+      <ContentWrapper>
       {error && (
         <div style={{ 
           backgroundColor: '#fee2e2', 
           color: '#dc2626', 
           padding: '12px', 
-          borderRadius: '8px', 
+          borderRadius: '10px', 
           marginBottom: '20px' 
         }}>
           Error: {error}
         </div>
       )}
       <Header>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <TitleSection>
           <Title>
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
             Users
+            <UserCount>{filteredUsers.length}</UserCount>
           </Title>
-          <UserCount>{filteredUsers.length}</UserCount>
-        </div>
-        <SearchContainer>
-          <SearchWrapper>
+          <Subtitle>Manage user accounts and permissions</Subtitle>
+        </TitleSection>
+        <HeaderActions>
+          <SearchContainer>
+            <SearchIcon xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </SearchIcon>
             <SearchInput
               type="text"
-              placeholder="Search"
+              placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <SearchIcon>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
-            </SearchIcon>
-          </SearchWrapper>
+          </SearchContainer>
           <AddButton>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
+            Add User
           </AddButton>
-        </SearchContainer>
+        </HeaderActions>
       </Header>
 
       <Table>
@@ -740,75 +832,80 @@ const AdminPage = ({ collapsed }) => {
         </TableBody>
       </Table>
 
-      {/* Edit User Modal */}
+      </ContentWrapper>
+
       {editingUser && (
         <ModalOverlay onClick={handleCloseModal}>
           <ModalContainer onClick={e => e.stopPropagation()}>
             <ModalHeader>
               <ModalTitle>Edit User</ModalTitle>
               <CloseButton onClick={handleCloseModal}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
               </CloseButton>
             </ModalHeader>
 
-            <UserProfileSection>
-              <LargeAvatar style={{ backgroundColor: editingUser.avatarColor }}>
-                {editingUser.avatar}
-              </LargeAvatar>
-              <UserProfileInfo>
-                <UserProfileName>{editingUser.name}</UserProfileName>
-                <UserProfileDate>Created at {editingUser.createdAt}</UserProfileDate>
-              </UserProfileInfo>
-            </UserProfileSection>
+            <ModalBody>
+              <UserProfileSection>
+                <LargeAvatar style={{ backgroundColor: editingUser.avatarColor }}>
+                  {editingUser.avatar}
+                </LargeAvatar>
+                <UserProfileInfo>
+                  <UserProfileName>{editingUser.name}</UserProfileName>
+                  <UserProfileDate>Created at {editingUser.createdAt}</UserProfileDate>
+                </UserProfileInfo>
+              </UserProfileSection>
 
-            <FormGroup>
-              <FormLabel>Role</FormLabel>
-              <FormSelect
-                value={editForm.role}
-                onChange={(e) => handleFormChange('role', e.target.value)}
-              >
-                <option value="ADMIN">Admin</option>
-                <option value="USER">Active User</option>
-                <option value="PENDING">Pending User</option>
-              </FormSelect>
-            </FormGroup>
+              <FormGroup>
+                <FormLabel>Role</FormLabel>
+                <FormSelect
+                  value={editForm.role}
+                  onChange={(e) => handleFormChange('role', e.target.value)}
+                >
+                  <option value="ADMIN">Admin</option>
+                  <option value="USER">Active User</option>
+                  <option value="PENDING">Pending User</option>
+                </FormSelect>
+              </FormGroup>
 
-            <FormGroup>
-              <FormLabel>Email</FormLabel>
-              <FormInput
-                type="email"
-                value={editForm.email}
-                onChange={(e) => handleFormChange('email', e.target.value)}
-                placeholder="Enter email address"
-              />
-            </FormGroup>
+              <FormGroup>
+                <FormLabel>Email</FormLabel>
+                <FormInput
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => handleFormChange('email', e.target.value)}
+                  placeholder="Enter email address"
+                />
+              </FormGroup>
 
-            <FormGroup>
-              <FormLabel>Name</FormLabel>
-              <FormInput
-                type="text"
-                value={editForm.name}
-                onChange={(e) => handleFormChange('name', e.target.value)}
-                placeholder="Enter user name"
-              />
-            </FormGroup>
+              <FormGroup>
+                <FormLabel>Name</FormLabel>
+                <FormInput
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => handleFormChange('name', e.target.value)}
+                  placeholder="Enter user name"
+                />
+              </FormGroup>
 
-            <FormGroup>
-              <FormLabel>New Password</FormLabel>
-              <FormInput
-                type="password"
-                value={editForm.newPassword}
-                onChange={(e) => handleFormChange('newPassword', e.target.value)}
-                placeholder="Enter New Password"
-              />
-            </FormGroup>
+              <FormGroup style={{ marginBottom: 0 }}>
+                <FormLabel>New Password</FormLabel>
+                <FormInput
+                  type="password"
+                  value={editForm.newPassword}
+                  onChange={(e) => handleFormChange('newPassword', e.target.value)}
+                  placeholder="Enter New Password"
+                />
+              </FormGroup>
+            </ModalBody>
 
-            <SaveButton onClick={handleSaveUser}>
-              Save
-            </SaveButton>
+            <ModalFooter>
+              <SaveButton onClick={handleSaveUser}>
+                Save Changes
+              </SaveButton>
+            </ModalFooter>
           </ModalContainer>
         </ModalOverlay>
       )}

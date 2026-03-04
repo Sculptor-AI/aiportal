@@ -39,6 +39,7 @@ import ConfettiExplosion from './components/ConfettiExplosion';
 import MatrixRain from './components/MatrixRain';
 import useEasterEggs from './hooks/useEasterEggs';
 import { DEFAULT_CUSTOM_BASE_MODEL_ID, getPreferredModelId } from './config/modelConfig';
+import { setBackendMode, shouldUseRealBackend } from './services/backendConfig';
 
 const AppContainer = styled.div`
   display: flex;
@@ -434,7 +435,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const [settings, setSettings] = useState(() => {
     // If logged in, use user settings
     if (user && user.settings) {
-      return user.settings;
+      return {
+        ...user.settings,
+        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
+      };
     }
 
     // Otherwise, use localStorage
@@ -458,6 +462,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       reducedMotion: false,
       lineSpacing: 'normal',
       showGreeting: true,
+        useRealBackend: shouldUseRealBackend(),
       language: 'en-US'
     };
   });
@@ -491,7 +496,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   // Update settings when user changes
   useEffect(() => {
     if (user && user.settings) {
-      setSettings(user.settings);
+      setSettings({
+        ...user.settings,
+        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
+      });
     }
   }, [user]);
 
@@ -500,6 +508,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       onSettingsLanguageChange(settings.language || 'en-US');
     }
   }, [settings.language, onSettingsLanguageChange]);
+
+  useEffect(() => {
+    setBackendMode(settings.useRealBackend !== false);
+  }, [settings.useRealBackend]);
 
   // Check if onboarding is needed for new users
   useEffect(() => {
@@ -602,7 +614,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     });
   }, [settings?.language]);
 
-  const createNewChat = (projectId = null) => {
+  const createNewChat = (projectId = null, options = {}) => {
     const currentLanguage = settings?.language || getLanguagePreference();
     const newChat = {
       id: uuidv4(),
@@ -621,8 +633,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     });
     setActiveChat(newChat.id);
 
-    // Navigate to chat tab if not already there
-    if (location.pathname !== '/') {
+    // Navigate to chat tab unless caller explicitly keeps the current view.
+    if (!options.stayOnCurrentRoute && location.pathname !== '/') {
       navigate('/');
     }
 
@@ -815,6 +827,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     if (user) {
       updateUserSettings(newSettings);
     }
+    setBackendMode(newSettings.useRealBackend !== false);
   };
 
   useEffect(() => {
@@ -1156,6 +1169,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   addMessage={addMessage}
                   updateMessage={updateMessage}
                   createNewChat={createNewChat}
+                  collapsed={collapsed}
                   setActiveChat={setActiveChat}
                   activeChat={activeChat}
                   addKnowledgeToProject={addKnowledgeToProject}

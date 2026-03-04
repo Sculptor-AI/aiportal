@@ -2,6 +2,7 @@
 
 // All models now go through backend API - no direct API configurations needed
 import { TITLE_GENERATION_MODEL_ID } from '../config/modelConfig';
+import { getBackendApiBase, getRemoteBackendHost } from './backendConfig';
 
 // Helper function to parse SSE data chunks
 // This needs to handle different formats potentially sent by APIs
@@ -357,7 +358,8 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     
     // If it's a certificate/CORS issue, provide helpful guidance
     if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
-      yield `\n🔒 **Backend Connection Issue**\n\nYour backend server is running on HTTPS with a self-signed certificate.\n\n**To fix this:**\n1. Open [${rawBaseUrl}](${rawBaseUrl}) in a new browser tab\n2. Accept the security warning/certificate\n3. Return here and try again\n\nThis only needs to be done once per browser session.\n`;
+      const backendDisplayUrl = getRemoteBackendHost() || 'https://api.sculptorai.org';
+      yield `\n🔒 **Backend Connection Issue**\n\nYour backend server is running on HTTPS with a self-signed certificate.\n\n**To fix this:**\n1. Open [${backendDisplayUrl}](${backendDisplayUrl}) in a new browser tab\n2. Accept the security warning/certificate\n3. Return here and try again\n\nThis only needs to be done once per browser session.\n`;
     } else {
       yield `\n[Error: ${error.message}]\n`;
     }
@@ -383,21 +385,7 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 
 // Legacy code removed - all models now go through backend API
 
-// Prefer environment variable and default to same-origin /api
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
 const SAME_ORIGIN_API_BASE = '/api';
-
-// Remove trailing slashes
-let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
-
-// Remove a trailing /api if present
-if (cleanedBase.endsWith('/api')) {
-  cleanedBase = cleanedBase.slice(0, -4);
-}
-
-const BACKEND_API_BASE = `${cleanedBase}/api`;
-
-console.log('[aiService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
 
 const buildApiUrlWithBase = (base, endpoint) => {
   if (!endpoint) return base;
@@ -415,7 +403,7 @@ const buildApiUrlWithBase = (base, endpoint) => {
 
 // Remove duplicated /api in endpoint paths
 const buildApiUrl = (endpoint) => {
-  return buildApiUrlWithBase(BACKEND_API_BASE, endpoint);
+  return buildApiUrlWithBase(getBackendApiBase(), endpoint);
 };
 
 const fetchWithFallback = async (endpoint, options) => {
@@ -424,7 +412,7 @@ const fetchWithFallback = async (endpoint, options) => {
   try {
     return await fetch(primaryUrl, options);
   } catch (error) {
-    if (BACKEND_API_BASE === SAME_ORIGIN_API_BASE) {
+    if (getBackendApiBase() === SAME_ORIGIN_API_BASE) {
       throw error;
     }
 
@@ -496,11 +484,12 @@ export const fetchModelsFromBackend = async () => {
       
       // If it's a certificate/CORS issue, show helpful message
       if (fetchError.message.includes('Failed to fetch')) {
+        const backendDisplayUrl = getRemoteBackendHost() || 'https://api.sculptorai.org';
         console.warn(`
 🔒 Backend Connection Issue:
 Your backend server is running on HTTPS with a self-signed certificate.
 To fix this:
-1. Open ${rawBaseUrl} in a new browser tab
+1. Open ${backendDisplayUrl} in a new browser tab
 2. Accept the security warning/certificate
 3. Refresh this page
 

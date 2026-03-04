@@ -1,16 +1,7 @@
 import { useState } from 'react';
+import { getBackendApiBase } from './backendConfig';
 
-// Helper function to get API base URL
-const getApiBaseUrl = () => {
-  const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
-  let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
-  
-  if (cleanedBase.endsWith('/api')) {
-    cleanedBase = cleanedBase.slice(0, -4);
-  }
-  
-  return `${cleanedBase}/api`;
-};
+const getApiBaseUrl = () => getBackendApiBase();
 
 // Helper function to get authentication headers
 const getAuthHeaders = () => {

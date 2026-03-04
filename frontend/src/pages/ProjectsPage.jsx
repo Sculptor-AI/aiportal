@@ -1,27 +1,65 @@
 import React, { useState, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import NewProjectModal from '../components/NewProjectModal';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 
+const fadeIn = keyframes`
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
+const scaleIn = keyframes`
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+`;
+
+const slideUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+`;
+
 const PageContainer = styled.div`
   flex: 1;
   min-height: 100vh;
-  background: ${props => props.theme.background};
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   color: ${props => props.theme.text};
   overflow-y: auto;
-  width: ${props => (props.$collapsed ? '100%' : 'calc(100% - 320px)')};
-  margin-left: ${props => (props.$collapsed ? '0' : '320px')};
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  overflow-x: hidden;
+  padding-left: ${props => (props.$collapsed ? '0' : '300px')};
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+
+  @media (max-width: 1024px) {
+    padding-left: 0;
+  }
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 48px;
-  
+  padding: 48px 40px 80px;
+
   @media (max-width: 768px) {
-    padding: 24px 20px;
+    padding: 32px 20px 60px;
   }
 `;
 
@@ -29,62 +67,68 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
   gap: 24px;
-  
+  animation: ${fadeIn} 0.5s ease-out;
+
   @media (max-width: 640px) {
     flex-direction: column;
-    align-items: stretch;
+    gap: 20px;
   }
 `;
 
 const TitleSection = styled.div`
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 600;
-  margin: 0 0 8px 0;
-  letter-spacing: -0.02em;
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0;
+
+  @media (max-width: 640px) {
+    font-size: 1.875rem;
+  }
 `;
 
 const Subtitle = styled.p`
-  font-size: 0.95rem;
-  color: ${props => props.theme.text}80;
+  font-size: 0.9375rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   margin: 0;
-  line-height: 1.5;
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
+  letter-spacing: -0.01em;
 `;
 
 const CreateButton = styled.button`
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: ${props => props.theme.primary || '#007AFF'};
-  color: ${props => props.theme.primaryForeground || 'white'};
+  padding: 10px 20px;
+  background: ${props => props.theme.accentBackground || props.theme.primary};
+  color: #fff;
   border: none;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 500;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
   white-space: nowrap;
-  
+
   &:hover {
-    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px ${props => props.theme.accentColor || props.theme.primary}40;
   }
-  
+
   &:active {
-    filter: brightness(0.95);
+    transform: translateY(0);
   }
-  
+
   svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 `;
 
@@ -92,8 +136,11 @@ const SearchAndFilters = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 28px;
-  
+  margin-bottom: 32px;
+  animation: ${slideUp} 0.5s ease-out;
+  animation-delay: 0.1s;
+  animation-fill-mode: backwards;
+
   @media (max-width: 640px) {
     flex-direction: column;
     align-items: stretch;
@@ -112,23 +159,22 @@ const SearchWrapper = styled.div`
 
 const SearchInput = styled.input`
   width: 100%;
-  padding: 12px 16px 12px 44px;
-  border-radius: 10px;
+  padding: 10px 16px 10px 42px;
+  background: ${props => props.theme.inputBackground || props.theme.sidebar};
   border: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.inputBackground};
+  border-radius: 12px;
   color: ${props => props.theme.text};
-  font-size: 0.9rem;
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
+  font-size: 0.875rem;
   transition: all 0.2s ease;
-  
-  &::placeholder {
-    color: ${props => props.theme.text}50;
-  }
-  
+
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.primary || '#007AFF'};
-    box-shadow: 0 0 0 3px ${props => props.theme.primary || '#007AFF'}20;
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+  }
+
+  &::placeholder {
+    color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
   }
 `;
 
@@ -137,49 +183,55 @@ const SearchIcon = styled.div`
   left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: ${props => props.theme.text}50;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+  pointer-events: none;
   display: flex;
   align-items: center;
-  
+
   svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 `;
 
 const FilterTabs = styled.div`
   display: flex;
-  gap: 4px;
-  background: ${props => props.theme.inputBackground};
-  padding: 4px;
-  border-radius: 10px;
-  border: 1px solid ${props => props.theme.border};
+  gap: 8px;
+  flex-wrap: wrap;
 `;
 
 const FilterTab = styled.button`
   padding: 8px 16px;
-  border: none;
-  background: ${props => props.$active ? props.theme.primary || '#007AFF' : 'transparent'};
-  color: ${props => props.$active ? 'white' : props.theme.text};
-  border-radius: 6px;
-  font-size: 0.85rem;
+  background: ${props => props.$active
+    ? (props.theme.accentSurface || `${props.theme.primary}15`)
+    : 'transparent'};
+  color: ${props => props.$active
+    ? (props.theme.accentColor || props.theme.primary)
+    : (props.theme.textSecondary || `${props.theme.text}80`)};
+  border: 1px solid ${props => props.$active
+    ? (props.theme.accentColor || props.theme.primary)
+    : props.theme.border};
+  border-radius: 20px;
+  font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
-  
+  transition: all 0.2s ease;
+
   &:hover {
-    background: ${props => props.$active ? props.theme.primary || '#007AFF' : props.theme.hover};
+    background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    color: ${props => props.theme.accentColor || props.theme.primary};
   }
 `;
 
 const ProjectsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
-  
+  gap: 24px;
+
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 `;
 
@@ -189,16 +241,19 @@ const ProjectCard = styled.div`
   border-radius: 16px;
   padding: 24px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   position: relative;
   display: flex;
   flex-direction: column;
   min-height: 180px;
-  
+  animation: ${scaleIn} 0.4s ease-out;
+  animation-delay: ${props => (props.$index || 0) * 0.05}s;
+  animation-fill-mode: backwards;
+
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px ${props => props.theme.shadow || 'rgba(0,0,0,0.12)'};
-    border-color: ${props => props.theme.primary || '#007AFF'}40;
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px ${props => props.theme.shadow || 'rgba(0,0,0,0.15)'};
+    border-color: ${props => props.theme.accentColor || props.theme.primary}40;
   }
 `;
 
@@ -227,11 +282,10 @@ const ProjectInfo = styled.div`
 `;
 
 const ProjectTitle = styled.h3`
-  font-size: 1.1rem;
+  font-size: 1.125rem;
   font-weight: 600;
   margin: 0 0 4px 0;
-  color: ${props => props.theme.text};
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
+  letter-spacing: -0.02em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -239,14 +293,13 @@ const ProjectTitle = styled.h3`
 
 const ProjectDescription = styled.p`
   font-size: 0.875rem;
-  color: ${props => props.theme.text}80;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   margin: 0;
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
 `;
 
 const ProjectMeta = styled.div`
@@ -262,10 +315,9 @@ const MetaItem = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8rem;
-  color: ${props => props.theme.text}60;
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
-  
+  font-size: 0.8125rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+
   svg {
     width: 14px;
     height: 14px;
@@ -340,43 +392,42 @@ const EmptyState = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 80px 40px;
   text-align: center;
-  padding: 80px 20px;
-  max-width: 400px;
-  margin: 40px auto;
+  animation: ${fadeIn} 0.5s ease-out;
 `;
 
 const EmptyIcon = styled.div`
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
-  background: ${props => props.theme.inputBackground};
+  width: 120px;
+  height: 120px;
+  border-radius: 32px;
+  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
-  
+  animation: ${float} 3s ease-in-out infinite;
+
   svg {
-    width: 40px;
-    height: 40px;
-    color: ${props => props.theme.text}40;
+    width: 56px;
+    height: 56px;
+    color: ${props => props.theme.accentColor || props.theme.primary};
   }
 `;
 
 const EmptyTitle = styled.h2`
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  margin: 0 0 12px 0;
-  color: ${props => props.theme.text};
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
 `;
 
 const EmptyDescription = styled.p`
-  font-size: 0.95rem;
-  color: ${props => props.theme.text}70;
-  margin: 0 0 28px 0;
+  font-size: 0.9375rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  margin: 0 0 32px;
+  max-width: 420px;
   line-height: 1.6;
-  font-family: ${props => props.theme.fontFamily || 'inherit'};
 `;
 
 const PROJECT_COLORS = [
@@ -522,7 +573,8 @@ const ProjectsPage = ({ projects = [], createNewProject, collapsed, deleteProjec
           <ProjectsGrid>
             {filteredProjects.map((project, index) => (
               <ProjectCard 
-                key={project.id} 
+                key={project.id}
+                $index={index}
                 onClick={() => handleProjectClick(project.id)}
               >
                 <StarButton 

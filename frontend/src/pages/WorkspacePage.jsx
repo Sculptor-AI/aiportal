@@ -62,17 +62,18 @@ const shimmer = keyframes`
 const PageContainer = styled.div`
   flex: 1;
   min-height: 100vh;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   color: ${props => props.theme.text};
   overflow-y: auto;
   overflow-x: hidden;
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 
-  width: ${props => props.$collapsed ? '100%' : 'calc(100% - 320px)'};
-  margin-left: ${props => props.$collapsed ? '0' : '320px'};
+  padding-left: ${props => props.$collapsed ? '0' : '300px'};
 
   @media (max-width: 1024px) {
-    width: 100%;
-    margin-left: 0;
+    padding-left: 0;
   }
 `;
 
@@ -199,7 +200,7 @@ const CreateButton = styled.button`
   gap: 8px;
   padding: 10px 20px;
   background: ${props => props.theme.accentBackground || props.theme.primary};
-  color: ${props => props.theme.accentText || '#fff'};
+  color: #fff;
   border: none;
   border-radius: 12px;
   font-size: 0.875rem;
@@ -818,7 +819,7 @@ const Button = styled.button`
 
 const PrimaryButton = styled(Button)`
   background: ${props => props.theme.accentBackground || props.theme.primary};
-  color: ${props => props.theme.accentText || '#fff'};
+  color: #fff;
 
   &:hover {
     transform: translateY(-1px);

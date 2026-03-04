@@ -19,22 +19,34 @@ const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
   </ReactKatex>
 );
 
+const extractThinkingFromContent = (content = '') => {
+  if (!content) {
+    return { mainContent: '', thinkingContent: null };
+  }
+
+  const thinkingRegex = /<think>([\s\S]*?)<\/think>/gi;
+  const matches = [...content.matchAll(thinkingRegex)];
+
+  if (matches.length === 0) {
+    return { mainContent: content, thinkingContent: null };
+  }
+
+  const thinkingContent = matches
+    .map((match) => match[1]?.trim())
+    .filter(Boolean)
+    .join('\n\n');
+
+  return {
+    mainContent: content.replace(thinkingRegex, '').trim(),
+    thinkingContent: thinkingContent || null
+  };
+};
+
 // Format markdown text including bold, italic, bullet points and code blocks
 const robustFormatContent = (content, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
   if (!content) return '';
 
-  // Extract thinking content if present
-  const thinkingRegex = /<think>([\s\S]*?)<\/think>/;
-  const thinkingMatch = content.match(thinkingRegex);
-
-  let mainContent = content;
-  let thinkingContent = null;
-
-  if (thinkingMatch) {
-    thinkingContent = thinkingMatch[1];
-    // Remove the thinking tags and their content from the main content
-    mainContent = content.replace(thinkingRegex, '').trim();
-  }
+  const { mainContent, thinkingContent } = extractThinkingFromContent(content);
 
   // If we have thinking content, return an object with both processed contents
   if (thinkingContent) {
@@ -2272,16 +2284,20 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               }
 
               // Process content and show main content + thinking dropdown if applicable
-              const processedContent = robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme);
+              const { mainContent: mainContentWithoutThinking, thinkingContent: rawThinkingContent } =
+                extractThinkingFromContent(contentToProcess);
               const isMercury = modelId?.toLowerCase().includes('mercury');
+              const formattedThinkingContent = rawThinkingContent
+                ? processText(rawThinkingContent, true, isLanguageExecutable, supportedLanguages, theme)
+                : null;
 
-              if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
+              if (formattedThinkingContent) {
                 // If content has thinking tags, show thinking dropdown first, then main content
                 return (
                   <>
-                    <ThinkingDropdown thinkingContent={processedContent.thinking} toolCalls={toolCalls} />
+                    <ThinkingDropdown thinkingContent={formattedThinkingContent} toolCalls={toolCalls} />
                     <StreamingMarkdownRenderer
-                      text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
+                      text={mainContentWithoutThinking}
                       isStreaming={isLoading}
                       theme={theme}
                     />
@@ -2352,7 +2368,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   )}
 
                   <StreamingMarkdownRenderer
-                    text={contentToProcess}
+                    text={mainContentWithoutThinking}
                     isStreaming={isLoading}
                     theme={theme}
                   />

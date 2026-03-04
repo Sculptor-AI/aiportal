@@ -9,6 +9,7 @@
 
 import { getCurrentUser } from './authService';
 import { GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID } from '../config/modelConfig';
+import { getBackendLiveSocketUrl } from './backendConfig';
 
 class GeminiLiveService {
   constructor() {
@@ -56,19 +57,7 @@ class GeminiLiveService {
    * The token is short-lived (24h session) and can be revoked by logging out.
    */
   _getWebSocketUrl() {
-    const backendUrl = import.meta.env.VITE_BACKEND_API_URL || '';
-
-    // Convert HTTP URL to WebSocket URL
-    let wsUrl;
-    if (backendUrl.startsWith('https://')) {
-      wsUrl = backendUrl.replace('https://', 'wss://');
-    } else if (backendUrl.startsWith('http://')) {
-      wsUrl = backendUrl.replace('http://', 'ws://');
-    } else {
-      // Default to current host
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      wsUrl = `${protocol}//${window.location.host}`;
-    }
+    const wsUrl = getBackendLiveSocketUrl();
 
     // Get auth token and include in URL
     // Note: WebSocket API doesn't support custom headers, so we use query param
@@ -80,7 +69,7 @@ class GeminiLiveService {
       return null;
     }
 
-    return `${wsUrl}/api/v1/live?token=${encodeURIComponent(token)}`;
+    return `${wsUrl}?token=${encodeURIComponent(token)}`;
   }
 
   /**

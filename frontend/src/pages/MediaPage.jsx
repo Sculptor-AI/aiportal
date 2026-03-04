@@ -1,27 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
 import { generateVideo, pollVideoStatus, getVideoDownloadUrl, downloadGeneratedVideo } from '../services/videoService';
 import { useToast } from '../contexts/ToastContext';
 
-// ============================================================================
-// ANIMATIONS
-// ============================================================================
-
 const fadeIn = keyframes`
   from { opacity: 0; }
   to { opacity: 1; }
-`;
-
-const riseUp = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 `;
 
 const scaleIn = keyframes`
@@ -35,82 +20,35 @@ const scaleIn = keyframes`
   }
 `;
 
-const drift = keyframes`
-  0%, 100% {
-    transform: translate3d(0, 0, 0);
-    opacity: 0.9;
-  }
-  50% {
-    transform: translate3d(0, -8px, 0);
-    opacity: 1;
-  }
-`;
-
-const skeletonShimmer = keyframes`
-  0% { transform: translateX(-100%); opacity: 0.5; }
-  50% { opacity: 1; }
-  100% { transform: translateX(200%); opacity: 0.5; }
-`;
-
-const spin = keyframes`
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-`;
-
-const subtleGlow = keyframes`
-  0%, 100% { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15); }
-  50% { box-shadow: 0 12px 42px rgba(0, 0, 0, 0.2); }
-`;
-
-const PROMPT_TEMPLATES = [
-  'A cinematic close-up of a rainy neon metropolis at night, ultra-realistic, dramatic lighting',
-  'A minimalist product demo with clean white studio setup, soft shadows, product in motion',
-  'Vintage sci-fi spaceship launch sequence, sweeping camera movement, editorial motion',
-];
-
-// ============================================================================
-// MAIN LAYOUT
-// ============================================================================
-
 const PageContainer = styled.div`
   flex: 1;
   min-height: 100vh;
-  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   color: ${props => props.theme.text};
   overflow-y: auto;
   overflow-x: hidden;
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  background:
-    radial-gradient(circle at 10% 15%, rgba(255, 255, 255, 0.16), transparent 40%),
-    radial-gradient(circle at 85% 5%, rgba(255, 255, 255, 0.10), transparent 35%),
-    linear-gradient(155deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.03));
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 
-  width: ${props => props.$collapsed ? '100%' : 'calc(100% - 320px)'};
-  margin-left: ${props => props.$collapsed ? '0' : '320px'};
+  padding-left: ${props => props.$collapsed ? '0' : '300px'};
 
   @media (max-width: 1024px) {
-    width: 100%;
-    margin-left: 0;
+    padding-left: 0;
   }
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1320px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 42px 44px 80px;
-  position: relative;
-  z-index: 1;
+  padding: 48px 40px 80px;
 
   @media (max-width: 768px) {
     padding: 32px 20px 60px;
   }
 `;
 
-// ============================================================================
-// HEADER
-// ============================================================================
-
-const Header = styled.header`
+const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -118,7 +56,7 @@ const Header = styled.header`
   gap: 24px;
   animation: ${fadeIn} 0.5s ease-out;
 
-  @media (max-width: 768px) {
+  @media (max-width: 640px) {
     flex-direction: column;
     gap: 20px;
   }
@@ -131,14 +69,14 @@ const TitleSection = styled.div`
 `;
 
 const PageTitle = styled.h1`
-  font-size: 2.2rem;
+  font-size: 2.25rem;
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 
   @media (max-width: 640px) {
     font-size: 1.875rem;
@@ -147,153 +85,50 @@ const PageTitle = styled.h1`
 
 const BetaTag = styled.span`
   font-size: 0.75rem;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.15);
+  padding: 3px 10px;
+  background: ${props => props.theme.border};
   color: ${props => props.theme.text};
-  border-radius: 20px;
-  font-weight: 600;
+  border-radius: 6px;
+  font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
 `;
 
-const Subtitle = styled.p`
-  font-size: 0.96rem;
-  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
-  margin: 0;
-  letter-spacing: -0.01em;
+const LayoutGrid = styled.div`
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+
+  @media (max-width: 1080px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 `;
 
-// ============================================================================
-// PROMPT CARD
-// ============================================================================
-
-const PromptCard = styled.div`
-  position: relative;
-  background: ${props => `linear-gradient(150deg, ${props.theme.sidebar} 0%, ${props.theme.background} 120%)`};
+const SidePanel = styled.aside`
+  background: ${props => props.theme.sidebar};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 20px;
-  padding: 30px;
-  margin-bottom: 40px;
-  animation: ${riseUp} 0.45s ease-out, ${subtleGlow} 7s ease-in-out infinite;
-  animation-delay: 0.1s;
-  animation-fill-mode: backwards;
-  transition: border-color 0.3s ease;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-
-  ${props => props.$generating && css`
-    border-color: ${props.theme.accentColor || props.theme.primary}60;
-  `}
-`;
-
-const PromptHeader = styled.div`
+  border-radius: 12px;
+  padding: 20px;
+  position: sticky;
+  top: 24px;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-`;
+  flex-direction: column;
+  gap: 20px;
 
-const PromptIcon = styled.div`
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: ${props => props.theme.primary};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${props => props.theme.primaryForeground || 'white'};
-
-  svg {
-    width: 20px;
-    height: 20px;
+  @media (max-width: 1080px) {
+    position: static;
   }
 `;
 
-const PromptTitle = styled.h2`
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: -0.02em;
-`;
-
-const TextArea = styled.textarea`
-  width: 100%;
-  min-height: 132px;
-  padding: 16px 18px;
-  background: ${props => props.theme.inputBackground || props.theme.background};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 16px;
-  font-size: 1rem;
-  line-height: 1.6;
-  resize: vertical;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.accentColor || props.theme.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}18`};
-  }
-
-  &::placeholder {
-    color: ${props => props.theme.textSecondary || `${props.theme.text}50`};
-  }
-
-  &:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-  }
-`;
-
-const SettingsRow = styled.div`
-  display: flex;
-  gap: 16px;
-  margin-top: 20px;
-  flex-wrap: wrap;
-  align-items: flex-end;
-
-  @media (max-width: 640px) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-`;
-
-const SettingGroup = styled.div`
+const PanelSection = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: 180px;
-`;
-
-const TemplateStrip = styled.div`
-  margin-top: 16px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-`;
-
-const TemplateTag = styled.button`
-  border: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.inputBackground || props.theme.background};
-  color: ${props => props.theme.text};
-  font-size: 0.78rem;
-  letter-spacing: -0.005em;
-  line-height: 1.3;
-  padding: 9px 12px;
-  border-radius: 999px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: ${props => props.theme.text};
-    transform: translateY(-1px);
-    color: ${props => props.theme.text};
-  }
 `;
 
 const Label = styled.label`
+  display: block;
   font-size: 0.8125rem;
   font-weight: 600;
   color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
@@ -301,25 +136,60 @@ const Label = styled.label`
   letter-spacing: 0.05em;
 `;
 
-const Select = styled.select`
-  padding: 12px 40px 12px 14px;
+const TextArea = styled.textarea`
+  width: 100%;
+  min-height: 120px;
+  padding: 12px 16px;
   background: ${props => props.theme.inputBackground || props.theme.background};
-  color: ${props => props.theme.text};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 12px;
+  border-radius: 10px;
+  color: ${props => props.theme.text};
   font-size: 0.9375rem;
-  cursor: pointer;
+  line-height: 1.5;
+  resize: vertical;
+  font-family: inherit;
   transition: all 0.2s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 40px;
 
   &:focus {
     outline: none;
     border-color: ${props => props.theme.accentColor || props.theme.primary};
     box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+  }
+
+  &::placeholder {
+    color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 12px 16px;
+  background: ${props => props.theme.inputBackground || props.theme.background};
+  color: ${props => props.theme.text};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 10px;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  appearance: none;
+  transition: all 0.2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   option {
@@ -328,153 +198,137 @@ const Select = styled.select`
   }
 `;
 
-const GenerateButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 28px;
-  background: linear-gradient(120deg, ${props => props.theme.primary}, ${props => props.theme.accentColor || props.theme.primary});
-  color: #0f172a;
+const TemplateStrip = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+`;
+
+const TemplateTag = styled.button`
+  background: none;
   border: none;
-  border-radius: 14px;
-  font-size: 1rem;
+  color: ${props => props.theme.text};
+  font-size: 0.8rem;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: background 0.15s, opacity 0.15s;
+
+  &:hover {
+    background: ${props => props.theme.hover || 'rgba(128,128,128,0.1)'};
+    opacity: 1;
+  }
+`;
+
+const GenerateButton = styled.button`
+  width: 100%;
+  padding: 12px;
+  background: ${props => props.theme.accentBackground || props.theme.primary};
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   transition: all 0.2s ease;
-  white-space: nowrap;
-  margin-left: auto;
-  min-width: 180px;
 
   &:hover:not(:disabled) {
-    filter: translateY(-1px) saturate(1.1);
-  }
-
-  &:active:not(:disabled) {
-    filter: brightness(0.95);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px ${props => props.theme.accentColor || props.theme.primary}40;
   }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
-
-  svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  @media (max-width: 640px) {
-    width: 100%;
-    margin-left: 0;
-    margin-top: 12px;
-  }
 `;
 
-const Spinner = styled.div`
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top: 2px solid ${props => props.theme.primaryForeground || '#0f172a'};
-  border-radius: 50%;
-  animation: ${spin} 0.8s linear infinite;
+const MainColumn = styled.div`
+  min-width: 0;
 `;
-
-// ============================================================================
-// VIDEO GALLERY
-// ============================================================================
 
 const GalleryHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  animation: ${riseUp} 0.5s ease-out;
-  animation-delay: 0.2s;
-  animation-fill-mode: backwards;
+  margin-bottom: 20px;
 `;
 
 const GalleryTitle = styled.h2`
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  letter-spacing: -0.02em;
 `;
 
 const VideoCount = styled.span`
-  font-size: 0.875rem;
-  font-weight: 500;
-  padding: 4px 10px;
-  background: rgba(15, 23, 42, 0.1);
-  color: ${props => props.theme.accentColor || props.theme.primary};
-  border-radius: 20px;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  background: ${props => props.theme.border};
+  border-radius: 12px;
 `;
 
 const ClearButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 6px 12px;
   background: transparent;
-  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+  color: ${props => props.theme.text};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 10px;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  border-radius: 6px;
+  font-size: 0.8rem;
   cursor: pointer;
+  opacity: 0.7;
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #EF4444;
-  }
-
-  svg {
-    width: 14px;
-    height: 14px;
+    opacity: 1;
+    background: ${props => props.theme.hover || 'rgba(128,128,128,0.1)'};
   }
 `;
 
 const VideoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
 `;
 
-const VideoCard = styled.article`
+const VideoCard = styled.div`
   background: ${props => props.theme.sidebar};
   border: 1px solid ${props => props.theme.border};
   border-radius: 16px;
   overflow: hidden;
-  transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   animation: ${scaleIn} 0.4s ease-out;
-  animation-delay: ${props => props.$index * 0.05}s;
-  animation-fill-mode: backwards;
 
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 40px ${props => props.theme.shadow || 'rgba(0,0,0,0.15)'};
-    border-color: ${props => props.theme.accentColor || props.theme.primary}40;
+    border-color: transparent;
   }
-
-  ${props => props.$generating && css`
-    border-color: ${props.theme.accentColor || props.theme.primary}60;
-  `}
 `;
 
 const VideoPreview = styled.div`
   position: relative;
-  background: ${props => props.theme.text === '#fff' ? '#0a0a0a' : '#0f172a'};
+  background: #000;
   aspect-ratio: 16/9;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 `;
 
 const VideoPlayer = styled.video`
@@ -483,110 +337,75 @@ const VideoPlayer = styled.video`
   object-fit: cover;
 `;
 
-const VideoPlaceholder = styled.div`
-  width: 100%;
-  height: 100%;
+const StatusMessage = styled.div`
+  color: #fff;
+  font-size: 0.85rem;
+  opacity: 0.8;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: white;
-  padding: 20px;
-  text-align: center;
-
-  svg {
-    width: 40px;
-    height: 40px;
-    opacity: 0.6;
-  }
-`;
-
-const PlaceholderText = styled.span`
-  font-size: 0.9rem;
-  opacity: 0.8;
-`;
-
-const ProgressBarContainer = styled.div`
-  width: 80%;
-  height: 4px;
-  background: rgba(255,255,255,0.2);
-  border-radius: 2px;
-  overflow: hidden;
-`;
-
-const ProgressBar = styled.div`
-  height: 100%;
-  width: 30%;
-  background: ${props => props.theme.primary};
-  border-radius: 2px;
-  animation: ${skeletonShimmer} 2s infinite ease-in-out;
+  gap: 8px;
 `;
 
 const CardContent = styled.div`
-  padding: 20px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  flex: 1;
 `;
 
-const VideoPrompt = styled.p`
+const VideoPromptText = styled.p`
   margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.5;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: ${props => props.theme.text};
+  opacity: 0.9;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  color: ${props => props.theme.text};
 `;
 
 const CardFooter = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid ${props => props.theme.border};
 `;
 
 const StatusBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 20px;
   font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
-  background: ${props => {
-    switch (props.$status) {
-      case 'completed': return 'rgba(34, 197, 94, 0.15)';
-      case 'failed': return 'rgba(239, 68, 68, 0.15)';
-      default: return props.theme.accentSurface || `${props.theme.primary}15`;
-    }
-  }};
-  color: ${props => {
-    switch (props.$status) {
-      case 'completed': return '#22C55E';
-      case 'failed': return '#EF4444';
-      default: return props.theme.accentColor || props.theme.primary;
-    }
-  }};
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: ${props => props.theme.border};
+  color: ${props => props.theme.text};
+  
+  ${props => props.$status === 'completed' && css`
+    color: #22C55E;
+    background: rgba(34, 197, 94, 0.1);
+  `}
+  
+  ${props => props.$status === 'failed' && css`
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.1);
+  `}
 `;
 
 const CardActions = styled.div`
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 6px;
 `;
 
-const IconButton = styled.button`
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+const ActionBtn = styled.button`
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   border: none;
-  background: ${props => props.theme.inputBackground || props.theme.background};
+  background: transparent;
   color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   cursor: pointer;
   display: flex;
@@ -599,20 +418,11 @@ const IconButton = styled.button`
     color: ${props => props.theme.text};
   }
 
-  &:hover.delete {
-    background: rgba(239, 68, 68, 0.1);
-    color: #EF4444;
-  }
-
   svg {
     width: 16px;
     height: 16px;
   }
 `;
-
-// ============================================================================
-// EMPTY STATE
-// ============================================================================
 
 const EmptyState = styled.div`
   display: flex;
@@ -622,34 +432,20 @@ const EmptyState = styled.div`
   padding: 80px 40px;
   text-align: center;
   animation: ${fadeIn} 0.5s ease-out;
-  border: 1px dashed ${props => props.theme.border};
-  border-radius: 16px;
-  background: ${props => props.theme.sidebar};
-`;
-
-const EmptyIcon = styled.div`
-  width: 120px;
-  height: 120px;
-  border-radius: 32px;
-  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 24px;
-  animation: ${drift} 3s ease-in-out infinite;
 
   svg {
     width: 56px;
     height: 56px;
+    margin-bottom: 24px;
     color: ${props => props.theme.accentColor || props.theme.primary};
-    opacity: 0.8;
+    opacity: 0.6;
   }
 `;
 
-const EmptyTitle = styled.h2`
-  font-size: 1.5rem;
+const EmptyTitle = styled.h3`
+  font-size: 1.25rem;
   font-weight: 600;
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   letter-spacing: -0.02em;
 `;
 
@@ -657,13 +453,30 @@ const EmptyDescription = styled.p`
   font-size: 0.9375rem;
   color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   margin: 0;
-  max-width: 420px;
+  max-width: 320px;
   line-height: 1.6;
 `;
 
-// ============================================================================
-// COMPONENT
-// ============================================================================
+// Simple Spinner
+const Spinner = styled.div`
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+const PROMPT_TEMPLATES = [
+  'A cinematic close-up of a rainy neon metropolis at night, ultra-realistic, dramatic lighting',
+  'A minimalist product demo with clean white studio setup, soft shadows, product in motion',
+  'Vintage sci-fi spaceship launch sequence, sweeping camera movement, editorial motion',
+];
 
 const MediaPage = ({ collapsed }) => {
   const { t } = useTranslation();
@@ -674,7 +487,6 @@ const MediaPage = ({ collapsed }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeOperation, setActiveOperation] = useState(null);
   
-  // Load saved videos from localStorage
   const [videos, setVideos] = useState(() => {
     try {
       const saved = localStorage.getItem('generated_videos');
@@ -685,12 +497,10 @@ const MediaPage = ({ collapsed }) => {
     }
   });
 
-  // Persist videos to localStorage
   useEffect(() => {
     localStorage.setItem('generated_videos', JSON.stringify(videos));
   }, [videos]);
 
-  // Polling logic
   useEffect(() => {
     let pollInterval;
 
@@ -804,37 +614,29 @@ const MediaPage = ({ collapsed }) => {
               Media Studio
               <BetaTag>Veo 2</BetaTag>
             </PageTitle>
-            <Subtitle>Create AI-generated videos with Google's Veo 2 model</Subtitle>
           </TitleSection>
         </Header>
 
-        <PromptCard $generating={isGenerating}>
-          <PromptHeader>
-            <PromptIcon>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-              </svg>
-            </PromptIcon>
-            <PromptTitle>Create New Video</PromptTitle>
-          </PromptHeader>
+        <LayoutGrid>
+          <SidePanel>
+            <PanelSection>
+              <Label>Prompt</Label>
+              <TextArea 
+                placeholder="Describe your video in detail..."
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                disabled={isGenerating}
+              />
+              <TemplateStrip>
+                {PROMPT_TEMPLATES.map((template, idx) => (
+                  <TemplateTag key={idx} onClick={() => handleUseTemplate(template)} disabled={isGenerating}>
+                    "{template.length > 50 ? template.substring(0, 50) + '...' : template}"
+                  </TemplateTag>
+                ))}
+              </TemplateStrip>
+            </PanelSection>
 
-          <TextArea 
-            placeholder="Describe your video in detail... (e.g., A cinematic drone shot of a futuristic city at night with neon lights reflecting in puddles, slow motion, 8K quality)"
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            disabled={isGenerating}
-          />
-          <TemplateStrip>
-            {PROMPT_TEMPLATES.map((template) => (
-              <TemplateTag key={template} onClick={() => handleUseTemplate(template)} disabled={isGenerating}>
-                {template}
-              </TemplateTag>
-            ))}
-          </TemplateStrip>
-
-          <SettingsRow>
-            <SettingGroup>
+            <PanelSection>
               <Label>Aspect Ratio</Label>
               <Select 
                 value={aspectRatio} 
@@ -845,125 +647,104 @@ const MediaPage = ({ collapsed }) => {
                 <option value="9:16">9:16 Portrait</option>
                 <option value="1:1">1:1 Square</option>
               </Select>
-            </SettingGroup>
+            </PanelSection>
             
-            <SettingGroup>
+            <PanelSection>
               <Label>Duration</Label>
               <Select disabled>
                 <option>5-8 seconds (Auto)</option>
               </Select>
-            </SettingGroup>
+            </PanelSection>
 
             <GenerateButton 
               onClick={handleGenerate} 
               disabled={!prompt.trim() || isGenerating}
             >
               {isGenerating ? (
-                <>
-                  <Spinner /> Generating...
-                </>
+                <><Spinner /> Generating...</>
               ) : (
-                <>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                  Generate Video
-                </>
+                'Generate Video'
               )}
             </GenerateButton>
-          </SettingsRow>
-        </PromptCard>
+          </SidePanel>
 
-        {videos.length > 0 && (
-          <>
-            <GalleryHeader>
-              <GalleryTitle>
-                Your Videos
-                <VideoCount>{videos.length}</VideoCount>
-              </GalleryTitle>
-              <ClearButton onClick={handleClearAll}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-                Clear All
-              </ClearButton>
-            </GalleryHeader>
+          <MainColumn>
+            {videos.length > 0 ? (
+              <>
+                <GalleryHeader>
+                  <GalleryTitle>
+                    Generated Videos
+                    <VideoCount>{videos.length}</VideoCount>
+                  </GalleryTitle>
+                  <ClearButton onClick={handleClearAll}>
+                    Clear All
+                  </ClearButton>
+                </GalleryHeader>
 
-            <VideoGrid>
-              {videos.map((video, index) => (
-                <VideoCard key={video.id} $index={index} $generating={video.status === 'generating'}>
-                  <VideoPreview>
-                    {video.status === 'completed' && video.url ? (
-                      <VideoPlayer src={video.url} controls />
-                    ) : (
-                      <VideoPlaceholder>
-                        {video.status === 'failed' ? (
-                          <>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2">
-                              <circle cx="12" cy="12" r="10" />
-                              <line x1="15" y1="9" x2="9" y2="15" />
-                              <line x1="9" y1="9" x2="15" y2="15" />
-                            </svg>
-                            <PlaceholderText>Generation Failed</PlaceholderText>
-                          </>
+                <VideoGrid>
+                  {videos.map(video => (
+                    <VideoCard key={video.id}>
+                      <VideoPreview>
+                        {video.status === 'completed' && video.url ? (
+                          <VideoPlayer src={video.url} controls />
                         ) : (
-                          <>
-                            <Spinner style={{ width: 32, height: 32 }} />
-                            <PlaceholderText>Generating your video...</PlaceholderText>
-                            <ProgressBarContainer>
-                              <ProgressBar />
-                            </ProgressBarContainer>
-                          </>
+                          <StatusMessage>
+                            {video.status === 'failed' ? (
+                              'Generation Failed'
+                            ) : (
+                              <>
+                                <Spinner />
+                                Processing...
+                              </>
+                            )}
+                          </StatusMessage>
                         )}
-                      </VideoPlaceholder>
-                    )}
-                  </VideoPreview>
-                  <CardContent>
-                    <VideoPrompt>{video.prompt}</VideoPrompt>
-                    <CardFooter>
-                      <StatusBadge $status={video.status}>
-                        {video.status === 'generating' ? 'Processing' : video.status}
-                      </StatusBadge>
-                      <CardActions>
-                        {video.status === 'completed' && (
-                          <IconButton onClick={() => handleDownload(video)} title="Download">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                              <polyline points="7 10 12 15 17 10" />
-                              <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
-                          </IconButton>
-                        )}
-                        <IconButton className="delete" onClick={() => handleDelete(video.id)} title="Delete">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </IconButton>
-                      </CardActions>
-                    </CardFooter>
-                  </CardContent>
-                </VideoCard>
-              ))}
-            </VideoGrid>
-          </>
-        )}
-
-        {videos.length === 0 && (
-          <EmptyState>
-            <EmptyIcon>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-              </svg>
-            </EmptyIcon>
-            <EmptyTitle>No videos yet</EmptyTitle>
-            <EmptyDescription>
-              Create your first AI-generated video by entering a detailed prompt above. Veo 2 can generate stunning 5-8 second videos from your descriptions.
-            </EmptyDescription>
-          </EmptyState>
-        )}
+                      </VideoPreview>
+                      <CardContent>
+                        <VideoPromptText title={video.prompt}>
+                          {video.prompt}
+                        </VideoPromptText>
+                        <CardFooter>
+                          <StatusBadge $status={video.status}>
+                            {video.status === 'generating' ? 'Processing' : video.status}
+                          </StatusBadge>
+                          <CardActions>
+                            {video.status === 'completed' && (
+                              <ActionBtn onClick={() => handleDownload(video)} title="Download">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                  <polyline points="7 10 12 15 17 10" />
+                                  <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                              </ActionBtn>
+                            )}
+                            <ActionBtn onClick={() => handleDelete(video.id)} title="Delete">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </ActionBtn>
+                          </CardActions>
+                        </CardFooter>
+                      </CardContent>
+                    </VideoCard>
+                  ))}
+                </VideoGrid>
+              </>
+            ) : (
+              <EmptyState>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+                <EmptyTitle>No videos yet</EmptyTitle>
+                <EmptyDescription>
+                  Enter a prompt in the left panel and click Generate to create your first video.
+                </EmptyDescription>
+              </EmptyState>
+            )}
+          </MainColumn>
+        </LayoutGrid>
       </ContentWrapper>
     </PageContainer>
   );

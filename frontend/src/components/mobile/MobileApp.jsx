@@ -15,6 +15,7 @@ import OnboardingFlow from '../OnboardingFlow';
 import { getDefaultChatTitle, isDefaultChatTitle } from '../../utils/chatLocalization';
 import { useTranslation } from '../../contexts/TranslationContext';
 import { getPreferredModelId } from '../../config/modelConfig';
+import { setBackendMode, shouldUseRealBackend } from '../../services/backendConfig';
 
 const MobileAppContainer = styled.div`
   display: flex;
@@ -279,7 +280,10 @@ const MobileAppContent = () => {
 
   const [settings, setSettings] = useState(() => {
     if (user && user.settings) {
-      return user.settings;
+      return {
+        ...user.settings,
+        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
+      };
     }
     
     const savedSettings = localStorage.getItem('settings');
@@ -300,9 +304,14 @@ const MobileAppContent = () => {
       highContrast: false,
       reducedMotion: false,
       lineSpacing: 'normal',
+      useRealBackend: shouldUseRealBackend(),
       language: 'en-US'
     };
   });
+
+  useEffect(() => {
+    setBackendMode(settings.useRealBackend !== false);
+  }, [settings.useRealBackend]);
   
   // UI state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -555,6 +564,7 @@ const MobileAppContent = () => {
     if (user) {
       updateUserSettings(newSettings);
     }
+    setBackendMode(newSettings.useRealBackend !== false);
   };
 
   const handleModelChange = (modelId) => {

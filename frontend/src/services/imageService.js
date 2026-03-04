@@ -1,23 +1,11 @@
 import axios from 'axios';
 import { getAuthHeaders } from './authService';
-
-// Prefer environment variable, otherwise default to same-origin
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
-
-// Remove trailing slashes
-let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
-
-// Remove a trailing /api if present
-if (cleanedBase.endsWith('/api')) {
-  cleanedBase = cleanedBase.slice(0, -4);
-}
-
-const BACKEND_API_BASE = `${cleanedBase}/api`;
-
-console.log('[imageService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
+import { getBackendApiBase } from './backendConfig';
 
 // Remove duplicated /api in endpoint paths
 const buildApiUrl = (endpoint) => {
+  const BACKEND_API_BASE = getBackendApiBase();
+
   if (!endpoint) return BACKEND_API_BASE;
 
   // Normalize endpoint to remove a leading slash if it exists
@@ -31,8 +19,8 @@ const buildApiUrl = (endpoint) => {
   return `${BACKEND_API_BASE}/${normalizedEndpoint}`;
 };
 
-const API_URL = buildApiUrl('/image'); // Backend image generation endpoint
-const VIDEO_API_URL = buildApiUrl('/video'); // Backend video generation endpoint
+const getApiUrl = () => buildApiUrl('/image'); // Backend image generation endpoint
+const getVideoApiUrl = () => buildApiUrl('/video'); // Backend video generation endpoint
 
 /**
  * Calls the backend API to generate an image based on the provided prompt.
@@ -60,7 +48,7 @@ export const generateImageApi = async (prompt, model, history = []) => {
       console.log('[imageService] Sending with history:', history.length, 'items');
     }
 
-    const response = await axios.post(`${API_URL}/generate`, body, config);
+    const response = await axios.post(`${getApiUrl()}/generate`, body, config);
     return response.data; // Expects { imageData: "..." } or { imageUrl: "..." }
   } catch (error) {
     console.error('Error calling generate image API:', error.response ? error.response.data : error.message);
@@ -86,7 +74,7 @@ export const generateVideoApi = async (prompt) => {
       },
     };
 
-    const response = await axios.post(`${VIDEO_API_URL}/generate`, { prompt }, config);
+    const response = await axios.post(`${getVideoApiUrl()}/generate`, { prompt }, config);
     return response.data; // Expects { videoData: "..." } or { videoUrl: "..." }
   } catch (error) {
     console.error('Error calling generate video API:', error.response ? error.response.data : error.message);
