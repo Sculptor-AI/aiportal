@@ -1980,7 +1980,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             <span>{t('chat.research.performing')}</span>
           </div>
           <div style={{ fontSize: '0.9em', opacity: 0.7 }}>
-            {t('chat.labels.query')}: "{content || t('chat.labels.yourQuery')}"
+            {t('chat.labels.query')}: "{message.query || content || t('chat.labels.yourQuery')}"
           </div>
           {message.progress !== undefined && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2044,6 +2044,38 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 {t('chat.research.analyzedBy', { count: message.agentResults.length })}
               </div>
             )}
+            {message.metadata?.models && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: theme.inputBackground || 'rgba(0,0,0,0.04)',
+                border: `1px solid ${theme.border || 'rgba(0,0,0,0.1)'}`,
+                fontSize: '0.82em',
+                lineHeight: '1.5',
+                opacity: 0.86
+              }}>
+                <div>Planner: {message.metadata.models.planner || 'N/A'}</div>
+                <div>Research agents: {message.metadata.models.researcher || 'N/A'}</div>
+                <div>Writer: {message.metadata.models.writer || 'N/A'}</div>
+                {message.metadata.agentCount && (
+                  <div>Agents used: {message.metadata.agentCount}</div>
+                )}
+              </div>
+            )}
+            {Array.isArray(message.qualityIssues) && message.qualityIssues.length > 0 && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: '#7f1d1d1f',
+                border: '1px solid #ef444466',
+                fontSize: '0.82em',
+                lineHeight: '1.4'
+              }}>
+                Quality notes: {message.qualityIssues.join(' | ')}
+              </div>
+            )}
           </div>
           <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
             {robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)}
@@ -2056,8 +2088,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
             {t('chat.research.failed')}
           </p>
-          <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.query')}: "{content || t('chat.labels.yourQuery')}"</p>
-          {message.content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {message.content}</p>}
+          <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.query')}: "{message.query || content || t('chat.labels.yourQuery')}"</p>
+          {(message.errorMessage || message.content) && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {message.errorMessage || message.content}</p>}
         </div>
       );
     }

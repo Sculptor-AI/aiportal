@@ -49,3 +49,20 @@ CORS_ALLOWED_ORIGINS="http://localhost:3000,http://localhost:3009,http://localho
 # Then set it when running the script:
 #   KV_NAMESPACE_ID=your-id node scripts/create-admin.js admin admin@example.com password
 KV_NAMESPACE_ID="YOUR_KV_NAMESPACE_ID_HERE"
+
+# ----------------------------------------------------------------------------
+# Deep Research Pipeline (optional overrides)
+# ----------------------------------------------------------------------------
+# Set to false to disable deep research endpoint
+DEEP_RESEARCH_ENABLED="true"
+
+# Planner / researcher / writer model names (mapped through src/config/models.json)
+DEEP_RESEARCH_PLANNER_MODEL="gemini-3.1-pro"
+DEEP_RESEARCH_RESEARCHER_MODEL="gemini-3-flash"
+DEEP_RESEARCH_WRITER_MODEL="claude-sonnet-4.6"
+
+# Agent and throughput controls
+DEEP_RESEARCH_MIN_AGENTS="2"
+DEEP_RESEARCH_DEFAULT_MAX_AGENTS="8"
+DEEP_RESEARCH_MAX_AGENTS="12"
+DEEP_RESEARCH_MAX_PARALLEL_AGENTS="4"

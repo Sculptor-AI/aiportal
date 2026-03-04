@@ -198,6 +198,7 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
     return c.json({ error: 'Storage not configured' }, 500);
   }
 
+  const currentUser = c.get('user');
   const userId = c.req.param('userId');
   const user = await findUserById(kv, userId);
 
@@ -206,6 +207,11 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
   }
 
   const body = await c.req.json().catch(() => ({}));
+
+  // Prevent admins from demoting/changing their own role.
+  if (currentUser?.id === userId && body.role && body.role !== user.role) {
+    return c.json({ error: 'Cannot modify your own role' }, 403);
+  }
 
   // Validate email format and check if already taken
   if (body.email && body.email.toLowerCase() !== user.email.toLowerCase()) {

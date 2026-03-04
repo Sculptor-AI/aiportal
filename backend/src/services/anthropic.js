@@ -402,10 +402,7 @@ function buildAnthropicBody(body) {
       anthropicBody.thinking = { type: 'adaptive' };
       anthropicBody.output_config = {
         ...(anthropicBody.output_config || {}),
-        thinking: {
-          type: 'adaptive',
-          effort: anthropicEffort
-        }
+        effort: anthropicEffort
       };
     } else {
       anthropicBody.thinking = {

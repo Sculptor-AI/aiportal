@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { useTheme } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
 import FileUploadButton from './FileUploadButton';
@@ -34,8 +34,6 @@ import {
   ThinkingChipGroup,
   ThinkingEffortButton
 } from './ChatWindow.styled';
-
-const REASONING_EFFORT_ORDER = ['low', 'medium', 'high', 'xhigh'];
 
 const ChatInputArea = forwardRef(({
   chatIsEmpty,
@@ -104,6 +102,26 @@ const ChatInputArea = forwardRef(({
   const greetingEnabled = settings?.showGreeting !== false;
   const showGreetingMessage = greetingEnabled && chatIsEmpty && !animateDown;
   const supportsReasoningEffort = modelCapabilities?.reasoning_effort === true;
+  const reasoningEffortOptions = useMemo(() => {
+    const levels = modelCapabilities?.reasoning_effort_levels;
+    if (Array.isArray(levels) && levels.length > 0) {
+      return levels;
+    }
+    return ['low', 'medium', 'high'];
+  }, [modelCapabilities]);
+  const reasoningEffortDefault = useMemo(() => {
+    const configuredDefault = modelCapabilities?.reasoning_effort_default;
+    if (configuredDefault && reasoningEffortOptions.includes(configuredDefault)) {
+      return configuredDefault;
+    }
+    if (reasoningEffortOptions.includes('medium')) {
+      return 'medium';
+    }
+    if (reasoningEffortOptions.includes('high')) {
+      return 'high';
+    }
+    return reasoningEffortOptions[0] || 'medium';
+  }, [modelCapabilities, reasoningEffortOptions]);
 
   // Use image mode from prop (state managed by parent)
   const isImagePromptMode = isImagePromptModeProp || false;
@@ -156,6 +174,13 @@ const ChatInputArea = forwardRef(({
   useEffect(() => {
     localStorage.setItem('reasoningEffort', reasoningEffort);
   }, [reasoningEffort]);
+
+  useEffect(() => {
+    if (!supportsReasoningEffort) return;
+
+    if (reasoningEffortOptions.includes(reasoningEffort)) return;
+    setReasoningEffort(reasoningEffortDefault);
+  }, [supportsReasoningEffort, reasoningEffort, reasoningEffortOptions, reasoningEffortDefault]);
 
   useEffect(() => {
     const wasEmpty = prevChatIsEmptyRef.current;
@@ -511,11 +536,11 @@ const ChatInputArea = forwardRef(({
 
   const cycleReasoningEffort = useCallback(() => {
     setReasoningEffort((previousEffort) => {
-      const currentIndex = REASONING_EFFORT_ORDER.indexOf(previousEffort);
-      const safeIndex = currentIndex >= 0 ? currentIndex : 1;
-      return REASONING_EFFORT_ORDER[(safeIndex + 1) % REASONING_EFFORT_ORDER.length];
+      const currentIndex = reasoningEffortOptions.indexOf(previousEffort);
+      const safeIndex = currentIndex >= 0 ? currentIndex : -1;
+      return reasoningEffortOptions[(safeIndex + 1) % reasoningEffortOptions.length];
     });
-  }, []);
+  }, [reasoningEffortOptions]);
 
   const getReasoningEffortLabel = useCallback((effort) => {
     switch (effort) {
@@ -527,8 +552,12 @@ const ChatInputArea = forwardRef(({
         return t('composer.reasoningEffort.high', 'High');
       case 'xhigh':
         return t('composer.reasoningEffort.xhigh', 'X-High');
+      case 'minimal':
+        return t('composer.reasoningEffort.minimal', 'Minimal');
+      case 'max':
+        return t('composer.reasoningEffort.max', 'Max');
       default:
-        return t('composer.reasoningEffort.medium', 'Medium');
+        return effort || t('composer.reasoningEffort.medium', 'Medium');
     }
   }, [t]);
 

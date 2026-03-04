@@ -38,7 +38,11 @@ import DinosaurRunGame from './components/DinosaurRunGame';
 import ConfettiExplosion from './components/ConfettiExplosion';
 import MatrixRain from './components/MatrixRain';
 import useEasterEggs from './hooks/useEasterEggs';
-import { DEFAULT_CUSTOM_BASE_MODEL_ID, getPreferredModelId } from './config/modelConfig';
+import {
+  DEFAULT_CUSTOM_BASE_MODEL_ID,
+  appendDeepResearchModel,
+  getPreferredModelId
+} from './config/modelConfig';
 import { setBackendMode, shouldUseRealBackend } from './services/backendConfig';
 
 const AppContainer = styled.div`
@@ -355,7 +359,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
 
         // Combine backend models with enabled custom models
-        const allModels = [...(backendModels || []), ...enabledCustomModels];
+        const allModels = appendDeepResearchModel([
+          ...(backendModels || []),
+          ...enabledCustomModels
+        ]);
 
         if (allModels.length > 0) {
           setAvailableModels(allModels);

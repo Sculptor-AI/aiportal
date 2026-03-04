@@ -127,7 +127,7 @@ function buildOpenAIBody(body) {
 
   // Reasoning effort (for reasoning-capable models, e.g. GPT-5.2 reasoning)
   if (body.reasoning_effort) {
-    openAIBody.reasoning_effort = body.reasoning_effort; // 'low', 'medium', 'high'
+    openAIBody.reasoning_effort = body.reasoning_effort; // model-dependent: e.g. 'low'|'medium'|'high'|'xhigh'
   }
 
   // Stream options

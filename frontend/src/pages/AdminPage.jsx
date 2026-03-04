@@ -1,25 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import styled, { keyframes } from 'styled-components';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllUsers, updateUserStatus, updateUserDetails, getDashboardStats } from '../services/authService';
+import {
+  deleteUserById,
+  getAllUsers,
+  getDashboardStats,
+  updateUserDetails,
+  updateUserStatus
+} from '../services/authService';
 import AdminLoginModal from '../components/AdminLoginModal';
 
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
+const STATUS_LABELS = {
+  active: 'Active',
+  pending: 'Pending',
+  suspended: 'Suspended',
+  banned: 'Banned'
+};
+
+const ROLE_LABELS = {
+  admin: 'Admin',
+  user: 'User'
+};
 
 const AdminContainer = styled.div`
   flex: 1;
   min-height: 100vh;
   min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
   color: ${props => props.theme.text};
   overflow-y: auto;
   overflow-x: hidden;
   transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-
   padding-left: ${props => (props.$collapsed ? '0' : '300px')};
 
   @media (max-width: 1024px) {
@@ -28,497 +38,438 @@ const AdminContainer = styled.div`
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 48px 40px 80px;
+  padding: 40px 32px 72px;
 
   @media (max-width: 768px) {
-    padding: 32px 20px 60px;
+    padding: 24px 14px 48px;
   }
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
+  gap: 16px;
   align-items: flex-start;
-  margin-bottom: 40px;
-  gap: 24px;
-  animation: ${fadeIn} 0.5s ease-out;
+  margin-bottom: 20px;
 
-  @media (max-width: 640px) {
+  @media (max-width: 880px) {
     flex-direction: column;
-    gap: 20px;
   }
 `;
 
-const TitleSection = styled.div`
+const HeaderLeft = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
 `;
 
 const Title = styled.h1`
-  font-size: 2.25rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-
-  @media (max-width: 640px) {
-    font-size: 1.875rem;
-  }
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 `;
 
 const Subtitle = styled.p`
-  font-size: 0.9375rem;
-  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   margin: 0;
-  letter-spacing: -0.01em;
+  opacity: 0.78;
+  font-size: 0.95rem;
 `;
 
-const UserCount = styled.span`
-  font-size: 1rem;
-  font-weight: 500;
-  padding: 4px 12px;
-  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
-  color: ${props => props.theme.accentColor || props.theme.primary};
-  border-radius: 20px;
-`;
-
-const HeaderActions = styled.div`
+const HeaderButtons = styled.div`
   display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-shrink: 0;
-
-  @media (max-width: 768px) {
-    width: 100%;
-  }
+  gap: 10px;
 `;
 
-const SearchContainer = styled.div`
-  position: relative;
-  width: 280px;
-
-  @media (max-width: 768px) {
-    flex: 1;
-  }
-`;
-
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 10px 16px 10px 42px;
-  background: ${props => props.theme.inputBackground || props.theme.sidebar};
+const Button = styled.button`
   border: 1px solid ${props => props.theme.border};
-  border-radius: 12px;
-  color: ${props => props.theme.text};
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.accentColor || props.theme.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
-  }
-
-  &::placeholder {
-    color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
-  }
-`;
-
-const SearchIcon = styled.svg`
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
-  pointer-events: none;
-`;
-
-const AddButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  background: ${props => props.theme.accentBackground || props.theme.primary};
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  background: ${props => props.$primary ? (props.theme.accentBackground || props.theme.primary) : (props.theme.inputBackground || props.theme.sidebar)};
+  color: ${props => props.$primary ? '#fff' : props.theme.text};
+  padding: 10px 14px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px ${props => props.theme.accentColor || props.theme.primary}40;
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-  background: ${props => props.theme.sidebar};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 16px;
-  overflow: hidden;
-`;
-
-const TableHeader = styled.thead`
-  background-color: ${props => props.theme.inputBackground || props.theme.background};
-`;
-
-const TableHeaderCell = styled.th`
-  padding: 15px 20px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${props => props.theme.textSecondary || '#888'};
-  border-bottom: 1px solid ${props => props.theme.border};
-
-  &:last-child {
-    text-align: right;
-  }
-`;
-
-const TableBody = styled.tbody``;
-
-const TableRow = styled.tr`
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background-color: ${props => props.theme.inputBackground || 'rgba(255, 255, 255, 0.05)'};
-  }
-
-  &:not(:last-child) {
-    border-bottom: 1px solid ${props => props.theme.border};
-  }
-`;
-
-const TableCell = styled.td`
-  padding: 15px 20px;
-  vertical-align: middle;
-`;
-
-const UserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const Avatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
-  color: white;
-  text-transform: uppercase;
-`;
-
-const UserDetails = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const UserName = styled.span`
-  font-weight: 500;
-  font-size: 1rem;
-`;
-
-const UserEmail = styled.span`
-  font-size: 0.85rem;
-  color: ${props => props.theme.textSecondary || '#888'};
-`;
-
-const RoleBadge = styled.span`
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  
-  ${props => {
-    if (props.$role === 'ADMIN') {
-      return `
-        background-color: #3b82f6;
-        color: white;
-      `;
-    } else if (props.$status === 'pending') {
-      return `
-        background-color: #f59e0b;
-        color: white;
-      `;
-    } else {
-      return `
-        background-color: #10b981;
-        color: white;
-      `;
-    }
-  }}
-`;
-
-const TimeText = styled.span`
   font-size: 0.9rem;
-  color: ${props => props.theme.textSecondary || '#888'};
-`;
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: ${props => props.theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)'};
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: ${fadeIn} 0.2s ease;
-`;
-
-const ModalContainer = styled.div`
-  background: ${props => props.theme.sidebar};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 16px;
-  width: 90%;
-  max-width: 500px;
-  padding: 0;
-  position: relative;
-  box-shadow: 0 20px 60px ${props => props.theme.shadow || 'rgba(0,0,0,0.3)'};
-  color: ${props => props.theme.text};
-  overflow: hidden;
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px;
-  border-bottom: 1px solid ${props => props.theme.border};
-`;
-
-const ModalTitle = styled.h2`
-  font-size: 1.25rem;
   font-weight: 600;
-  margin: 0;
-  letter-spacing: -0.02em;
-`;
+  transition: all 0.16s ease;
 
-const ModalBody = styled.div`
-  padding: 24px;
-`;
-
-const CloseButton = styled.button`
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: none;
-  background: ${props => props.theme.hover || props.theme.inputBackground};
-  color: ${props => props.theme.text};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: ${props => props.theme.border};
-  }
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-`;
-
-const UserProfileSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid ${props => props.theme.border};
-`;
-
-const LargeAvatar = styled.div`
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 24px;
-  color: white;
-  text-transform: uppercase;
-`;
-
-const UserProfileInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const UserProfileName = styled.h3`
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0 0 5px 0;
-`;
-
-const UserProfileDate = styled.span`
-  font-size: 0.9rem;
-  color: ${props => props.theme.textSecondary || '#888'};
-`;
-
-const ModalFooter = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  padding: 20px 24px;
-  border-top: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.inputBackground || props.theme.background};
-`;
-
-const FormGroup = styled.div`
-  margin-bottom: 24px;
-`;
-
-const FormLabel = styled.label`
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 10px;
-`;
-
-const FormInput = styled.input`
-  width: 100%;
-  padding: 12px 16px;
-  background: ${props => props.theme.inputBackground || props.theme.background};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 10px;
-  color: ${props => props.theme.text};
-  font-size: 0.9375rem;
-  transition: all 0.2s ease;
-
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.accentColor || props.theme.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
-  }
-
-  &::placeholder {
-    color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
-  }
-`;
-
-const FormSelect = styled.select`
-  width: 100%;
-  padding: 12px 16px;
-  background: ${props => props.theme.inputBackground || props.theme.background};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 10px;
-  color: ${props => props.theme.text};
-  font-size: 0.9375rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.accentColor || props.theme.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
-  }
-
-  option {
-    background: ${props => props.theme.sidebar};
-    color: ${props => props.theme.text};
-  }
-`;
-
-const SaveButton = styled.button`
-  padding: 12px 24px;
-  border-radius: 10px;
-  border: none;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: ${props => props.theme.accentBackground || props.theme.primary};
-  color: #fff;
-
-  &:hover {
+  &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px ${props => props.theme.accentColor || props.theme.primary}40;
+    box-shadow: ${props => props.$primary ? `0 6px 16px ${(props.theme.accentColor || props.theme.primary)}33` : 'none'};
   }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
   }
 `;
 
-const ClickableText = styled.span`
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  @media (max-width: 760px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const StatCard = styled.div`
+  background: ${props => props.theme.sidebar};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const StatLabel = styled.span`
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+`;
+
+const StatValue = styled.span`
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+`;
+
+const Controls = styled.div`
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 180px 180px auto;
+  gap: 10px;
+  margin-bottom: 14px;
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SearchWrap = styled.div`
+  position: relative;
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 11px 12px 11px 38px;
+  border-radius: 10px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground || props.theme.sidebar};
+  color: ${props => props.theme.text};
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}22`};
+  }
+`;
+
+const SearchIcon = styled.span`
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.55;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground || props.theme.sidebar};
+  color: ${props => props.theme.text};
   cursor: pointer;
-  transition: all 0.2s ease;
+`;
+
+const Banner = styled.div`
+  border-radius: 10px;
+  border: 1px solid ${props => props.$error ? '#fca5a5' : '#86efac'};
+  background: ${props => props.$error ? '#7f1d1d26' : '#14532d26'};
+  color: ${props => props.$error ? '#fecaca' : '#dcfce7'};
+  padding: 11px 13px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+`;
+
+const TableWrap = styled.div`
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 14px;
+  overflow: hidden;
+  background: ${props => props.theme.sidebar};
+  overflow-x: auto;
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+`;
+
+const THead = styled.thead`
+  background: ${props => props.theme.inputBackground || props.theme.background};
+`;
+
+const Th = styled.th`
+  text-align: left;
+  padding: 13px 14px;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  border-bottom: 1px solid ${props => props.theme.border};
+`;
+
+const Tr = styled.tr`
+  border-bottom: 1px solid ${props => props.theme.border};
+
+  &:last-child {
+    border-bottom: none;
+  }
 
   &:hover {
-    opacity: 0.8;
+    background: ${props => props.theme.inputBackground || 'rgba(255,255,255,0.04)'};
   }
 `;
 
-// Helper function to generate user avatar initials
-const getAvatarInitials = (name) => {
-  return name.split(' ').map(word => word.charAt(0).toUpperCase()).join('').slice(0, 2);
-};
+const Td = styled.td`
+  padding: 13px 14px;
+  vertical-align: middle;
+`;
 
-// Helper function to generate avatar color
-const getAvatarColor = (name) => {
+const UserCell = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const Avatar = styled.div`
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: ${props => props.$color};
+  flex-shrink: 0;
+`;
+
+const UserMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+`;
+
+const UserName = styled.span`
+  font-size: 0.96rem;
+  font-weight: 600;
+`;
+
+const UserEmail = styled.span`
+  font-size: 0.82rem;
+  opacity: 0.72;
+`;
+
+const Badge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+`;
+
+const RoleBadge = styled(Badge)`
+  background: ${props => props.$role === 'admin' ? '#1d4ed8' : '#475569'};
+  color: #fff;
+`;
+
+const StatusBadge = styled(Badge)`
+  background: ${props => {
+    if (props.$status === 'active') return '#059669';
+    if (props.$status === 'pending') return '#d97706';
+    if (props.$status === 'suspended') return '#b45309';
+    if (props.$status === 'banned') return '#dc2626';
+    return '#475569';
+  }};
+  color: #fff;
+`;
+
+const RowActions = styled.div`
+  display: flex;
+  gap: 7px;
+  justify-content: flex-end;
+`;
+
+const MiniButton = styled.button`
+  border: 1px solid ${props => props.$danger ? '#ef4444' : props.theme.border};
+  background: ${props => props.$danger ? '#7f1d1d22' : (props.theme.inputBackground || props.theme.sidebar)};
+  color: ${props => props.$danger ? '#ef4444' : props.theme.text};
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const EmptyState = styled.div`
+  border: 1px dashed ${props => props.theme.border};
+  border-radius: 12px;
+  padding: 28px;
+  text-align: center;
+  opacity: 0.85;
+  background: ${props => props.theme.sidebar};
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.58);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+`;
+
+const Modal = styled.div`
+  width: min(640px, 92vw);
+  background: ${props => props.theme.sidebar};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 14px;
+  overflow: hidden;
+`;
+
+const ModalHead = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid ${props => props.theme.border};
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0;
+  font-size: 1.15rem;
+`;
+
+const ModalBody = styled.div`
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+
+  @media (max-width: 680px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Field = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+`;
+
+const FieldLabel = styled.label`
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.75;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 10px 11px;
+  border-radius: 9px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground || props.theme.background};
+  color: ${props => props.theme.text};
+`;
+
+const FullWidth = styled.div`
+  grid-column: 1 / -1;
+`;
+
+const InfoText = styled.p`
+  margin: 0;
+  font-size: 0.84rem;
+  opacity: 0.76;
+`;
+
+const ModalFoot = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground || props.theme.background};
+`;
+
+const FootRight = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const getAvatarInitials = (name = '') =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(part => part[0]?.toUpperCase() || '')
+    .join('')
+    .slice(0, 2) || '?';
+
+const getAvatarColor = (name = '') => {
   const colors = ['#f59e0b', '#8b5cf6', '#10b981', '#3b82f6', '#ef4444', '#f97316'];
   const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[hash % colors.length];
 };
 
-// Helper function to format date
 const formatDate = (dateString) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
   });
 };
 
-// Helper function to get time ago
 const getTimeAgo = (dateString) => {
+  if (!dateString) return 'Never';
   const now = new Date();
   const date = new Date(dateString);
-  const diff = now - date;
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+
+  const diff = Math.max(0, now.getTime() - date.getTime());
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
@@ -529,216 +480,253 @@ const getTimeAgo = (dateString) => {
   if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
   if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
   if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-  return 'a few seconds ago';
+  return 'just now';
+};
+
+const normalizeApiUser = (user) => {
+  const name = user.username || user.name || 'Unknown';
+  const role = user.role === 'admin' ? 'admin' : 'user';
+  const status = ['active', 'pending', 'suspended', 'banned'].includes(user.status)
+    ? user.status
+    : 'active';
+
+  return {
+    id: user.id,
+    username: name,
+    email: user.email || '',
+    role,
+    status,
+    lastActive: getTimeAgo(user.last_login || user.updated_at),
+    createdAt: formatDate(user.created_at),
+    avatar: getAvatarInitials(name),
+    avatarColor: getAvatarColor(name)
+  };
 };
 
 const AdminPage = ({ collapsed }) => {
   const { adminUser } = useAuth();
+
   const [users, setUsers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [editingUser, setEditingUser] = useState(null);
-  const [editForm, setEditForm] = useState({
-    role: '',
-    email: '',
-    name: '',
-    newPassword: ''
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [dashboardStats, setDashboardStats] = useState({
     totalUsers: 0,
     pendingUsers: 0,
     activeUsers: 0,
-    adminUsers: 0
+    adminUsers: 0,
+    suspendedUsers: 0
   });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState({
+    username: '',
+    email: '',
+    role: 'user',
+    status: 'active',
+    newPassword: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [workingUserId, setWorkingUserId] = useState(null);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [showAdminLogin, setShowAdminLogin] = useState(false);
 
-  // Load users and dashboard stats on component mount
-  useEffect(() => {
-    const loadData = async () => {
-      if (!adminUser) return;
+  const loadData = useCallback(async (silent = false) => {
+    if (!adminUser) return;
 
-      try {
-        setLoading(true);
-        const [usersData, statsData] = await Promise.all([
-          getAllUsers(),
-          getDashboardStats()
-        ]);
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError('');
 
-        // Transform user data to match the expected format
-        const transformedUsers = usersData.map(user => ({
-          id: user.id,
-          name: user.username,
-          email: user.email,
-          role: user.status === 'admin' ? 'ADMIN' : 'USER',
-          status: user.status,
-          lastActive: getTimeAgo(user.last_login || user.updated_at),
-          createdAt: formatDate(user.created_at),
-          avatar: getAvatarInitials(user.username),
-          avatarColor: getAvatarColor(user.username),
-          is_active: user.is_active
-        }));
+    try {
+      const [usersData, statsData] = await Promise.all([
+        getAllUsers(),
+        getDashboardStats()
+      ]);
 
-        setUsers(transformedUsers);
-        setDashboardStats(statsData);
-      } catch (err) {
-        setError(err.message);
-        console.error('Failed to load admin data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
+      setUsers((usersData || []).map(normalizeApiUser));
+      setDashboardStats(statsData || {
+        totalUsers: 0,
+        pendingUsers: 0,
+        activeUsers: 0,
+        adminUsers: 0,
+        suspendedUsers: 0
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to load admin data.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [adminUser]);
 
-  // Filter users based on search term
   useEffect(() => {
-    const filtered = users.filter(user => 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredUsers(filtered);
-  }, [searchTerm, users]);
+    if (!adminUser) return;
+    loadData(false);
+  }, [adminUser, loadData]);
 
-  const handleEditUser = (user) => {
+  const filteredUsers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return users.filter(user => {
+      const matchesSearch =
+        !query ||
+        user.username.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.role.toLowerCase().includes(query) ||
+        user.status.toLowerCase().includes(query);
+
+      const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+      const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+
+      return matchesSearch && matchesStatus && matchesRole;
+    });
+  }, [users, searchTerm, statusFilter, roleFilter]);
+
+  const beginEdit = (user) => {
+    setError('');
+    setSuccess('');
     setEditingUser(user);
-    
-    // Set the role based on status
-    let formRole;
-    if (user.status === 'admin') {
-      formRole = 'ADMIN';
-    } else if (user.status === 'pending') {
-      formRole = 'PENDING';
-    } else {
-      formRole = 'USER';
-    }
-    
     setEditForm({
-      role: formRole,
+      username: user.username,
       email: user.email,
-      name: user.name,
+      role: user.role,
+      status: user.status,
       newPassword: ''
     });
   };
 
-  const handleCloseModal = () => {
+  const closeEdit = () => {
     setEditingUser(null);
     setEditForm({
-      role: '',
+      username: '',
       email: '',
-      name: '',
+      role: 'user',
+      status: 'active',
       newPassword: ''
     });
   };
 
   const handleSaveUser = async () => {
     if (!editingUser) return;
+    const isSelf = editingUser.id === adminUser?.id;
+
+    if (isSelf && editForm.role !== editingUser.role) {
+      setError('You cannot change your own admin role.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
 
     try {
-      setLoading(true);
-      
-      // Prepare updates object
-      const updates = {};
-      if (editForm.email !== editingUser.email) {
-        updates.email = editForm.email;
+      const detailUpdates = {};
+      if (editForm.username.trim() !== editingUser.username) {
+        detailUpdates.username = editForm.username.trim();
       }
-      if (editForm.name !== editingUser.name) {
-        updates.username = editForm.name;
+      if (editForm.email.trim() !== editingUser.email) {
+        detailUpdates.email = editForm.email.trim();
       }
       if (editForm.newPassword.trim()) {
-        updates.password = editForm.newPassword;
+        detailUpdates.password = editForm.newPassword.trim();
+      }
+      if (editForm.role !== editingUser.role) {
+        detailUpdates.role = editForm.role;
       }
 
-      // Update user details if there are changes
-      if (Object.keys(updates).length > 0) {
-        await updateUserDetails(editingUser.id, updates);
+      if (Object.keys(detailUpdates).length > 0) {
+        await updateUserDetails(editingUser.id, detailUpdates);
       }
 
-      // Update user status/role if changed
-      let newStatus;
-      if (editForm.role === 'ADMIN') {
-        newStatus = 'admin';
-      } else if (editForm.role === 'PENDING') {
-        newStatus = 'pending';
-      } else {
-        newStatus = 'active';
-      }
-      
-      if (newStatus !== editingUser.status) {
-        await updateUserStatus(editingUser.id, newStatus);
+      if (editForm.status !== editingUser.status) {
+        await updateUserStatus(editingUser.id, editForm.status);
       }
 
-      // Update local state
-      const updatedUsers = users.map(user => 
-        user.id === editingUser.id 
-          ? { 
-              ...user, 
-              role: editForm.role, 
-              email: editForm.email, 
-              name: editForm.name,
-              status: newStatus
-            }
-          : user
-      );
-      setUsers(updatedUsers);
-      handleCloseModal();
+      closeEdit();
+      await loadData(true);
+      setSuccess('User updated successfully.');
     } catch (err) {
-      setError(err.message);
-      console.error('Failed to update user:', err);
+      setError(err.message || 'Failed to update user.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const handleFormChange = (field, value) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const quickStatusChange = async (user, nextStatus) => {
+    if (!user || user.status === nextStatus) return;
+    if (user.id === adminUser?.id) {
+      setError('You cannot change your own account status.');
+      return;
+    }
+
+    if (nextStatus === 'banned') {
+      const ok = window.confirm(`Ban ${user.username}? This will revoke active sessions and API keys.`);
+      if (!ok) return;
+    }
+
+    setWorkingUserId(user.id);
+    setError('');
+    setSuccess('');
+
+    try {
+      await updateUserStatus(user.id, nextStatus);
+      await loadData(true);
+      setSuccess(`${user.username} is now ${STATUS_LABELS[nextStatus].toLowerCase()}.`);
+    } catch (err) {
+      setError(err.message || 'Failed to update user status.');
+    } finally {
+      setWorkingUserId(null);
+    }
   };
 
-  // Show admin login modal if admin is not authenticated
+  const deleteUser = async (user) => {
+    if (!user) return;
+    if (user.id === adminUser?.id) {
+      setError('You cannot delete your own account.');
+      return;
+    }
+
+    const ok = window.confirm(`Delete ${user.username}? This action is permanent.`);
+    if (!ok) return;
+
+    setWorkingUserId(user.id);
+    setError('');
+    setSuccess('');
+
+    try {
+      await deleteUserById(user.id);
+      await loadData(true);
+      if (editingUser?.id === user.id) {
+        closeEdit();
+      }
+      setSuccess(`${user.username} was deleted.`);
+    } catch (err) {
+      setError(err.message || 'Failed to delete user.');
+    } finally {
+      setWorkingUserId(null);
+    }
+  };
+
   if (!adminUser) {
     return (
       <AdminContainer $collapsed={collapsed}>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
-          <h2>Admin Access Required</h2>
-          <p>Please log in as an administrator to access this page.</p>
-          <button
-            onClick={() => setShowAdminLogin(true)}
-            style={{
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              fontSize: '1rem',
-              cursor: 'pointer',
-              marginTop: '20px'
-            }}
-          >
-            Admin Login
-          </button>
-        </div>
-        <AdminLoginModal 
-          isOpen={showAdminLogin} 
-          onClose={() => setShowAdminLogin(false)} 
+        <ContentWrapper>
+          <EmptyState>
+            <h2>Admin access required</h2>
+            <p style={{ marginBottom: '16px' }}>Log in with an administrator account to manage users.</p>
+            <Button $primary onClick={() => setShowAdminLogin(true)}>Admin login</Button>
+          </EmptyState>
+        </ContentWrapper>
+        <AdminLoginModal
+          isOpen={showAdminLogin}
+          onClose={() => setShowAdminLogin(false)}
         />
-      </AdminContainer>
-    );
-  }
-
-  // Show loading state
-  if (loading && users.length === 0) {
-    return (
-      <AdminContainer $collapsed={collapsed}>
-        <div style={{ padding: '40px', textAlign: 'center' }}>
-          <h2>Loading...</h2>
-          <p>Fetching user data...</p>
-        </div>
       </AdminContainer>
     );
   }
@@ -746,171 +734,267 @@ const AdminPage = ({ collapsed }) => {
   return (
     <AdminContainer $collapsed={collapsed}>
       <ContentWrapper>
-      {error && (
-        <div style={{ 
-          backgroundColor: '#fee2e2', 
-          color: '#dc2626', 
-          padding: '12px', 
-          borderRadius: '10px', 
-          marginBottom: '20px' 
-        }}>
-          Error: {error}
-        </div>
-      )}
-      <Header>
-        <TitleSection>
-          <Title>
-            Users
-            <UserCount>{filteredUsers.length}</UserCount>
-          </Title>
-          <Subtitle>Manage user accounts and permissions</Subtitle>
-        </TitleSection>
-        <HeaderActions>
-          <SearchContainer>
-            <SearchIcon xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
+        {error && <Banner $error>{error}</Banner>}
+        {success && <Banner>{success}</Banner>}
+
+        <Header>
+          <HeaderLeft>
+            <Title>Admin panel</Title>
+            <Subtitle>User access, account status, and role controls.</Subtitle>
+          </HeaderLeft>
+          <HeaderButtons>
+            <Button onClick={() => loadData(true)} disabled={refreshing || loading}>
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </HeaderButtons>
+        </Header>
+
+        <StatsGrid>
+          <StatCard>
+            <StatLabel>Total users</StatLabel>
+            <StatValue>{dashboardStats.totalUsers || 0}</StatValue>
+          </StatCard>
+          <StatCard>
+            <StatLabel>Admins</StatLabel>
+            <StatValue>{dashboardStats.adminUsers || 0}</StatValue>
+          </StatCard>
+          <StatCard>
+            <StatLabel>Active</StatLabel>
+            <StatValue>{dashboardStats.activeUsers || 0}</StatValue>
+          </StatCard>
+          <StatCard>
+            <StatLabel>Pending</StatLabel>
+            <StatValue>{dashboardStats.pendingUsers || 0}</StatValue>
+          </StatCard>
+          <StatCard>
+            <StatLabel>Suspended or banned</StatLabel>
+            <StatValue>{dashboardStats.suspendedUsers || 0}</StatValue>
+          </StatCard>
+        </StatsGrid>
+
+        <Controls>
+          <SearchWrap>
+            <SearchIcon aria-hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
             </SearchIcon>
             <SearchInput
-              type="text"
-              placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search username, email, role, status"
             />
-          </SearchContainer>
-          <AddButton>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            Add User
-          </AddButton>
-        </HeaderActions>
-      </Header>
+          </SearchWrap>
 
-      <Table>
-        <TableHeader>
-          <tr>
-            <TableHeaderCell>Role</TableHeaderCell>
-            <TableHeaderCell>Name</TableHeaderCell>
-            <TableHeaderCell>Email</TableHeaderCell>
-            <TableHeaderCell>Last Active</TableHeaderCell>
-            <TableHeaderCell>Created At</TableHeaderCell>
-          </tr>
-        </TableHeader>
-        <TableBody>
-          {filteredUsers.map(user => (
-            <TableRow key={user.id}>
-              <TableCell>
-                <ClickableText onClick={() => handleEditUser(user)}>
-                  <RoleBadge $role={user.role} $status={user.status}>
-                    {user.status === 'pending' ? 'PENDING' : user.role}
-                  </RoleBadge>
-                </ClickableText>
-              </TableCell>
-              <TableCell>
-                <UserInfo>
-                  <Avatar style={{ backgroundColor: user.avatarColor }}>
-                    {user.avatar}
-                  </Avatar>
-                  <ClickableText onClick={() => handleEditUser(user)}>
-                    <UserName>{user.name}</UserName>
-                  </ClickableText>
-                </UserInfo>
-              </TableCell>
-              <TableCell>
-                <UserEmail>{user.email}</UserEmail>
-              </TableCell>
-              <TableCell>
-                <TimeText>{user.lastActive}</TimeText>
-              </TableCell>
-              <TableCell>
-                <TimeText>{user.createdAt}</TimeText>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          <Select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="suspended">Suspended</option>
+            <option value="banned">Banned</option>
+          </Select>
 
+          <Select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+          >
+            <option value="all">All roles</option>
+            <option value="admin">Admin</option>
+            <option value="user">User</option>
+          </Select>
+
+          <Button onClick={() => {
+            setSearchTerm('');
+            setStatusFilter('all');
+            setRoleFilter('all');
+          }}>
+            Clear filters
+          </Button>
+        </Controls>
+
+        {loading && users.length === 0 ? (
+          <EmptyState>Loading users...</EmptyState>
+        ) : filteredUsers.length === 0 ? (
+          <EmptyState>No users match the current filters.</EmptyState>
+        ) : (
+          <TableWrap>
+            <Table>
+              <THead>
+                <tr>
+                  <Th>User</Th>
+                  <Th>Role</Th>
+                  <Th>Status</Th>
+                  <Th>Last active</Th>
+                  <Th>Created</Th>
+                  <Th style={{ textAlign: 'right' }}>Actions</Th>
+                </tr>
+              </THead>
+              <tbody>
+                {filteredUsers.map((user) => {
+                  const isBusy = workingUserId === user.id || saving;
+                  const isSelf = user.id === adminUser?.id;
+
+                  return (
+                    <Tr key={user.id}>
+                      <Td>
+                        <UserCell>
+                          <Avatar $color={user.avatarColor}>{user.avatar}</Avatar>
+                          <UserMeta>
+                            <UserName>{user.username}</UserName>
+                            <UserEmail>{user.email}</UserEmail>
+                          </UserMeta>
+                        </UserCell>
+                      </Td>
+                      <Td>
+                        <RoleBadge $role={user.role}>
+                          {ROLE_LABELS[user.role] || user.role}
+                        </RoleBadge>
+                      </Td>
+                      <Td>
+                        <StatusBadge $status={user.status}>
+                          {STATUS_LABELS[user.status] || user.status}
+                        </StatusBadge>
+                      </Td>
+                      <Td>{user.lastActive}</Td>
+                      <Td>{user.createdAt}</Td>
+                      <Td>
+                        <RowActions>
+                          <MiniButton onClick={() => beginEdit(user)} disabled={isBusy}>
+                            Edit
+                          </MiniButton>
+                          {user.status === 'active' ? (
+                            <MiniButton
+                              onClick={() => quickStatusChange(user, 'suspended')}
+                              disabled={isBusy || isSelf}
+                            >
+                              Suspend
+                            </MiniButton>
+                          ) : (
+                            <MiniButton
+                              onClick={() => quickStatusChange(user, 'active')}
+                              disabled={isBusy || isSelf}
+                            >
+                              Activate
+                            </MiniButton>
+                          )}
+                          <MiniButton
+                            $danger
+                            onClick={() => deleteUser(user)}
+                            disabled={isBusy || isSelf}
+                          >
+                            Delete
+                          </MiniButton>
+                        </RowActions>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          </TableWrap>
+        )}
       </ContentWrapper>
 
       {editingUser && (
-        <ModalOverlay onClick={handleCloseModal}>
-          <ModalContainer onClick={e => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>Edit User</ModalTitle>
-              <CloseButton onClick={handleCloseModal}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </CloseButton>
-            </ModalHeader>
+        <ModalOverlay onClick={closeEdit}>
+          <Modal onClick={(e) => e.stopPropagation()}>
+            <ModalHead>
+              <ModalTitle>Edit user</ModalTitle>
+              <Button onClick={closeEdit}>Close</Button>
+            </ModalHead>
 
             <ModalBody>
-              <UserProfileSection>
-                <LargeAvatar style={{ backgroundColor: editingUser.avatarColor }}>
-                  {editingUser.avatar}
-                </LargeAvatar>
-                <UserProfileInfo>
-                  <UserProfileName>{editingUser.name}</UserProfileName>
-                  <UserProfileDate>Created at {editingUser.createdAt}</UserProfileDate>
-                </UserProfileInfo>
-              </UserProfileSection>
+              <Field>
+                <FieldLabel>Username</FieldLabel>
+                <Input
+                  value={editForm.username}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="username"
+                />
+              </Field>
 
-              <FormGroup>
-                <FormLabel>Role</FormLabel>
-                <FormSelect
-                  value={editForm.role}
-                  onChange={(e) => handleFormChange('role', e.target.value)}
-                >
-                  <option value="ADMIN">Admin</option>
-                  <option value="USER">Active User</option>
-                  <option value="PENDING">Pending User</option>
-                </FormSelect>
-              </FormGroup>
-
-              <FormGroup>
-                <FormLabel>Email</FormLabel>
-                <FormInput
+              <Field>
+                <FieldLabel>Email</FieldLabel>
+                <Input
                   type="email"
                   value={editForm.email}
-                  onChange={(e) => handleFormChange('email', e.target.value)}
-                  placeholder="Enter email address"
+                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="email"
                 />
-              </FormGroup>
+              </Field>
 
-              <FormGroup>
-                <FormLabel>Name</FormLabel>
-                <FormInput
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) => handleFormChange('name', e.target.value)}
-                  placeholder="Enter user name"
-                />
-              </FormGroup>
+              <Field>
+                <FieldLabel>Role</FieldLabel>
+                <Select
+                  value={editForm.role}
+                  disabled={editingUser.id === adminUser?.id}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value }))}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="user">User</option>
+                </Select>
+              </Field>
 
-              <FormGroup style={{ marginBottom: 0 }}>
-                <FormLabel>New Password</FormLabel>
-                <FormInput
+              <Field>
+                <FieldLabel>Status</FieldLabel>
+                <Select
+                  value={editForm.status}
+                  disabled={editingUser.id === adminUser?.id}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
+                >
+                  <option value="active">Active</option>
+                  <option value="pending">Pending</option>
+                  <option value="suspended">Suspended</option>
+                  <option value="banned">Banned</option>
+                </Select>
+              </Field>
+
+              <Field>
+                <FieldLabel>New password (optional)</FieldLabel>
+                <Input
                   type="password"
                   value={editForm.newPassword}
-                  onChange={(e) => handleFormChange('newPassword', e.target.value)}
-                  placeholder="Enter New Password"
+                  onChange={(e) => setEditForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  placeholder="Leave empty to keep current password"
                 />
-              </FormGroup>
+              </Field>
+
+              <FullWidth>
+                <InfoText>
+                  Created: {editingUser.createdAt} | Last active: {editingUser.lastActive}
+                </InfoText>
+                {editingUser.id === adminUser?.id && (
+                  <InfoText style={{ marginTop: '6px' }}>
+                    Your own role and status cannot be changed from this view.
+                  </InfoText>
+                )}
+              </FullWidth>
             </ModalBody>
 
-            <ModalFooter>
-              <SaveButton onClick={handleSaveUser}>
-                Save Changes
-              </SaveButton>
-            </ModalFooter>
-          </ModalContainer>
+            <ModalFoot>
+              <MiniButton
+                $danger
+                disabled={editingUser.id === adminUser?.id || saving}
+                onClick={() => deleteUser(editingUser)}
+              >
+                Delete user
+              </MiniButton>
+              <FootRight>
+                <Button onClick={closeEdit} disabled={saving}>Cancel</Button>
+                <Button $primary onClick={handleSaveUser} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save changes'}
+                </Button>
+              </FootRight>
+            </ModalFoot>
+          </Modal>
         </ModalOverlay>
       )}
     </AdminContainer>
   );
 };
 
-export default AdminPage; 
+export default AdminPage;

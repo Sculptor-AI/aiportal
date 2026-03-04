@@ -21,16 +21,24 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_THINKING_LEVELS_BY_MODEL = {
   'gemini-3.1-pro': ['low', 'medium', 'high'],
   'gemini-3.1-pro-preview': ['low', 'medium', 'high'],
-  'gemini-3-flash': ['low', 'medium', 'high'],
-  'gemini-3-flash-preview': ['low', 'medium', 'high'],
-  'gemini-3.1-flash-lite': ['low', 'medium', 'high'],
-  'gemini-3.1-flash-lite-preview': ['low', 'medium', 'high']
+  'gemini-3-flash': ['minimal', 'low', 'medium', 'high'],
+  'gemini-3-flash-preview': ['minimal', 'low', 'medium', 'high'],
+  'gemini-3.1-flash-lite': ['minimal', 'low', 'medium', 'high'],
+  'gemini-3.1-flash-lite-preview': ['minimal', 'low', 'medium', 'high']
+};
+const GEMINI_DEFAULT_THINKING_LEVEL_BY_MODEL = {
+  'gemini-3.1-pro': 'high',
+  'gemini-3.1-pro-preview': 'high',
+  'gemini-3-flash': 'high',
+  'gemini-3-flash-preview': 'high',
+  'gemini-3.1-flash-lite': 'minimal',
+  'gemini-3.1-flash-lite-preview': 'minimal'
 };
 
 function normalizeReasoningEffort(reasoningEffort) {
   if (typeof reasoningEffort !== 'string') return null;
   const normalized = reasoningEffort.toLowerCase();
-  if (['low', 'medium', 'high', 'xhigh', 'max'].includes(normalized)) {
+  if (['minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(normalized)) {
     return normalized;
   }
   return null;
@@ -38,6 +46,8 @@ function normalizeReasoningEffort(reasoningEffort) {
 
 function mapReasoningEffortToGeminiThinkingLevel(reasoningEffort) {
   switch (reasoningEffort) {
+    case 'minimal':
+      return 'minimal';
     case 'low':
       return 'low';
     case 'medium':
@@ -55,6 +65,19 @@ function getSupportedGeminiThinkingLevels(modelId) {
   return GEMINI_THINKING_LEVELS_BY_MODEL[modelId] || null;
 }
 
+function getDefaultGeminiThinkingLevel(modelId) {
+  const modelDefault = GEMINI_DEFAULT_THINKING_LEVEL_BY_MODEL[modelId];
+  if (modelDefault) return modelDefault;
+
+  const supportedLevels = getSupportedGeminiThinkingLevels(modelId);
+  if (!supportedLevels || supportedLevels.length === 0) return null;
+
+  if (supportedLevels.includes('high')) return 'high';
+  if (supportedLevels.includes('medium')) return 'medium';
+  if (supportedLevels.includes('low')) return 'low';
+  return supportedLevels[0];
+}
+
 function resolveGeminiThinkingLevel(modelId, reasoningEffort) {
   const mappedLevel = mapReasoningEffortToGeminiThinkingLevel(reasoningEffort);
   if (!mappedLevel) return null;
@@ -68,14 +91,20 @@ function resolveGeminiThinkingLevel(modelId, reasoningEffort) {
     return mappedLevel;
   }
 
-  if (supportedLevels.includes('high')) return 'high';
+  if (mappedLevel === 'medium' && supportedLevels.includes('high')) return 'high';
+  if (mappedLevel === 'minimal' && supportedLevels.includes('low')) return 'low';
+  if (mappedLevel === 'high' && supportedLevels.includes('medium')) return 'medium';
   if (supportedLevels.includes('medium')) return 'medium';
+  if (supportedLevels.includes('high')) return 'high';
   if (supportedLevels.includes('low')) return 'low';
+  if (supportedLevels.includes('minimal')) return 'minimal';
   return supportedLevels[0] || null;
 }
 
 function mapReasoningEffortToGeminiBudget(reasoningEffort) {
   switch (reasoningEffort) {
+    case 'minimal':
+      return 1024;
     case 'low':
       return 2048;
     case 'medium':
@@ -303,7 +332,7 @@ function buildGeminiBody(body, targetModel = '') {
 
     if (normalizedReasoningEffort) {
       if (supportsThinkingLevels) {
-        thinkingConfig.thinkingLevel = resolveGeminiThinkingLevel(modelId, normalizedReasoningEffort) || 'medium';
+        thinkingConfig.thinkingLevel = resolveGeminiThinkingLevel(modelId, normalizedReasoningEffort) || 'high';
       } else {
         thinkingConfig.thinkingBudget =
           body.thinking_budget ||
@@ -312,7 +341,11 @@ function buildGeminiBody(body, targetModel = '') {
           8192;
       }
     } else {
-      thinkingConfig.thinkingBudget = body.thinking_budget || body.reasoning_budget || 8192;
+      if (supportsThinkingLevels) {
+        thinkingConfig.thinkingLevel = getDefaultGeminiThinkingLevel(modelId) || 'high';
+      } else {
+        thinkingConfig.thinkingBudget = body.thinking_budget || body.reasoning_budget || 8192;
+      }
     }
 
     geminiBody.generationConfig.thinkingConfig = thinkingConfig;

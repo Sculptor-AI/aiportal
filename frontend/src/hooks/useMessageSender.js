@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend, generateChatTitle } from '../services/aiService';
-import { generateImageApi } from '../services/imageService';
+import { generateImageApi, generateVideoApi } from '../services/imageService';
+import { performDeepResearch } from '../services/deepResearchService';
 import { getFlowchartSystemPrompt } from '../utils/flowchartTools';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
 import { hasIncompleteCodeBlock, validateCodeBlockSyntax } from '../utils/codeBlockProcessor';
+import { DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
 
 // Helper function (can be outside or passed in if it uses external context like toast)
 const generateId = () => {
@@ -130,79 +132,6 @@ const useMessageSender = ({
         });
         addAlert({
           message: `Image generation failed: ${error.message || 'Unknown error'}`,
-          type: 'error',
-          autoHide: true
-        });
-      } finally {
-        setIsLoading(false);
-      }
-      
-      return;
-    }
-
-    // Check if this is a video generation request
-    if (messagePayload.type === 'generate-video') {
-      const prompt = messagePayload.prompt;
-      
-      if (!prompt || !chat?.id) return;
-      
-      setIsLoading(true);
-      
-      // Add user message indicating the prompt
-      const userPromptMessage = {
-        id: generateId(),
-        role: 'user',
-        content: `Generate video: "${prompt}"`,
-        timestamp: new Date().toISOString(),
-      };
-      addMessage(chat.id, userPromptMessage);
-      
-      // Add placeholder message for the generated video
-      const videoPlaceholderId = generateId();
-      const videoPlaceholderMessage = {
-        id: videoPlaceholderId,
-        role: 'assistant',
-        type: 'generated-video',
-        prompt: prompt,
-        status: 'loading',
-        videoUrl: null,
-        content: '',
-        timestamp: new Date().toISOString(),
-        modelId: 'video-generator',
-      };
-      addMessage(chat.id, videoPlaceholderMessage);
-      
-      if (scrollToBottom) setTimeout(scrollToBottom, 100);
-      
-      try {
-        const response = await generateVideoApi(prompt);
-        const videoUrl = response.videoData || response.videoUrl;
-        
-        if (!videoUrl) {
-          throw new Error('No video URL returned from API');
-        }
-        
-        updateMessage(chat.id, videoPlaceholderId, { 
-          status: 'completed', 
-          videoUrl: videoUrl, 
-          isLoading: false 
-        });
-        
-        // Generate title for new chat if this is the first message
-        if (chat.messages.length === 0) {
-          const title = `Video: ${prompt.substring(0, 30)}${prompt.length > 30 ? '...' : ''}`;
-          if (updateChatTitle) updateChatTitle(chat.id, title);
-        }
-      } catch (error) {
-        console.error('[useMessageSender] Error generating video:', error);
-        updateMessage(chat.id, videoPlaceholderId, { 
-          status: 'error', 
-          content: error.message || 'Failed to generate video', 
-          isLoading: false, 
-          isError: true 
-        });
-        addAlert({
-          message: `Video generation failed: ${error.message || 'Unknown error'}`,
           type: 'error',
           autoHide: true
         });
@@ -486,6 +415,99 @@ const useMessageSender = ({
     if (setResetFileUpload) setResetFileUpload(true);
     if (setResetFileUpload) setTimeout(() => setResetFileUpload(false), 0);
     if (onAttachmentChange) onAttachmentChange(false);
+
+    const shouldRunDeepResearch =
+      currentActionChip === 'deep-research' || currentModel === DEEP_RESEARCH_MODEL_ID;
+
+    // Dedicated deep research flow (SSE progress + structured completion payload)
+    if (shouldRunDeepResearch) {
+      const deepResearchMessageId = generateId();
+      const deepResearchMessage = {
+        id: deepResearchMessageId,
+        role: 'assistant',
+        type: 'deep-research',
+        status: 'loading',
+        query: messageToSend,
+        content: messageToSend,
+        progress: 0,
+        statusMessage: 'Initializing deep research...',
+        timestamp: new Date().toISOString(),
+        modelId: currentModel
+      };
+      addMessage(currentChatId, deepResearchMessage);
+
+      if (currentHistory.length === 0 && messageToSend) {
+        if (updateChatTitle) updateChatTitle(currentChatId, messageToSend);
+      }
+
+      if (scrollToBottom) setTimeout(scrollToBottom, 100);
+
+        try {
+          const maxAgents = Math.max(
+            2,
+            Math.min(12, Number.parseInt(settings?.deepResearchMaxAgents, 10) || 8)
+          );
+          const researchModel =
+            currentModel === DEEP_RESEARCH_MODEL_ID ? DEEP_RESEARCH_MODEL_ID : modelIdForApi;
+
+          await performDeepResearch(
+            messageToSend,
+            researchModel,
+            maxAgents,
+          (progress, statusMessage) => {
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'loading',
+              progress,
+              statusMessage: statusMessage || 'Researching...'
+            });
+          },
+          (result) => {
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'completed',
+              progress: 100,
+              statusMessage: 'Deep research complete',
+              query: messageToSend,
+              content: result.content || result.report || '',
+              subQuestions: result.subQuestions || [],
+              agentResults: result.agentResults || [],
+              sources: result.sources || [],
+              metadata: result.metadata || null,
+              qualityIssues: result.qualityIssues || [],
+              isLoading: false
+            });
+          },
+          (errorMessage) => {
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'error',
+              query: messageToSend,
+              content: messageToSend,
+              errorMessage: errorMessage || 'Deep research failed',
+              isError: true,
+              isLoading: false
+            });
+          }
+        );
+      } catch (error) {
+        console.error('[useMessageSender] Deep research failed:', error);
+        updateMessage(currentChatId, deepResearchMessageId, {
+          status: 'error',
+          query: messageToSend,
+          content: messageToSend,
+          errorMessage: error.message || 'Deep research failed',
+          isError: true,
+          isLoading: false
+        });
+        addAlert({
+          message: `Deep research failed: ${error.message || 'Unknown error'}`,
+          type: 'error',
+          autoHide: true
+        });
+      } finally {
+        setIsLoading(false);
+      }
+
+      return;
+    }
 
     const formattedHistory = currentHistory
       .filter(msg => msg.role !== 'system') // Filter out system messages

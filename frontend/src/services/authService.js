@@ -405,6 +405,27 @@ export const updateUserDetails = async (userId, updates) => {
   }
 };
 
+// Delete user
+export const deleteUserById = async (userId) => {
+  try {
+    const response = await fetchWithFallback(`/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: getAdminAuthHeaders()
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to delete user');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Delete user error:', error);
+    throw error;
+  }
+};
+
 // Get dashboard stats
 export const getDashboardStats = async () => {
   try {

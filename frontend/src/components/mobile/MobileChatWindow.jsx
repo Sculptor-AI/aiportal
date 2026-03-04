@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend } from '../../services/aiService';
+import { performDeepResearch } from '../../services/deepResearchService';
 import { useToast } from '../../contexts/ToastContext';
 import MobileChatMessage from './MobileChatMessage';
 import MobileFileUpload from './MobileFileUpload';
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
+import { DEEP_RESEARCH_MODEL_ID } from '../../config/modelConfig';
 
 pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
 
@@ -415,6 +417,92 @@ const MobileChatWindow = ({
     // Clear inputs
     setInputMessage('');
     setUploadedFile(null);
+
+    if (currentModel === DEEP_RESEARCH_MODEL_ID) {
+      const deepResearchMessageId = generateId();
+      const deepResearchMessage = {
+        id: deepResearchMessageId,
+        role: 'assistant',
+        type: 'deep-research',
+        status: 'loading',
+        query: messageToSend,
+        content: messageToSend,
+        progress: 0,
+        statusMessage: 'Initializing deep research...',
+        timestamp: new Date().toISOString(),
+        modelId: currentModel
+      };
+      addMessage(currentChatId, deepResearchMessage);
+
+      if (currentHistory.length === 0) {
+        updateChatTitle(currentChatId, messageToSend);
+      }
+
+      setTimeout(scrollToBottom, 100);
+
+      try {
+        const maxAgents = Math.max(
+          2,
+          Math.min(12, Number.parseInt(settings?.deepResearchMaxAgents, 10) || 8)
+        );
+
+        await performDeepResearch(
+          messageToSend,
+          currentModel,
+          maxAgents,
+          (progress, statusMessage) => {
+            const pct = Number.isFinite(progress) ? progress : 0;
+            const label = statusMessage || 'Researching...';
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'loading',
+              progress: pct,
+              statusMessage: label,
+              content: `${label} (${pct}%)`
+            });
+          },
+          (result) => {
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'completed',
+              progress: 100,
+              statusMessage: 'Deep research complete',
+              query: messageToSend,
+              content: result.content || result.report || '',
+              subQuestions: result.subQuestions || [],
+              agentResults: result.agentResults || [],
+              sources: result.sources || [],
+              metadata: result.metadata || null,
+              qualityIssues: result.qualityIssues || [],
+              isLoading: false
+            });
+          },
+          (errorMessage) => {
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'error',
+              query: messageToSend,
+              content: errorMessage || 'Deep research failed',
+              errorMessage: errorMessage || 'Deep research failed',
+              isError: true,
+              isLoading: false
+            });
+          }
+        );
+      } catch (error) {
+        console.error('[Mobile] Deep research failed:', error);
+        updateMessage(currentChatId, deepResearchMessageId, {
+          status: 'error',
+          query: messageToSend,
+          content: error?.message || 'Deep research failed',
+          errorMessage: error?.message || 'Deep research failed',
+          isError: true,
+          isLoading: false
+        });
+        toast.showToast(`Deep research failed: ${error?.message || 'Unknown error'}`, 'error');
+      } finally {
+        setIsLoading(false);
+      }
+
+      return;
+    }
 
     // Create AI message placeholder
     const aiMessageId = generateId();

@@ -105,7 +105,7 @@ async function main() {
     email: email.toLowerCase(),
     passwordHash: hash,
     passwordSalt: salt,
-    status: 'admin',
+    status: 'active',
     role: 'admin',
     created_at: now,
     updated_at: now,

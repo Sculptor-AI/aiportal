@@ -14,7 +14,7 @@ import ModelIcon from '../ModelIcon';
 import OnboardingFlow from '../OnboardingFlow';
 import { getDefaultChatTitle, isDefaultChatTitle } from '../../utils/chatLocalization';
 import { useTranslation } from '../../contexts/TranslationContext';
-import { getPreferredModelId } from '../../config/modelConfig';
+import { appendDeepResearchModel, getPreferredModelId } from '../../config/modelConfig';
 import { setBackendMode, shouldUseRealBackend } from '../../services/backendConfig';
 
 const MobileAppContainer = styled.div`
@@ -383,11 +383,12 @@ const MobileAppContent = () => {
       try {
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
-          setAvailableModels(backendModels);
+          const allModels = appendDeepResearchModel(backendModels);
+          setAvailableModels(allModels);
 
-          const currentSelectedModelIsValid = backendModels.some(m => m.id === selectedModel);
-          if (!currentSelectedModelIsValid && backendModels.length > 0) {
-            setSelectedModel(getPreferredModelId(backendModels));
+          const currentSelectedModelIsValid = allModels.some(m => m.id === selectedModel);
+          if (!currentSelectedModelIsValid && allModels.length > 0) {
+            setSelectedModel(getPreferredModelId(allModels));
           }
         } else {
           setAvailableModels([]);

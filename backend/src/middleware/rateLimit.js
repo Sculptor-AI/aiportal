@@ -87,3 +87,9 @@ export const videoGenerationRateLimit = createRateLimiter({
   limit: 12,
   windowSeconds: 600 // 10 minutes
 });
+
+export const deepResearchRateLimit = createRateLimiter({
+  keyPrefix: 'deep-research',
+  limit: 20,
+  windowSeconds: 1800 // 30 minutes
+});

@@ -15,6 +15,7 @@ import rssRoutes from './routes/rss.js';
 import chatRoutes from './routes/chat.js';
 import imageRoutes from './routes/image.js';
 import videoRoutes from './routes/video.js';
+import researchRoutes from './routes/research.js';
 import staticRoutes from './routes/static.js';
 // Note: Gemini Live WebSocket is handled directly in worker.js
 
@@ -54,6 +55,9 @@ app.route('/api/image', imageRoutes);
 
 // Video Generation
 app.route('/api/video', videoRoutes);
+
+// Deep Research
+app.route('/api', researchRoutes);
 
 // Note: Gemini Live WebSocket (/api/v1/live) is handled in worker.js
 
