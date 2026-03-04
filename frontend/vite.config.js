@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const API_PROXY_TIMEOUT_MS = 10 * 60 * 1000;
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -25,6 +27,8 @@ export default defineConfig({
         target: 'http://localhost:8787',
         changeOrigin: true,
         secure: false,
+        timeout: API_PROXY_TIMEOUT_MS,
+        proxyTimeout: API_PROXY_TIMEOUT_MS,
       },
     },
   },

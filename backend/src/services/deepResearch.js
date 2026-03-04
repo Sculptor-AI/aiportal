@@ -119,6 +119,45 @@ const extractGeminiSources = (payload) => {
   return sources;
 };
 
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isAbortLikeError = (error) => {
+  if (!error) return false;
+  if (error.name === 'AbortError') return true;
+  const message = String(error.message || '').toLowerCase();
+  return message.includes('aborted');
+};
+
+const isRetryableUpstreamError = (error) => {
+  const message = normalizeWhitespace(error?.message || '').toLowerCase();
+  return (
+    isAbortLikeError(error) ||
+    message.includes('timed out') ||
+    message.includes('fetch failed') ||
+    message.includes('network error') ||
+    message.includes('econnreset') ||
+    message.includes('etimedout')
+  );
+};
+
+const withRetry = async (operation, { attempts = 2, baseDelayMs = 750 } = {}) => {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= attempts || !isRetryableUpstreamError(error)) {
+        throw error;
+      }
+      await delay(baseDelayMs * attempt);
+    }
+  }
+
+  throw lastError;
+};
+
 const fetchWithTimeout = async (url, options, timeoutMs) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -128,6 +167,11 @@ const fetchWithTimeout = async (url, options, timeoutMs) => {
       ...options,
       signal: controller.signal
     });
+  } catch (error) {
+    if (isAbortLikeError(error)) {
+      throw new Error(`Upstream model request timed out after ${Math.ceil(timeoutMs / 1000)}s.`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -598,16 +642,20 @@ export const performDeepResearch = async ({
     });
   }
 
-  const planner = await callGemini({
-    apiKey: env.GEMINI_API_KEY,
-    model: config.plannerApiModel,
-    systemPrompt: PLANNER_SYSTEM_PROMPT,
-    userPrompt: buildPlannerPrompt(normalizedQuery, boundedAgents),
-    maxTokens: config.plannerMaxTokens,
-    temperature: config.plannerTemperature,
-    useSearch: false,
-    timeoutMs: config.requestTimeoutMs
-  });
+  const planner = await withRetry(
+    () =>
+      callGemini({
+        apiKey: env.GEMINI_API_KEY,
+        model: config.plannerApiModel,
+        systemPrompt: PLANNER_SYSTEM_PROMPT,
+        userPrompt: buildPlannerPrompt(normalizedQuery, boundedAgents),
+        maxTokens: config.plannerMaxTokens,
+        temperature: config.plannerTemperature,
+        useSearch: false,
+        timeoutMs: config.requestTimeoutMs
+      }),
+    { attempts: 2, baseDelayMs: 800 }
+  );
 
   const plan = normalizePlan(planner.json, normalizedQuery, boundedAgents);
   const subQuestions = plan.subQuestions.slice(0, boundedAgents);
@@ -713,15 +761,19 @@ export const performDeepResearch = async ({
     sourceMap
   });
 
-  const writer = await callAnthropic({
-    apiKey: env.ANTHROPIC_API_KEY,
-    model: config.writerApiModel,
-    systemPrompt: WRITER_SYSTEM_PROMPT,
-    userPrompt: writerPrompt,
-    maxTokens: config.writerMaxTokens,
-    temperature: config.writerTemperature,
-    timeoutMs: config.requestTimeoutMs
-  });
+  const writer = await withRetry(
+    () =>
+      callAnthropic({
+        apiKey: env.ANTHROPIC_API_KEY,
+        model: config.writerApiModel,
+        systemPrompt: WRITER_SYSTEM_PROMPT,
+        userPrompt: writerPrompt,
+        maxTokens: config.writerMaxTokens,
+        temperature: config.writerTemperature,
+        timeoutMs: config.requestTimeoutMs
+      }),
+    { attempts: 2, baseDelayMs: 1000 }
+  );
 
   let finalReport = normalizeWhitespace(writer.text);
   let qualityIssues = assessWriterOutput(finalReport, sourceCatalog.length);
@@ -736,16 +788,20 @@ export const performDeepResearch = async ({
       });
     }
 
-    const revisedText = await reviseWriterOutput({
-      apiKey: env.ANTHROPIC_API_KEY,
-      model: config.writerApiModel,
-      timeoutMs: config.requestTimeoutMs,
-      maxTokens: config.writerMaxTokens,
-      temperature: config.writerTemperature,
-      draft: finalReport,
-      issues: qualityIssues,
-      evidencePrompt: writerPrompt
-    });
+    const revisedText = await withRetry(
+      () =>
+        reviseWriterOutput({
+          apiKey: env.ANTHROPIC_API_KEY,
+          model: config.writerApiModel,
+          timeoutMs: config.requestTimeoutMs,
+          maxTokens: config.writerMaxTokens,
+          temperature: config.writerTemperature,
+          draft: finalReport,
+          issues: qualityIssues,
+          evidencePrompt: writerPrompt
+        }),
+      { attempts: 2, baseDelayMs: 1000 }
+    );
 
     finalReport = normalizeWhitespace(revisedText);
     qualityIssues = assessWriterOutput(finalReport, sourceCatalog.length);

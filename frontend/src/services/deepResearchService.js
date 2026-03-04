@@ -3,6 +3,17 @@ import { getBackendApiBase } from './backendConfig';
 
 const getApiBaseUrl = () => getBackendApiBase();
 
+const toDeepResearchErrorMessage = (error) => {
+  const message = String(error?.message || error || 'Deep research failed');
+  if (/operation was aborted|aborterror/i.test(message)) {
+    return 'Deep research connection was interrupted before completion. Please retry.';
+  }
+  if (/timed out|timeout/i.test(message)) {
+    return 'Deep research timed out while waiting for upstream models. Please retry.';
+  }
+  return message;
+};
+
 // Helper function to get authentication headers
 const getAuthHeaders = () => {
   let accessToken = null;
@@ -67,7 +78,8 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      cache: 'no-store'
     });
 
     if (!response.ok) {
@@ -78,9 +90,11 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
         errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
       }
       
-      const errorMessage = errorData.error || `Request failed with status ${response.status}`;
-      if (onError) onError(errorMessage);
-      throw new Error(errorMessage);
+      throw new Error(errorData.error || `Request failed with status ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error('Deep research endpoint did not return a stream.');
     }
 
     const reader = response.body.getReader();
@@ -118,7 +132,7 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
               }
             } else if (event.type === 'error') {
               if (onError) {
-                onError(event.message);
+                onError(toDeepResearchErrorMessage(event.message));
               }
             }
           } catch (e) {
@@ -148,11 +162,12 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
       }
     }
   } catch (error) {
+    const friendlyMessage = toDeepResearchErrorMessage(error);
     console.error('Deep research error:', error);
     if (onError) {
-      onError(error.message);
+      onError(friendlyMessage);
     }
-    throw error;
+    throw new Error(friendlyMessage);
   }
 };
 

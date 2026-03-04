@@ -22,7 +22,8 @@ const DEFAULTS = {
   plannerTemperature: 0.2,
   agentTemperature: 0.2,
   writerTemperature: 0.2,
-  requestTimeoutMs: 45000,
+  // Deep research calls can be long (search-grounded agents + long-form writer output).
+  requestTimeoutMs: 180000,
   allowWriterModelOverride: false
 };
 
@@ -118,7 +119,7 @@ export const getDeepResearchConfig = (env = {}, requestBody = {}) => {
   const requestTimeoutMs = clamp(
     parseInteger(env.DEEP_RESEARCH_TIMEOUT_MS, DEFAULTS.requestTimeoutMs),
     5000,
-    180000
+    300000
   );
 
   const allowWriterModelOverride = parseBoolean(

@@ -9,6 +9,7 @@ import { performDeepResearch } from '../services/deepResearch.js';
 
 const research = new Hono();
 const encoder = new TextEncoder();
+const HEARTBEAT_INTERVAL_MS = 15000;
 
 const emitEvent = (controller, payload) => {
   controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
@@ -20,6 +21,9 @@ const emitDone = (controller) => {
 
 const toSafeErrorMessage = (error) => {
   const message = String(error?.message || 'Deep research failed');
+  if (/operation was aborted|timed out/i.test(message)) {
+    return 'Deep research timed out while waiting for an upstream model. Please retry.';
+  }
   // Avoid leaking upstream raw payloads.
   if (message.length > 500) return `${message.slice(0, 500)}...`;
   return message;
@@ -41,10 +45,55 @@ const handleDeepResearchRequest = async (c) => {
     return c.json({ error: 'query is required' }, 400);
   }
 
+  let streamCancelled = false;
   const stream = new ReadableStream({
     async start(controller) {
+      let streamClosed = false;
+      const safeEmitEvent = (payload) => {
+        if (streamCancelled || streamClosed) return false;
+        try {
+          emitEvent(controller, payload);
+          return true;
+        } catch (error) {
+          streamClosed = true;
+          streamCancelled = true;
+          console.warn('Deep research stream closed while emitting event:', error?.message || error);
+          return false;
+        }
+      };
+
+      const safeEmitDone = () => {
+        if (streamCancelled || streamClosed) return;
+        try {
+          emitDone(controller);
+        } catch (error) {
+          streamClosed = true;
+          streamCancelled = true;
+          console.warn('Deep research stream closed while emitting done event:', error?.message || error);
+        }
+      };
+
+      const safeClose = () => {
+        if (streamClosed) return;
+        streamClosed = true;
+        try {
+          controller.close();
+        } catch (error) {
+          console.warn('Deep research stream already closed:', error?.message || error);
+        }
+      };
+
+      const heartbeat = setInterval(() => {
+        safeEmitEvent({
+          type: 'heartbeat',
+          stage: 'heartbeat',
+          message: 'Deep research is still running',
+          ts: new Date().toISOString()
+        });
+      }, HEARTBEAT_INTERVAL_MS);
+
       try {
-        emitEvent(controller, {
+        safeEmitEvent({
           type: 'progress',
           progress: 1,
           stage: 'init',
@@ -57,7 +106,7 @@ const handleDeepResearchRequest = async (c) => {
           maxAgents,
           modelOverride: model,
           onProgress: (update) => {
-            emitEvent(controller, {
+            const emitted = safeEmitEvent({
               type: 'progress',
               progress: update.progress ?? 0,
               stage: update.stage,
@@ -67,31 +116,43 @@ const handleDeepResearchRequest = async (c) => {
               ...(update.result && { agentResult: update.result }),
               ...(update.qualityIssues && { qualityIssues: update.qualityIssues })
             });
+            if (!emitted) {
+              throw new Error('Client disconnected during deep research stream.');
+            }
           }
         });
 
-        emitEvent(controller, {
+        safeEmitEvent({
           type: 'completion',
           ...result
         });
       } catch (error) {
+        if (streamCancelled) {
+          console.log('Deep research stream cancelled by client.');
+          return;
+        }
         console.error('Deep research route error:', error);
-        emitEvent(controller, {
+        safeEmitEvent({
           type: 'error',
           message: toSafeErrorMessage(error)
         });
       } finally {
-        emitDone(controller);
-        controller.close();
+        clearInterval(heartbeat);
+        safeEmitDone();
+        safeClose();
       }
+    },
+    cancel() {
+      streamCancelled = true;
     }
   });
 
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no'
     }
   });
 };
