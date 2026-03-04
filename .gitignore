@@ -68,3 +68,8 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Lockfiles (regenerated per-platform during CI install)
+package-lock.json
+frontend/package-lock.json
+backend/package-lock.json
