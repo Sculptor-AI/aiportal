@@ -724,9 +724,9 @@ const getBubbleTextColor = (theme) => isCustomAccent(theme) ? '#FFFFFF' : theme.
 
 const Content = styled.div`
   width: ${props => props.role === 'user' ? 'fit-content' : '100%'};
-  white-space: pre-wrap;
+  white-space: ${props => props.role === 'user' ? 'pre-wrap' : 'normal'};
   color: ${props => getBubbleTextColor(props.theme)};
-  line-height: var(--line-height, 1.65);
+  line-height: var(--line-height, 1.6);
   overflow: hidden;
   flex: 1;
   margin-left: ${props => props.$alignment === 'right' ? 'auto' : '0'};
@@ -897,26 +897,13 @@ const Italic = styled.span`
 `;
 
 const Heading1 = styled.h1`
-  font-size: 1.55rem;
-  font-weight: 650;
-  margin: 1.5rem 0 0.85rem 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0.8em 0 0.3em 0;
   color: ${props => props.theme.text};
   border-bottom: 1px solid ${props => props.theme.border};
-  padding-bottom: 0.45rem;
+  padding-bottom: 0.25rem;
   line-height: 1.3;
-  letter-spacing: -0.025em;
-  
-  &:first-child {
-    margin-top: 0;
-  }
-`;
-
-const Heading2 = styled.h2`
-  font-size: 1.3rem;
-  font-weight: 620;
-  margin: 1.3rem 0 0.7rem 0;
-  color: ${props => props.theme.text};
-  line-height: 1.35;
   letter-spacing: -0.02em;
   
   &:first-child {
@@ -924,12 +911,12 @@ const Heading2 = styled.h2`
   }
 `;
 
-const Heading3 = styled.h3`
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 1.1rem 0 0.5rem 0;
+const Heading2 = styled.h2`
+  font-size: 1.25rem;
+  font-weight: 650;
+  margin: 0.7em 0 0.25em 0;
   color: ${props => props.theme.text};
-  line-height: 1.35;
+  line-height: 1.3;
   letter-spacing: -0.015em;
   
   &:first-child {
@@ -937,10 +924,23 @@ const Heading3 = styled.h3`
   }
 `;
 
-const Heading4 = styled.h4`
-  font-size: 1.1rem;
+const Heading3 = styled.h3`
+  font-size: 1.08rem;
   font-weight: 600;
-  margin: 1rem 0 0.5rem 0;
+  margin: 0.6em 0 0.2em 0;
+  color: ${props => props.theme.text};
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+`;
+
+const Heading4 = styled.h4`
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.5em 0 0.2em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -950,9 +950,9 @@ const Heading4 = styled.h4`
 `;
 
 const Heading5 = styled.h5`
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  margin: 0.9rem 0 0.4rem 0;
+  margin: 0.4em 0 0.15em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -962,9 +962,9 @@ const Heading5 = styled.h5`
 `;
 
 const Heading6 = styled.h6`
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  margin: 0.8rem 0 0.3rem 0;
+  margin: 0.35em 0 0.1em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -974,8 +974,8 @@ const Heading6 = styled.h6`
 `;
 
 const Paragraph = styled.p`
-  margin: 0.65rem 0;
-  line-height: 1.65;
+  margin: 0.4em 0;
+  line-height: 1.6;
   color: ${props => props.theme.text};
   
   &:first-child {
@@ -989,42 +989,51 @@ const Paragraph = styled.p`
 
 const BulletList = styled.ul`
   list-style-type: none;
-  padding-left: 0;
-  margin: 0.7rem 0;
+  padding-left: 1em;
+  margin: 0.35em 0;
   
   li {
     position: relative;
-    padding-left: 1.4em;
-    margin: 0.4em 0;
-    line-height: 1.65;
+    padding-left: 1.3em;
+    margin: 0.2em 0;
+    line-height: 1.6;
     color: ${props => props.theme.text};
     
     &:before {
       content: "•";
       position: absolute;
-      left: 0.2em;
-      color: ${props => `${props.theme.text}44`};
+      left: 0.15em;
+      color: ${props => props.theme.accentColor || props.theme.text};
       font-weight: bold;
-      font-size: 1.1em;
+      font-size: 1em;
+      opacity: 0.55;
     }
   }
 `;
 
 const NumberedList = styled.ol`
-  padding-left: 1.5em;
-  margin: 0.8rem 0;
+  padding-left: 1.4em;
+  margin: 0.35em 0;
   
   li {
-    margin: 0.5em 0;
+    margin: 0.2em 0;
     line-height: 1.6;
     color: ${props => props.theme.text};
+    padding-left: 0.2em;
+    
+    &::marker {
+      color: ${props => props.theme.accentColor || props.theme.text};
+      opacity: 0.55;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
   }
 `;
 
 const Blockquote = styled.blockquote`
-  border-left: 3px solid ${props => `${props.theme.text}22`};
-  margin: 1rem 0;
-  padding: 0.6rem 0 0.6rem 1rem;
+  border-left: 3px solid ${props => `${props.theme.accentColor || props.theme.text}44`};
+  margin: 0.4em 0;
+  padding: 0.3rem 0 0.3rem 0.9rem;
   background: transparent;
   border-radius: 0;
   font-style: italic;
@@ -1032,7 +1041,7 @@ const Blockquote = styled.blockquote`
   
   p {
     margin: 0;
-    line-height: 1.65;
+    line-height: 1.6;
   }
 `;
 
@@ -1094,7 +1103,7 @@ const HorizontalRule = styled.hr`
   border: none;
   height: 1px;
   background: ${props => props.theme.border};
-  margin: 2rem 0;
+  margin: 1rem 0;
   border-radius: 1px;
 `;
 

@@ -22,13 +22,14 @@ const Italic = styled.span`
 `;
 
 const Heading1 = styled.h1`
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin: 0;
+  margin: 0.8em 0 0.3em 0;
   color: ${props => props.theme.text};
-  border-bottom: 2px solid ${props => props.theme.border};
-  padding-bottom: 0.3rem;
+  border-bottom: 1px solid ${props => props.theme.border};
+  padding-bottom: 0.25rem;
   line-height: 1.3;
+  letter-spacing: -0.02em;
   
   &:first-child {
     margin-top: 0;
@@ -36,13 +37,12 @@ const Heading1 = styled.h1`
 `;
 
 const Heading2 = styled.h2`
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  margin: 0.7em 0 0.25em 0;
   color: ${props => props.theme.text};
-  border-bottom: 1px solid ${props => props.theme.border};
-  padding-bottom: 0.2rem;
   line-height: 1.3;
+  letter-spacing: -0.015em;
   
   &:first-child {
     margin-top: 0;
@@ -50,11 +50,12 @@ const Heading2 = styled.h2`
 `;
 
 const Heading3 = styled.h3`
-  font-size: 1.1rem;
+  font-size: 1.08rem;
   font-weight: 600;
-  margin: 0;
+  margin: 0.6em 0 0.2em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
+  letter-spacing: -0.01em;
   
   &:first-child {
     margin-top: 0;
@@ -64,7 +65,7 @@ const Heading3 = styled.h3`
 const Heading4 = styled.h4`
   font-size: 1rem;
   font-weight: 600;
-  margin: 0;
+  margin: 0.5em 0 0.2em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -74,9 +75,9 @@ const Heading4 = styled.h4`
 `;
 
 const Heading5 = styled.h5`
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  margin: 0;
+  margin: 0.4em 0 0.15em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -88,7 +89,7 @@ const Heading5 = styled.h5`
 const Heading6 = styled.h6`
   font-size: 0.85rem;
   font-weight: 600;
-  margin: 0;
+  margin: 0.35em 0 0.1em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -98,8 +99,8 @@ const Heading6 = styled.h6`
 `;
 
 const Paragraph = styled.p`
-  margin: 0;
-  line-height: 1.5;
+  margin: 0.4em 0;
+  line-height: 1.6;
   color: ${props => props.theme.text};
   
   &:first-child {
@@ -113,50 +114,59 @@ const Paragraph = styled.p`
 
 const BulletList = styled.ul`
   list-style-type: none;
-  padding-left: 0;
-  margin: 0;
+  padding-left: 1em;
+  margin: 0.35em 0;
   
   li {
     position: relative;
-    padding-left: 1.2em;
-    margin: 0;
-    line-height: 1.5;
+    padding-left: 1.3em;
+    margin: 0.2em 0;
+    line-height: 1.6;
     color: ${props => props.theme.text};
     
     &:before {
       content: "•";
       position: absolute;
-      left: 0.2em;
-      color: ${props => props.theme.primary};
+      left: 0.15em;
+      color: ${props => props.theme.accentColor || props.theme.text};
       font-weight: bold;
-      font-size: 1.1em;
+      font-size: 1em;
+      opacity: 0.55;
     }
   }
 `;
 
 const NumberedList = styled.ol`
-  padding-left: 1.2em;
-  margin: 0;
+  padding-left: 1.4em;
+  margin: 0.35em 0;
   
   li {
-    margin: 0;
-    line-height: 1.5;
+    margin: 0.2em 0;
+    line-height: 1.6;
     color: ${props => props.theme.text};
+    padding-left: 0.2em;
+    
+    &::marker {
+      color: ${props => props.theme.accentColor || props.theme.text};
+      opacity: 0.55;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
   }
 `;
 
 const Blockquote = styled.blockquote`
-  border-left: 4px solid ${props => props.theme.primary};
-  margin: 0.5rem 0;
-  padding: 0.4rem 0 0.4rem 1rem;
-  background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
-  border-radius: 0 8px 8px 0;
+  border-left: 3px solid ${props => props.theme.accentColor || props.theme.text}44;
+  margin: 0.4em 0;
+  padding: 0.3rem 0 0.3rem 0.9rem;
+  background: transparent;
+  border-radius: 0;
   font-style: italic;
-  color: ${props => props.theme.text};
+  color: ${props => `${props.theme.text}cc`};
   
   p {
     margin: 0;
-    line-height: 1.5;
+    line-height: 1.6;
   }
 `;
 
@@ -528,9 +538,9 @@ const StreamingMarkdownRenderer = ({
   return (
     <div style={{ 
       fontFamily: 'inherit', 
-      lineHeight: 1.5, 
+      lineHeight: 1.6, 
       wordWrap: 'break-word', 
-      whiteSpace: 'pre-wrap',
+      whiteSpace: 'normal',
       color: theme.text || '#000'
     }}>
       <ReactMarkdown
