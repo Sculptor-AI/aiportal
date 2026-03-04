@@ -5,7 +5,7 @@ import { processCodeBlocks } from '../../utils/codeBlockProcessor';
 import { useTranslation } from '../../contexts/TranslationContext';
 
 const MessageContainer = styled.div`
-  margin: 16px 0;
+  margin: 6px 0;
   display: flex;
   flex-direction: column;
   align-items: ${props => props.$isUser ? 'flex-end' : 'flex-start'};
@@ -13,93 +13,77 @@ const MessageContainer = styled.div`
 `;
 
 const MessageBubble = styled.div`
-  max-width: ${props => props.$isUser ? '85%' : 'calc(100% - 30px)'};
-  padding: ${props => props.$isUser ? '12px 16px' : '0'};
-  padding-right: ${props => props.$isUser ? '16px' : '20px'};
-  border-radius: ${props => props.$isUser ? '20px' : '0'};
+  max-width: ${props => props.$isUser ? '82%' : 'calc(100% - 8px)'};
+  padding: ${props => props.$isUser ? '10px 14px' : '4px 0'};
+  border-radius: ${props => props.$isUser ? '18px' : '0'};
   word-wrap: break-word;
   position: relative;
-  margin-right: ${props => props.$isUser ? '0' : '0'};
-  margin-left: ${props => props.$isUser ? 'auto' : '10px'};
+  margin-left: ${props => props.$isUser ? 'auto' : '4px'};
   
   ${props => props.$isUser ? `
-    background: ${
-      props.theme.name === 'dark' || props.theme.name === 'oled' 
-        ? 'rgba(40, 40, 45, 0.95)' 
-        : props.theme.primary
-    };
-    color: ${props.theme.name === 'dark' || props.theme.name === 'oled' ? props.theme.text : 'white'};
-    border-bottom-right-radius: 8px;
-    box-shadow: 0 2px 10px ${props.theme.shadow};
-    border: 1px solid ${props.theme.border};
+    background: ${(() => {
+      const p = props.theme.buttonGradient || props.theme.primary;
+      if (props.theme.isDark) return props.theme.messageUser || 'rgba(40, 40, 45, 0.95)';
+      if (typeof p === 'string' && p.includes('gradient')) return p;
+      return props.theme.primary;
+    })()};
+    color: ${props.theme.isDark ? props.theme.text : (props.theme.primaryForeground || 'white')};
+    border-bottom-right-radius: 6px;
+    box-shadow: 0 1px 6px ${props.theme.shadow || 'rgba(0,0,0,0.06)'};
   ` : `
     background: transparent;
     color: ${props.theme.text};
   `}
   
-  /* Handle long content gracefully */
   word-break: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
 `;
 
 const MessageContent = styled.div`
-  font-size: 16px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.5;
   
-  /* Style text content */
   p {
-    margin: 0 0 8px 0;
-    line-height: 1.6;
-    color: ${props => props.theme.text};
+    margin: 0 0 6px 0;
+    line-height: 1.55;
+    color: inherit;
     &:last-child {
       margin-bottom: 0;
     }
   }
   
-  /* Handle headings */
   h1, h2, h3, h4, h5, h6 {
-    margin: 16px 0 8px 0;
-    font-weight: 600;
+    margin: 14px 0 6px 0;
+    font-weight: 650;
     color: ${props => props.theme.text};
-    line-height: 1.3;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
     &:first-child {
       margin-top: 0;
     }
   }
   
   h1 {
-    font-size: 1.6rem;
-    border-bottom: 2px solid ${props => props.theme.border};
-    padding-bottom: 0.5rem;
-  }
-  
-  h2 {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     border-bottom: 1px solid ${props => props.theme.border};
     padding-bottom: 0.4rem;
   }
   
-  h3 {
-    font-size: 1.2rem;
+  h2 {
+    font-size: 1.3rem;
+    border-bottom: 0.5px solid ${props => props.theme.border};
+    padding-bottom: 0.3rem;
   }
   
-  h4 {
-    font-size: 1.1rem;
-  }
+  h3 { font-size: 1.15rem; }
+  h4 { font-size: 1.05rem; }
+  h5 { font-size: 1rem; }
+  h6 { font-size: 0.9rem; }
   
-  h5 {
-    font-size: 1rem;
-  }
-  
-  h6 {
-    font-size: 0.9rem;
-  }
-  
-  /* Handle lists */
   ul, ol {
-    margin: 8px 0;
-    padding-left: 20px;
+    margin: 6px 0;
+    padding-left: 18px;
   }
   
   ul {
@@ -108,104 +92,105 @@ const MessageContent = styled.div`
     
     li {
       position: relative;
-      padding-left: 1.5em;
-      margin: 4px 0;
-      line-height: 1.6;
+      padding-left: 1.4em;
+      margin: 3px 0;
+      line-height: 1.55;
       color: ${props => props.theme.text};
       
       &:before {
-        content: "•";
+        content: "";
         position: absolute;
         left: 0.3em;
-        color: ${props => props.theme.primary};
-        font-weight: bold;
-        font-size: 1.2em;
+        top: 0.6em;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: ${props => {
+          const p = props.theme.primary;
+          if (typeof p === 'string' && !p.includes('gradient')) return p;
+          return props.theme.text + '44';
+        }};
       }
     }
   }
   
   ol li {
-    margin: 4px 0;
-    line-height: 1.6;
+    margin: 3px 0;
+    line-height: 1.55;
     color: ${props => props.theme.text};
   }
   
-  /* Handle blockquotes */
   blockquote {
-    border-left: 4px solid ${props => props.theme.primary};
-    margin: 8px 0;
-    padding: 8px 0 8px 16px;
-    background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
+    border-left: 3px solid ${props => {
+      const p = props.theme.primary;
+      if (typeof p === 'string' && !p.includes('gradient')) return p;
+      return props.theme.border;
+    }};
+    margin: 6px 0;
+    padding: 6px 0 6px 14px;
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'};
     border-radius: 0 8px 8px 0;
     font-style: italic;
     color: ${props => props.theme.text};
     
     p {
       margin: 0;
-      line-height: 1.6;
+      line-height: 1.55;
     }
   }
   
-  /* Handle links */
   a {
-    color: ${props => props.theme.primary};
+    color: ${props => {
+      const p = props.theme.primary;
+      if (typeof p === 'string' && !p.includes('gradient')) return p;
+      return props.theme.text;
+    }};
     text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: border-bottom-color 0.2s ease;
-    
-    &:hover {
-      border-bottom-color: ${props => props.theme.primary};
-    }
+    text-decoration-skip-ink: auto;
   }
   
-  /* Handle code blocks */
   pre {
-    background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.9)' : 'rgba(30, 30, 30, 0.9)'};
-    border: 1px solid ${props => props.theme.border};
-    border-radius: 8px;
+    background: ${props => props.theme.isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)'};
+    border: 0.5px solid ${props => props.theme.border};
+    border-radius: 10px;
     padding: 12px;
-    margin: 8px 0;
+    margin: 6px 0;
     overflow-x: auto;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-    font-size: 14px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-size: 13px;
     line-height: 1.5;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    -webkit-overflow-scrolling: touch;
   }
   
-  /* Handle inline code */
   code {
-    background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-    font-size: 14px;
-    border: 1px solid ${props => props.theme.border};
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-size: 13.5px;
     color: ${props => props.theme.text};
   }
   
-  /* Handle tables */
   table {
     width: 100%;
     border-collapse: collapse;
-    margin: 8px 0;
-    border: 1px solid ${props => props.theme.border};
-    border-radius: 8px;
+    margin: 6px 0;
+    border: 0.5px solid ${props => props.theme.border};
+    border-radius: 10px;
     overflow: hidden;
-    background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'};
   }
   
   th, td {
-    padding: 8px 12px;
+    padding: 8px 10px;
     text-align: left;
-    border-bottom: 1px solid ${props => props.theme.border};
+    border-bottom: 0.5px solid ${props => props.theme.border};
     color: ${props => props.theme.text};
+    font-size: 14px;
   }
   
   th {
-    background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'};
     font-weight: 600;
   }
   
@@ -213,28 +198,21 @@ const MessageContent = styled.div`
     border-bottom: none;
   }
   
-  tr:hover {
-    background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
-  }
-  
-  /* Handle horizontal rules */
   hr {
     border: none;
-    height: 1px;
+    height: 0.5px;
     background: ${props => props.theme.border};
-    margin: 16px 0;
-    border-radius: 1px;
+    margin: 14px 0;
   }
   
-  /* Handle bold and italic */
   strong, b {
-    font-weight: 700;
+    font-weight: 650;
     color: ${props => props.theme.text};
   }
   
   em, i {
     font-style: italic;
-    color: ${props => props.theme.text};
+    color: inherit;
   }
 `;
 
@@ -250,31 +228,36 @@ const LoadingIndicator = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  color: ${props => props.theme.text}88;
+  font-size: 13px;
+  color: ${props => props.theme.textSecondary || (props.theme.text + '77')};
   margin-top: 4px;
+  letter-spacing: -0.01em;
 `;
 
 const LoadingDots = styled.div`
   display: flex;
-  gap: 2px;
+  gap: 3px;
   
   span {
-    width: 4px;
-    height: 4px;
-    background: ${props => props.theme.text}88;
+    width: 5px;
+    height: 5px;
+    background: ${props => {
+      const p = props.theme.primary;
+      if (typeof p === 'string' && !p.includes('gradient')) return p + '88';
+      return props.theme.text + '55';
+    }};
     border-radius: 50%;
-    animation: loading 1.4s infinite ease-in-out;
+    animation: mobileLoadPulse 1.4s infinite ease-in-out;
     
     &:nth-child(1) { animation-delay: -0.32s; }
     &:nth-child(2) { animation-delay: -0.16s; }
     &:nth-child(3) { animation-delay: 0; }
   }
   
-  @keyframes loading {
+  @keyframes mobileLoadPulse {
     0%, 80%, 100% {
-      transform: scale(0);
-      opacity: 0.5;
+      transform: scale(0.4);
+      opacity: 0.3;
     }
     40% {
       transform: scale(1);
@@ -284,20 +267,22 @@ const LoadingDots = styled.div`
 `;
 
 const MessageTimestamp = styled.div`
-  font-size: 12px;
-  color: ${props => props.theme.text}66;
-  margin-top: 4px;
+  font-size: 11px;
+  color: ${props => props.theme.textSecondary || (props.theme.text + '55')};
+  margin-top: 3px;
   text-align: ${props => props.$isUser ? 'right' : 'left'};
+  padding: 0 2px;
+  letter-spacing: 0.01em;
 `;
 
 const ErrorMessage = styled.div`
-  color: #ff4444;
-  font-size: 14px;
+  color: #ff3b30;
+  font-size: 13px;
   margin-top: 4px;
-  padding: 8px;
-  background: rgba(255, 68, 68, 0.1);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 68, 68, 0.2);
+  padding: 8px 12px;
+  background: rgba(255, 59, 48, 0.08);
+  border-radius: 10px;
+  border: 0.5px solid rgba(255, 59, 48, 0.15);
 `;
 
 const parseMessageContent = (content) => {

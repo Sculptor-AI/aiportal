@@ -8,7 +8,9 @@ const SettingsOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: 2000;
   display: flex;
   align-items: flex-end;
@@ -17,14 +19,16 @@ const SettingsOverlay = styled.div`
 
 const SettingsContainer = styled.div`
   width: 100%;
-  max-height: 80vh;
-  background: ${props => props.theme.background};
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  max-height: 85vh;
+  background: ${props => props.theme.sidebar || props.theme.background};
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
   overflow: hidden;
-  animation: slideUp 0.3s ease;
+  animation: settingsSlideUp 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   
-  @keyframes slideUp {
+  @keyframes settingsSlideUp {
     from {
       transform: translateY(100%);
     }
@@ -32,74 +36,94 @@ const SettingsContainer = styled.div`
       transform: translateY(0);
     }
   }
+
+  &::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 5px;
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'};
+    border-radius: 3px;
+    margin: 8px auto 0;
+  }
 `;
 
 const SettingsHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
-  border-bottom: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.background};
+  padding: 14px 20px;
+  border-bottom: 0.5px solid ${props => props.theme.border};
 `;
 
 const SettingsTitle = styled.h2`
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 650;
   color: ${props => props.theme.text};
+  letter-spacing: -0.02em;
 `;
 
 const CloseButton = styled.button`
-  background: none;
+  background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)'};
   border: none;
-  color: ${props => props.theme.text};
-  padding: 8px;
-  border-radius: 8px;
+  color: ${props => props.theme.textSecondary || (props.theme.text + 'aa')};
+  padding: 6px;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
+  transition: all 0.15s ease;
   
   &:active {
-    background: ${props => props.theme.border};
+    transform: scale(0.88);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'};
   }
   
   svg {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.2;
   }
 `;
 
 const SettingsContent = styled.div`
-  max-height: calc(80vh - 80px);
+  max-height: calc(85vh - 80px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 0 20px 20px 20px;
+  
+  &::-webkit-scrollbar { display: none; }
+  scrollbar-width: none;
 `;
 
 const SettingsSection = styled.div`
-  margin: 24px 0;
+  margin: 20px 0;
   
   &:first-child {
-    margin-top: 20px;
+    margin-top: 16px;
   }
 `;
 
 const SectionTitle = styled.h3`
-  margin: 0 0 16px 0;
-  font-size: 18px;
+  margin: 0 0 12px 0;
+  font-size: 12px;
   font-weight: 600;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.textSecondary || (props.theme.text + '77')};
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 `;
 
 const SettingItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
-  border-bottom: 1px solid ${props => props.theme.border};
+  padding: 13px 0;
+  border-bottom: 0.5px solid ${props => props.theme.border};
   
   &:last-child {
     border-bottom: none;
@@ -113,80 +137,103 @@ const SettingLabel = styled.div`
 `;
 
 const SettingName = styled.div`
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 400;
   color: ${props => props.theme.text};
-  margin-bottom: 2px;
+  margin-bottom: 1px;
+  letter-spacing: -0.01em;
 `;
 
 const SettingDescription = styled.div`
-  font-size: 14px;
-  color: ${props => props.theme.text}66;
+  font-size: 13px;
+  color: ${props => props.theme.textSecondary || (props.theme.text + '66')};
+  line-height: 1.3;
 `;
 
 const SettingControl = styled.div`
   margin-left: 16px;
+  flex-shrink: 0;
 `;
 
 const Toggle = styled.button`
-  width: 48px;
-  height: 28px;
+  width: 51px;
+  height: 31px;
   border: none;
-  border-radius: 14px;
-  background: ${props => props.enabled ? props.theme.primary : props.theme.border};
+  border-radius: 16px;
+  background: ${props => {
+    if (!props.enabled) return props.theme.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+    const p = props.theme.primary;
+    if (typeof p === 'string' && p.includes('gradient')) return p;
+    return p;
+  }};
   position: relative;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 0.2s ease;
+  transition: background 0.25s cubic-bezier(0.25, 1, 0.5, 1);
   
   &::after {
     content: '';
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 27px;
+    height: 27px;
     border-radius: 50%;
     background: white;
-    top: 4px;
-    left: ${props => props.enabled ? '24px' : '4px'};
-    transition: left 0.2s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    top: 2px;
+    left: ${props => props.enabled ? '22px' : '2px'};
+    transition: left 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 `;
 
 const Select = styled.select`
-  padding: 8px 12px;
-  border: 1px solid ${props => props.theme.border};
+  padding: 7px 10px;
+  border: 0.5px solid ${props => props.theme.border};
   border-radius: 8px;
   background: ${props => props.theme.inputBackground};
   color: ${props => props.theme.text};
-  font-size: 16px;
-  min-width: 120px;
+  font-size: 15px;
+  min-width: 110px;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2388888888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
   
   &:focus {
     outline: none;
-    border-color: ${props => props.theme.primary};
+    border-color: ${props => {
+      const p = props.theme.primary;
+      if (typeof p === 'string' && !p.includes('gradient')) return p;
+      return props.theme.border;
+    }};
   }
 `;
 
 const ColorGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 10px;
   margin-top: 8px;
 `;
 
 const ColorOption = styled.button`
-  width: 60px;
-  height: 40px;
-  border: 2px solid ${props => props.selected ? props.theme.primary : 'transparent'};
-  border-radius: 8px;
+  aspect-ratio: 1.5;
+  border: 2px solid ${props => props.selected 
+    ? (typeof props.theme.primary === 'string' && !props.theme.primary.includes('gradient') 
+      ? props.theme.primary 
+      : '#007AFF')
+    : 'transparent'};
+  border-radius: 10px;
   background: ${props => props.color};
   cursor: pointer;
   touch-action: manipulation;
   position: relative;
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  box-shadow: ${props => props.selected ? '0 2px 12px rgba(0,0,0,0.15)' : '0 1px 4px rgba(0,0,0,0.08)'};
   
   &:active {
-    transform: scale(0.95);
+    transform: scale(0.92);
   }
   
   ${props => props.selected && `
@@ -197,8 +244,9 @@ const ColorOption = styled.button`
       left: 50%;
       transform: translate(-50%, -50%);
       color: white;
-      font-weight: bold;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      font-weight: 700;
+      font-size: 14px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
   `}
 `;
