@@ -1,6 +1,6 @@
 {
   "_description": "Centralized model configuration. Update this file when models change.",
-  "_lastUpdated": "2026-03-03",
+  "_lastUpdated": "2026-03-04",
 
   "default": "chatgpt-5.3-instant",
 
@@ -29,6 +29,14 @@
         "claude-sonnet-4.6": "claude-sonnet-4-6",
         "claude-haiku-4.5": "claude-haiku-4-5"
       },
+      "modelCapabilities": {
+        "claude-opus-4.6": {
+          "reasoning_effort": true
+        },
+        "claude-sonnet-4.6": {
+          "reasoning_effort": true
+        }
+      },
       "capabilities": {
         "web_search": true,
         "code_execution": true,
@@ -41,6 +49,17 @@
         "gemini-3.1-pro": "gemini-3.1-pro-preview",
         "gemini-3-flash": "gemini-3-flash-preview",
         "gemini-3.1-flash-lite": "gemini-3.1-flash-lite-preview"
+      },
+      "modelCapabilities": {
+        "gemini-3.1-pro": {
+          "reasoning_effort": true
+        },
+        "gemini-3-flash": {
+          "reasoning_effort": true
+        },
+        "gemini-3.1-flash-lite": {
+          "reasoning_effort": true
+        }
       },
       "capabilities": {
         "web_search": true,

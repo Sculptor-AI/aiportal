@@ -18,6 +18,77 @@
 import { resolveModel, getImageModelFallbacks } from '../config/index.js';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_THINKING_LEVELS_BY_MODEL = {
+  'gemini-3.1-pro': ['low', 'medium', 'high'],
+  'gemini-3.1-pro-preview': ['low', 'medium', 'high'],
+  'gemini-3-flash': ['low', 'medium', 'high'],
+  'gemini-3-flash-preview': ['low', 'medium', 'high'],
+  'gemini-3.1-flash-lite': ['low', 'medium', 'high'],
+  'gemini-3.1-flash-lite-preview': ['low', 'medium', 'high']
+};
+
+function normalizeReasoningEffort(reasoningEffort) {
+  if (typeof reasoningEffort !== 'string') return null;
+  const normalized = reasoningEffort.toLowerCase();
+  if (['low', 'medium', 'high', 'xhigh', 'max'].includes(normalized)) {
+    return normalized;
+  }
+  return null;
+}
+
+function mapReasoningEffortToGeminiThinkingLevel(reasoningEffort) {
+  switch (reasoningEffort) {
+    case 'low':
+      return 'low';
+    case 'medium':
+      return 'medium';
+    case 'high':
+    case 'xhigh':
+    case 'max':
+      return 'high';
+    default:
+      return null;
+  }
+}
+
+function getSupportedGeminiThinkingLevels(modelId) {
+  return GEMINI_THINKING_LEVELS_BY_MODEL[modelId] || null;
+}
+
+function resolveGeminiThinkingLevel(modelId, reasoningEffort) {
+  const mappedLevel = mapReasoningEffortToGeminiThinkingLevel(reasoningEffort);
+  if (!mappedLevel) return null;
+
+  const supportedLevels = getSupportedGeminiThinkingLevels(modelId);
+  if (!supportedLevels || supportedLevels.length === 0) {
+    return mappedLevel;
+  }
+
+  if (supportedLevels.includes(mappedLevel)) {
+    return mappedLevel;
+  }
+
+  if (supportedLevels.includes('high')) return 'high';
+  if (supportedLevels.includes('medium')) return 'medium';
+  if (supportedLevels.includes('low')) return 'low';
+  return supportedLevels[0] || null;
+}
+
+function mapReasoningEffortToGeminiBudget(reasoningEffort) {
+  switch (reasoningEffort) {
+    case 'low':
+      return 2048;
+    case 'medium':
+      return 8192;
+    case 'high':
+      return 16384;
+    case 'xhigh':
+    case 'max':
+      return 24576;
+    default:
+      return null;
+  }
+}
 
 /**
  * Convert OpenAI-style message content to Gemini parts
@@ -95,7 +166,11 @@ function convertToolsToGemini(tools) {
 /**
  * Build Gemini request body with all supported features
  */
-function buildGeminiBody(body) {
+function buildGeminiBody(body, targetModel = '') {
+  const modelId = targetModel || body.model?.replace('google/', '') || '';
+  const normalizedReasoningEffort = normalizeReasoningEffort(body.reasoning_effort);
+  const supportsThinkingLevels = Boolean(getSupportedGeminiThinkingLevels(modelId));
+
   // Convert messages to Gemini format
   const contents = [];
   let systemInstruction = null;
@@ -219,11 +294,28 @@ function buildGeminiBody(body) {
     }
   }
 
-  // Thinking / reasoning budget
-  if (body.thinking || body.reasoning) {
-    geminiBody.generationConfig.thinkingConfig = {
-      thinkingBudget: body.thinking_budget || body.reasoning_budget || 8192
+  // Thinking / reasoning controls
+  if (body.thinking || body.reasoning || normalizedReasoningEffort) {
+    const thinkingConfig = {
+      // Required to return reasoning previews in response parts.
+      includeThoughts: true
     };
+
+    if (normalizedReasoningEffort) {
+      if (supportsThinkingLevels) {
+        thinkingConfig.thinkingLevel = resolveGeminiThinkingLevel(modelId, normalizedReasoningEffort) || 'medium';
+      } else {
+        thinkingConfig.thinkingBudget =
+          body.thinking_budget ||
+          body.reasoning_budget ||
+          mapReasoningEffortToGeminiBudget(normalizedReasoningEffort) ||
+          8192;
+      }
+    } else {
+      thinkingConfig.thinkingBudget = body.thinking_budget || body.reasoning_budget || 8192;
+    }
+
+    geminiBody.generationConfig.thinkingConfig = thinkingConfig;
   }
 
   // Safety settings (optional relaxation)
@@ -402,7 +494,7 @@ export async function handleGeminiChat(c, body, apiKey) {
 
   console.log(`Gemini request: ${body.model} -> ${targetModel}`);
 
-  const geminiBody = buildGeminiBody(body);
+  const geminiBody = buildGeminiBody(body, targetModel);
   const url = `${GEMINI_BASE_URL}/models/${targetModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   try {
@@ -443,7 +535,7 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
   const modelId = body.model?.replace('google/', '') || 'gemini-3.1-pro';
   const targetModel = resolveModel('gemini', modelId);
 
-  const geminiBody = buildGeminiBody(body);
+  const geminiBody = buildGeminiBody(body, targetModel);
   const url = `${GEMINI_BASE_URL}/models/${targetModel}:generateContent?key=${apiKey}`;
 
   try {

@@ -1237,22 +1237,25 @@ const SourceFavicon = styled.img`
 
 // Add a ThinkingDropdown component
 const ThinkingDropdownContainer = styled.div`
-  margin: 10px 0;
+  margin: 10px 0 12px;
   border-radius: 12px;
   overflow: hidden;
-  border: none;
+  border: 1px solid ${props => props.theme.border || '#e1e5e9'};
+  background: ${props => props.theme.name === 'light' ? 'rgba(248, 249, 251, 0.8)' : 'rgba(24, 24, 27, 0.45)'};
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 `;
 
 const ThinkingHeader = styled.div`
   display: flex;
   align-items: center;
-  padding: 8px 0;
+  justify-content: space-between;
+  padding: 9px 12px;
   cursor: pointer;
   user-select: none;
   font-weight: 500;
   font-size: 0.85rem;
   color: ${props => `${props.theme.text}88`};
-  justify-content: flex-start;
   transition: color 0.15s ease;
   
   &:hover {
@@ -1260,26 +1263,55 @@ const ThinkingHeader = styled.div`
   }
 `;
 
+const ThinkingHeaderTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+`;
+
+const ThinkingBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid ${props => `${props.theme.text}22`};
+  background: ${props => `${props.theme.text}10`};
+  color: ${props => `${props.theme.text}dd`};
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+`;
+
+const ThinkingPreview = styled.div`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  color: ${props => `${props.theme.text}aa`};
+`;
+
 const ThinkingArrow = styled.span`
-  margin-left: 8px;
   transition: transform 0.2s ease;
   transform: ${props => props.expanded ? 'rotate(180deg)' : 'rotate(0deg)'};
   font-size: 12px;
   display: inline-block;
-  width: 16px;
+  width: 14px;
   text-align: center;
+  opacity: 0.8;
 `;
 
 const ThinkingContent = styled.div`
-  padding: ${props => props.expanded ? '8px 0 8px 14px' : '0'};
+  padding: ${props => props.expanded ? '10px 12px 12px 12px' : '0 12px'};
   max-height: ${props => props.expanded ? '1000px' : '0'};
   opacity: ${props => props.expanded ? '1' : '0'};
-  transition: all 0.3s ease;
+  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.25s ease;
   overflow: hidden;
-  border-top: none;
-  margin-bottom: ${props => props.expanded ? '12px' : '0'};
-  margin-left: 8px;
-  border-left: ${props => props.expanded ? `2px solid ${props.theme.text}18` : 'none'};
+  border-top: ${props => props.expanded ? `1px solid ${props.theme.border || '#e1e5e9'}40` : 'none'};
   font-size: 0.88rem;
   color: ${props => `${props.theme.text}cc`};
 `;
@@ -1561,7 +1593,7 @@ const ThinkingSectionHeader = styled.div`
   gap: 6px;
 `;
 
-const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
+const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls, isStreaming = false }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
@@ -1582,21 +1614,36 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
     return t('chat.thinking.header.tools');
   };
 
+  const normalizedThinkingPreview = typeof thinkingPreviewText === 'string'
+    ? thinkingPreviewText.replace(/\s+/g, ' ').trim()
+    : '';
+  const clippedThinkingPreview = normalizedThinkingPreview.length > 140
+    ? `${normalizedThinkingPreview.slice(0, 140)}...`
+    : normalizedThinkingPreview;
+  const thinkingLabel = t('composer.chip.thinking', 'Thinking');
+
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'pending': return '⏳';
-      case 'executing': return '⚙️';
-      case 'completed': return '✅';
-      case 'error': return '❌';
-      default: return '🔧';
+      case 'pending': return '[...]';
+      case 'executing': return '[~]';
+      case 'completed': return '[ok]';
+      case 'error': return '[x]';
+      default: return '[*]';
     }
   };
 
   return (
     <ThinkingDropdownContainer>
       <ThinkingHeader onClick={toggleExpanded}>
-        <span>{getHeaderTitle()}</span>
-        <ThinkingArrow expanded={expanded}>▾</ThinkingArrow>
+        <ThinkingHeaderTitle>
+          <ThinkingBadge>{thinkingLabel}</ThinkingBadge>
+          {!expanded && (
+            <ThinkingPreview>
+              {clippedThinkingPreview || (isStreaming ? t('chat.status.thinking') : getHeaderTitle())}
+            </ThinkingPreview>
+          )}
+        </ThinkingHeaderTitle>
+        <ThinkingArrow expanded={expanded}>v</ThinkingArrow>
       </ThinkingHeader>
       <ThinkingContent expanded={expanded}>
         {hasToolActivity && (
@@ -1649,7 +1696,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
         {hasThinking && (
           <ThinkingSection hasToolActivity={hasToolActivity}>
-            {hasToolActivity && <ThinkingSectionHeader>{t('chat.thinking.section.reasoning')}</ThinkingSectionHeader>}
+            {hasToolActivity && <ThinkingSectionHeader>{thinkingLabel}</ThinkingSectionHeader>}
             {thinkingContent}
           </ThinkingSection>
         )}
@@ -1660,7 +1707,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
   const { t } = useTranslation();
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
 
   // Debug logging
@@ -2283,7 +2330,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
             {(() => {
               // If loading and no content yet, show thinking indicator
-              if (isLoading && !content) {
+              if (
+                isLoading &&
+                !content &&
+                !(typeof reasoningTrace === 'string' && reasoningTrace.trim()) &&
+                !(toolCalls && toolCalls.length > 0)
+              ) {
                 return (
                   <ThinkingContainer>
                     <SpinnerIcon />
@@ -2295,16 +2347,25 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               // Process content and show main content + thinking dropdown if applicable
               const { mainContent: mainContentWithoutThinking, thinkingContent: rawThinkingContent } =
                 extractThinkingFromContent(contentToProcess);
-              const isMercury = modelId?.toLowerCase().includes('mercury');
-              const formattedThinkingContent = rawThinkingContent
-                ? processText(rawThinkingContent, true, isLanguageExecutable, supportedLanguages, theme)
+              const combinedThinkingText = [reasoningTrace, rawThinkingContent]
+                .map(value => (typeof value === 'string' ? value.trim() : ''))
+                .filter(Boolean)
+                .filter((value, index, array) => array.indexOf(value) === index)
+                .join('\n\n');
+              const formattedThinkingContent = combinedThinkingText
+                ? processText(combinedThinkingText, true, isLanguageExecutable, supportedLanguages, theme)
                 : null;
 
               if (formattedThinkingContent) {
-                // If content has thinking tags, show thinking dropdown first, then main content
+                // If content has reasoning/thinking traces, show the collapsible trace first.
                 return (
                   <>
-                    <ThinkingDropdown thinkingContent={formattedThinkingContent} toolCalls={toolCalls} />
+                    <ThinkingDropdown
+                      thinkingContent={formattedThinkingContent}
+                      thinkingPreviewText={combinedThinkingText}
+                      toolCalls={toolCalls}
+                      isStreaming={isLoading}
+                    />
                     <StreamingMarkdownRenderer
                       text={mainContentWithoutThinking}
                       isStreaming={isLoading}
@@ -2320,7 +2381,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               return (
                 <>
                   {hasToolActivity && (
-                    <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
+                    <ThinkingDropdown
+                      thinkingContent={null}
+                      thinkingPreviewText=""
+                      toolCalls={toolCalls}
+                      isStreaming={isLoading}
+                    />
                   )}
 
                   {/* Code Execution Display (Gemini) */}
@@ -2501,3 +2567,4 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 };
 
 export default ChatMessage;
+

@@ -31,10 +31,11 @@ import {
   OverflowChipButton,
   OverflowDropdown,
   InputGreeting,
-  ReasoningEffortRow,
-  ReasoningEffortLabel,
-  ReasoningEffortSelect
+  ThinkingChipGroup,
+  ThinkingEffortButton
 } from './ChatWindow.styled';
+
+const REASONING_EFFORT_ORDER = ['low', 'medium', 'high', 'xhigh'];
 
 const ChatInputArea = forwardRef(({
   chatIsEmpty,
@@ -328,7 +329,7 @@ const ChatInputArea = forwardRef(({
       actionChip: selectedActionChip,
       mode: thinkingMode,
       createType: createType,
-      reasoningEffort: supportsReasoningEffort ? reasoningEffort : null
+      reasoningEffort: supportsReasoningEffort && thinkingMode === 'thinking' ? reasoningEffort : null
     });
     setInputMessage(''); // Clear input after submission attempt
     if (onMessageSent) {
@@ -508,6 +509,29 @@ const ChatInputArea = forwardRef(({
     setSelectedActionChip(null);
   };
 
+  const cycleReasoningEffort = useCallback(() => {
+    setReasoningEffort((previousEffort) => {
+      const currentIndex = REASONING_EFFORT_ORDER.indexOf(previousEffort);
+      const safeIndex = currentIndex >= 0 ? currentIndex : 1;
+      return REASONING_EFFORT_ORDER[(safeIndex + 1) % REASONING_EFFORT_ORDER.length];
+    });
+  }, []);
+
+  const getReasoningEffortLabel = useCallback((effort) => {
+    switch (effort) {
+      case 'low':
+        return t('composer.reasoningEffort.low', 'Low');
+      case 'medium':
+        return t('composer.reasoningEffort.medium', 'Medium');
+      case 'high':
+        return t('composer.reasoningEffort.high', 'High');
+      case 'xhigh':
+        return t('composer.reasoningEffort.xhigh', 'X-High');
+      default:
+        return t('composer.reasoningEffort.medium', 'Medium');
+    }
+  }, [t]);
+
   const handleCreateSelect = (type) => {
     // Clear all creation modes first
     setIsImagePromptMode(false);
@@ -563,41 +587,57 @@ const ChatInputArea = forwardRef(({
 
     if (type === 'mode') {
       return (
-        <ActionChip
-          key="mode"
-          ref={isHidden ? null : (el) => {
-            if (el) {
-              modeAnchorRef.current = el;
-              if (!isHidden) chipRefs.current[index] = el;
-            }
-          }}
-          selected={thinkingMode === 'thinking'}
-          onClick={() => {
-            if (isHidden) setShowOverflowDropdown(false);
-            // Toggle thinking mode directly
-            setThinkingMode(prev => prev === 'thinking' ? null : 'thinking');
-          }}
-        >
-          {theme.name === 'retro' ? (
-            <RetroIconWrapper>
-              <img src="/images/retroTheme/brainIcon.png" alt={t('composer.chip.thinking')} style={{ width: '16px', height: '16px' }} />
-            </RetroIconWrapper>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-              <rect x="9" y="9" width="6" height="6"></rect>
-              <line x1="9" y1="2" x2="9" y2="4"></line>
-              <line x1="15" y1="2" x2="15" y2="4"></line>
-              <line x1="9" y1="20" x2="9" y2="22"></line>
-              <line x1="15" y1="20" x2="15" y2="22"></line>
-              <line x1="20" y1="9" x2="22" y2="9"></line>
-              <line x1="20" y1="14" x2="22" y2="14"></line>
-              <line x1="2" y1="9" x2="4" y2="9"></line>
-              <line x1="2" y1="14" x2="4" y2="14"></line>
-            </svg>
+        <ThinkingChipGroup key="mode">
+          <ActionChip
+            ref={isHidden ? null : (el) => {
+              if (el) {
+                modeAnchorRef.current = el;
+                if (!isHidden) chipRefs.current[index] = el;
+              }
+            }}
+            selected={thinkingMode === 'thinking'}
+            onClick={() => {
+              if (isHidden) setShowOverflowDropdown(false);
+              // Toggle thinking mode directly
+              setThinkingMode(prev => prev === 'thinking' ? null : 'thinking');
+            }}
+          >
+            {theme.name === 'retro' ? (
+              <RetroIconWrapper>
+                <img src="/images/retroTheme/brainIcon.png" alt={t('composer.chip.thinking')} style={{ width: '16px', height: '16px' }} />
+              </RetroIconWrapper>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                <rect x="9" y="9" width="6" height="6"></rect>
+                <line x1="9" y1="2" x2="9" y2="4"></line>
+                <line x1="15" y1="2" x2="15" y2="4"></line>
+                <line x1="9" y1="20" x2="9" y2="22"></line>
+                <line x1="15" y1="20" x2="15" y2="22"></line>
+                <line x1="20" y1="9" x2="22" y2="9"></line>
+                <line x1="20" y1="14" x2="22" y2="14"></line>
+                <line x1="2" y1="9" x2="4" y2="9"></line>
+                <line x1="2" y1="14" x2="4" y2="14"></line>
+              </svg>
+            )}
+            {t('composer.chip.thinking')}
+          </ActionChip>
+          {supportsReasoningEffort && thinkingMode === 'thinking' && (
+            <ThinkingEffortButton
+              type="button"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (isHidden) setShowOverflowDropdown(false);
+                cycleReasoningEffort();
+              }}
+              disabled={isLoading || isProcessingFile}
+              title={`${t('composer.reasoningEffort.label', 'Reasoning effort')}: ${getReasoningEffortLabel(reasoningEffort)}`}
+            >
+              {getReasoningEffortLabel(reasoningEffort)}
+            </ThinkingEffortButton>
           )}
-          {t('composer.chip.thinking')}
-        </ActionChip>
+        </ThinkingChipGroup>
       );
     } else if (type === 'search') {
       return (
@@ -1157,26 +1197,6 @@ const ChatInputArea = forwardRef(({
               );
             })}
           </FilesPreviewContainer>
-
-          {supportsReasoningEffort && (
-            <ReasoningEffortRow theme={theme}>
-              <ReasoningEffortLabel theme={theme}>
-                {t('composer.reasoningEffort.label', 'Reasoning effort')}
-              </ReasoningEffortLabel>
-              <ReasoningEffortSelect
-                theme={theme}
-                value={reasoningEffort}
-                onChange={(event) => setReasoningEffort(event.target.value)}
-                disabled={isLoading || isProcessingFile}
-                aria-label={t('composer.reasoningEffort.label', 'Reasoning effort')}
-              >
-                <option value="low">{t('composer.reasoningEffort.low', 'Low')}</option>
-                <option value="medium">{t('composer.reasoningEffort.medium', 'Medium')}</option>
-                <option value="high">{t('composer.reasoningEffort.high', 'High')}</option>
-                <option value="xhigh">{t('composer.reasoningEffort.xhigh', 'X-High')}</option>
-              </ReasoningEffortSelect>
-            </ReasoningEffortRow>
-          )}
 
           <InputRow>
             <FileUploadButton

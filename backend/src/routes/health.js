@@ -95,7 +95,14 @@ health.get('/capabilities', (c) => {
       // Reasoning/Thinking
       reasoning: {
         display_thinking: ['gemini', 'anthropic'],
-        reasoning_effort: ['chatgpt-5.2-reasoning']
+        reasoning_effort: [
+          'chatgpt-5.2-reasoning',
+          'claude-opus-4.6',
+          'claude-sonnet-4.6',
+          'gemini-3.1-pro',
+          'gemini-3-flash',
+          'gemini-3.1-flash-lite'
+        ]
       },
 
       // Structured outputs

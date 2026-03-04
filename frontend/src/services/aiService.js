@@ -289,6 +289,15 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
               };
               continue;
             }
+
+            // Handle provider-native reasoning/thinking deltas
+            if (parsed.choices?.[0]?.delta?.reasoning_content) {
+              yield {
+                type: 'reasoning',
+                content: parsed.choices[0].delta.reasoning_content
+              };
+              continue;
+            }
             
             // Handle content chunks
             if (parsed.choices?.[0]?.delta?.content) {
@@ -337,6 +346,12 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
           if (data !== '[DONE]') {
             try {
               const parsed = JSON.parse(data);
+              if (parsed.choices?.[0]?.delta?.reasoning_content) {
+                yield {
+                  type: 'reasoning',
+                  content: parsed.choices[0].delta.reasoning_content
+                };
+              }
               if (parsed.choices?.[0]?.delta?.content) {
                 yield parsed.choices[0].delta.content;
               }

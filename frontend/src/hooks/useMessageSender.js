@@ -436,8 +436,9 @@ const useMessageSender = ({
     const currentModel = selectedModel;
     const currentHistory = chat.messages;
     const currentModelObj = (availableModels || []).find(model => model.id === currentModel);
-    const isBackendModel = currentModelObj?.isBackendModel === true;
     const supportsReasoningEffort = currentModelObj?.capabilities?.reasoning_effort === true;
+    const thinkingEnabled = thinkingMode === 'thinking';
+    const useNativeThinking = thinkingEnabled && supportsReasoningEffort;
 
     // For custom models, use the base model ID for the API call
     const modelIdForApi = currentModelObj?.isCustomModel && currentModelObj?.baseModel 
@@ -445,7 +446,7 @@ const useMessageSender = ({
       : currentModel;
     const requestOptions = {
       ...(currentModelObj?.provider ? { provider: currentModelObj.provider } : {}),
-      ...(supportsReasoningEffort && reasoningEffort ? { reasoningEffort } : {})
+      ...(useNativeThinking && reasoningEffort ? { reasoningEffort } : {})
     };
 
     // All models now go through backend API - no local API key validation needed
@@ -507,6 +508,7 @@ const useMessageSender = ({
       id: aiMessageId,
       role: 'assistant',
       content: '',
+      reasoningTrace: '',
       isLoading: true,
       timestamp: new Date().toISOString(),
       modelId: currentModel,
@@ -522,7 +524,7 @@ const useMessageSender = ({
     let finalAssistantContent = '';
 
     try {
-        const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
+        const thinkingModeSystemPrompt = thinkingEnabled && !useNativeThinking ?
             `You are a Deep Analysis Chain of Thought model. You MUST provide both thinking and a final answer.
 
 CRITICAL: Your response must have TWO parts:
@@ -565,12 +567,25 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
         
         let messageSources = [];
         let toolCalls = [];
+        let reasoningTrace = '';
         
         for await (const chunk of messageGenerator) {
           // Check if chunk is an object with type 'sources'
           if (typeof chunk === 'object' && chunk.type === 'sources') {
             messageSources = chunk.sources;
             // Don't add sources to content - they'll be handled separately
+            continue;
+          }
+
+          // Handle provider-native reasoning deltas
+          if (typeof chunk === 'object' && chunk.type === 'reasoning') {
+            reasoningTrace += chunk.content || '';
+            updateMessage(currentChatId, aiMessageId, {
+              content: streamedContent,
+              reasoningTrace,
+              isLoading: true,
+              toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined
+            });
             continue;
           }
           
@@ -679,6 +694,10 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
         finalAssistantContent = streamedContent;
         
         const messageUpdates = { content: streamedContent, isLoading: false };
+
+        if (reasoningTrace) {
+          messageUpdates.reasoningTrace = reasoningTrace;
+        }
         
         // Add tool calls if we have them
         if (toolCalls.length > 0) {

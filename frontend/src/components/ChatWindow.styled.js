@@ -1081,6 +1081,49 @@ export const ActionChip = styled.button`
   }
 `;
 
+export const ThinkingChipGroup = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+export const ThinkingEffortButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 6px 10px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '999px'};
+  border: ${props => {
+    if (props.theme.name === 'retro') {
+      return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
+    }
+    return `1px solid ${props.theme.border}`;
+  }};
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : `${props.theme.text}0d`};
+  color: ${props => props.theme.text};
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : `${props.theme.text}18`};
+    border-color: ${props => props.theme.name === 'retro' ? props.theme.border : `${props.theme.text}22`};
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+`;
+
 export const ChipDropdownButton = styled.button`
   display: flex;
   align-items: center;
