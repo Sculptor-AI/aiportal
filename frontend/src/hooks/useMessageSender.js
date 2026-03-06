@@ -368,7 +368,12 @@ const useMessageSender = ({
     const currentModel = selectedModel;
     const currentHistory = chat.messages;
     const currentModelObj = (availableModels || []).find(model => model.id === currentModel);
-    const supportsReasoningEffort = currentModelObj?.capabilities?.reasoning_effort === true;
+    const reasoningEffortLevels = Array.isArray(currentModelObj?.capabilities?.reasoning_effort_levels)
+      ? currentModelObj.capabilities.reasoning_effort_levels.filter((level) => typeof level === 'string' && level.trim().length > 0)
+      : [];
+    const supportsReasoningEffort =
+      currentModelObj?.capabilities?.reasoning_effort === true &&
+      reasoningEffortLevels.length > 1;
     const thinkingEnabled = thinkingMode === 'thinking';
     const useNativeThinking = thinkingEnabled && supportsReasoningEffort;
 
@@ -424,6 +429,10 @@ const useMessageSender = ({
 
     // Dedicated deep research flow (SSE progress + structured completion payload)
     if (shouldRunDeepResearch) {
+      const deepResearchModelId =
+        currentActionChip === 'deep-research' || currentModel === DEEP_RESEARCH_MODEL_ID
+          ? DEEP_RESEARCH_MODEL_ID
+          : currentModel;
       const deepResearchMessageId = generateId();
       const deepResearchMessage = {
         id: deepResearchMessageId,
@@ -435,7 +444,7 @@ const useMessageSender = ({
         progress: 0,
         statusMessage: 'Initializing deep research...',
         timestamp: new Date().toISOString(),
-        modelId: currentModel
+        modelId: deepResearchModelId
       };
       addMessage(currentChatId, deepResearchMessage);
 
@@ -451,7 +460,9 @@ const useMessageSender = ({
             Math.min(12, Number.parseInt(settings?.deepResearchMaxAgents, 10) || 8)
           );
           const researchModel =
-            currentModel === DEEP_RESEARCH_MODEL_ID ? DEEP_RESEARCH_MODEL_ID : modelIdForApi;
+            currentActionChip === 'deep-research' || currentModel === DEEP_RESEARCH_MODEL_ID
+              ? DEEP_RESEARCH_MODEL_ID
+              : modelIdForApi;
 
           await performDeepResearch(
             messageToSend,

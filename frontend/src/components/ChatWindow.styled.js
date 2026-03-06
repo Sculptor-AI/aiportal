@@ -1004,19 +1004,46 @@ export const EmptyState = styled.div`
 
 export const ActionChipsContainer = styled.div`
   display: flex;
+  align-items: center;
   justify-content: flex-start;
   margin: 0;
   gap: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
   pointer-events: auto;
   width: 100%;
   position: relative;
+  overflow: visible;
+`;
+
+export const AnimatedChipSlot = styled.div`
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+  opacity: ${props => props.$phase === 'exiting' || props.$phase === 'entering' ? 0 : 1};
+  max-width: ${props => props.$phase === 'exiting' ? '0px' : '420px'};
+  transform: ${props => {
+    if (props.$phase === 'entering') return 'translate3d(14px, 6px, 0) scale(0.94)';
+    if (props.$phase === 'exiting') return 'translate3d(-12px, -4px, 0) scale(0.94)';
+    return 'translate3d(0, 0, 0) scale(1)';
+  }};
+  transform-origin: center left;
+  pointer-events: ${props => props.$phase === 'exiting' ? 'none' : 'auto'};
+  transition: opacity 0.18s ease,
+              transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              max-width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform, max-width;
 `;
 
 export const ActionChip = styled.button`
   display: flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
   gap: 6px;
-  padding: 7px 14px;
+  min-height: 40px;
+  padding: 0 14px;
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '999px'};
   background-color: ${props => {
     if (props.theme.name === 'retro') {
@@ -1035,8 +1062,10 @@ export const ActionChip = styled.button`
   color: ${props => props.selected ? props.theme.text : `${props.theme.text}88`};
   font-size: 13px;
   font-weight: 500;
+  line-height: 1;
   cursor: pointer;
   letter-spacing: -0.005em;
+  white-space: nowrap;
   transition: background-color 0.2s ease,
               border-color 0.2s ease,
               color 0.2s ease,
@@ -1084,15 +1113,20 @@ export const ActionChip = styled.button`
 export const ThinkingChipGroup = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-shrink: 0;
 `;
 
 export const ThinkingEffortButton = styled.button`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 64px;
-  padding: 6px 10px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  gap: 8px;
+  min-height: 40px;
+  min-width: 72px;
+  padding: 0 14px;
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '999px'};
   border: ${props => {
     if (props.theme.name === 'retro') {
@@ -1102,16 +1136,30 @@ export const ThinkingEffortButton = styled.button`
   }};
   background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : `${props.theme.text}0d`};
   color: ${props => props.theme.text};
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  line-height: 1;
+  letter-spacing: -0.005em;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
   white-space: nowrap;
 
+  svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.72;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
   &:hover:not(:disabled) {
     background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : `${props.theme.text}18`};
     border-color: ${props => props.theme.name === 'retro' ? props.theme.border : `${props.theme.text}22`};
+
+    svg {
+      opacity: 0.92;
+      transform: rotate(90deg);
+    }
   }
 
   &:active:not(:disabled) {
@@ -1173,8 +1221,9 @@ export const HammerButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
   position: relative;
   border-radius: ${props => props.theme.name === 'retro' ? '0' : '50%'};
   background-color: ${props => {
@@ -1240,7 +1289,7 @@ export const ToolbarContainer = styled.div`
   gap: ${props => props.theme.name === 'retro' ? '12px' : '8px'};
   width: auto;
   opacity: ${props => props.$isOpen ? 1 : 0};
-  transform: translate(calc(-50% + 18px), ${props => props.$isOpen ? '0' : '10px'});
+  transform: translate(calc(-50% + 20px), ${props => props.$isOpen ? '0' : '10px'});
   visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
   border: ${props => {
     if (props.theme.name === 'retro') {
@@ -1320,81 +1369,117 @@ export const OverflowChipButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '20px'};
+  gap: 8px;
+  min-width: 48px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '999px'};
   background-color: ${props => {
     if (props.theme.name === 'retro') {
       return props.theme.buttonFace;
     }
-    return 'rgba(0, 0, 0, 0.03)';
+    return props.$isOpen ? 'rgba(0, 0, 0, 0.08)' : 'rgba(0, 0, 0, 0.03)';
   }};
   border: ${props => {
     if (props.theme.name === 'retro') {
       return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
     }
-    return '1px solid rgba(0, 0, 0, 0.06)';
+    return props.$isOpen ? '1px solid rgba(0, 0, 0, 0.12)' : '1px solid rgba(0, 0, 0, 0.06)';
   }};
   color: ${props => props.theme.text + '99'};
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: 1px;
+  line-height: 1;
   cursor: pointer;
   transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+              color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: ${props => props.theme.name === 'retro' ?
     `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
     'none'};
-  min-width: 44px;
+  flex-shrink: 0;
+
+  .overflow-count {
+    letter-spacing: -0.02em;
+  }
+
+  .overflow-icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.72;
+    transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+    transform: rotate(${props => props.$isOpen ? '135deg' : '0deg'});
+    flex-shrink: 0;
+  }
 
   &:hover {
     background-color: ${props => {
     if (props.theme.name === 'retro') {
       return props.theme.buttonFace;
     }
-    return 'rgba(0, 0, 0, 0.07)';
+    return props.$isOpen ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.07)';
   }};
     color: ${props => props.theme.text};
+    transform: translateY(-1px);
+
+    .overflow-icon {
+      opacity: 0.92;
+    }
   }
 
   &:active:not(:disabled) {
     ${props => props.theme.name === 'retro' && `
       border-color: ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight} ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark};
       box-shadow: -1px -1px 0 0 ${props.theme.buttonHighlightSoft} inset, 1px 1px 0 0 ${props.theme.buttonShadowSoft} inset;
-      padding: 7px 11px 5px 13px;
+      padding: 1px 11px 0 13px;
     `}
   }
 `;
 
-const dropdownSlideIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+export const OverflowCluster = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 30;
 `;
 
 export const OverflowDropdown = styled.div`
   position: absolute;
-  top: 100%;
   right: 0;
-  margin-top: 6px;
-  background: ${props => props.theme.inputBackground};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: ${props => props.theme.name === 'retro' ? '0' : '12px'};
+  bottom: calc(100% + 10px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: ${props => props.theme.name === 'retro' ? props.theme.buttonFace : props.theme.inputBackground};
+  border: ${props => {
+    if (props.theme.name === 'retro') {
+      return `1px solid ${props.theme.buttonHighlightLight} ${props.theme.buttonShadowDark} ${props.theme.buttonShadowDark} ${props.theme.buttonHighlightLight}`;
+    }
+    return `1px solid ${props.theme.border}`;
+  }};
+  border-radius: ${props => props.theme.name === 'retro' ? '0' : '22px'};
   box-shadow: ${props => props.theme.name === 'retro' ?
-    `inset 1px 1px 0px ${props.theme.buttonHighlightLight}, inset -1px -1px 0px ${props.theme.buttonShadowDark}` :
-    '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08)'};
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 150px;
+    `1px 1px 0 0 ${props.theme.buttonHighlightSoft} inset, -1px -1px 0 0 ${props.theme.buttonShadowSoft} inset` :
+    '0 14px 30px rgba(0, 0, 0, 0.14), 0 4px 14px rgba(0, 0, 0, 0.08)'};
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
+  pointer-events: ${props => props.$isOpen ? 'auto' : 'none'};
+  transform: ${props => props.$isOpen ? 'translateY(0) scale(1)' : 'translateY(8px) scale(0.94)'};
+  transform-origin: bottom right;
+  transition: opacity 0.22s ease,
+              transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              visibility 0.22s ease;
   z-index: 1000;
-  animation: ${dropdownSlideIn} 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform-origin: top right;
-`; 
+`;
+
+export const OverflowChipItem = styled.div`
+  opacity: ${props => props.$isOpen ? 1 : 0};
+  transform: ${props => props.$isOpen ? 'translate3d(0, 0, 0) rotate(0deg) scale(1)' : 'translate3d(14px, 8px, 0) rotate(-10deg) scale(0.9)'};
+  transform-origin: center right;
+  transition: opacity 0.2s ease,
+              transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: ${props => props.$isOpen ? `${Math.min(props.$index * 42, 168)}ms` : '0ms'};
+`;

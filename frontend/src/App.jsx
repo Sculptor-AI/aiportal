@@ -40,7 +40,6 @@ import MatrixRain from './components/MatrixRain';
 import useEasterEggs from './hooks/useEasterEggs';
 import {
   DEFAULT_CUSTOM_BASE_MODEL_ID,
-  appendDeepResearchModel,
   getPreferredModelId
 } from './config/modelConfig';
 import { setBackendMode, shouldUseRealBackend } from './services/backendConfig';
@@ -71,7 +70,7 @@ const MainContentArea = styled.div`
 const FloatingMenuButton = styled.button`
   position: absolute;
   left: 20px;
-  top: 9px; // Adjusted to vertically align with chat title
+  top: 12px; // Align with the model selector row when the sidebar is collapsed
   z-index: 100;
   background: transparent;
   border: none;
@@ -359,10 +358,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
 
         // Combine backend models with enabled custom models
-        const allModels = appendDeepResearchModel([
+        const allModels = [
           ...(backendModels || []),
           ...enabledCustomModels
-        ]);
+        ];
 
         if (allModels.length > 0) {
           setAvailableModels(allModels);
