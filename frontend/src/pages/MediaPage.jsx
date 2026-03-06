@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { createVideoObjectUrl, downloadGeneratedVideo, generateVideo, waitForVideoCompletion } from '../services/videoService';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import VideoEditorModal from '../components/VideoEditorModal';
 
 const fadeIn = keyframes`
@@ -621,42 +622,134 @@ const PROMPT_TEMPLATES = [
   'Vintage sci-fi spaceship launch sequence, sweeping camera movement, editorial motion',
 ];
 
+const LEGACY_MEDIA_STORAGE_KEY = 'generated_videos';
+const USER_MEDIA_STORAGE_PREFIX = 'generated_videos:';
+const VALID_VIDEO_STATUSES = new Set(['generating', 'completed', 'failed']);
+
+const buildMediaStorageKey = (userId) => (userId ? `${USER_MEDIA_STORAGE_PREFIX}${userId}` : null);
+
+const removeLegacyMediaStorage = () => {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+
+  try {
+    localStorage.removeItem(LEGACY_MEDIA_STORAGE_KEY);
+  } catch (error) {
+    console.warn('[MediaPage] Failed to remove legacy media cache:', error);
+  }
+};
+
+const sanitizeStoredVideo = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const id = typeof value.id === 'string' && value.id.trim() ? value.id : null;
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    prompt: typeof value.prompt === 'string' ? value.prompt : '',
+    aspectRatio: value.aspectRatio === '9:16' ? '9:16' : '16:9',
+    status: VALID_VIDEO_STATUSES.has(value.status) ? value.status : 'failed',
+    createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
+    videoId: typeof value.videoId === 'string' && value.videoId.trim() ? value.videoId : null,
+    url: typeof value.url === 'string' && value.url.trim() ? value.url : null,
+    model: typeof value.model === 'string' && value.model.trim() ? value.model : 'sora-2',
+    editProject: value.editProject && typeof value.editProject === 'object' && !Array.isArray(value.editProject)
+      ? value.editProject
+      : null
+  };
+};
+
+const readStoredVideos = (storageKey) => {
+  if (!storageKey || typeof localStorage === 'undefined') {
+    return [];
+  }
+
+  try {
+    const rawValue = localStorage.getItem(storageKey);
+    if (!rawValue) {
+      return [];
+    }
+
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.map(sanitizeStoredVideo).filter(Boolean);
+  } catch (error) {
+    console.warn('[MediaPage] Failed to read scoped media cache:', error);
+    return [];
+  }
+};
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */
 /* ------------------------------------------------------------------ */
 
 const MediaPage = ({ collapsed }) => {
   const toast = useToast();
+  const { user } = useAuth();
+  const mediaStorageKey = buildMediaStorageKey(user?.id || null);
 
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [editorVideoId, setEditorVideoId] = useState(null);
-  const [videos, setVideos] = useState(() => {
-    try {
-      const saved = localStorage.getItem('generated_videos');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [videos, setVideos] = useState([]);
   const [previewUrls, setPreviewUrls] = useState({});
+  const [loadedStorageKey, setLoadedStorageKey] = useState(null);
   const previewUrlsRef = useRef({});
   const activeJobsRef = useRef(new Set());
   const inputRef = useRef(null);
   const settingsRef = useRef(null);
+  const effectiveVideos = loadedStorageKey === mediaStorageKey ? videos : [];
+
+  const clearPreviewUrls = useCallback(() => {
+    Object.values(previewUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    previewUrlsRef.current = {};
+    setPreviewUrls({});
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('generated_videos', JSON.stringify(videos));
-  }, [videos]);
+    removeLegacyMediaStorage();
+  }, []);
+
+  useEffect(() => {
+    clearPreviewUrls();
+    activeJobsRef.current.clear();
+    setEditorVideoId(null);
+    setLoadedStorageKey(null);
+    setVideos(readStoredVideos(mediaStorageKey));
+    setLoadedStorageKey(mediaStorageKey);
+    removeLegacyMediaStorage();
+  }, [clearPreviewUrls, mediaStorageKey]);
+
+  useEffect(() => {
+    if (!mediaStorageKey || loadedStorageKey !== mediaStorageKey || typeof localStorage === 'undefined') {
+      return;
+    }
+
+    try {
+      localStorage.setItem(mediaStorageKey, JSON.stringify(videos));
+    } catch (error) {
+      console.warn('[MediaPage] Failed to persist scoped media cache:', error);
+    }
+  }, [loadedStorageKey, mediaStorageKey, videos]);
 
   useEffect(() => {
     return () => {
-      Object.values(previewUrlsRef.current).forEach(url => URL.revokeObjectURL(url));
-      previewUrlsRef.current = {};
+      clearPreviewUrls();
     };
-  }, []);
+  }, [clearPreviewUrls]);
 
   useEffect(() => {
     if (!showSettings) return;
@@ -752,7 +845,7 @@ const MediaPage = ({ collapsed }) => {
   }, [setPreviewUrl, toast, updateVideo]);
 
   useEffect(() => {
-    videos.forEach(video => {
+    effectiveVideos.forEach(video => {
       if (video.status === 'completed' && video.videoId) {
         hydrateVideoPreview(video.id, video.videoId);
       }
@@ -760,13 +853,13 @@ const MediaPage = ({ collapsed }) => {
         monitorVideoJob(video.id, video.videoId, { notify: false });
       }
     });
-  }, [videos, hydrateVideoPreview, monitorVideoJob]);
+  }, [effectiveVideos, hydrateVideoPreview, monitorVideoJob]);
 
   useEffect(() => {
-    if (editorVideoId && !videos.some(video => video.id === editorVideoId && video.status === 'completed')) {
+    if (editorVideoId && !effectiveVideos.some(video => video.id === editorVideoId && video.status === 'completed')) {
       setEditorVideoId(null);
     }
-  }, [editorVideoId, videos]);
+  }, [editorVideoId, effectiveVideos]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -865,7 +958,7 @@ const MediaPage = ({ collapsed }) => {
     }
   };
 
-  const completedVideos = videos.filter(video => (
+  const completedVideos = effectiveVideos.filter(video => (
     video.status === 'completed' && (video.videoId || video.url)
   ));
   const editorVideo = completedVideos.find(video => video.id === editorVideoId) || null;
@@ -878,7 +971,7 @@ const MediaPage = ({ collapsed }) => {
           <TitleSection>
             <PageTitle>Media Studio</PageTitle>
           </TitleSection>
-          {videos.length > 0 && (
+          {effectiveVideos.length > 0 && (
             <HeaderActions>
               <SmallBtn onClick={handleClearAll}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -893,9 +986,9 @@ const MediaPage = ({ collapsed }) => {
       </ContentWrapper>
 
       {/* ---- Feed ---- */}
-      {videos.length > 0 ? (
+      {effectiveVideos.length > 0 ? (
         <MasonryGrid>
-          {videos.map(video => {
+          {effectiveVideos.map(video => {
             const previewUrl = previewUrls[video.id] || video.url || null;
             const canEdit = video.status === 'completed' && Boolean(previewUrl || video.videoId || video.url);
             return (

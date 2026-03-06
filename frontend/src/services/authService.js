@@ -4,6 +4,7 @@
 import { getBackendApiBase } from './backendConfig';
 
 const SAME_ORIGIN_API_BASE = '/api';
+const LEGACY_CLIENT_STORAGE_KEYS = ['generated_videos'];
 
 // Helper function to build API URLs
 const buildApiUrlWithBase = (base, endpoint) => {
@@ -21,6 +22,20 @@ const buildApiUrlWithBase = (base, endpoint) => {
 };
 
 const buildApiUrl = (endpoint) => buildApiUrlWithBase(getBackendApiBase(), endpoint);
+
+const clearLegacyClientStorage = () => {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+
+  for (const storageKey of LEGACY_CLIENT_STORAGE_KEYS) {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (error) {
+      console.warn(`[authService] Failed to remove legacy storage key "${storageKey}":`, error);
+    }
+  }
+};
 
 const fetchWithFallback = async (endpoint, options) => {
   const backendBase = getBackendApiBase();
@@ -139,6 +154,7 @@ export const logoutUser = async () => {
     console.error('Logout error:', error);
   } finally {
     sessionStorage.removeItem('ai_portal_current_user');
+    clearLegacyClientStorage();
   }
   return true;
 };
@@ -291,6 +307,7 @@ export const adminLogout = async () => {
     console.error('Admin logout error:', error);
   } finally {
     sessionStorage.removeItem('ai_portal_admin_user');
+    clearLegacyClientStorage();
   }
 };
 

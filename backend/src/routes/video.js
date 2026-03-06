@@ -9,6 +9,7 @@ import { generateVideoWithSora, getSoraVideoStatus } from '../services/openai.js
 import { requireAuthAndApproved } from '../middleware/auth.js';
 import { videoGenerationRateLimit } from '../middleware/rateLimit.js';
 import { validateOutboundUrl } from '../utils/urlValidation.js';
+import { canUserAccessVideo, createVideoOwnershipRecord, getVideoOwnershipRecord } from '../utils/videoOwnership.js';
 
 const video = new Hono();
 const VIDEO_DOWNLOAD_HOST_ALLOWLIST = [
@@ -21,6 +22,28 @@ const VIDEO_DOWNLOAD_HOST_ALLOWLIST = [
 ];
 
 const isRedirectStatus = (status) => status >= 300 && status < 400;
+
+const requireTrackedVideoAccess = async (c, videoId) => {
+  const kv = c.env.KV;
+  const user = c.get('user');
+
+  if (!kv) {
+    return {
+      error: c.json({ error: 'Storage not configured' }, 500),
+      record: null
+    };
+  }
+
+  const record = await getVideoOwnershipRecord(kv, videoId);
+  if (!canUserAccessVideo(record, user)) {
+    return {
+      error: c.json({ error: 'Video not found' }, 404),
+      record: null
+    };
+  }
+
+  return { error: null, record };
+};
 
 // Apply auth middleware to all video routes
 video.use('/*', requireAuthAndApproved);
@@ -36,9 +59,15 @@ video.use('/*', requireAuthAndApproved);
 video.post('/generate', videoGenerationRateLimit, async (c) => {
   const env = c.env;
   const apiKey = env.OPENAI_API_KEY;
+  const kv = env.KV;
+  const user = c.get('user');
 
   if (!apiKey) {
     return c.json({ error: 'OPENAI_API_KEY is not configured for Sora video generation.' }, 500);
+  }
+
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
   }
 
   try {
@@ -60,6 +89,17 @@ video.post('/generate', videoGenerationRateLimit, async (c) => {
     if (!result.success) {
       console.error('Video generation provider failure:', result.error);
       return c.json({ error: result.error || 'Video generation failed' }, 500);
+    }
+
+    try {
+      await createVideoOwnershipRecord(kv, {
+        videoId: result.videoId,
+        userId: user.id,
+        model: result.model || null
+      });
+    } catch (error) {
+      console.error('Unable to persist video ownership:', error);
+      return c.json({ error: 'Unable to persist video request' }, 500);
     }
 
     return c.json({
@@ -94,6 +134,11 @@ video.get('/status', async (c) => {
   }
 
   try {
+    const { error: accessError } = await requireTrackedVideoAccess(c, videoId);
+    if (accessError) {
+      return accessError;
+    }
+
     const result = await getSoraVideoStatus(videoId, apiKey);
 
     if (!result.success) {
@@ -128,6 +173,11 @@ video.get('/download', async (c) => {
     }
 
     try {
+      const { error: accessError } = await requireTrackedVideoAccess(c, videoId);
+      if (accessError) {
+        return accessError;
+      }
+
       const response = await fetch(`https://api.openai.com/v1/videos/${encodeURIComponent(videoId)}/content`, {
         method: 'GET',
         headers: {
