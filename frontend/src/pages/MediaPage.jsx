@@ -641,7 +641,11 @@ const MediaPage = ({ collapsed }) => {
     } catch (error) {
       console.error('Error generating video:', error);
       updateVideoStatus(localId, 'failed');
-      toast.showErrorToast('Error', typeof error === 'string' ? error : 'Failed to generate video. Please try again.');
+      const errorMessage =
+        typeof error === 'string'
+          ? error
+          : error?.message || 'Failed to generate video. Please try again.';
+      toast.showErrorToast('Error', errorMessage);
     } finally {
       setIsGenerating(false);
     }

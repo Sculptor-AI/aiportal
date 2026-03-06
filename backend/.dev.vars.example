@@ -37,7 +37,7 @@ ANTHROPIC_API_KEY="sk-ant-your-anthropic-key-here"
 OPENAI_API_KEY="sk-your-openai-key-here"
 
 # Comma-separated allowlist for browser CORS origins
-# Example: "https://sculptorai.org,http://localhost:3009"
+# Example: "https://sculptorai.org,https://ai.sculptorai.org,http://localhost:3009"
 # If unset, safe defaults are used.
 CORS_ALLOWED_ORIGINS="http://localhost:3000,http://localhost:3009,http://localhost:5173"
 

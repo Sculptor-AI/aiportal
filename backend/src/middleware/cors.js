@@ -7,6 +7,8 @@ import { cors } from 'hono/cors';
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://sculptorai.org',
   'https://www.sculptorai.org',
+  'https://ai.sculptorai.org',
+  'https://api.sculptorai.org',
   'http://localhost:3000',
   'http://localhost:3009',
   'http://localhost:5173',
@@ -41,4 +43,3 @@ export const apiCors = cors({
   allowHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'x-api-key'],
   maxAge: 86400
 });
-

@@ -28,10 +28,25 @@ export const generateVideo = async (prompt, options = {}) => {
       }
     });
 
-    return response.data; // { success: true, videoId: 'video_...' }
+    const payload = response.data;
+
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Unexpected video API response from backend.');
+    }
+
+    if (payload.success && payload.videoId) {
+      return payload; // { success: true, videoId: 'video_...' }
+    }
+
+    if (payload.success && payload.operationName && !payload.videoId) {
+      throw new Error('Video backend returned a legacy job format. Refresh the app and try again.');
+    }
+
+    throw new Error(payload.error || payload.message || 'Failed to start video generation');
   } catch (error) {
     console.error('Error generating video:', error);
-    throw error.response?.data?.error || error.message || 'Failed to start video generation';
+    const message = error.response?.data?.error || error.message || 'Failed to start video generation';
+    throw new Error(message);
   }
 };
 
@@ -50,7 +65,8 @@ export const pollVideoStatus = async (videoId) => {
     return response.data;
   } catch (error) {
     console.error('Error polling video status:', error);
-    throw error.response?.data?.error || error.message || 'Failed to check status';
+    const message = error.response?.data?.error || error.message || 'Failed to check status';
+    throw new Error(message);
   }
 };
 

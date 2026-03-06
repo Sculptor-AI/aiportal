@@ -25,7 +25,21 @@ const isLocalUrl = (rawUrl) => {
   }
 };
 
+const isHostedRuntime = () => {
+  if (typeof window === 'undefined' || !window.location) {
+    return false;
+  }
+
+  return !LOCALHOST_HOSTNAMES.has(window.location.hostname);
+};
+
 const getRemoteRoot = () => {
+  // On hosted deployments, prefer the same origin worker/API so the frontend
+  // and backend stay on the same release and avoid cross-origin auth/CORS issues.
+  if (isHostedRuntime()) {
+    return '';
+  }
+
   const configuredRemoteRoot = cleanBaseUrl(import.meta.env.VITE_REMOTE_BACKEND_URL || '');
   if (configuredRemoteRoot) {
     return configuredRemoteRoot;

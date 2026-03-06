@@ -31,6 +31,8 @@ const GEMINI_LIVE_WS_URL = 'wss://generativelanguage.googleapis.com/ws/google.ai
 const DEFAULT_ALLOWED_ORIGINS = [
   'https://sculptorai.org',
   'https://www.sculptorai.org',
+  'https://ai.sculptorai.org',
+  'https://api.sculptorai.org',
   'http://localhost:3000',
   'http://localhost:3009',
   'http://localhost:5173',
