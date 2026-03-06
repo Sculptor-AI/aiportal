@@ -1,7 +1,6 @@
 import React from 'react';
 import styled, { useTheme } from 'styled-components';
 import { modelThemes } from '../styles/themes';
-import { useAuth } from '../contexts/AuthContext';
 
 // Moved sizeMap to module scope
 const sizeMap = {
@@ -78,6 +77,22 @@ const MODEL_LOGOS = {
   'ursa-minor': '/images/sculptor.svg'
 };
 
+const PROVIDER_LOGOS = {
+  google: '/images/gemini-logo.png',
+  gemini: '/images/gemini-logo.png',
+  openai: '/images/openai-logo.png',
+  anthropic: '/images/claude-logo.png',
+  claude: '/images/claude-logo.png',
+  meta: '/images/meta-logo.png',
+  llama: '/images/meta-logo.png',
+  deepseek: '/images/deepseek-logo.png',
+  grok: '/images/grok-logo.png',
+  'x-ai': '/images/grok-logo.png',
+  xai: '/images/grok-logo.png',
+  mercury: '/images/inception-logo.png',
+  inception: '/images/inception-logo.png'
+};
+
 const ModelIconContainer = styled.div`
   display: flex;
   align-items: center;
@@ -103,9 +118,8 @@ const ModelIconContainer = styled.div`
   }
 `;
 
-const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
+const ModelIcon = ({ modelId, provider, size = 'medium', $inMessage = false }) => {
   const theme = useTheme();
-  const { settings } = useAuth(); // Access settings from AuthContext
   let iconComponent;
   let iconBackground;
 
@@ -116,6 +130,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
 
   // Try to get image from the MODEL_LOGOS mapping (unless it's a custom model)
   let imageUrl = !isCustomModel ? MODEL_LOGOS[modelId] : null;
+  const normalizedProvider = typeof provider === 'string' ? provider.toLowerCase() : null;
 
   // For custom models, we'll use the emoji instead of an image
   if (isCustomModel) {
@@ -148,6 +163,10 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
       // Check if the modelId contains any of our known provider names
       if (modelId?.includes('mercury')) {
         imageUrl = '/images/inception-logo.png';
+      } else if (modelId?.includes('imagen') || modelId?.includes('nano-banana')) {
+        imageUrl = '/images/gemini-logo.png';
+      } else if (modelId?.includes('gpt-image') || modelId?.includes('chatgpt-image')) {
+        imageUrl = '/images/openai-logo.png';
       } else if (modelId?.includes('openai') || modelId?.includes('gpt') || modelId?.includes('sora')) {
         imageUrl = '/images/openai-logo.png';
       } else if (modelId?.includes('gemini')) {
@@ -161,6 +180,10 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
       } else if (modelId?.includes('grok') || modelId?.includes('x-ai')) {
         imageUrl = '/images/grok-logo.png';
       }
+    }
+
+    if (!imageUrl && normalizedProvider) {
+      imageUrl = PROVIDER_LOGOS[normalizedProvider] || null;
     }
 
     // If no image available, set icon based on model
@@ -202,7 +225,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
       $useImage={$useImage}
       $noMargin={$noMargin}
       style={{ background: !$useImage && iconBackground ? iconBackground : undefined }}
-      title={`${model?.name || modelId} (${model?.provider || 'Local'})`}
+      title={`${model?.name || modelId} (${model?.provider || provider || 'Local'})`}
     >
       {imageUrl ? (
         <img

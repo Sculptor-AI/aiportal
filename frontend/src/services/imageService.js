@@ -3,6 +3,20 @@ import { getAuthHeaders } from './authService';
 import { getBackendApiBase } from './backendConfig';
 import { createVideoObjectUrl, generateVideo, waitForVideoCompletion } from './videoService';
 
+const SAME_ORIGIN_API_BASE = '/api';
+
+const buildApiUrlWithBase = (base, endpoint) => {
+  if (!endpoint) return base;
+
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+
+  if (normalizedEndpoint.startsWith('api/')) {
+    return `${base}/${normalizedEndpoint.substring(4)}`;
+  }
+
+  return `${base}/${normalizedEndpoint}`;
+};
+
 // Remove duplicated /api in endpoint paths
 const buildApiUrl = (endpoint) => {
   const BACKEND_API_BASE = getBackendApiBase();
@@ -21,6 +35,41 @@ const buildApiUrl = (endpoint) => {
 };
 
 const getApiUrl = () => buildApiUrl('/image'); // Backend image generation endpoint
+
+const fetchImageApiWithFallback = async (endpoint, config = {}) => {
+  const backendBase = getBackendApiBase();
+  const primaryUrl = buildApiUrl(endpoint);
+
+  try {
+    return await axios.get(primaryUrl, config);
+  } catch (error) {
+    if (backendBase === SAME_ORIGIN_API_BASE) {
+      throw error;
+    }
+
+    const fallbackUrl = buildApiUrlWithBase(SAME_ORIGIN_API_BASE, endpoint);
+    console.warn(`[imageService] Primary API request failed (${primaryUrl}). Retrying same-origin at ${fallbackUrl}`);
+    return axios.get(fallbackUrl, config);
+  }
+};
+
+export const listImageModelsApi = async () => {
+  try {
+    const response = await fetchImageApiWithFallback('/image/models', {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching image models:', error.response ? error.response.data : error.message);
+    if (error.response && error.response.data) {
+      throw error.response.data;
+    }
+    throw new Error(error.message || 'Network error or server unresponsive');
+  }
+};
 
 /**
  * Calls the backend API to generate an image based on the provided prompt.
