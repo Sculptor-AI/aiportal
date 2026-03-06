@@ -38,24 +38,25 @@ const AdminContainer = styled.div`
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1440px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 32px 72px;
+  padding: 48px 40px 80px;
 
   @media (max-width: 768px) {
-    padding: 24px 14px 48px;
+    padding: 32px 20px 60px;
   }
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 24px;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 40px;
 
   @media (max-width: 880px) {
     flex-direction: column;
+    gap: 20px;
   }
 `;
 
@@ -67,15 +68,21 @@ const HeaderLeft = styled.div`
 
 const Title = styled.h1`
   margin: 0;
-  font-size: 2rem;
-  letter-spacing: -0.02em;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   line-height: 1.1;
+
+  @media (max-width: 640px) {
+    font-size: 1.875rem;
+  }
 `;
 
 const Subtitle = styled.p`
   margin: 0;
-  opacity: 0.78;
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  letter-spacing: -0.01em;
 `;
 
 const HeaderButtons = styled.div`

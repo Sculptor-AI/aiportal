@@ -476,7 +476,12 @@ const StreamingMarkdownRenderer = ({
 
   // Helper to render LaTeX
   const renderLatex = (latex, displayMode) => (
-    <ReactKatex key={`latex-${Math.random()}`} displayMode={displayMode}>
+    <ReactKatex
+      key={`latex-${Math.random()}`}
+      displayMode={displayMode}
+      throwOnError={false}
+      strict={false}
+    >
       {latex}
     </ReactKatex>
   );

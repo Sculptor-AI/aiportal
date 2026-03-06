@@ -139,13 +139,16 @@ const CloseButton = styled.button`
   cursor: pointer;
   z-index: 20;
   transition: all 0.2s;
-  font-size: 24px;
-  line-height: 1;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 
   &:hover {
     background: ${props => props.theme.border};
-    transform: rotate(90deg);
+    transform: scale(1.05);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
@@ -179,6 +182,13 @@ const ToolButton = styled.button`
     background: ${props => props.$primary ? props.theme.primaryDark : props.theme.border};
   }
 `;
+
+const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="6" y1="6" x2="18" y2="18" />
+    <line x1="18" y1="6" x2="6" y2="18" />
+  </svg>
+);
 
 // --- Custom Node ---
 
@@ -391,7 +401,9 @@ const FlowchartModal = ({ isOpen, onClose, onSubmit, theme, aiFlowchartData }) =
               <Controls />
             </ReactFlow>
 
-            <CloseButton onClick={onClose}>×</CloseButton>
+            <CloseButton onClick={onClose} aria-label="Close flowchart">
+              <CloseIcon />
+            </CloseButton>
 
             <ToolbarOverlay>
               <ToolButton onClick={handleExport} $primary>{t('flowchart.toolbar.save')}</ToolButton>

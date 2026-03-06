@@ -15,7 +15,12 @@ import { downloadGeneratedVideo } from '../services/videoService';
 
 // Helper function to parse and render LaTeX
 const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
-  <ReactKatex key={`${keyPrefix}-${latex.length}-${displayMode}`} displayMode={displayMode}>
+  <ReactKatex
+    key={`${keyPrefix}-${latex.length}-${displayMode}`}
+    displayMode={displayMode}
+    throwOnError={false}
+    strict={false}
+  >
     {latex}
   </ReactKatex>
 );
@@ -111,46 +116,46 @@ const processMarkdown = (text, theme = {}) => {
   // Regex for inline math: $...$ (not starting/ending with space)
   const inlineRegex = /\$([^\s].*?[^\s])\$/g;
 
-  // First handle display math
-  let match;
-  while ((match = displayRegex.exec(text)) !== null) {
-    // Add text before
-    if (match.index > lastIndex) {
+  const pushInlineSegments = (segment) => {
+    let inlineLastIndex = 0;
+    let inlineMatch;
+
+    while ((inlineMatch = inlineRegex.exec(segment)) !== null) {
+      if (inlineMatch.index > inlineLastIndex) {
+        parts.push(
+          <span key={`text-${keyCounter++}`}>
+            {processMarkdownText(segment.substring(inlineLastIndex, inlineMatch.index), theme)}
+          </span>
+        );
+      }
+
+      parts.push(renderLatex(inlineMatch[1], false, `inline-${keyCounter++}`));
+      inlineLastIndex = inlineMatch.index + inlineMatch[0].length;
+    }
+
+    if (inlineLastIndex < segment.length) {
       parts.push(
         <span key={`text-${keyCounter++}`}>
-          {processMarkdownText(text.substring(lastIndex, match.index), theme)}
+          {processMarkdownText(segment.substring(inlineLastIndex), theme)}
         </span>
       );
     }
-    // Add LaTeX
+
+    inlineRegex.lastIndex = 0;
+  };
+
+  let match;
+  while ((match = displayRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      pushInlineSegments(text.substring(lastIndex, match.index));
+    }
+
     parts.push(renderLatex(match[1], true, `display-${keyCounter++}`));
     lastIndex = match.index + match[0].length;
   }
-  // Add remaining after display
-  let remaining = text.substring(lastIndex);
 
-  // Now handle inline in the remaining parts
-  lastIndex = 0;
-  while ((match = inlineRegex.exec(remaining)) !== null) {
-    // Add text before
-    if (match.index > lastIndex) {
-      parts.push(
-        <span key={`text-${keyCounter++}`}>
-          {processMarkdownText(remaining.substring(lastIndex, match.index), theme)}
-        </span>
-      );
-    }
-    // Add inline LaTeX
-    parts.push(renderLatex(match[1], false, `inline-${keyCounter++}`));
-    lastIndex = match.index + match[0].length;
-  }
-  // Add final remaining
-  if (lastIndex < remaining.length) {
-    parts.push(
-      <span key={`text-${keyCounter++}`}>
-        {processMarkdownText(remaining.substring(lastIndex), theme)}
-      </span>
-    );
+  if (lastIndex < text.length) {
+    pushInlineSegments(text.substring(lastIndex));
   }
 
   return <>{parts}</>;

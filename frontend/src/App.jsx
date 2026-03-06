@@ -1223,7 +1223,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
             onSubmit={(latex) => {
               // Handle equation submission - add to chat input
               if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
-                chatWindowRef.current.appendToInput(`$${latex}$$ `);
+                chatWindowRef.current.appendToInput(`$$\n${latex}\n$$ `);
               }
               setIsEquationEditorOpen(false);
             }}
@@ -1234,6 +1234,12 @@ const AppContent = ({ onSettingsLanguageChange }) => {
           <GraphingModal
             isOpen={isGraphingOpen}
             onClose={() => setIsGraphingOpen(false)}
+            onSubmit={(file) => {
+              if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                chatWindowRef.current.handleFileSelected(file);
+              }
+              setIsGraphingOpen(false);
+            }}
             theme={currentTheme}
             otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
           />

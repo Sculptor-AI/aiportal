@@ -192,13 +192,16 @@ const CloseButton = styled.button`
   cursor: pointer;
   z-index: 20;
   transition: all 0.2s;
-  font-size: 24px;
-  line-height: 1;
   backdrop-filter: blur(4px);
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
-    transform: rotate(90deg);
+    transform: scale(1.05);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
@@ -258,6 +261,13 @@ const FloatingGizmo = styled.div`
   color: white;
   font-size: 12px;
 `;
+
+const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="6" y1="6" x2="18" y2="18" />
+    <line x1="18" y1="6" x2="6" y2="18" />
+  </svg>
+);
 
 // --- 3D Components ---
 
@@ -425,7 +435,9 @@ const Sandbox3DModal = ({ isOpen, onClose, onSend, theme, initialScene }) => {
             <ToolButton onClick={deleteSelected} disabled={!selectedId} style={{ color: '#ff4d4d' }}>{t('sandbox3d.toolbar.delete')}</ToolButton>
           </ToolbarOverlay>
 
-          <CloseButton onClick={onClose}>×</CloseButton>
+          <CloseButton onClick={onClose} aria-label="Close 3D sandbox">
+            <CloseIcon />
+          </CloseButton>
         </MainContent>
 
         {/* Right Sidebar: Properties */}
