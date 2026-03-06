@@ -11,6 +11,7 @@ import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 import ChatInputArea from './ChatInputArea';
 import LiveModeUI from './LiveModeUI';
 import useMessageSender from '../hooks/useMessageSender';
+import { listImageModelsApi } from '../services/imageService';
 import { DEFAULT_CHAT_MODEL_ID, DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
 import {
   ChatWindowContainer,
@@ -446,16 +447,13 @@ const ChatWindow = forwardRef(({
   useEffect(() => {
     const fetchImageModels = async () => {
       try {
-        const response = await fetch('/api/image/models');
-        if (response.ok) {
-          const data = await response.json();
-          const models = data.models || [];
-          setAvailableImageModels(models);
-          // Set default model
-          const defaultModel = models.find(m => m.isDefault) || models[0];
-          if (defaultModel && !selectedImageModel) {
-            setSelectedImageModel(defaultModel);
-          }
+        const data = await listImageModelsApi();
+        const models = data.models || [];
+        setAvailableImageModels(models);
+
+        const defaultModel = models.find(m => m.isDefault) || models[0];
+        if (defaultModel && !selectedImageModel) {
+          setSelectedImageModel(defaultModel);
         }
       } catch (error) {
         console.error('Failed to fetch image models:', error);
@@ -602,7 +600,7 @@ const ChatWindow = forwardRef(({
       >
         <ChatTitleSection $sidebarCollapsed={$sidebarCollapsed}>
           <ModelSelectorsRow>
-            {!isDeepResearchChipActive && selectedModel !== 'instant' && (
+            {!isDeepResearchChipActive && selectedModel !== 'instant' && !isImagePromptMode && (
               <ModelSelector
                 selectedModel={selectedModel}
                 models={selectableModels}
@@ -611,13 +609,15 @@ const ChatWindow = forwardRef(({
                 theme={theme}
               />
             )}
-            <ImageModelSelector
-              availableModels={availableImageModels}
-              selectedModel={selectedImageModel}
-              onSelectModel={setSelectedImageModel}
-              isVisible={isImagePromptMode}
-              theme={theme}
-            />
+            {!isDeepResearchChipActive && (
+              <ImageModelSelector
+                availableModels={availableImageModels}
+                selectedModel={selectedImageModel}
+                onSelectModel={setSelectedImageModel}
+                isVisible={isImagePromptMode}
+                theme={theme}
+              />
+            )}
           </ModelSelectorsRow>
         </ChatTitleSection>
       </ChatHeader>
