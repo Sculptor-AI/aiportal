@@ -48,6 +48,8 @@ const MODEL_LOGOS = {
   // OpenAI models
   'openai/gpt-4o': '/images/openai-logo.png',
   'chatgpt-4o': '/images/openai-logo.png',
+  'sora-2': '/images/openai-logo.png',
+  'sora-2-pro': '/images/openai-logo.png',
 
   // Google models
   'google/gemini-2.5-pro-exp-03-25': '/images/gemini-logo.png',
@@ -146,7 +148,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
       // Check if the modelId contains any of our known provider names
       if (modelId?.includes('mercury')) {
         imageUrl = '/images/inception-logo.png';
-      } else if (modelId?.includes('openai') || modelId?.includes('gpt')) {
+      } else if (modelId?.includes('openai') || modelId?.includes('gpt') || modelId?.includes('sora')) {
         imageUrl = '/images/openai-logo.png';
       } else if (modelId?.includes('gemini')) {
         imageUrl = '/images/gemini-logo.png';
@@ -172,7 +174,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
           iconComponent = <ClaudeIcon />;
           iconBackground = model.gradient;
           break;
-        case modelId?.includes('gpt') || modelId?.includes('openai'):
+        case modelId?.includes('gpt') || modelId?.includes('openai') || modelId?.includes('sora'):
           iconComponent = <ChatGPTIcon />;
           iconBackground = model.gradient;
           break;
@@ -210,7 +212,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
             width: '100%',
             height: '100%',
             objectFit: 'contain',
-            filter: (modelId?.includes('gpt') || modelId?.includes('openai')) && theme.isDark ? 'invert(1) brightness(1.5)' : 'none'
+            filter: (modelId?.includes('gpt') || modelId?.includes('openai') || modelId?.includes('sora')) && theme.isDark ? 'invert(1) brightness(1.5)' : 'none'
           }}
         />
       ) : (

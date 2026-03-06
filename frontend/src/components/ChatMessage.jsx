@@ -11,6 +11,7 @@ import useSupportedLanguages from '../hooks/useSupportedLanguages';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
 import { useTranslation } from '../contexts/TranslationContext';
+import { downloadGeneratedVideo } from '../services/videoService';
 
 // Helper function to parse and render LaTeX
 const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
@@ -2232,7 +2233,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Handle generated video message type
   if (type === 'generated-video') {
-    const { videoUrl } = message;
+    const { videoUrl, videoId } = message;
     let generatedVideoContent;
     if (status === 'loading') {
       generatedVideoContent = (
@@ -2241,7 +2242,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           {t('chat.video.generating', { prompt: imagePrompt || t('chat.labels.yourPrompt') })}
         </ThinkingContainer>
       );
-    } else if (status === 'completed' && videoUrl) {
+    } else if (status === 'completed' && (videoUrl || videoId)) {
       generatedVideoContent = (
         <>
           {imagePrompt && (
@@ -2249,7 +2250,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               {t('chat.labels.prompt')}: "{imagePrompt}"
             </p>
           )}
-          <MessageVideo controls src={videoUrl} style={{ maxHeight: '400px' }} />
+          {videoUrl ? (
+            <MessageVideo controls src={videoUrl} style={{ maxHeight: '400px' }} />
+          ) : (
+            <p style={{ margin: 0, opacity: 0.85 }}>
+              {t('chat.video.previewUnavailable', 'Preview unavailable. Download the video to view it.')}
+            </p>
+          )}
         </>
       );
     } else if (status === 'error') {
@@ -2286,15 +2293,16 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
               <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
-                {status === 'completed' && videoUrl && (
+                {status === 'completed' && videoId && (
                   <>
                     <div style={{ flexGrow: 1 }}></div>
-                    <ActionButton onClick={() => navigator.clipboard.writeText(videoUrl).then(() => console.log('Video URL copied'))}>
+                    <ActionButton onClick={() => downloadGeneratedVideo(videoId).catch((error) => console.error('Video download failed', error))}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
                       </svg>
-                      {t('chat.actions.copyUrl')}
+                      {t('chat.actions.download', 'Download')}
                     </ActionButton>
                   </>
                 )}
@@ -2599,4 +2607,3 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 };
 
 export default ChatMessage;
-

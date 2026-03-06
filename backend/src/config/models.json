@@ -1,16 +1,27 @@
 {
   "_description": "Centralized model configuration. Update this file when models change.",
-  "_lastUpdated": "2026-03-04",
+  "_lastUpdated": "2026-03-06",
 
   "default": "chatgpt-5.3-instant",
 
   "chat": {
     "openai": {
       "models": {
+        "chatgpt-5.4-thinking": "gpt-5.4",
         "chatgpt-5.3-instant": "gpt-5.3-chat-latest",
         "chatgpt-5.2-reasoning": "gpt-5.2"
       },
       "modelCapabilities": {
+        "chatgpt-5.4-thinking": {
+          "reasoning_effort": true,
+          "reasoning_effort_levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high"
+          ],
+          "reasoning_effort_default": "medium"
+        },
         "chatgpt-5.2-reasoning": {
           "reasoning_effort": true,
           "reasoning_effort_levels": [

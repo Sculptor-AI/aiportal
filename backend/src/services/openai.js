@@ -17,6 +17,29 @@
 import { resolveModel, getImageModels, getDefaultImageModel } from '../config/index.js';
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
+const OPENAI_VIDEO_DEFAULT_MODEL = 'sora-2';
+const SORA_SIZE_BY_ASPECT_RATIO = Object.freeze({
+  '16:9': '1280x720',
+  '9:16': '720x1280',
+});
+
+async function extractOpenAIError(response) {
+  try {
+    const payload = await response.json();
+    return payload?.error?.message || payload?.message || `OpenAI API returned status ${response.status}`;
+  } catch {
+    try {
+      const text = await response.text();
+      return text || `OpenAI API returned status ${response.status}`;
+    } catch {
+      return `OpenAI API returned status ${response.status}`;
+    }
+  }
+}
+
+function mapAspectRatioToSoraSize(aspectRatio = '16:9') {
+  return SORA_SIZE_BY_ASPECT_RATIO[aspectRatio] || null;
+}
 
 /**
  * Get OpenAI headers
@@ -73,7 +96,7 @@ function convertContentToOpenAI(content) {
  * Build OpenAI chat request body
  */
 function buildOpenAIBody(body) {
-  const modelId = body.model?.replace('openai/', '') || 'chatgpt-5.3-instant';
+  const modelId = body.model?.replace('openai/', '') || 'chatgpt-5.4-thinking';
   const model = resolveModel('openai', modelId);
 
   const openAIBody = {
@@ -125,9 +148,9 @@ function buildOpenAIBody(body) {
     };
   }
 
-  // Reasoning effort (for reasoning-capable models, e.g. GPT-5.2 reasoning)
+  // Reasoning effort (for reasoning-capable models, e.g. GPT-5.4)
   if (body.reasoning_effort) {
-    openAIBody.reasoning_effort = body.reasoning_effort; // model-dependent: e.g. 'low'|'medium'|'high'|'xhigh'
+    openAIBody.reasoning_effort = body.reasoning_effort; // model-dependent: e.g. 'minimal'|'low'|'medium'|'high'
   }
 
   // Stream options
@@ -315,6 +338,104 @@ export async function editImageWithDALLE(image, prompt, apiKey, options = {}) {
       }))
     };
 
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Generate a video with OpenAI Sora.
+ */
+export async function generateVideoWithSora(prompt, apiKey, options = {}) {
+  const model = options.model || OPENAI_VIDEO_DEFAULT_MODEL;
+  const size = mapAspectRatioToSoraSize(options.aspectRatio);
+
+  if (!size) {
+    return {
+      success: false,
+      error: 'Unsupported aspect ratio. Sora currently supports 16:9 and 9:16.'
+    };
+  }
+
+  const formData = new FormData();
+  formData.append('model', model);
+  formData.append('prompt', prompt);
+  formData.append('size', size);
+  formData.append('seconds', String(options.seconds || 8));
+
+  try {
+    const response = await fetch(`${OPENAI_BASE_URL}/videos`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: await extractOpenAIError(response)
+      };
+    }
+
+    const result = await response.json();
+    const videoId = result?.id;
+
+    if (!videoId) {
+      return {
+        success: false,
+        error: 'Unexpected OpenAI response: missing video ID.'
+      };
+    }
+
+    return {
+      success: true,
+      videoId,
+      model: result?.model || model,
+      status: result?.status || 'queued'
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Check the status of a Sora video generation job.
+ */
+export async function getSoraVideoStatus(videoId, apiKey) {
+  try {
+    const response = await fetch(`${OPENAI_BASE_URL}/videos/${encodeURIComponent(videoId)}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      }
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: await extractOpenAIError(response)
+      };
+    }
+
+    const result = await response.json();
+    const status = result?.status || 'unknown';
+    const done = ['completed', 'failed', 'cancelled', 'canceled'].includes(status);
+    const errorMessage =
+      result?.error?.message ||
+      result?.last_error?.message ||
+      result?.failure_reason ||
+      null;
+
+    return {
+      success: true,
+      done,
+      status,
+      videoId: result?.id || videoId,
+      model: result?.model || OPENAI_VIDEO_DEFAULT_MODEL,
+      error: errorMessage
+    };
   } catch (error) {
     return { success: false, error: error.message };
   }

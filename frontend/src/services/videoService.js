@@ -4,26 +4,31 @@ import { getBackendApiBase } from './backendConfig';
 
 const getVideoApiUrl = () => `${getBackendApiBase()}/video`;
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const resolveVideoDownloadUrl = (videoRef) => {
+  if (!videoRef) return '';
+  if (videoRef.includes('/download?')) {
+    return videoRef;
+  }
+  return `${getVideoApiUrl()}/download?id=${encodeURIComponent(videoRef)}`;
+};
+
 /**
- * Generate a video using Veo 2
- * @param {string} prompt - Text prompt
- * @param {object} options - Configuration options
- * @param {string} options.aspectRatio - '16:9', '9:16', '1:1', '4:3'
- * @param {string} options.negativePrompt - Optional negative prompt
+ * Start a Sora video generation job.
  */
 export const generateVideo = async (prompt, options = {}) => {
   try {
     const response = await axios.post(`${getVideoApiUrl()}/generate`, {
       prompt,
       aspectRatio: options.aspectRatio || '16:9',
-      negativePrompt: options.negativePrompt
     }, {
       headers: {
         ...getAuthHeaders()
       }
     });
-    
-    return response.data; // { success: true, operationName: '...' }
+
+    return response.data; // { success: true, videoId: 'video_...' }
   } catch (error) {
     console.error('Error generating video:', error);
     throw error.response?.data?.error || error.message || 'Failed to start video generation';
@@ -31,20 +36,18 @@ export const generateVideo = async (prompt, options = {}) => {
 };
 
 /**
- * Poll for video generation status
- * @param {string} operationName - The operation ID returned from generateVideo
+ * Poll for video generation status.
  */
-export const pollVideoStatus = async (operationName) => {
+export const pollVideoStatus = async (videoId) => {
   try {
-    // Pass name via query param to handle special chars/slashes safely
     const response = await axios.get(`${getVideoApiUrl()}/status`, {
-      params: { name: operationName },
+      params: { id: videoId },
       headers: {
         ...getAuthHeaders()
       }
     });
-    
-    return response.data; // { done: boolean, videoUri: string, ... }
+
+    return response.data;
   } catch (error) {
     console.error('Error polling video status:', error);
     throw error.response?.data?.error || error.message || 'Failed to check status';
@@ -52,22 +55,38 @@ export const pollVideoStatus = async (operationName) => {
 };
 
 /**
- * Get the download URL for a video (proxied or direct)
- * @param {string} videoUri - The remote video URI
+ * Wait for a Sora job to reach a terminal state.
  */
-export const getVideoDownloadUrl = (videoUri) => {
-  if (!videoUri) return '';
-  // Use proxy endpoint to avoid CORS issues with Google storage
-    return `${getVideoApiUrl()}/download?url=${encodeURIComponent(videoUri)}`;
+export const waitForVideoCompletion = async (videoId, options = {}) => {
+  const intervalMs = options.intervalMs || 5000;
+  const maxAttempts = options.maxAttempts || 120;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const status = await pollVideoStatus(videoId);
+    options.onPoll?.(status);
+
+    if (status.done) {
+      return status;
+    }
+
+    await sleep(intervalMs);
+  }
+
+  throw new Error('Video generation timed out');
 };
 
 /**
- * Download a generated video using authenticated request headers.
- * @param {string} downloadUrl - Download URL returned by getVideoDownloadUrl().
+ * Get the authenticated backend download URL for a video.
  */
-export const downloadGeneratedVideo = async (downloadUrl) => {
+export const getVideoDownloadUrl = (videoRef) => resolveVideoDownloadUrl(videoRef);
+
+/**
+ * Fetch the generated video as a Blob using authenticated request headers.
+ */
+export const fetchGeneratedVideoBlob = async (videoRef) => {
+  const downloadUrl = resolveVideoDownloadUrl(videoRef);
   if (!downloadUrl) {
-    throw new Error('Download URL is required');
+    throw new Error('Video reference is required');
   }
 
   const response = await fetch(downloadUrl, {
@@ -82,12 +101,27 @@ export const downloadGeneratedVideo = async (downloadUrl) => {
       const payload = await response.json();
       errorMessage = payload?.error || errorMessage;
     } catch {
-      // Ignore JSON parse errors and use generic message
+      // Ignore JSON parse failures and fall back to the generic message.
     }
     throw new Error(errorMessage);
   }
 
-  const blob = await response.blob();
+  return response.blob();
+};
+
+/**
+ * Create a temporary object URL for authenticated video playback.
+ */
+export const createVideoObjectUrl = async (videoRef) => {
+  const blob = await fetchGeneratedVideoBlob(videoRef);
+  return URL.createObjectURL(blob);
+};
+
+/**
+ * Download a generated video using authenticated request headers.
+ */
+export const downloadGeneratedVideo = async (videoRef) => {
+  const blob = await fetchGeneratedVideoBlob(videoRef);
   const objectUrl = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = objectUrl;
@@ -97,4 +131,3 @@ export const downloadGeneratedVideo = async (downloadUrl) => {
   link.remove();
   URL.revokeObjectURL(objectUrl);
 };
-

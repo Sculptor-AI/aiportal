@@ -40,7 +40,8 @@ Open the `.env` file and add the following variables. Replace the placeholder va
 
 ```
 # Frontend Environment Variables
-VITE_BACKEND_API_URL=http://localhost:8787 # Default for `wrangler dev`
+VITE_REMOTE_BACKEND_URL=https://api.sculptorai.org
+VITE_LOCAL_BACKEND_PROXY_TARGET=http://localhost:8787 # Default for `wrangler dev`
 
 # Backend/Wrangler Environment Variables
 # These are also used by `wrangler dev` from the same .env file
@@ -67,7 +68,7 @@ The backend is a Cloudflare Worker. To start the local development server for th
 yarn wrangler:dev
 ```
 
-This will start the worker, and by default, it will be available at `http://localhost:8787`. The `VITE_BACKEND_API_URL` in your `.env` file should point to this address.
+This will start the worker, and by default, it will be available at `http://localhost:8787`. The `VITE_LOCAL_BACKEND_PROXY_TARGET` in your `.env` file should point to this address if you want the frontend's local proxy mode to hit your local worker.
 
 ### 2. Run the Frontend (React App)
 

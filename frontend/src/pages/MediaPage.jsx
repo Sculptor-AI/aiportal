@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
-import { generateVideo, pollVideoStatus, getVideoDownloadUrl, downloadGeneratedVideo } from '../services/videoService';
+import { createVideoObjectUrl, downloadGeneratedVideo, generateVideo, waitForVideoCompletion } from '../services/videoService';
 import { useToast } from '../contexts/ToastContext';
 
 const fadeIn = keyframes`
@@ -485,8 +485,6 @@ const MediaPage = ({ collapsed }) => {
   const [prompt, setPrompt] = useState('');
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeOperation, setActiveOperation] = useState(null);
-  
   const [videos, setVideos] = useState(() => {
     try {
       const saved = localStorage.getItem('generated_videos');
@@ -496,51 +494,128 @@ const MediaPage = ({ collapsed }) => {
       return [];
     }
   });
+  const [previewUrls, setPreviewUrls] = useState({});
+  const previewUrlsRef = useRef({});
+  const activeJobsRef = useRef(new Set());
 
   useEffect(() => {
     localStorage.setItem('generated_videos', JSON.stringify(videos));
   }, [videos]);
 
   useEffect(() => {
-    let pollInterval;
+    return () => {
+      Object.values(previewUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+      previewUrlsRef.current = {};
+    };
+  }, []);
 
-    if (activeOperation) {
-      const checkStatus = async () => {
-        try {
-          const status = await pollVideoStatus(activeOperation.id);
-          
-          if (status.done) {
-            clearInterval(pollInterval);
-            setIsGenerating(false);
-            setActiveOperation(null);
-            
-            if (status.error) {
-              toast.showErrorToast('Generation Failed', status.error);
-              updateVideoStatus(activeOperation.localId, 'failed', null);
-            } else {
-              toast.showSuccessToast('Video Ready', 'Your video has been generated successfully!');
-              const downloadUrl = getVideoDownloadUrl(status.videoUri);
-              updateVideoStatus(activeOperation.localId, 'completed', downloadUrl);
-            }
-          }
-        } catch (error) {
-          console.error('Polling error:', error);
-        }
-      };
+  const updateVideo = useCallback((localId, updates) => {
+    setVideos((previousVideos) => previousVideos.map((video) =>
+      video.id === localId
+        ? { ...video, ...updates, updatedAt: new Date().toISOString() }
+        : video
+    ));
+  }, []);
 
-      pollInterval = setInterval(checkStatus, 5000);
-      checkStatus();
+  const setPreviewUrl = useCallback((localId, objectUrl) => {
+    const nextPreviewUrls = { ...previewUrlsRef.current };
+    const previousUrl = nextPreviewUrls[localId];
+
+    if (previousUrl && previousUrl !== objectUrl) {
+      URL.revokeObjectURL(previousUrl);
     }
 
-    return () => clearInterval(pollInterval);
-  }, [activeOperation, toast]);
+    if (objectUrl) {
+      nextPreviewUrls[localId] = objectUrl;
+    } else {
+      delete nextPreviewUrls[localId];
+    }
 
-  const updateVideoStatus = (localId, status, url) => {
-    setVideos(prev => prev.map(v => 
-      v.id === localId 
-        ? { ...v, status, url: url || v.url, updatedAt: new Date().toISOString() } 
-        : v
-    ));
+    previewUrlsRef.current = nextPreviewUrls;
+    setPreviewUrls(nextPreviewUrls);
+  }, []);
+
+  const hydrateVideoPreview = useCallback(async (localId, videoRef) => {
+    if (!videoRef || previewUrlsRef.current[localId]) {
+      return;
+    }
+
+    try {
+      const objectUrl = await createVideoObjectUrl(videoRef);
+      setPreviewUrl(localId, objectUrl);
+    } catch (error) {
+      console.error('Error creating video preview:', error);
+    }
+  }, [setPreviewUrl]);
+
+  const monitorVideoJob = useCallback(async (localId, videoId, options = {}) => {
+    if (!videoId || activeJobsRef.current.has(localId)) {
+      return;
+    }
+
+    activeJobsRef.current.add(localId);
+
+    try {
+      const status = await waitForVideoCompletion(videoId);
+      const failedStatuses = new Set(['failed', 'cancelled', 'canceled']);
+
+      if (status?.error || failedStatuses.has(status?.status)) {
+        updateVideo(localId, { status: 'failed', videoId });
+        if (options.notify !== false) {
+          toast.showErrorToast('Generation Failed', status?.error || 'Video generation failed.');
+        }
+        return;
+      }
+
+      updateVideo(localId, { status: 'completed', videoId });
+
+      try {
+        const objectUrl = await createVideoObjectUrl(videoId);
+        setPreviewUrl(localId, objectUrl);
+      } catch (error) {
+        console.error('Preview fetch error:', error);
+      }
+
+      if (options.notify !== false) {
+        toast.showSuccessToast('Video Ready', 'Your Sora video has been generated successfully!');
+      }
+    } catch (error) {
+      console.error('Video monitoring error:', error);
+      updateVideo(localId, { status: 'failed', videoId });
+      if (options.notify !== false) {
+        toast.showErrorToast('Generation Failed', error.message || 'Unable to finish video generation.');
+      }
+    } finally {
+      activeJobsRef.current.delete(localId);
+    }
+  }, [setPreviewUrl, toast, updateVideo]);
+
+  useEffect(() => {
+    videos.forEach((video) => {
+      if (video.status === 'completed' && video.videoId) {
+        hydrateVideoPreview(video.id, video.videoId);
+      }
+
+      if (video.status === 'generating' && video.videoId) {
+        monitorVideoJob(video.id, video.videoId, { notify: false });
+      }
+    });
+  }, [videos, hydrateVideoPreview, monitorVideoJob]);
+
+  const createStoredVideo = (localId, nextPrompt, nextAspectRatio) => ({
+    id: localId,
+    prompt: nextPrompt,
+    aspectRatio: nextAspectRatio,
+    status: 'generating',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    videoId: null,
+    url: null,
+    model: 'sora-2'
+  });
+
+  const updateVideoStatus = (localId, status, extra = {}) => {
+    updateVideo(localId, { status, ...extra });
   };
 
   const handleGenerate = async () => {
@@ -549,51 +624,45 @@ const MediaPage = ({ collapsed }) => {
     setIsGenerating(true);
     const localId = Date.now().toString();
     
-    const newVideo = {
-      id: localId,
-      prompt,
-      aspectRatio,
-      status: 'generating',
-      createdAt: new Date().toISOString(),
-      url: null
-    };
+    const newVideo = createStoredVideo(localId, prompt, aspectRatio);
     
     setVideos(prev => [newVideo, ...prev]);
 
     try {
       const result = await generateVideo(prompt, { aspectRatio });
 
-      if (result.success && result.operationName) {
-        setActiveOperation({
-          id: result.operationName,
-          localId
-        });
-        toast.showInfoToast('Generation Started', 'Your video is being created. This may take a few minutes.');
+      if (result.success && result.videoId) {
+        updateVideoStatus(localId, 'generating', { videoId: result.videoId });
+        toast.showInfoToast('Generation Started', 'Sora is creating your video. This may take a few minutes.');
+        await monitorVideoJob(localId, result.videoId);
       } else {
         throw new Error(result.error || 'Failed to start generation');
       }
     } catch (error) {
       console.error('Error generating video:', error);
-      setIsGenerating(false);
-      updateVideoStatus(localId, 'failed', null);
+      updateVideoStatus(localId, 'failed');
       toast.showErrorToast('Error', typeof error === 'string' ? error : 'Failed to generate video. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   const handleDelete = (id) => {
+    setPreviewUrl(id, null);
     setVideos(prev => prev.filter(v => v.id !== id));
   };
 
   const handleClearAll = () => {
     if (confirm('Are you sure you want to delete all videos?')) {
+      Object.keys(previewUrlsRef.current).forEach((id) => setPreviewUrl(id, null));
       setVideos([]);
     }
   };
 
   const handleDownload = async (video) => {
-    if (video.url) {
+    if (video.videoId || video.url) {
       try {
-        await downloadGeneratedVideo(video.url);
+        await downloadGeneratedVideo(video.videoId || video.url);
       } catch (error) {
         toast.showErrorToast('Download Failed', error.message || 'Unable to download video');
       }
@@ -612,7 +681,7 @@ const MediaPage = ({ collapsed }) => {
           <TitleSection>
             <PageTitle>
               Media Studio
-              <BetaTag>Veo 2</BetaTag>
+              <BetaTag>Sora 2</BetaTag>
             </PageTitle>
           </TitleSection>
         </Header>
@@ -622,7 +691,7 @@ const MediaPage = ({ collapsed }) => {
             <PanelSection>
               <Label>Prompt</Label>
               <TextArea 
-                placeholder="Describe your video in detail..."
+                placeholder="Describe the video you want Sora to generate..."
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 disabled={isGenerating}
@@ -645,14 +714,13 @@ const MediaPage = ({ collapsed }) => {
               >
                 <option value="16:9">16:9 Landscape</option>
                 <option value="9:16">9:16 Portrait</option>
-                <option value="1:1">1:1 Square</option>
               </Select>
             </PanelSection>
             
             <PanelSection>
               <Label>Duration</Label>
               <Select disabled>
-                <option>5-8 seconds (Auto)</option>
+                <option>8 seconds</option>
               </Select>
             </PanelSection>
 
@@ -682,11 +750,20 @@ const MediaPage = ({ collapsed }) => {
                 </GalleryHeader>
 
                 <VideoGrid>
-                  {videos.map(video => (
+                  {videos.map(video => {
+                    const previewUrl = previewUrls[video.id] || video.url || null;
+
+                    return (
                     <VideoCard key={video.id}>
                       <VideoPreview>
-                        {video.status === 'completed' && video.url ? (
-                          <VideoPlayer src={video.url} controls />
+                        {video.status === 'completed' ? (
+                          previewUrl ? (
+                            <VideoPlayer src={previewUrl} controls />
+                          ) : (
+                            <StatusMessage>
+                              Preview unavailable. Download to view.
+                            </StatusMessage>
+                          )
                         ) : (
                           <StatusMessage>
                             {video.status === 'failed' ? (
@@ -694,7 +771,7 @@ const MediaPage = ({ collapsed }) => {
                             ) : (
                               <>
                                 <Spinner />
-                                Processing...
+                                Rendering with Sora...
                               </>
                             )}
                           </StatusMessage>
@@ -709,7 +786,7 @@ const MediaPage = ({ collapsed }) => {
                             {video.status === 'generating' ? 'Processing' : video.status}
                           </StatusBadge>
                           <CardActions>
-                            {video.status === 'completed' && (
+                            {video.status === 'completed' && (video.videoId || video.url) && (
                               <ActionBtn onClick={() => handleDownload(video)} title="Download">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -728,7 +805,8 @@ const MediaPage = ({ collapsed }) => {
                         </CardFooter>
                       </CardContent>
                     </VideoCard>
-                  ))}
+                    );
+                  })}
                 </VideoGrid>
               </>
             ) : (
@@ -737,9 +815,9 @@ const MediaPage = ({ collapsed }) => {
                   <polygon points="23 7 16 12 23 17 23 7" />
                   <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                 </svg>
-                <EmptyTitle>No videos yet</EmptyTitle>
-                <EmptyDescription>
-                  Enter a prompt in the left panel and click Generate to create your first video.
+              <EmptyTitle>No videos yet</EmptyTitle>
+              <EmptyDescription>
+                  Enter a prompt in the left panel and click Generate to create your first Sora video.
                 </EmptyDescription>
               </EmptyState>
             )}

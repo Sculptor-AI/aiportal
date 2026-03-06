@@ -1,6 +1,8 @@
 const SAME_ORIGIN_API_BASE = '/api';
 const BACKEND_MODE_STORAGE_KEY = 'sculptorBackendMode';
 const DEFAULT_USE_REAL_BACKEND = true;
+const DEFAULT_REMOTE_BACKEND_URL = 'https://api.sculptorai.org';
+const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0']);
 
 const cleanBaseUrl = (rawBaseUrl) => {
   let base = (rawBaseUrl || '').trim().replace(/\/+$/, '');
@@ -12,7 +14,30 @@ const cleanBaseUrl = (rawBaseUrl) => {
   return base;
 };
 
-const getRemoteRoot = () => cleanBaseUrl(import.meta.env.VITE_BACKEND_API_URL || '');
+const isLocalUrl = (rawUrl) => {
+  if (!rawUrl) return false;
+
+  try {
+    const { hostname } = new URL(rawUrl);
+    return LOCALHOST_HOSTNAMES.has(hostname);
+  } catch (error) {
+    return false;
+  }
+};
+
+const getRemoteRoot = () => {
+  const configuredRemoteRoot = cleanBaseUrl(import.meta.env.VITE_REMOTE_BACKEND_URL || '');
+  if (configuredRemoteRoot) {
+    return configuredRemoteRoot;
+  }
+
+  const legacyBackendRoot = cleanBaseUrl(import.meta.env.VITE_BACKEND_API_URL || '');
+  if (legacyBackendRoot && !isLocalUrl(legacyBackendRoot)) {
+    return legacyBackendRoot;
+  }
+
+  return DEFAULT_REMOTE_BACKEND_URL;
+};
 
 const readStoredMode = () => {
   try {

@@ -18,7 +18,7 @@ export function getModelsConfig() {
  * Get the global default model
  */
 export function getGlobalDefault() {
-  return modelsConfig.default || 'chatgpt-5.3-instant';
+  return modelsConfig.default || 'chatgpt-5.4-thinking';
 }
 
 /**

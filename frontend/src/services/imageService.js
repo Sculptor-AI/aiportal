@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getAuthHeaders } from './authService';
 import { getBackendApiBase } from './backendConfig';
+import { createVideoObjectUrl, generateVideo, waitForVideoCompletion } from './videoService';
 
 // Remove duplicated /api in endpoint paths
 const buildApiUrl = (endpoint) => {
@@ -20,7 +21,6 @@ const buildApiUrl = (endpoint) => {
 };
 
 const getApiUrl = () => buildApiUrl('/image'); // Backend image generation endpoint
-const getVideoApiUrl = () => buildApiUrl('/video'); // Backend video generation endpoint
 
 /**
  * Calls the backend API to generate an image based on the provided prompt.
@@ -60,22 +60,27 @@ export const generateImageApi = async (prompt, model, history = []) => {
 };
 
 /**
- * Calls the backend API to generate a video based on the provided prompt.
+ * Starts a Sora video generation job and resolves once the preview is ready.
  * @param {string} prompt - The text prompt for video generation.
- * @returns {Promise<object>} The API response data (e.g., { videoData: 'base64...' } or { videoUrl: '...' })
- * @throws {Error} If the API call fails or returns an error.
+ * @returns {Promise<object>} { videoId, videoUrl }
  */
 export const generateVideoApi = async (prompt) => {
   try {
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeaders(),
-      },
-    };
+    const job = await generateVideo(prompt);
+    if (!job?.success || !job?.videoId) {
+      throw new Error(job?.error || 'No video ID returned from API');
+    }
 
-    const response = await axios.post(`${getVideoApiUrl()}/generate`, { prompt }, config);
-    return response.data; // Expects { videoData: "..." } or { videoUrl: "..." }
+    const status = await waitForVideoCompletion(job.videoId);
+    if (status?.error || status?.status === 'failed' || status?.status === 'cancelled' || status?.status === 'canceled') {
+      throw new Error(status?.error || 'Video generation failed');
+    }
+
+    const videoUrl = await createVideoObjectUrl(job.videoId);
+    return {
+      videoId: job.videoId,
+      videoUrl
+    };
   } catch (error) {
     console.error('Error calling generate video API:', error.response ? error.response.data : error.message);
     if (error.response && error.response.data) {

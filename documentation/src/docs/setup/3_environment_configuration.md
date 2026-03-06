@@ -23,10 +23,12 @@ Open the newly created `.env` file in a text editor and add the following variab
 These variables are used by the React frontend application. Keep frontend variables non-sensitive.
 
 ```
-VITE_BACKEND_API_URL=http://localhost:8787
+VITE_REMOTE_BACKEND_URL=https://api.sculptorai.org
+VITE_LOCAL_BACKEND_PROXY_TARGET=http://localhost:8787
 ```
 
-*   `VITE_BACKEND_API_URL`: The URL where the backend server is running. The default is `http://localhost:8787`.
+*   `VITE_REMOTE_BACKEND_URL`: The hosted backend used when the frontend is set to "Use real backend". The default is `https://api.sculptorai.org`.
+*   `VITE_LOCAL_BACKEND_PROXY_TARGET`: The local backend used by the Vite `/api` proxy when the frontend is set to "Use local proxy". The default is `http://localhost:8787`.
 *   Do **not** store provider API keys in `VITE_*` variables. They are exposed to all users.
 
 ### Backend Variables
@@ -44,7 +46,7 @@ ANTHROPIC_API_KEY=sk-ant-your-key
 OPENAI_API_KEY=sk-your-openai-key
 ```
 
-*   `PORT`: The port on which the backend server will run. This should match the port in `VITE_BACKEND_API_URL`.
+*   `PORT`: The port on which the backend server will run. This should match the port in `VITE_LOCAL_BACKEND_PROXY_TARGET` when you are using the local proxy.
 *   `NODE_ENV`: The application environment. Set to `development` for local development.
 *   `JWT_SECRET`: A secret key used for signing JSON Web Tokens (JWTs) for authentication. You should use a long, random string for this.
 *   `DATABASE_PATH`: The path to the SQLite database file.

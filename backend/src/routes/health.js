@@ -55,6 +55,13 @@ health.get('/models/config', requireAuth, requireAdmin, (c) => {
  */
 health.get('/capabilities', (c) => {
   const deepResearch = getDeepResearchConfig(c.env || {});
+  const chatModels = listChatModels();
+  const openAIWebSearchModels = chatModels
+    .filter((model) => model.provider === 'openai' && model.capabilities?.web_search)
+    .map((model) => model.id);
+  const reasoningEffortModels = chatModels
+    .filter((model) => model.capabilities?.reasoning_effort)
+    .map((model) => model.id);
 
   return c.json({
     capabilities: {
@@ -86,7 +93,7 @@ health.get('/capabilities', (c) => {
       web_search: {
         google: ['gemini'],
         anthropic: ['claude-sonnet-4.6'],
-        openai: ['chatgpt-5.3-instant', 'chatgpt-5.2-reasoning'],
+        openai: openAIWebSearchModels,
         openrouter: true
       },
 
@@ -98,14 +105,7 @@ health.get('/capabilities', (c) => {
       // Reasoning/Thinking
       reasoning: {
         display_thinking: ['gemini', 'anthropic'],
-        reasoning_effort: [
-          'chatgpt-5.2-reasoning',
-          'claude-opus-4.6',
-          'claude-sonnet-4.6',
-          'gemini-3.1-pro',
-          'gemini-3-flash',
-          'gemini-3.1-flash-lite'
-        ]
+        reasoning_effort: reasoningEffortModels
       },
 
       // Structured outputs

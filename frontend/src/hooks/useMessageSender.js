@@ -168,9 +168,10 @@ const useMessageSender = ({
         prompt: prompt,
         status: 'loading',
         videoUrl: null,
+        videoId: null,
         content: '',
         timestamp: new Date().toISOString(),
-        modelId: 'video-generator',
+        modelId: 'sora-2',
       };
       addMessage(chat.id, videoPlaceholderMessage);
       
@@ -179,6 +180,7 @@ const useMessageSender = ({
       try {
         const response = await generateVideoApi(prompt);
         const videoUrl = response.videoData || response.videoUrl;
+        const videoId = response.videoId || null;
         
         if (!videoUrl) {
           throw new Error('No video URL returned from API');
@@ -186,7 +188,8 @@ const useMessageSender = ({
         
         updateMessage(chat.id, videoPlaceholderId, { 
           status: 'completed', 
-          videoUrl: videoUrl, 
+          videoUrl: videoUrl,
+          videoId,
           isLoading: false 
         });
         

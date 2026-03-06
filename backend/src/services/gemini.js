@@ -12,7 +12,7 @@
  * - URL-based media fetching
  * - System instructions
  * - Safety settings
- * - Video generation (Veo)
+ * - Legacy Google video generation
  */
 
 import { resolveModel, getImageModelFallbacks } from '../config/index.js';
@@ -835,16 +835,16 @@ export async function generateImageWithImagen(prompt, apiKey, options = {}) {
 }
 
 /**
- * Generate video using Veo 2 (Gemini API)
+ * Generate video using the legacy Google video endpoint (Gemini API)
  * 
  * Uses the long-running predictLongRunning endpoint
- * Note: Veo 2 requires specific API access and may not be available to all users
+ * Note: This endpoint requires specific Google API access and may not be available to all users.
  */
 export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
-  // Use the specific model ID for Veo 2
+  // Preserve the original model identifier for compatibility with legacy Google video jobs.
   const model = 'veo-2.0-generate-001';
   
-  console.log(`[Veo Video] Generating with model: ${model}`);
+  console.log(`[Google Video Legacy] Generating with model: ${model}`);
 
   const requestBody = {
     instances: [{ 
@@ -858,7 +858,7 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
 
   try {
     const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
-    console.log(`[Veo Video] URL: ${url.replace(apiKey, 'API_KEY_HIDDEN')}`);
+    console.log(`[Google Video Legacy] URL: ${url.replace(apiKey, 'API_KEY_HIDDEN')}`);
     
     const response = await fetch(url, {
       method: 'POST',
@@ -869,15 +869,15 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
     const result = await response.json();
     
     if (!response.ok) {
-      console.error(`[Veo Video] API Error (${response.status})`);
+      console.error(`[Google Video Legacy] API Error (${response.status})`);
       
       // Provide more helpful error messages
       let errorMessage = result.error?.message || `API returned status ${response.status}`;
       
       if (response.status === 403) {
-        errorMessage = 'Access denied. Veo 2 video generation requires specific API access. Please check your API key permissions.';
+        errorMessage = 'Access denied. This legacy Google video endpoint requires specific API access. Please check your API key permissions.';
       } else if (response.status === 404) {
-        errorMessage = 'Veo 2 model not found. This model may not be available in your region or requires special access.';
+        errorMessage = 'Legacy Google video model not found. This model may not be available in your region or may require special access.';
       } else if (response.status === 429) {
         errorMessage = 'Rate limit exceeded. Please wait a moment and try again.';
       }
@@ -890,30 +890,30 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
     
     // Returns an operation name for polling
     if (result.name) {
-      console.log(`[Veo Video] Operation started successfully: ${result.name}`);
+      console.log(`[Google Video Legacy] Operation started successfully: ${result.name}`);
       return {
         success: true,
         operationName: result.name,
         model
       };
     } else {
-      console.error('[Veo Video] Unexpected response structure');
+      console.error('[Google Video Legacy] Unexpected response structure');
       return { success: false, error: 'Unexpected API response - no operation name returned' };
     }
   } catch (e) {
-    console.error(`[Veo Video] Exception:`, e);
+    console.error(`[Google Video Legacy] Exception:`, e);
     return { success: false, error: `Network error: ${e.message}` };
   }
 }
 
 /**
- * Check status of a long-running operation (Veo video generation)
+ * Check status of a long-running legacy Google video operation.
  */
 export async function checkOperationStatus(operationName, apiKey) {
   try {
     // Operation name usually looks like "operations/..."
     const url = `${GEMINI_BASE_URL}/${operationName}?key=${apiKey}`;
-    console.log(`[Veo Status] Checking: ${operationName}`);
+    console.log(`[Google Video Legacy Status] Checking: ${operationName}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -923,19 +923,19 @@ export async function checkOperationStatus(operationName, apiKey) {
     const result = await response.json();
     
     if (!response.ok) {
-      console.error(`[Veo Status] Error (${response.status})`);
+      console.error(`[Google Video Legacy Status] Error (${response.status})`);
       return { 
         success: false, 
         error: result.error?.message || `Status ${response.status}: Unknown error` 
       };
     }
 
-    console.log(`[Veo Status] Response done=${result.done}`);
+    console.log(`[Google Video Legacy Status] Response done=${result.done}`);
 
     // Check if done
     if (result.done) {
       if (result.error) {
-        console.error(`[Veo Status] Operation failed:`, result.error);
+        console.error(`[Google Video Legacy Status] Operation failed:`, result.error);
         return { success: false, done: true, error: result.error.message || 'Video generation failed' };
       }
       
@@ -960,9 +960,9 @@ export async function checkOperationStatus(operationName, apiKey) {
       }
       
       if (!videoUri) {
-        console.log('[Veo Status] Completed but could not find video URI.');
+        console.log('[Google Video Legacy Status] Completed but could not find video URI.');
       } else {
-        console.log(`[Veo Status] Video ready at: ${videoUri}`);
+        console.log(`[Google Video Legacy Status] Video ready at: ${videoUri}`);
       }
       
       return {
@@ -980,7 +980,7 @@ export async function checkOperationStatus(operationName, apiKey) {
     };
     
   } catch (e) {
-    console.error(`[Veo Status] Exception:`, e);
+    console.error(`[Google Video Legacy Status] Exception:`, e);
     return { success: false, error: `Network error: ${e.message}` };
   }
 }

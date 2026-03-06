@@ -12,9 +12,9 @@
  * 
  * Required secrets:
  *   - OPENROUTER_API_KEY   : Access to 200+ AI models via OpenRouter
- *   - GEMINI_API_KEY       : Google Gemini, Imagen, Veo access
+ *   - GEMINI_API_KEY       : Google Gemini, Imagen access
  *   - ANTHROPIC_API_KEY    : Claude models direct access
- *   - OPENAI_API_KEY       : GPT, DALL-E, Whisper, TTS access
+ *   - OPENAI_API_KEY       : GPT, DALL-E, Sora, Whisper, TTS access
  */
 
 import { spawn } from 'child_process';
@@ -37,7 +37,7 @@ const SECRETS = [
   },
   {
     name: 'GEMINI_API_KEY',
-    description: 'Google Gemini API key for Gemini, Imagen, and Veo',
+    description: 'Google Gemini API key for Gemini, Imagen, and Live API',
     url: 'https://aistudio.google.com/apikey',
     prefix: null,
     required: true
@@ -51,7 +51,7 @@ const SECRETS = [
   },
   {
     name: 'OPENAI_API_KEY',
-    description: 'OpenAI API key for GPT, DALL-E, Whisper, TTS',
+    description: 'OpenAI API key for GPT, DALL-E, Sora, Whisper, and TTS',
     url: 'https://platform.openai.com/api-keys',
     prefix: 'sk-',
     required: false
@@ -422,11 +422,11 @@ Usage:
 
 Required Secrets:
   OPENROUTER_API_KEY    Access to 200+ AI models via OpenRouter
-  GEMINI_API_KEY        Google Gemini, Imagen, Veo access
+  GEMINI_API_KEY        Google Gemini, Imagen, Live API access
 
 Optional Secrets:
   ANTHROPIC_API_KEY     Claude models direct access
-  OPENAI_API_KEY        GPT, DALL-E, Whisper, TTS access
+  OPENAI_API_KEY        GPT, DALL-E, Sora, Whisper, TTS access
 `);
     } else {
       await interactiveSetup();

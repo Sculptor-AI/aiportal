@@ -126,7 +126,8 @@ This application is optimized for **Cloudflare Pages**, offering edge deployment
 Set these in your Cloudflare Pages dashboard or `.env` file:
 
 ```bash
-VITE_BACKEND_API_URL=https://your-backend-api.com
+VITE_REMOTE_BACKEND_URL=https://your-backend-api.com
+VITE_LOCAL_BACKEND_PROXY_TARGET=http://localhost:8787
 # Frontend should NOT include provider API keys.
 # Configure provider keys on the backend (Worker secrets/.dev.vars) only:
 OPENROUTER_API_KEY=...
