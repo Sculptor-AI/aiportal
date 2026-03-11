@@ -349,6 +349,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 isCustomModel: true,
                 systemPrompt: model.systemPrompt,
                 avatar: model.avatar,
+                avatarImage: model.avatarImage || null,
+                avatarColor: model.avatarColor || null,
                 provider: 'Custom Model',
                 isBackendModel: false, // Custom models are frontend models
                 baseModel: model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID
@@ -400,6 +402,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 isCustomModel: true,
                 systemPrompt: model.systemPrompt,
                 avatar: model.avatar,
+                avatarImage: model.avatarImage || null,
+                avatarColor: model.avatarColor || null,
                 provider: 'Custom Model',
                 isBackendModel: false,
                 baseModel: model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID

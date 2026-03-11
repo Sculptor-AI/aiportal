@@ -45,6 +45,24 @@ const buildAuthHeaders = (accessToken) => {
   return { 'Authorization': `Bearer ${accessToken}` };
 };
 
+const VALID_PROVIDER_HINTS = new Set([
+  'anthropic',
+  'claude',
+  'gemini',
+  'google',
+  'openai',
+  'openrouter'
+]);
+
+const normalizeProviderHint = (provider) => {
+  if (typeof provider !== 'string') {
+    return null;
+  }
+
+  const normalized = provider.trim().toLowerCase();
+  return VALID_PROVIDER_HINTS.has(normalized) ? normalized : null;
+};
+
 // New backend streaming function
 export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null, requestOptions = {}) {
   const user = getCurrentUserSession();
@@ -118,8 +136,9 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       stream: true
     };
 
-    if (requestOptions?.provider) {
-      requestPayload.provider = requestOptions.provider;
+    const providerHint = normalizeProviderHint(requestOptions?.provider);
+    if (providerHint) {
+      requestPayload.provider = providerHint;
     }
 
     if (requestOptions?.reasoningEffort && requestOptions.reasoningEffort !== 'none') {
@@ -175,7 +194,11 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       }
       
       // Provide specific error messages for common issues
-      let errorMessage = errorData.error?.message || 'Backend request failed';
+      const backendErrorMessage =
+        (typeof errorData.error === 'string' ? errorData.error : errorData.error?.message) ||
+        errorData.message;
+
+      let errorMessage = backendErrorMessage || 'Backend request failed';
       if (response.status === 401 && modelId.includes('gemini')) {
         errorMessage = 'Google API authentication failed on the backend. The Gemini models are currently unavailable.';
       } else if (response.status === 401) {

@@ -132,28 +132,27 @@ const ModelIcon = ({ modelId, provider, size = 'medium', $inMessage = false }) =
   let imageUrl = !isCustomModel ? MODEL_LOGOS[modelId] : null;
   const normalizedProvider = typeof provider === 'string' ? provider.toLowerCase() : null;
 
-  // For custom models, we'll use the emoji instead of an image
+  // For custom models, prefer the uploaded avatar image and fall back to emoji/initials.
   if (isCustomModel) {
-    // Get the available models from the parent context to find the emoji
-    // Since we don't have access to availableModels here, we'll need to parse the model ID
-    // The modelId format is 'custom-{id}', we need to get the emoji from localStorage
     try {
       const customModelsJson = localStorage.getItem('customModels');
       if (customModelsJson) {
         const customModels = JSON.parse(customModelsJson);
         const modelNumericId = modelId.replace('custom-', '');
         const customModel = customModels.find(m => m.id.toString() === modelNumericId);
-        if (customModel && customModel.avatar) {
+
+        if (customModel?.avatarImage) {
+          imageUrl = customModel.avatarImage;
+        } else if (customModel?.avatar) {
           iconComponent = <span style={{ fontSize: '1.2em' }}>{customModel.avatar}</span>;
           iconBackground = 'transparent';
         } else {
-          // Fallback to first letter
-          iconComponent = 'C';
+          iconComponent = customModel?.name?.charAt(0)?.toUpperCase() || 'C';
           iconBackground = '#888';
         }
       }
     } catch (err) {
-      console.error('Error getting custom model emoji:', err);
+      console.error('Error getting custom model avatar:', err);
       iconComponent = 'C';
       iconBackground = '#888';
     }
@@ -216,6 +215,7 @@ const ModelIcon = ({ modelId, provider, size = 'medium', $inMessage = false }) =
 
   const $useImage = !!imageUrl;
   const $noMargin = $inMessage && !!imageUrl; // Determine if margin should be applied
+  const isCustomAvatarImage = isCustomModel && !!imageUrl;
 
   return (
     <ModelIconContainer
@@ -234,7 +234,7 @@ const ModelIcon = ({ modelId, provider, size = 'medium', $inMessage = false }) =
           style={{
             width: '100%',
             height: '100%',
-            objectFit: 'contain',
+            objectFit: isCustomAvatarImage ? 'cover' : 'contain',
             filter: (modelId?.includes('gpt') || modelId?.includes('openai') || modelId?.includes('sora')) && theme.isDark ? 'invert(1) brightness(1.5)' : 'none'
           }}
         />

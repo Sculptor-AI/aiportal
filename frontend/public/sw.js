@@ -1,12 +1,13 @@
 // Service Worker for AI Portal PWA
-const CACHE_NAME = 'ai-portal-v2';
-const STATIC_CACHE_NAME = 'ai-portal-static-v2';
-const DYNAMIC_CACHE_NAME = 'ai-portal-dynamic-v2';
+const CACHE_VERSION = 'v3';
+const CACHE_PREFIX = 'ai-portal';
+const STATIC_CACHE_NAME = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE_NAME = `${CACHE_PREFIX}-dynamic-${CACHE_VERSION}`;
+const NAVIGATION_CACHE_NAME = `${CACHE_PREFIX}-navigation-${CACHE_VERSION}`;
+const APP_SHELL_CACHE_KEY = '/index.html';
 
 // Static assets to cache
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/images/sculptor.svg',
   '/images/claude-logo.png',
@@ -58,15 +59,20 @@ self.addEventListener('activate', (event) => {
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== STATIC_CACHE_NAME && 
+            if (cacheName !== STATIC_CACHE_NAME &&
                 cacheName !== DYNAMIC_CACHE_NAME &&
-                cacheName.startsWith('ai-portal-')) {
+                cacheName !== NAVIGATION_CACHE_NAME &&
+                cacheName.startsWith(`${CACHE_PREFIX}-`)) {
               console.log('[SW] Deleting old cache:', cacheName);
               return caches.delete(cacheName);
             }
           })
         );
       }),
+      // Speed up navigation requests when supported by the browser.
+      'navigationPreload' in self.registration
+        ? self.registration.navigationPreload.enable()
+        : Promise.resolve(),
       // Take control of all clients
       self.clients.claim()
     ])
@@ -81,9 +87,20 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') {
     return;
   }
+
+  if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') {
+    return;
+  }
   
   // Skip chrome-extension requests
-  if (url.protocol === 'chrome-extension:') {
+  if (url.protocol === 'chrome-extension:' || (url.protocol !== 'http:' && url.protocol !== 'https:')) {
+    return;
+  }
+
+  // Always try to fetch the latest HTML shell first so deploys do not strand users
+  // on an old document that references deleted hashed assets.
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigationRequest(event));
     return;
   }
   
@@ -137,6 +154,41 @@ async function cacheFirst(request) {
   }
 }
 
+async function handleNavigationRequest(event) {
+  const { request, preloadResponse } = event;
+  const cache = await caches.open(NAVIGATION_CACHE_NAME);
+
+  try {
+    const networkResponse = await preloadResponse || await fetch(request);
+
+    if (networkResponse && networkResponse.ok) {
+      await Promise.all([
+        cache.put(request, networkResponse.clone()),
+        cache.put(APP_SHELL_CACHE_KEY, networkResponse.clone())
+      ]);
+    }
+
+    return networkResponse;
+  } catch (error) {
+    console.log('[SW] Navigation request failed, trying cache:', error);
+
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    const appShellResponse = await cache.match(APP_SHELL_CACHE_KEY);
+    if (appShellResponse) {
+      return appShellResponse;
+    }
+
+    return new Response('Offline', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' }
+    });
+  }
+}
+
 // Network-first strategy (for API calls)
 async function networkFirst(request) {
   const requestUrl = new URL(request.url);
@@ -174,19 +226,27 @@ async function networkFirst(request) {
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(DYNAMIC_CACHE_NAME);
   const cachedResponse = await cache.match(request);
-  
-  // Fetch fresh version in background
-  const fetchPromise = fetch(request).then((networkResponse) => {
-    if (networkResponse.status === 200) {
-      cache.put(request, networkResponse.clone());
+
+  try {
+    const networkResponse = await fetch(request);
+
+    if (networkResponse.ok) {
+      await cache.put(request, networkResponse.clone());
     }
-    return networkResponse;
-  }).catch((error) => {
-    console.log('[SW] Background fetch failed:', error);
-  });
-  
-  // Return cached version immediately, or wait for network
-  return cachedResponse || fetchPromise;
+
+    return cachedResponse || networkResponse;
+  } catch (error) {
+    console.log('[SW] Asset fetch failed, trying cache:', error);
+
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    return new Response('', {
+      status: 504,
+      statusText: 'Gateway Timeout'
+    });
+  }
 }
 
 // Handle background sync for offline message sending

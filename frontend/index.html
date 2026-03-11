@@ -101,10 +101,27 @@
       
       // Only register service worker in production
       if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        let hasReloadedForServiceWorkerUpdate = false;
+
+        function promptForServiceWorkerUpdate(worker) {
+          if (!worker || !navigator.serviceWorker.controller) {
+            return;
+          }
+
+          if (confirm('New version available! Refresh to update?')) {
+            worker.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }
+
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
               console.log('SW registered: ', registration);
+              registration.update();
+
+              if (registration.waiting) {
+                promptForServiceWorkerUpdate(registration.waiting);
+              }
               
               // Check for updates
               registration.addEventListener('updatefound', () => {
@@ -112,11 +129,7 @@
                 if (newWorker) {
                   newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                      // New content is available
-                      if (confirm('New version available! Refresh to update?')) {
-                        newWorker.postMessage({ type: 'SKIP_WAITING' });
-                        window.location.reload();
-                      }
+                      promptForServiceWorkerUpdate(newWorker);
                     }
                   });
                 }
@@ -129,6 +142,11 @@
         
         // Handle service worker updates
         navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (hasReloadedForServiceWorkerUpdate) {
+            return;
+          }
+
+          hasReloadedForServiceWorkerUpdate = true;
           window.location.reload();
         });
       }

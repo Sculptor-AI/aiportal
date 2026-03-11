@@ -23,6 +23,19 @@ const SORA_SIZE_BY_ASPECT_RATIO = Object.freeze({
   '9:16': '720x1280',
 });
 
+function buildOpenAIMessages(body) {
+  const messages = Array.isArray(body.messages) ? body.messages.filter(Boolean) : [];
+
+  if (!body.system) {
+    return messages;
+  }
+
+  return [
+    { role: 'system', content: body.system },
+    ...messages.filter((message) => message.role !== 'system')
+  ];
+}
+
 async function extractOpenAIError(response) {
   try {
     const payload = await response.json();
@@ -101,7 +114,7 @@ function buildOpenAIBody(body) {
 
   const openAIBody = {
     model,
-    messages: body.messages.map(msg => ({
+    messages: buildOpenAIMessages(body).map(msg => ({
       role: msg.role,
       content: convertContentToOpenAI(msg.content),
       ...(msg.name && { name: msg.name }),

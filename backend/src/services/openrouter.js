@@ -15,6 +15,19 @@
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
+function buildOpenRouterMessages(body) {
+  const messages = Array.isArray(body.messages) ? body.messages.filter(Boolean) : [];
+
+  if (!body.system) {
+    return messages;
+  }
+
+  return [
+    { role: 'system', content: body.system },
+    ...messages.filter((message) => message.role !== 'system')
+  ];
+}
+
 /**
  * OpenRouter-specific headers
  */
@@ -33,7 +46,7 @@ function getOpenRouterHeaders(apiKey, options = {}) {
 function buildOpenRouterBody(body) {
   const payload = {
     model: body.model,
-    messages: body.messages,
+    messages: buildOpenRouterMessages(body),
     stream: body.stream !== false, // Default to streaming
   };
 
@@ -64,7 +77,7 @@ function buildOpenRouterBody(body) {
   // OpenRouter-specific features
   
   // Provider preferences (order, allow/deny lists)
-  if (body.provider) {
+  if (body.provider && typeof body.provider === 'object' && !Array.isArray(body.provider)) {
     payload.provider = body.provider;
   }
 
@@ -182,4 +195,3 @@ export async function getOpenRouterLimits(apiKey) {
     return null;
   }
 }
-

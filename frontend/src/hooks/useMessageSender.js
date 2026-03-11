@@ -13,6 +13,19 @@ const generateId = () => {
   return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
 };
 
+const resolveProviderHint = (model, models = []) => {
+  if (!model) {
+    return null;
+  }
+
+  if (model.isCustomModel && model.baseModel) {
+    const baseModel = models.find((candidate) => candidate.id === model.baseModel);
+    return baseModel?.provider || null;
+  }
+
+  return model.provider || null;
+};
+
 const useMessageSender = ({
   chat,
   selectedModel,
@@ -263,8 +276,9 @@ const useMessageSender = ({
           content: msg.content
         }));
         const flowchartModelObj = (availableModels || []).find(model => model.id === selectedModel);
-        const flowchartRequestOptions = flowchartModelObj?.provider
-          ? { provider: flowchartModelObj.provider }
+        const flowchartProviderHint = resolveProviderHint(flowchartModelObj, availableModels || []);
+        const flowchartRequestOptions = flowchartProviderHint
+          ? { provider: flowchartProviderHint }
           : {};
         
         let streamedContent = '';
@@ -381,8 +395,9 @@ const useMessageSender = ({
     const modelIdForApi = currentModelObj?.isCustomModel && currentModelObj?.baseModel 
       ? currentModelObj.baseModel 
       : currentModel;
+    const providerHint = resolveProviderHint(currentModelObj, availableModels || []);
     const requestOptions = {
-      ...(currentModelObj?.provider ? { provider: currentModelObj.provider } : {}),
+      ...(providerHint ? { provider: providerHint } : {}),
       ...(useNativeThinking && reasoningEffort ? { reasoningEffort } : {})
     };
 
