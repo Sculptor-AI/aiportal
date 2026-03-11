@@ -103,14 +103,12 @@
       if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
         let hasReloadedForServiceWorkerUpdate = false;
 
-        function promptForServiceWorkerUpdate(worker) {
+        function activateServiceWorkerUpdate(worker) {
           if (!worker || !navigator.serviceWorker.controller) {
             return;
           }
 
-          if (confirm('New version available! Refresh to update?')) {
-            worker.postMessage({ type: 'SKIP_WAITING' });
-          }
+          worker.postMessage({ type: 'SKIP_WAITING' });
         }
 
         window.addEventListener('load', () => {
@@ -120,7 +118,7 @@
               registration.update();
 
               if (registration.waiting) {
-                promptForServiceWorkerUpdate(registration.waiting);
+                activateServiceWorkerUpdate(registration.waiting);
               }
               
               // Check for updates
@@ -129,7 +127,7 @@
                 if (newWorker) {
                   newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                      promptForServiceWorkerUpdate(newWorker);
+                      activateServiceWorkerUpdate(newWorker);
                     }
                   });
                 }

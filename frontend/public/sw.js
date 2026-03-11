@@ -1,5 +1,5 @@
 // Service Worker for AI Portal PWA
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_PREFIX = 'ai-portal';
 const STATIC_CACHE_NAME = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `${CACHE_PREFIX}-dynamic-${CACHE_VERSION}`;
