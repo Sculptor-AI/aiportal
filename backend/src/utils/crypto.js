@@ -99,6 +99,10 @@ const constantTimeCompare = (a, b) => {
  * @returns {Promise<boolean>}
  */
 export const verifyPassword = async (password, storedHash, salt) => {
+  if (!password || !storedHash || !salt) {
+    return false;
+  }
+
   const { hash } = await hashPassword(password, salt);
   return constantTimeCompare(hash, storedHash);
 };

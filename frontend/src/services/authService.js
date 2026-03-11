@@ -54,9 +54,28 @@ const fetchWithFallback = async (endpoint, options) => {
   }
 };
 
-// Google login (placeholder - can be implemented later if needed)
+const persistCurrentUser = (sessionData) => {
+  const user = {
+    ...sessionData.user,
+    accessToken: sessionData.accessToken,
+    refreshToken: sessionData.refreshToken
+  };
+
+  sessionStorage.setItem('ai_portal_current_user', JSON.stringify(user));
+  return user;
+};
+
+// Google login via backend OAuth redirect
 export const loginWithGoogle = () => {
-  return Promise.reject(new Error('Google login not implemented in backend yet'));
+  const currentLocation = typeof window !== 'undefined' ? window.location : null;
+  const returnTo = currentLocation && currentLocation.pathname !== '/auth/callback'
+    ? `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`
+    : '/';
+  const oauthUrl = new URL(buildApiUrl('/auth/oauth/google/start'), currentLocation?.origin || 'http://localhost');
+  oauthUrl.searchParams.set('app_origin', currentLocation?.origin || oauthUrl.origin);
+  oauthUrl.searchParams.set('return_to', returnTo);
+  window.location.assign(oauthUrl.toString());
+  return Promise.resolve();
 };
 
 // Register a new user
@@ -112,17 +131,7 @@ export const loginUser = async (username, password) => {
     }
 
     if (data.success && data.data) {
-      // Store user data and tokens
-      const user = {
-        ...data.data.user,
-        accessToken: data.data.accessToken,
-        refreshToken: data.data.refreshToken
-      };
-
-      // Store in session storage
-      sessionStorage.setItem('ai_portal_current_user', JSON.stringify(user));
-      
-      return user;
+      return persistCurrentUser(data.data);
     } else {
       throw new Error('Invalid response format');
     }
@@ -163,6 +172,41 @@ export const logoutUser = async () => {
 export const getCurrentUser = () => {
   const userJSON = sessionStorage.getItem('ai_portal_current_user');
   return userJSON ? JSON.parse(userJSON) : null;
+};
+
+export const completeOAuthLogin = async (resultToken) => {
+  try {
+    const response = await fetchWithFallback('/auth/oauth/complete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ resultToken })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (response.ok && data.success && data.data) {
+      return {
+        status: 'authenticated',
+        user: persistCurrentUser(data.data),
+        returnTo: data.data.returnTo || '/'
+      };
+    }
+
+    if (data.status === 'pending') {
+      return {
+        status: 'pending',
+        message: data.message || 'Your account is awaiting admin approval.',
+        returnTo: data.returnTo || '/'
+      };
+    }
+
+    throw new Error(data.error || data.message || 'Google login failed');
+  } catch (error) {
+    console.error('OAuth completion error:', error);
+    throw error;
+  }
 };
 
 // Get authentication headers for API requests

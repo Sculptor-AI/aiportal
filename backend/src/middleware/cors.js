@@ -17,7 +17,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   'https://localhost:5173'
 ];
 
-const parseAllowedOrigins = (rawOrigins) => {
+export const parseAllowedOrigins = (rawOrigins) => {
   if (!rawOrigins || typeof rawOrigins !== 'string') {
     return DEFAULT_ALLOWED_ORIGINS;
   }

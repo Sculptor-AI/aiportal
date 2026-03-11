@@ -5,7 +5,7 @@
 
 import { Hono } from 'hono';
 import { nowIso } from '../state.js';
-import { sanitizeUser, findUserByUsername, findUserById, getAllUsers, updateUser, isEmailTaken, isUsernameTaken, invalidateUserSessions, deleteUserApiKeys, addUserSessionIndex, removeUserSessionIndex } from '../utils/helpers.js';
+import { sanitizeUser, findUserByUsername, findUserById, getAllUsers, updateUser, isEmailTaken, isUsernameTaken, invalidateUserSessions, deleteUserApiKeys, deleteUserOAuthLinks, addUserSessionIndex, removeUserSessionIndex } from '../utils/helpers.js';
 import { hashPassword, verifyPassword, generateSessionToken, hashToken } from '../utils/crypto.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { adminLoginRateLimit } from '../middleware/rateLimit.js';
@@ -363,7 +363,8 @@ admin.delete('/users/:userId', requireAuth, requireAdmin, async (c) => {
   // Invalidate all sessions and delete API keys for the user
   await Promise.all([
     invalidateUserSessions(kv, userId),
-    deleteUserApiKeys(kv, userId)
+    deleteUserApiKeys(kv, userId),
+    deleteUserOAuthLinks(kv, user)
   ]);
 
   // Delete user and indexes

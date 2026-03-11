@@ -34,6 +34,7 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import WorkspacePage from './pages/WorkspacePage';
 import ForcedLoginScreen from './components/ForcedLoginScreen';
 import MobileForcedLoginScreen from './components/mobile/MobileForcedLoginScreen';
+import OAuthCallbackPage from './components/OAuthCallbackPage';
 import DinosaurRunGame from './components/DinosaurRunGame';
 import ConfettiExplosion from './components/ConfettiExplosion';
 import MatrixRain from './components/MatrixRain';
@@ -1044,6 +1045,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
   // Force login if user is not authenticated
   if (!user) {
+    if (location.pathname === '/auth/callback') {
+      return <OAuthCallbackPage />;
+    }
+
     return isMobile ? <MobileForcedLoginScreen /> : <ForcedLoginScreen />;
   }
 
@@ -1163,6 +1168,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   onMessageSent={handleMessageSent}
                 />
               } />
+              <Route path="/auth/callback" element={<OAuthCallbackPage />} />
               <Route path="/media" element={<MediaPage collapsed={collapsed} />} />
               <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
               <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />

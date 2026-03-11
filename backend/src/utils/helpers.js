@@ -52,6 +52,18 @@ export const findUserById = async (kv, userId) => {
 };
 
 /**
+ * Find user by linked OAuth provider account.
+ */
+export const findUserByOAuthAccount = async (kv, provider, providerUserId) => {
+  if (!kv || !provider || !providerUserId) return null;
+
+  const userId = await kv.get(`oauth:${provider}:${providerUserId}`);
+  if (!userId) return null;
+
+  return await kv.get(`user:${userId}`, 'json');
+};
+
+/**
  * Get all users (KV-based)
  * 
  * WARNING: This function scans all user keys and fetches each user individually.
@@ -241,5 +253,29 @@ export const deleteUserApiKeys = async (kv, userId) => {
     }
   } catch (error) {
     console.error('Error deleting user API keys:', error);
+  }
+};
+
+/**
+ * Delete all OAuth provider links for a user.
+ */
+export const deleteUserOAuthLinks = async (kv, user) => {
+  if (!kv || !user) return;
+
+  try {
+    const authProviders = Array.isArray(user.authProviders) ? user.authProviders : [];
+    const deletePromises = [];
+
+    for (const authProvider of authProviders) {
+      if (authProvider?.provider && authProvider?.providerUserId) {
+        deletePromises.push(kv.delete(`oauth:${authProvider.provider}:${authProvider.providerUserId}`));
+      }
+    }
+
+    if (deletePromises.length > 0) {
+      await Promise.all(deletePromises);
+    }
+  } catch (error) {
+    console.error('Error deleting user OAuth links:', error);
   }
 };
