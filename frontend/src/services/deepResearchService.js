@@ -19,7 +19,7 @@ const getAuthHeaders = () => {
   let accessToken = null;
   
   try {
-    const userJSON = sessionStorage.getItem('ai_portal_current_user');
+    const userJSON = localStorage.getItem('ai_portal_current_user');
     if (userJSON) {
       const user = JSON.parse(userJSON);
       accessToken = user?.accessToken || null;

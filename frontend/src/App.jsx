@@ -35,7 +35,7 @@ import WorkspacePage from './pages/WorkspacePage';
 import ForcedLoginScreen from './components/ForcedLoginScreen';
 import MobileForcedLoginScreen from './components/mobile/MobileForcedLoginScreen';
 import OAuthCallbackPage from './components/OAuthCallbackPage';
-import DinosaurRunGame from './components/DinosaurRunGame';
+import OAuthCallbackPage from './components/OAuthCallbackPage';
 import ConfettiExplosion from './components/ConfettiExplosion';
 import MatrixRain from './components/MatrixRain';
 import useEasterEggs from './hooks/useEasterEggs';
@@ -44,6 +44,13 @@ import {
   getPreferredModelId
 } from './config/modelConfig';
 import { setBackendMode, shouldUseRealBackend } from './services/backendConfig';
+
+const WhiteboardModal = React.lazy(() => import('./components/WhiteboardModal'));
+const EquationEditorModal = React.lazy(() => import('./components/EquationEditorModal'));
+const GraphingModal = React.lazy(() => import('./components/GraphingModal'));
+const FlowchartModal = React.lazy(() => import('./components/FlowchartModal'));
+const Sandbox3DModal = React.lazy(() => import('./components/Sandbox3DModal'));
+const DinosaurRunGame = React.lazy(() => import('./components/DinosaurRunGame'));
 
 const AppContainer = styled.div`
   display: flex;
@@ -318,8 +325,14 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     return savedActiveProject ? JSON.parse(savedActiveProject) : null;
   });
 
-  // Models will be loaded exclusively from the backend.
-  const [availableModels, setAvailableModels] = useState([]);
+  const [availableModels, setAvailableModels] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cachedModels');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
   const [selectedModel, setSelectedModel] = useState(() => {
     const savedModel = localStorage.getItem('selectedModel');
@@ -368,6 +381,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
         if (allModels.length > 0) {
           setAvailableModels(allModels);
+          localStorage.setItem('cachedModels', JSON.stringify(allModels));
           console.log(`Loaded ${allModels.length} models (${backendModels?.length || 0} backend, ${enabledCustomModels.length} custom):`, allModels.map(m => m.id));
 
           // Set default model if none is selected or the selected one is no longer available
@@ -503,6 +517,19 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     closeConfetti,
     closeMatrix,
   } = useEasterEggs();
+
+  // Lazy mount tracking for modals
+  const [hasOpenedWhiteboard, setHasOpenedWhiteboard] = useState(false);
+  const [hasOpenedEquationEditor, setHasOpenedEquationEditor] = useState(false);
+  const [hasOpenedGraphing, setHasOpenedGraphing] = useState(false);
+  const [hasOpenedFlowchart, setHasOpenedFlowchart] = useState(false);
+  const [hasOpenedSandbox3D, setHasOpenedSandbox3D] = useState(false);
+
+  useEffect(() => { if (isWhiteboardOpen) setHasOpenedWhiteboard(true); }, [isWhiteboardOpen]);
+  useEffect(() => { if (isEquationEditorOpen) setHasOpenedEquationEditor(true); }, [isEquationEditorOpen]);
+  useEffect(() => { if (isGraphingOpen) setHasOpenedGraphing(true); }, [isGraphingOpen]);
+  useEffect(() => { if (isFlowchartOpen) setHasOpenedFlowchart(true); }, [isFlowchartOpen]);
+  useEffect(() => { if (isSandbox3DOpen) setHasOpenedSandbox3D(true); }, [isSandbox3DOpen]);
 
   // Update settings when user changes
   useEffect(() => {
@@ -1213,79 +1240,79 @@ const AppContent = ({ onSettingsLanguageChange }) => {
           </MainContentArea>
 
           {/* Render panels in order: whiteboard, equation editor, graphing */}
-          <WhiteboardModal
-            isOpen={isWhiteboardOpen}
-            onClose={() => setIsWhiteboardOpen(false)}
-            onSubmit={(file) => {
-              // Handle whiteboard submission through ChatWindow's file handler
-              if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
-                chatWindowRef.current.handleFileSelected(file);
-              }
-              setIsWhiteboardOpen(false);
-            }}
-            theme={currentTheme}
-          />
+          <React.Suspense fallback={null}>
+            {hasOpenedWhiteboard && <WhiteboardModal
+              isOpen={isWhiteboardOpen}
+              onClose={() => setIsWhiteboardOpen(false)}
+              onSubmit={(file) => {
+                // Handle whiteboard submission through ChatWindow's file handler
+                if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                  chatWindowRef.current.handleFileSelected(file);
+                }
+                setIsWhiteboardOpen(false);
+              }}
+              theme={currentTheme}
+            />}
 
-          <EquationEditorModal
-            isOpen={isEquationEditorOpen}
-            onClose={() => setIsEquationEditorOpen(false)}
-            onSubmit={(latex) => {
-              // Handle equation submission - add to chat input
-              if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
-                chatWindowRef.current.appendToInput(`$$\n${latex}\n$$ `);
-              }
-              setIsEquationEditorOpen(false);
-            }}
-            theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
-          />
+            {hasOpenedEquationEditor && <EquationEditorModal
+              isOpen={isEquationEditorOpen}
+              onClose={() => setIsEquationEditorOpen(false)}
+              onSubmit={(latex) => {
+                // Handle equation submission - add to chat input
+                if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
+                  chatWindowRef.current.appendToInput(`$$\n${latex}\n$$ `);
+                }
+                setIsEquationEditorOpen(false);
+              }}
+              theme={currentTheme}
+              otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+            />}
 
-          <GraphingModal
-            isOpen={isGraphingOpen}
-            onClose={() => setIsGraphingOpen(false)}
-            onSubmit={(file) => {
-              if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
-                chatWindowRef.current.handleFileSelected(file);
-              }
-              setIsGraphingOpen(false);
-            }}
-            theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
-          />
+            {hasOpenedGraphing && <GraphingModal
+              isOpen={isGraphingOpen}
+              onClose={() => setIsGraphingOpen(false)}
+              onSubmit={(file) => {
+                if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                  chatWindowRef.current.handleFileSelected(file);
+                }
+                setIsGraphingOpen(false);
+              }}
+              theme={currentTheme}
+              otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+            />}
 
-          <FlowchartModal
-            isOpen={isFlowchartOpen}
-            onClose={() => {
-              setIsFlowchartOpen(false);
-              setFlowchartData(null); // Clear flowchart data when closing
-            }}
-            onSubmit={(file) => {
-              // Handle flowchart submission through ChatWindow's file handler
-              if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
-                chatWindowRef.current.handleFileSelected(file);
-              }
-              setIsFlowchartOpen(false);
-              setFlowchartData(null); // Clear flowchart data after submission
-            }}
-            theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
-            aiFlowchartData={flowchartData}
-          />
+            {hasOpenedFlowchart && <FlowchartModal
+              isOpen={isFlowchartOpen}
+              onClose={() => {
+                setIsFlowchartOpen(false);
+                setFlowchartData(null); // Clear flowchart data when closing
+              }}
+              onSubmit={(file) => {
+                // Handle flowchart submission through ChatWindow's file handler
+                if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                  chatWindowRef.current.handleFileSelected(file);
+                }
+                setIsFlowchartOpen(false);
+                setFlowchartData(null); // Clear flowchart data after submission
+              }}
+              theme={currentTheme}
+              otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+              aiFlowchartData={flowchartData}
+            />}
 
-          <Sandbox3DModal
-            isOpen={isSandbox3DOpen}
-            onClose={() => setIsSandbox3DOpen(false)}
-            onSend={(objects) => {
-              if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
-                chatWindowRef.current.appendToInput(`\`\`\`json
-${JSON.stringify(objects, null, 2)}
-\`\`\``);
-              }
-            }}
-            theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0)}
-            initialScene={pendingScene}
-          />
+            {hasOpenedSandbox3D && <Sandbox3DModal
+              isOpen={isSandbox3DOpen}
+              onClose={() => setIsSandbox3DOpen(false)}
+              onSend={(objects) => {
+                if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
+                  chatWindowRef.current.appendToInput(`\`\`\`json\n${JSON.stringify(objects, null, 2)}\n\`\`\``);
+                }
+              }}
+              theme={currentTheme}
+              otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0)}
+              initialScene={pendingScene}
+            />}
+          </React.Suspense>
 
           {isSettingsOpen && (
             <NewSettingsPanel
@@ -1305,16 +1332,18 @@ ${JSON.stringify(objects, null, 2)}
           )}
 
           {showDinosaurGame && (
-            <DinosaurRunGame
-              onExit={handleExitGame}
-              $toolbarOpen={isToolbarOpen}
-              $sidebarCollapsed={collapsed}
-              $whiteboardOpen={isWhiteboardOpen}
-              $equationEditorOpen={isEquationEditorOpen}
-              $graphingOpen={isGraphingOpen}
-              $flowchartOpen={isFlowchartOpen}
-              $sandbox3DOpen={isSandbox3DOpen}
-            />
+            <React.Suspense fallback={null}>
+              <DinosaurRunGame
+                onExit={handleExitGame}
+                $toolbarOpen={isToolbarOpen}
+                $sidebarCollapsed={collapsed}
+                $whiteboardOpen={isWhiteboardOpen}
+                $equationEditorOpen={isEquationEditorOpen}
+                $graphingOpen={isGraphingOpen}
+                $flowchartOpen={isFlowchartOpen}
+                $sandbox3DOpen={isSandbox3DOpen}
+              />
+            </React.Suspense>
           )}
 
           {/* Easter Eggs */}

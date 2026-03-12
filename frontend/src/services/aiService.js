@@ -29,7 +29,7 @@ const isBackendModel = (modelId, availableModels = []) => {
 
 const getCurrentUserSession = () => {
   try {
-    const userJSON = sessionStorage.getItem('ai_portal_current_user');
+    const userJSON = localStorage.getItem('ai_portal_current_user');
     return userJSON ? JSON.parse(userJSON) : null;
   } catch (error) {
     console.error('Error getting user session:', error);

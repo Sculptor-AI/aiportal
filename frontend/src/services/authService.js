@@ -61,7 +61,7 @@ const persistCurrentUser = (sessionData) => {
     refreshToken: sessionData.refreshToken
   };
 
-  sessionStorage.setItem('ai_portal_current_user', JSON.stringify(user));
+  localStorage.setItem('ai_portal_current_user', JSON.stringify(user));
   return user;
 };
 
@@ -162,7 +162,7 @@ export const logoutUser = async () => {
   } catch (error) {
     console.error('Logout error:', error);
   } finally {
-    sessionStorage.removeItem('ai_portal_current_user');
+    localStorage.removeItem('ai_portal_current_user');
     clearLegacyClientStorage();
   }
   return true;
@@ -170,7 +170,7 @@ export const logoutUser = async () => {
 
 // Check if user is logged in
 export const getCurrentUser = () => {
-  const userJSON = sessionStorage.getItem('ai_portal_current_user');
+  const userJSON = localStorage.getItem('ai_portal_current_user');
   return userJSON ? JSON.parse(userJSON) : null;
 };
 
@@ -286,7 +286,7 @@ export const updateUserSettings = (username, newSettings) => {
     const currentUser = getCurrentUser();
     if (currentUser && currentUser.username === username) {
       currentUser.settings = { ...currentUser.settings, ...newSettings };
-      sessionStorage.setItem('ai_portal_current_user', JSON.stringify(currentUser));
+      localStorage.setItem('ai_portal_current_user', JSON.stringify(currentUser));
       resolve(currentUser.settings);
     } else {
       resolve(newSettings);
@@ -323,7 +323,7 @@ export const adminLogin = async (username, password) => {
       };
 
       // Store admin session
-      sessionStorage.setItem('ai_portal_admin_user', JSON.stringify(adminUser));
+      localStorage.setItem('ai_portal_admin_user', JSON.stringify(adminUser));
       
       return adminUser;
     } else {
@@ -350,14 +350,14 @@ export const adminLogout = async () => {
   } catch (error) {
     console.error('Admin logout error:', error);
   } finally {
-    sessionStorage.removeItem('ai_portal_admin_user');
+    localStorage.removeItem('ai_portal_admin_user');
     clearLegacyClientStorage();
   }
 };
 
 // Get current admin user
 export const getCurrentAdminUser = () => {
-  const adminUserJSON = sessionStorage.getItem('ai_portal_admin_user');
+  const adminUserJSON = localStorage.getItem('ai_portal_admin_user');
   return adminUserJSON ? JSON.parse(adminUserJSON) : null;
 };
 
