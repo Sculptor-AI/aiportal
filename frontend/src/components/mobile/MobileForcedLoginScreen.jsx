@@ -145,6 +145,7 @@ const InputGroup = styled.div`
 const Input = styled.input`
   width: 100%;
   padding: 16px 20px;
+  padding-right: ${props => props.$withToggle ? '82px' : '20px'};
   border: 2px solid rgba(209, 213, 219, 0.3);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.7);
@@ -172,6 +173,66 @@ const Input = styled.input`
     opacity: 0.6;
     cursor: not-allowed;
   }
+`;
+
+const PasswordToggleButton = styled.button`
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: #667eea;
+  cursor: pointer;
+  padding: 6px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+
+  &:hover:not(:disabled) {
+    background: rgba(102, 126, 234, 0.12);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(-50%) scale(0.96);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const PasswordIconLayer = styled.span`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+`;
+
+const HiddenPasswordIcon = styled(PasswordIconLayer)`
+  opacity: ${props => (props.$isVisible ? 0 : 1)};
+  transform: ${props => (props.$isVisible ? 'scale(0.85) rotate(90deg)' : 'scale(1) rotate(0deg)')};
+`;
+
+const VisiblePasswordIcon = styled(PasswordIconLayer)`
+  opacity: ${props => (props.$isVisible ? 1 : 0)};
+  transform: ${props => (props.$isVisible ? 'scale(1) rotate(0deg)' : 'scale(0.85) rotate(-90deg)')};
 `;
 
 const EmailInput = styled(Input)`
@@ -377,6 +438,7 @@ const MobileForcedLoginScreen = () => {
   const { login, register, loading, error, loginWithGoogle } = useAuth();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -438,6 +500,7 @@ const MobileForcedLoginScreen = () => {
     setTimeout(() => {
       setIsLoginMode(!isLoginMode);
       setFormData({ username: '', password: '', email: '' });
+      setShowPassword(false);
       setLocalError('');
       setSuccessMessage('');
       
@@ -550,14 +613,36 @@ const MobileForcedLoginScreen = () => {
 
             <InputGroup>
               <Input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 name="password"
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleInputChange}
                 disabled={isSubmitting}
                 autoComplete={isLoginMode ? "current-password" : "new-password"}
+                $withToggle
               />
+              <PasswordToggleButton
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                disabled={isSubmitting}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <HiddenPasswordIcon $isVisible={showPassword}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                </HiddenPasswordIcon>
+                <VisiblePasswordIcon $isVisible={showPassword}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C5 20 1 12 1 12a20.27 20.27 0 0 1 5.08-6.94" />
+                    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a20.3 20.3 0 0 1-2.62 3.93" />
+                    <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                    <path d="M1 1l22 22" />
+                  </svg>
+                </VisiblePasswordIcon>
+              </PasswordToggleButton>
             </InputGroup>
 
             <SubmitButton type="submit" disabled={isSubmitting || loading}>

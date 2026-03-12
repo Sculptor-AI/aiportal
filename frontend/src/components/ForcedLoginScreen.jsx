@@ -244,6 +244,7 @@ const InputWrapper = styled.div`
 const Input = styled.input`
   width: 100%;
   padding: 12px 14px;
+  padding-right: ${p => (p.$withToggle ? '68px' : '14px')};
   background: rgba(250, 248, 245, 0.6);
   border: 1px solid rgba(200, 190, 180, 0.2);
   border-radius: 10px;
@@ -267,6 +268,59 @@ const Input = styled.input`
   }
 
   &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+const PasswordField = styled.div`
+  position: relative;
+`;
+
+const PasswordToggleButton = styled.button`
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #8d7f72;
+  cursor: pointer;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  overflow: hidden;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+  }
+
+  &:hover:not(:disabled) { background: rgba(44, 36, 32, 0.08); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+const PasswordIconLayer = styled.span`
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+`;
+
+const HiddenPasswordIcon = styled(PasswordIconLayer)`
+  opacity: ${p => (p.$isVisible ? 0 : 1)};
+  transform: ${p => (p.$isVisible ? 'scale(0.85) rotate(90deg)' : 'scale(1) rotate(0deg)')};
+`;
+
+const VisiblePasswordIcon = styled(PasswordIconLayer)`
+  opacity: ${p => (p.$isVisible ? 1 : 0)};
+  transform: ${p => (p.$isVisible ? 'scale(1) rotate(0deg)' : 'scale(0.85) rotate(-90deg)')};
 `;
 
 const SubmitBtn = styled.button`
@@ -378,6 +432,7 @@ const ForcedLoginScreen = () => {
   const { login, register, loading, error, loginWithGoogle } = useAuth();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [formData, setFormData] = useState({ username: '', password: '', email: '' });
+  const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -435,6 +490,7 @@ const ForcedLoginScreen = () => {
   const toggleMode = () => {
     setIsLoginMode(m => !m);
     setFormData({ username: '', password: '', email: '' });
+    setShowPassword(false);
     setLocalError('');
     setSuccessMessage('');
   };
@@ -515,15 +571,39 @@ const ForcedLoginScreen = () => {
             </InputWrapper>
 
             <InputWrapper>
-              <Input
-                type="password"
-                name="password"
-                placeholder="Password"
-                value={formData.password}
-                onChange={handleInputChange}
-                disabled={isSubmitting}
-                autoComplete={isLoginMode ? 'current-password' : 'new-password'}
-              />
+              <PasswordField>
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  disabled={isSubmitting}
+                  autoComplete={isLoginMode ? 'current-password' : 'new-password'}
+                  $withToggle
+                />
+                <PasswordToggleButton
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  disabled={isSubmitting}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <HiddenPasswordIcon $isVisible={showPassword}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </HiddenPasswordIcon>
+                  <VisiblePasswordIcon $isVisible={showPassword}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+                      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C5 20 1 12 1 12a20.27 20.27 0 0 1 5.08-6.94" />
+                      <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a20.3 20.3 0 0 1-2.62 3.93" />
+                      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                      <path d="M1 1l22 22" />
+                    </svg>
+                  </VisiblePasswordIcon>
+                </PasswordToggleButton>
+              </PasswordField>
             </InputWrapper>
 
             <SubmitBtn type="submit" disabled={isSubmitting || loading}>
