@@ -39,6 +39,12 @@ import {
   getPreferredModelId
 } from './config/modelConfig';
 import { setBackendMode, shouldUseRealBackend } from './services/backendConfig';
+import {
+  readLocalStorageItem,
+  readLocalStorageJSON,
+  removeLocalStorageItem,
+  writeLocalStorageItem
+} from './utils/storage';
 
 const WhiteboardModal = React.lazy(() => import('./components/WhiteboardModal'));
 const EquationEditorModal = React.lazy(() => import('./components/EquationEditorModal'));
@@ -248,18 +254,37 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     if (user?.settings?.language) {
       return user.settings.language;
     }
-    try {
-      const savedSettings = localStorage.getItem('settings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        if (parsedSettings.language) {
-          return parsedSettings.language;
-        }
-      }
-    } catch (error) {
-      console.error('Error reading saved language preference:', error);
+
+    const savedSettings = readLocalStorageJSON('settings');
+    if (savedSettings?.language) {
+      return savedSettings.language;
     }
+
     return 'en-US';
+  };
+
+  const getEnabledCustomModels = () => {
+    const customModels = readLocalStorageJSON('customModels', []);
+
+    if (!Array.isArray(customModels)) {
+      return [];
+    }
+
+    return customModels
+      .filter(model => model.enabled)
+      .map(model => ({
+        id: `custom-${model.id}`,
+        name: model.name,
+        description: model.description,
+        isCustomModel: true,
+        systemPrompt: model.systemPrompt,
+        avatar: model.avatar,
+        avatarImage: model.avatarImage || null,
+        avatarColor: model.avatarColor || null,
+        provider: 'Custom Model',
+        isBackendModel: false,
+        baseModel: model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID
+      }));
   };
 
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
@@ -306,67 +331,31 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
   // Project state
   const [projects, setProjects] = useState(() => {
-    try {
-      const savedProjects = localStorage.getItem('projects');
-      return savedProjects ? JSON.parse(savedProjects) : [];
-    } catch (err) {
-      console.error("Error loading projects from localStorage:", err);
-      return [];
-    }
+    return readLocalStorageJSON('projects', []);
   });
 
   const [activeProject, setActiveProject] = useState(() => {
-    const savedActiveProject = localStorage.getItem('activeProject');
-    return savedActiveProject ? JSON.parse(savedActiveProject) : null;
+    return readLocalStorageJSON('activeProject', null);
   });
 
-  const [availableModels, setAvailableModels] = useState(() => {
-    try {
-      const cached = localStorage.getItem('cachedModels');
-      return cached ? JSON.parse(cached) : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const [pendingMessage, setPendingMessage] = useState(null);
+
+  const [availableModels, setAvailableModels] = useState([]);
 
   const [selectedModel, setSelectedModel] = useState(() => {
-    const savedModel = localStorage.getItem('selectedModel');
-    return savedModel || null; // Will be set when models are loaded
+    return readLocalStorageItem('selectedModel') || null;
   });
 
   // Fetch models from backend (now the ONLY source) and refresh periodically
   useEffect(() => {
+    removeLocalStorageItem('cachedModels');
+
     const getBackendModels = async () => {
+      const enabledCustomModels = getEnabledCustomModels();
+
       try {
         console.log('Fetching models from backend...');
         const backendModels = await fetchModelsFromBackend();
-
-        // Get enabled custom models from localStorage
-        const customModelsJson = localStorage.getItem('customModels');
-        let enabledCustomModels = [];
-        if (customModelsJson) {
-          try {
-            const customModels = JSON.parse(customModelsJson);
-            // Filter only enabled custom models and format them
-            enabledCustomModels = customModels
-              .filter(model => model.enabled)
-              .map(model => ({
-                id: `custom-${model.id}`, // Prefix with 'custom-' to avoid ID conflicts
-                name: model.name,
-                description: model.description,
-                isCustomModel: true,
-                systemPrompt: model.systemPrompt,
-                avatar: model.avatar,
-                avatarImage: model.avatarImage || null,
-                avatarColor: model.avatarColor || null,
-                provider: 'Custom Model',
-                isBackendModel: false, // Custom models are frontend models
-                baseModel: model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID
-              }));
-          } catch (err) {
-            console.error('Error parsing custom models:', err);
-          }
-        }
 
         // Combine backend models with enabled custom models
         const allModels = [
@@ -376,7 +365,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
         if (allModels.length > 0) {
           setAvailableModels(allModels);
-          localStorage.setItem('cachedModels', JSON.stringify(allModels));
           console.log(`Loaded ${allModels.length} models (${backendModels?.length || 0} backend, ${enabledCustomModels.length} custom):`, allModels.map(m => m.id));
 
           // Set default model if none is selected or the selected one is no longer available
@@ -384,7 +372,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
           if (!currentSelectedModelIsValid && allModels.length > 0) {
             const defaultModel = getPreferredModelId(allModels);
             setSelectedModel(defaultModel);
-            localStorage.setItem('selectedModel', defaultModel);
             console.log(`Set default model to: ${defaultModel}`);
           }
         } else {
@@ -396,37 +383,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
 
-        // Even if backend fails, still try to load custom models
-        const customModelsJson = localStorage.getItem('customModels');
-        let enabledCustomModels = [];
-        if (customModelsJson) {
-          try {
-            const customModels = JSON.parse(customModelsJson);
-            enabledCustomModels = customModels
-              .filter(model => model.enabled)
-              .map(model => ({
-                id: `custom-${model.id}`,
-                name: model.name,
-                description: model.description,
-                isCustomModel: true,
-                systemPrompt: model.systemPrompt,
-                avatar: model.avatar,
-                avatarImage: model.avatarImage || null,
-                avatarColor: model.avatarColor || null,
-                provider: 'Custom Model',
-                isBackendModel: false,
-                baseModel: model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID
-              }));
-          } catch (err) {
-            console.error('Error parsing custom models:', err);
-          }
-        }
-
         setAvailableModels(enabledCustomModels);
         if (enabledCustomModels.length > 0 && !enabledCustomModels.some(m => m.id === selectedModel)) {
           const defaultModel = getPreferredModelId(enabledCustomModels);
           setSelectedModel(defaultModel);
-          localStorage.setItem('selectedModel', defaultModel);
         }
       }
     };
@@ -462,13 +422,13 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     }
 
     // Otherwise, use localStorage
-    const savedSettings = localStorage.getItem('settings');
-      return savedSettings ? JSON.parse(savedSettings) : {
-        theme: 'light',
-        accentColor: 'theme',
-        fontSize: 'medium',
-        fontFamily: 'system',
-        sendWithEnter: true,
+    const savedSettings = readLocalStorageJSON('settings');
+    return savedSettings || {
+      theme: 'light',
+      accentColor: 'theme',
+      fontSize: 'medium',
+      fontFamily: 'system',
+      sendWithEnter: true,
       showTimestamps: true,
       showModelIcons: true,
       showProfilePicture: true,
@@ -482,7 +442,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       reducedMotion: false,
       lineSpacing: 'normal',
       showGreeting: true,
-        useRealBackend: shouldUseRealBackend(),
+      useRealBackend: shouldUseRealBackend(),
       language: 'en-US'
     };
   });
@@ -550,7 +510,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   useEffect(() => {
     if (user && !loading) {
       // Check if user has completed onboarding
-      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+      const hasCompletedOnboarding = readLocalStorageItem(`onboarding_completed_${user.id}`);
 
       // Show onboarding if:
       // 1. User hasn't completed onboarding AND
@@ -608,25 +568,25 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   }, [chats, activeChat]);
 
   useEffect(() => {
-    localStorage.setItem('activeChat', JSON.stringify(activeChat));
+    writeLocalStorageItem('activeChat', JSON.stringify(activeChat));
   }, [activeChat]);
 
   useEffect(() => {
-    localStorage.setItem('projects', JSON.stringify(projects));
+    writeLocalStorageItem('projects', JSON.stringify(projects));
   }, [projects]);
 
   useEffect(() => {
-    localStorage.setItem('activeProject', JSON.stringify(activeProject));
+    writeLocalStorageItem('activeProject', JSON.stringify(activeProject));
   }, [activeProject]);
 
   useEffect(() => {
-    localStorage.setItem('selectedModel', selectedModel);
+    writeLocalStorageItem('selectedModel', selectedModel);
   }, [selectedModel]);
 
   // Only save settings to localStorage if not logged in
   useEffect(() => {
     if (!user) {
-      localStorage.setItem('settings', JSON.stringify(settings));
+      writeLocalStorageItem('settings', JSON.stringify(settings));
     }
   }, [settings, user]);
 
@@ -657,14 +617,14 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     };
     setChats(prevChats => {
       const updatedChats = [newChat, ...prevChats];
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      writeLocalStorageItem('chats', safeStringify(updatedChats));
       return updatedChats;
     });
     setActiveChat(newChat.id);
+
+    if (options.initialMessage) {
+      setPendingMessage(options.initialMessage);
+    }
 
     // Navigate to chat tab unless caller explicitly keeps the current view.
     if (!options.stayOnCurrentRoute && location.pathname !== '/') {
@@ -727,6 +687,19 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     }));
   };
 
+  const updateProjectDescription = (projectId, description) => {
+    setProjects(prevProjects => prevProjects.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          projectDescription: description,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return p;
+    }));
+  };
+
   const toggleProjectStar = (projectId) => {
     setProjects(prevProjects => prevProjects.map(p => {
       if (p.id === projectId) {
@@ -752,18 +725,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       };
       setChats([newChat]);
       setActiveChat(newChat.id);
-      try {
-        localStorage.setItem('chats', safeStringify([newChat]));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      writeLocalStorageItem('chats', safeStringify([newChat]));
     } else {
       setChats(updatedChats);
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      writeLocalStorageItem('chats', safeStringify(updatedChats));
 
       // If the deleted chat was the active one, set a new active chat
       if (chatId === activeChat) {
@@ -785,11 +750,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
         return chat;
       });
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      writeLocalStorageItem('chats', safeStringify(updatedChats));
       return updatedChats;
     });
   };
@@ -810,7 +771,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
         return chat;
       });
-      localStorage.setItem('chats', safeStringify(updatedChats));
+      writeLocalStorageItem('chats', safeStringify(updatedChats));
       return updatedChats;
     });
   };
@@ -876,7 +837,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const handleOnboardingComplete = (onboardingSettings) => {
     if (user) {
       // Mark onboarding as completed
-      localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+      writeLocalStorageItem(`onboarding_completed_${user.id}`, 'true');
 
       // Apply the selected settings
       const newSettings = { ...settings, ...onboardingSettings };
@@ -891,7 +852,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const handleRestartOnboarding = () => {
     if (user) {
       // Remove the onboarding completion marker
-      localStorage.removeItem(`onboarding_completed_${user.id}`);
+      removeLocalStorageItem(`onboarding_completed_${user.id}`);
 
       // Show onboarding again
       setShowOnboarding(true);
@@ -924,8 +885,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     setChats([newChat]);
     setActiveChat(newChat.id);
     // Clear localStorage to start fresh
-    localStorage.removeItem('chats');
-    localStorage.removeItem('activeChat');
+    removeLocalStorageItem('chats');
+    removeLocalStorageItem('activeChat');
     console.log('Chats reset to fresh state');
   };
 
@@ -1163,6 +1124,9 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 <ChatWindow
                   ref={chatWindowRef}
                   chat={currentChat}
+                  projects={projects}
+                  pendingMessage={pendingMessage}
+                  onPendingMessageConsumed={() => setPendingMessage(null)}
                   addMessage={addMessage}
                   updateMessage={updateMessage}
                   updateChatTitle={updateChatTitle}
@@ -1204,8 +1168,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 <ProjectDetailPage
                   projects={projects}
                   chats={chats}
-                  addMessage={addMessage}
-                  updateMessage={updateMessage}
                   createNewChat={createNewChat}
                   collapsed={collapsed}
                   setActiveChat={setActiveChat}
@@ -1213,22 +1175,12 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   addKnowledgeToProject={addKnowledgeToProject}
                   removeKnowledgeFromProject={removeKnowledgeFromProject}
                   updateProjectInstructions={updateProjectInstructions}
-                  // Pass down all the props ChatInputArea needs
+                  updateProjectDescription={updateProjectDescription}
+                  toggleProjectStar={toggleProjectStar}
                   settings={settings}
                   availableModels={availableModels}
                   selectedModel={selectedModel}
                   onModelChange={handleModelChange}
-                  isWhiteboardOpen={isWhiteboardOpen}
-                  onToggleWhiteboard={() => setIsWhiteboardOpen(p => !p)}
-                  isEquationEditorOpen={isEquationEditorOpen}
-                  onToggleEquationEditor={() => setIsEquationEditorOpen(p => !p)}
-                  isGraphingOpen={isGraphingOpen}
-                  onToggleGraphing={() => setIsGraphingOpen(p => !p)}
-                  isFlowchartOpen={isFlowchartOpen}
-                  onToggleFlowchart={() => setIsFlowchartOpen(p => !p)}
-                  isSandbox3DOpen={isSandbox3DOpen}
-                  onToggleSandbox3D={() => setIsSandbox3DOpen(p => !p)}
-                  onToolbarToggle={setIsToolbarOpen}
                 />
               } />
             </Routes>
@@ -1343,7 +1295,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
           {/* Easter Eggs */}
           {showConfetti && (
-            <ConfettiExplosion onComplete={closeConfetti} message={confettiMessage} />
+            <ConfettiExplosion onComplete={closeConfetti} />
           )}
 
           {showMatrix && (

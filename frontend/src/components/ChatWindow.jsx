@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { useTheme } from 'styled-components';
+import styled from 'styled-components';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
@@ -13,6 +15,29 @@ import LiveModeUI from './LiveModeUI';
 import useMessageSender from '../hooks/useMessageSender';
 import { listImageModelsApi } from '../services/imageService';
 import { DEFAULT_CHAT_MODEL_ID, DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
+
+const ProjectBadge = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.sidebar};
+  color: ${props => props.theme.text};
+  font-size: 0.75rem;
+  opacity: 0.75;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover { opacity: 1; }
+
+  svg { width: 12px; height: 12px; flex-shrink: 0; }
+`;
 import {
   ChatWindowContainer,
   ChatHeader,
@@ -56,6 +81,9 @@ const ChatWindow = forwardRef(({
   onUserTyping,
   focusModeActive = false,
   onMessageSent,
+  projects = [],
+  pendingMessage = null,
+  onPendingMessageConsumed,
 }, ref) => {
   // All hooks at the top level - no conditional returns before this
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || DEFAULT_CHAT_MODEL_ID);
@@ -416,6 +444,7 @@ const ChatWindow = forwardRef(({
     selectedModel,
     settings,
     availableModels,
+    projects,
     addMessage,
     updateMessage,
     updateChatTitle,
@@ -425,6 +454,14 @@ const ChatWindow = forwardRef(({
     setResetFileUpload,
     onAttachmentChange,
   });
+
+  // Handle pending message from project detail page (pre-fill input)
+  useEffect(() => {
+    if (pendingMessage && chatInputAreaRef.current?.appendToInput) {
+      chatInputAreaRef.current.appendToInput(pendingMessage);
+      onPendingMessageConsumed?.();
+    }
+  }, [pendingMessage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Effects
   useEffect(() => {
@@ -609,6 +646,17 @@ const ChatWindow = forwardRef(({
                 theme={theme}
               />
             )}
+            {chat?.projectId && (() => {
+              const proj = (projects || []).find(p => p.id === chat.projectId);
+              return proj ? (
+                <ProjectBadge to={`/projects/${proj.id}`}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
+                  {proj.projectName}
+                </ProjectBadge>
+              ) : null;
+            })()}
             {!isDeepResearchChipActive && (
               <ImageModelSelector
                 availableModels={availableImageModels}

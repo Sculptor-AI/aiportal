@@ -16,6 +16,12 @@ import { getDefaultChatTitle, isDefaultChatTitle } from '../../utils/chatLocaliz
 import { useTranslation } from '../../contexts/TranslationContext';
 import { appendDeepResearchModel, getPreferredModelId } from '../../config/modelConfig';
 import { setBackendMode, shouldUseRealBackend } from '../../services/backendConfig';
+import {
+  readLocalStorageItem,
+  readLocalStorageJSON,
+  removeLocalStorageItem,
+  writeLocalStorageItem
+} from '../../utils/storage';
 
 const MobileAppContainer = styled.div`
   display: flex;
@@ -278,17 +284,12 @@ const MobileAppContent = () => {
     if (user?.settings?.language) {
       return user.settings.language;
     }
-    try {
-      const savedSettings = localStorage.getItem('settings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        if (parsedSettings.language) {
-          return parsedSettings.language;
-        }
-      }
-    } catch (error) {
-      console.error('Error reading saved language preference:', error);
+
+    const savedSettings = readLocalStorageJSON('settings');
+    if (savedSettings?.language) {
+      return savedSettings.language;
     }
+
     return 'en-US';
   };
   
@@ -330,8 +331,7 @@ const MobileAppContent = () => {
   const [availableModels, setAvailableModels] = useState([]);
   
   const [selectedModel, setSelectedModel] = useState(() => {
-    const savedModel = localStorage.getItem('selectedModel');
-    return savedModel || null;
+    return readLocalStorageItem('selectedModel') || null;
   });
 
   const [settings, setSettings] = useState(() => {
@@ -342,8 +342,8 @@ const MobileAppContent = () => {
       };
     }
     
-    const savedSettings = localStorage.getItem('settings');
-    return savedSettings ? JSON.parse(savedSettings) : {
+    const savedSettings = readLocalStorageJSON('settings');
+    return savedSettings || {
       theme: 'light',
       fontSize: 'medium',
       fontFamily: 'system',
@@ -421,20 +421,20 @@ const MobileAppContent = () => {
   }, [chats, activeChat]);
 
   useEffect(() => {
-    localStorage.setItem('chats', JSON.stringify(chats));
+    writeLocalStorageItem('chats', JSON.stringify(chats));
   }, [chats]);
 
   useEffect(() => {
-    localStorage.setItem('activeChat', JSON.stringify(activeChat));
+    writeLocalStorageItem('activeChat', JSON.stringify(activeChat));
   }, [activeChat]);
 
   useEffect(() => {
-    localStorage.setItem('selectedModel', selectedModel);
+    writeLocalStorageItem('selectedModel', selectedModel);
   }, [selectedModel]);
   
   useEffect(() => {
     if (!user) {
-      localStorage.setItem('settings', JSON.stringify(settings));
+      writeLocalStorageItem('settings', JSON.stringify(settings));
     }
   }, [settings, user]);
 
@@ -459,7 +459,7 @@ const MobileAppContent = () => {
   useEffect(() => {
     if (user && !loading) {
       // Check if user has completed onboarding
-      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+      const hasCompletedOnboarding = readLocalStorageItem(`onboarding_completed_${user.id}`);
       
       // Show onboarding if:
       // 1. User hasn't completed onboarding AND
@@ -570,7 +570,7 @@ const MobileAppContent = () => {
         }
         return chat;
       });
-      localStorage.setItem('chats', JSON.stringify(updatedChats));
+      writeLocalStorageItem('chats', JSON.stringify(updatedChats));
       return updatedChats;
     });
   };
@@ -634,8 +634,8 @@ const MobileAppContent = () => {
     setChats([newChat]);
     setActiveChat(newChat.id);
     // Clear localStorage to start fresh
-    localStorage.removeItem('chats');
-    localStorage.removeItem('activeChat');
+    removeLocalStorageItem('chats');
+    removeLocalStorageItem('activeChat');
     console.log('Chats reset to fresh state');
   };
 
@@ -643,7 +643,7 @@ const MobileAppContent = () => {
   const handleOnboardingComplete = (onboardingSettings) => {
     if (user) {
       // Mark onboarding as completed
-      localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+      writeLocalStorageItem(`onboarding_completed_${user.id}`, 'true');
       
       // Apply the selected settings
       const newSettings = { ...settings, ...onboardingSettings };

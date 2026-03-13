@@ -23,14 +23,14 @@ const slideUp = keyframes`
   }
 `;
 
-const slideInFromRight = keyframes`
+const modalIn = keyframes`
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateY(20px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0) scale(1);
   }
 `;
 
@@ -503,51 +503,84 @@ const EmptyDescription = styled.p`
 `;
 
 // ============================================================================
-// SLIDE-IN PANEL
+// MODAL
 // ============================================================================
 
-const PanelOverlay = styled.div`
+const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
   opacity: ${props => props.$visible ? 1 : 0};
   pointer-events: ${props => props.$visible ? 'auto' : 'none'};
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
+
+  @media (max-width: 640px) {
+    padding: 0;
+    align-items: flex-end;
+  }
 `;
 
-const EditPanel = styled.aside`
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 520px;
-  max-width: 100%;
-  height: 100vh;
+const ModalDialog = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
   background: ${props => props.theme.sidebar};
-  border-left: 1px solid ${props => props.theme.border};
-  z-index: 1001;
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
-  transform: translateX(${props => props.$visible ? '0' : '100%'});
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-  box-shadow: -20px 0 60px ${props => props.theme.shadow || 'rgba(0,0,0,0.2)'};
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255,255,255,0.04);
+  animation: ${props => props.$visible ? modalIn : 'none'} 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+
+  @media (max-width: 640px) {
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 24px 24px 0 0;
+    border-bottom: none;
+  }
 `;
 
-const PanelHeader = styled.div`
+const ModalHeader = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px;
-  border-bottom: 1px solid ${props => props.theme.border};
+  flex-direction: column;
+  padding: 28px 28px 0;
   flex-shrink: 0;
 `;
 
-const PanelTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 600;
+const ModalHeaderTop = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+`;
+
+const ModalTitleGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+const ModalTitle = styled.h2`
+  font-size: 1.375rem;
+  font-weight: 700;
   margin: 0;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
+  color: ${props => props.theme.text};
+`;
+
+const ModalSubtitle = styled.p`
+  font-size: 0.875rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}70`};
+  margin: 0;
 `;
 
 const CloseButton = styled.button`
@@ -555,45 +588,81 @@ const CloseButton = styled.button`
   height: 36px;
   border-radius: 10px;
   border: none;
-  background: ${props => props.theme.hover || props.theme.inputBackground};
-  color: ${props => props.theme.text};
+  background: ${props => props.theme.inputBackground || props.theme.background};
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 
   &:hover {
     background: ${props => props.theme.border};
+    color: ${props => props.theme.text};
   }
 
   svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 `;
 
-const PanelContent = styled.div`
-  flex: 1;
-  padding: 24px;
-  overflow-y: auto;
+const ModalDivider = styled.div`
+  height: 1px;
+  background: ${props => props.theme.border};
+  margin: 0 -28px;
 `;
 
-const PanelFooter = styled.div`
+const ModalContent = styled.div`
+  flex: 1;
+  padding: 24px 28px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border};
+    border-radius: 3px;
+  }
+`;
+
+const ModalFooter = styled.div`
   display: flex;
   justify-content: space-between;
-  padding: 20px 24px;
+  align-items: center;
+  padding: 20px 28px;
   border-top: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.inputBackground || props.theme.background};
+  background: ${props => props.theme.inputBackground || props.theme.background}80;
   flex-shrink: 0;
+  gap: 12px;
 `;
 
 // ============================================================================
 // FORM ELEMENTS
 // ============================================================================
 
+const FormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
 const FormGroup = styled.div`
-  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const Label = styled.label`
@@ -601,9 +670,7 @@ const Label = styled.label`
   font-size: 0.8125rem;
   font-weight: 600;
   color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 10px;
+  letter-spacing: 0.01em;
 `;
 
 const Input = styled.input`
@@ -685,41 +752,36 @@ const Select = styled.select`
   }
 `;
 
-const HelperText = styled.p`
-  font-size: 0.8125rem;
-  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
-  margin: 8px 0 0;
-  line-height: 1.5;
-`;
-
 // ============================================================================
 // AVATAR PICKER
 // ============================================================================
 
 const AvatarSection = styled.div`
-  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 `;
 
-const AvatarPreview = styled.div`
+const AvatarRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 20px;
 `;
 
 const LargeAvatar = styled.div`
-  width: 80px;
-  height: 80px;
+  width: 76px;
+  height: 76px;
   border-radius: 20px;
   background: ${props => props.$bgColor || props.theme.primary};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   color: #fff;
   overflow: hidden;
-  box-shadow: 0 4px 16px ${props => props.$bgColor || props.theme.primary}40;
+  box-shadow: 0 8px 24px ${props => props.$bgColor || props.theme.primary}50;
   transition: all 0.3s ease;
+  flex-shrink: 0;
 
   img {
     width: 100%;
@@ -728,17 +790,32 @@ const LargeAvatar = styled.div`
   }
 `;
 
-const AvatarActions = styled.div`
+const AvatarControls = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
+`;
+
+const AvatarControlLabel = styled.p`
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  margin: 0 0 4px;
+`;
+
+const AvatarButtonRow = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 `;
 
 const UploadButton = styled.label`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 6px;
+  padding: 7px 12px;
   background: ${props => props.theme.inputBackground || props.theme.background};
   border: 1px solid ${props => props.theme.border};
   border-radius: 8px;
@@ -758,34 +835,37 @@ const UploadButton = styled.label`
   }
 
   svg {
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
   }
 `;
 
 const RemoveImageButton = styled.button`
-  padding: 6px 12px;
+  padding: 7px 12px;
   background: transparent;
-  border: none;
-  font-size: 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
   color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
 
   &:hover {
     color: #e53935;
+    background: rgba(229, 57, 53, 0.08);
+    border-color: rgba(229, 57, 53, 0.2);
   }
 `;
 
 const EmojiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 8px;
+  gap: 6px;
 `;
 
 const EmojiButton = styled.button`
-  width: 44px;
-  height: 44px;
+  aspect-ratio: 1;
   border-radius: 10px;
   border: 2px solid ${props => props.$selected
     ? (props.theme.accentColor || props.theme.primary)
@@ -795,11 +875,12 @@ const EmojiButton = styled.button`
     : (props.theme.inputBackground || props.theme.background)};
   cursor: pointer;
   font-size: 1.25rem;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  padding: 6px;
 
   &:hover {
     background: ${props => props.theme.hover || props.theme.inputBackground};
-    transform: scale(1.1);
+    transform: scale(1.12);
   }
 `;
 
@@ -808,29 +889,37 @@ const EmojiButton = styled.button`
 // ============================================================================
 
 const Button = styled.button`
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-radius: 10px;
   border: none;
   font-size: 0.9375rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 `;
 
 const PrimaryButton = styled(Button)`
   background: ${props => props.theme.accentBackground || props.theme.primary};
   color: #fff;
+  padding: 11px 24px;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px ${props => props.theme.accentColor || props.theme.primary}40;
+    box-shadow: 0 6px 16px ${props => props.theme.accentColor || props.theme.primary}45;
+    filter: brightness(1.05);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   &:disabled {
-    opacity: 0.6;
+    opacity: 0.45;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+    filter: none;
   }
 `;
 
@@ -838,19 +927,32 @@ const SecondaryButton = styled(Button)`
   background: ${props => props.theme.inputBackground || props.theme.background};
   color: ${props => props.theme.text};
   border: 1px solid ${props => props.theme.border};
+  padding: 11px 20px;
 
   &:hover {
     background: ${props => props.theme.hover || props.theme.inputBackground};
+    border-color: ${props => props.theme.textSecondary || `${props.theme.text}40`};
   }
 `;
 
 const DeleteButton = styled(Button)`
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: transparent;
   color: #e53935;
-  padding: 12px 16px;
+  border: 1px solid rgba(229, 57, 53, 0.25);
+  padding: 11px 16px;
+  font-size: 0.875rem;
 
   &:hover {
-    background: rgba(229, 57, 53, 0.1);
+    background: rgba(229, 57, 53, 0.08);
+    border-color: rgba(229, 57, 53, 0.45);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
   }
 `;
 
@@ -1209,140 +1311,164 @@ const WorkspacePage = ({ collapsed }) => {
         )}
       </ContentWrapper>
 
-      {/* Edit/Create Panel */}
-      <PanelOverlay $visible={panelVisible} onClick={handleClosePanel} />
-      <EditPanel $visible={panelVisible}>
-        <PanelHeader>
-          <PanelTitle>
-            {editingModel ? t('workspace.modal.titleEdit') : t('workspace.modal.titleCreate')}
-          </PanelTitle>
-          <CloseButton onClick={handleClosePanel}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </CloseButton>
-        </PanelHeader>
+      {/* Edit/Create Modal */}
+      <ModalOverlay $visible={panelVisible} onClick={handleClosePanel}>
+        <ModalDialog $visible={panelVisible} onClick={e => e.stopPropagation()}>
+          <ModalHeader>
+            <ModalHeaderTop>
+              <ModalTitleGroup>
+                <ModalTitle>
+                  {editingModel ? t('workspace.modal.titleEdit') : t('workspace.modal.titleCreate')}
+                </ModalTitle>
+                <ModalSubtitle>
+                  {editingModel
+                    ? `Editing "${editingModel.name}"`
+                    : 'Configure a new AI personality with custom instructions'}
+                </ModalSubtitle>
+              </ModalTitleGroup>
+              <CloseButton onClick={handleClosePanel}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </CloseButton>
+            </ModalHeaderTop>
+            <ModalDivider />
+          </ModalHeader>
 
-        <PanelContent>
-          <AvatarSection>
-            <Label>{t('workspace.modal.fieldAvatar')}</Label>
-            <AvatarPreview>
-              <LargeAvatar $bgColor={formData.avatarColor}>
-                {formData.avatarImage ? (
-                  <img src={formData.avatarImage} alt="Avatar preview" />
-                ) : (
-                  formData.avatar || '🤖'
-                )}
-              </LargeAvatar>
-              <AvatarActions>
-                <UploadButton>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="17 8 12 3 7 8"/>
-                    <line x1="12" y1="3" x2="12" y2="15"/>
-                  </svg>
-                  Upload Image
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                </UploadButton>
-                {formData.avatarImage && (
-                  <RemoveImageButton onClick={handleRemoveImage}>
-                    Remove image
-                  </RemoveImageButton>
-                )}
-              </AvatarActions>
-            </AvatarPreview>
+          <ModalContent>
+            {/* Avatar Section */}
+            <AvatarSection>
+              <AvatarRow>
+                <LargeAvatar $bgColor={formData.avatarColor}>
+                  {formData.avatarImage ? (
+                    <img src={formData.avatarImage} alt="Avatar preview" />
+                  ) : (
+                    formData.avatar || '🤖'
+                  )}
+                </LargeAvatar>
+                <AvatarControls>
+                  <AvatarControlLabel>{t('workspace.modal.fieldAvatar')}</AvatarControlLabel>
+                  <AvatarButtonRow>
+                    <UploadButton>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      </svg>
+                      Upload Image
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                      />
+                    </UploadButton>
+                    {formData.avatarImage && (
+                      <RemoveImageButton onClick={handleRemoveImage}>
+                        Remove
+                      </RemoveImageButton>
+                    )}
+                  </AvatarButtonRow>
+                </AvatarControls>
+              </AvatarRow>
 
-            {!formData.avatarImage && (
-              <EmojiGrid>
-                {avatarOptions.map(emoji => (
-                  <EmojiButton
-                    key={emoji}
-                    $selected={formData.avatar === emoji}
-                    onClick={() => setFormData(prev => ({ ...prev, avatar: emoji }))}
-                    type="button"
-                  >
-                    {emoji}
-                  </EmojiButton>
-                ))}
-              </EmojiGrid>
-            )}
-          </AvatarSection>
-
-          <FormGroup>
-            <Label>{t('workspace.modal.fieldName')}</Label>
-            <Input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder={t('workspace.modal.placeholderExamples')}
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label>{t('workspace.modal.fieldDescription')}</Label>
-            <TextArea
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder={t('workspace.modal.placeholderDescription')}
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <Label>{t('workspace.modal.fieldBaseModel')}</Label>
-            <Select
-              value={formData.baseModel}
-              onChange={(e) => setFormData(prev => ({ ...prev, baseModel: e.target.value }))}
-            >
-              {availableBaseModels.length > 0 ? (
-                availableBaseModels.map(model => (
-                  <option key={model.id} value={model.id}>
-                    {model.name} ({model.provider})
-                  </option>
-                ))
-              ) : (
-                <option value="">{t('workspace.modal.status.loadingModels')}</option>
+              {!formData.avatarImage && (
+                <EmojiGrid>
+                  {avatarOptions.map(emoji => (
+                    <EmojiButton
+                      key={emoji}
+                      $selected={formData.avatar === emoji}
+                      onClick={() => setFormData(prev => ({ ...prev, avatar: emoji }))}
+                      type="button"
+                    >
+                      {emoji}
+                    </EmojiButton>
+                  ))}
+                </EmojiGrid>
               )}
-            </Select>
-            <HelperText>{t('workspace.modal.helperBaseModel')}</HelperText>
-          </FormGroup>
+            </AvatarSection>
 
-          <FormGroup>
-            <Label>{t('workspace.modal.fieldSystemPrompt')}</Label>
-            <SystemPromptArea
-              value={formData.systemPrompt}
-              onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
-              placeholder={t('workspace.modal.placeholderSystemPrompt')}
-            />
-          </FormGroup>
-        </PanelContent>
+            {/* Name + Base Model row */}
+            <FormRow>
+              <FormGroup>
+                <Label>{t('workspace.modal.fieldName')}</Label>
+                <Input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder={t('workspace.modal.placeholderExamples')}
+                />
+              </FormGroup>
 
-        <PanelFooter>
-          {editingModel ? (
-            <DeleteButton onClick={handleDeleteModel}>
-              {t('workspace.modal.button.delete')}
-            </DeleteButton>
-          ) : (
-            <div />
-          )}
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <SecondaryButton onClick={handleClosePanel}>
-              {t('workspace.modal.button.cancel')}
-            </SecondaryButton>
-            <PrimaryButton
-              onClick={handleSaveModel}
-              disabled={!formData.name || !formData.systemPrompt || !formData.baseModel}
-            >
-              {editingModel ? t('workspace.modal.button.save') : t('workspace.modal.button.create')}
-            </PrimaryButton>
-          </div>
-        </PanelFooter>
-      </EditPanel>
+              <FormGroup>
+                <Label>{t('workspace.modal.fieldBaseModel')}</Label>
+                <Select
+                  value={formData.baseModel}
+                  onChange={(e) => setFormData(prev => ({ ...prev, baseModel: e.target.value }))}
+                >
+                  {availableBaseModels.length > 0 ? (
+                    availableBaseModels.map(model => (
+                      <option key={model.id} value={model.id}>
+                        {model.name} ({model.provider})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">{t('workspace.modal.status.loadingModels')}</option>
+                  )}
+                </Select>
+              </FormGroup>
+            </FormRow>
+
+            <FormGroup>
+              <Label>{t('workspace.modal.fieldDescription')}</Label>
+              <TextArea
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder={t('workspace.modal.placeholderDescription')}
+                style={{ minHeight: '72px' }}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>{t('workspace.modal.fieldSystemPrompt')}</Label>
+              <SystemPromptArea
+                value={formData.systemPrompt}
+                onChange={(e) => setFormData(prev => ({ ...prev, systemPrompt: e.target.value }))}
+                placeholder={t('workspace.modal.placeholderSystemPrompt')}
+              />
+            </FormGroup>
+          </ModalContent>
+
+          <ModalFooter>
+            {editingModel ? (
+              <DeleteButton onClick={handleDeleteModel}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6"/>
+                  <path d="M14 11v6"/>
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+                {t('workspace.modal.button.delete')}
+              </DeleteButton>
+            ) : (
+              <div />
+            )}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <SecondaryButton onClick={handleClosePanel}>
+                {t('workspace.modal.button.cancel')}
+              </SecondaryButton>
+              <PrimaryButton
+                onClick={handleSaveModel}
+                disabled={!formData.name || !formData.systemPrompt || !formData.baseModel}
+              >
+                {editingModel ? t('workspace.modal.button.save') : t('workspace.modal.button.create')}
+              </PrimaryButton>
+            </div>
+          </ModalFooter>
+        </ModalDialog>
+      </ModalOverlay>
     </PageContainer>
   );
 };

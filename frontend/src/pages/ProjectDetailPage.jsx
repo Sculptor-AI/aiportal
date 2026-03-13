@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
-import ChatMessage from '../components/ChatMessage';
 import ModelSelector from '../components/ModelSelector';
 
 const PAGE_SIDEBAR_OFFSET = 320;
 const KNOWLEDGE_CAPACITY_BYTES = 10 * 1024 * 1024;
+const MAX_INSTRUCTIONS_LENGTH = 8000;
+
+/* ── Layout ── */
 
 const PageContainer = styled.div`
   flex: 1;
@@ -35,12 +37,14 @@ const ContentWrapper = styled.div`
 `;
 
 const BackLink = styled(Link)`
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: ${props => props.theme.text};
   text-decoration: none;
   font-size: 0.88rem;
   opacity: 0.6;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   transition: opacity 0.15s ease;
 
   &:hover {
@@ -53,7 +57,7 @@ const TitleRow = styled.div`
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 `;
 
 const ProjectTitle = styled.h1`
@@ -67,7 +71,7 @@ const ProjectTitle = styled.h1`
 const TitleActions = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-shrink: 0;
 `;
 
@@ -79,8 +83,8 @@ const IconBtn = styled.button`
   justify-content: center;
   border: none;
   background: none;
-  color: ${props => props.theme.text};
-  opacity: 0.5;
+  color: ${props => props.$starred ? '#FFB800' : props.theme.text};
+  opacity: ${props => props.$starred ? 1 : 0.5};
   cursor: pointer;
   border-radius: 8px;
   transition: opacity 0.15s, background 0.15s;
@@ -93,13 +97,14 @@ const IconBtn = styled.button`
   svg {
     width: 18px;
     height: 18px;
+    fill: ${props => props.$starred ? '#FFB800' : 'none'};
   }
 `;
 
 const LayoutGrid = styled.div`
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 28px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
   align-items: start;
 
   @media (max-width: 1080px) {
@@ -111,17 +116,18 @@ const MainColumn = styled.div`
   min-width: 0;
 `;
 
-/* ── Simple composer (matches Claude's "Reply..." box) ── */
+/* ── Composer ── */
 
 const ComposerCard = styled.div`
   background: ${props => props.theme.sidebar};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
+  margin-bottom: 4px;
 `;
 
 const ComposerInner = styled.div`
-  padding: 16px 18px;
+  padding: 14px 16px 10px;
 `;
 
 const ComposerTextarea = styled.textarea`
@@ -131,7 +137,7 @@ const ComposerTextarea = styled.textarea`
   outline: none;
   resize: none;
   color: ${props => props.theme.text};
-  font-size: 1rem;
+  font-size: 0.975rem;
   line-height: 1.5;
   font-family: ${props => props.theme.fontFamily || 'inherit'};
   min-height: 40px;
@@ -146,14 +152,13 @@ const ComposerFooter = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px;
-  border-top: 1px solid ${props => props.theme.border};
+  padding: 6px 12px 8px;
 `;
 
 const ComposerLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 `;
 
 const ComposerBtn = styled.button`
@@ -175,10 +180,7 @@ const ComposerBtn = styled.button`
     background: ${props => props.theme.hover || 'rgba(128,128,128,0.1)'};
   }
 
-  svg {
-    width: 18px;
-    height: 18px;
-  }
+  svg { width: 18px; height: 18px; }
 `;
 
 const SendBtn = styled.button`
@@ -195,107 +197,26 @@ const SendBtn = styled.button`
   opacity: ${props => (props.disabled ? 0.3 : 1)};
   transition: opacity 0.15s;
 
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`;
-
-/* ── Messages area ── */
-
-const MessagesArea = styled.div`
-  margin-top: 20px;
-  max-height: 55vh;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 0;
-
-  &::-webkit-scrollbar {
-    width: 5px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: ${props => props.theme.border};
-    border-radius: 4px;
-  }
-`;
-
-const EmptyMessages = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 48px 20px;
-  opacity: 0.55;
-
-  svg {
-    width: 36px;
-    height: 36px;
-    margin-bottom: 14px;
-    opacity: 0.5;
-  }
-`;
-
-const EmptyMsgTitle = styled.div`
-  font-size: 1.05rem;
-  font-weight: 500;
-  margin-bottom: 6px;
-`;
-
-const EmptyMsgSub = styled.div`
-  font-size: 0.84rem;
-  max-width: 340px;
-  line-height: 1.5;
+  svg { width: 16px; height: 16px; }
 `;
 
 /* ── Chat list ── */
 
-const ChatSection = styled.section`
-  margin-top: 28px;
-`;
-
-const ChatSectionHead = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 4px;
-`;
-
-const NewChatBtn = styled.button`
-  border: none;
-  background: none;
-  color: ${props => props.theme.text};
-  font-size: 0.82rem;
-  opacity: 0.6;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: opacity 0.15s, background 0.15s;
-
-  &:hover {
-    opacity: 1;
-    background: ${props => props.theme.hover || 'rgba(128,128,128,0.08)'};
-  }
-`;
-
 const ChatsList = styled.div`
   display: flex;
   flex-direction: column;
+  margin-top: 8px;
 `;
 
 const ChatRow = styled.button`
   width: 100%;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
-  padding: 16px 6px;
+  padding: 14px 8px;
   border: none;
   border-bottom: 1px solid ${props => props.theme.border};
-  background: ${props => (props.$active ? (props.theme.hover || 'rgba(128,128,128,0.08)') : 'transparent')};
+  background: transparent;
   color: ${props => props.theme.text};
   text-align: left;
   cursor: pointer;
@@ -316,17 +237,8 @@ const ChatInfo = styled.div`
 `;
 
 const ChatName = styled.div`
-  font-size: 0.95rem;
+  font-size: 0.93rem;
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const ChatSub = styled.div`
-  margin-top: 3px;
-  font-size: 0.82rem;
-  opacity: 0.55;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -337,24 +249,26 @@ const ChatTime = styled.div`
   opacity: 0.5;
   white-space: nowrap;
   flex-shrink: 0;
+  margin-top: 2px;
 `;
 
 const EmptyChats = styled.div`
-  border: 1px dashed ${props => props.theme.border};
-  border-radius: 14px;
-  padding: 28px;
+  padding: 32px 20px;
   text-align: center;
-  font-size: 0.9rem;
-  opacity: 0.6;
+  font-size: 0.88rem;
+  opacity: 0.5;
 `;
 
 /* ── Right panel ── */
 
 const SidePanel = styled.aside`
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   background: ${props => props.theme.sidebar};
   border: 1px solid ${props => props.theme.border};
-  border-radius: 18px;
-  padding: 18px 18px 14px;
+  border-radius: 14px;
+  overflow: hidden;
   position: sticky;
   top: 24px;
 
@@ -363,178 +277,153 @@ const SidePanel = styled.aside`
   }
 `;
 
+const PanelSection = styled.div`
+  padding: 14px 16px;
+  border-bottom: 1px solid ${props => props.theme.border};
+
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
 const PanelHeadRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 `;
 
 const PanelTitle = styled.div`
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 600;
 `;
 
 const BadgePill = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
+  gap: 4px;
+  padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid ${props => props.theme.border};
-  font-size: 0.72rem;
-  opacity: 0.8;
+  font-size: 0.7rem;
+  opacity: 0.75;
 `;
 
-const Section = styled.section`
-  padding: 14px 0 10px;
-  border-top: 1px solid ${props => props.theme.border};
-`;
-
-const SectionHead = styled.div`
+const PanelEditBtn = styled.button`
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-`;
-
-const SectionLabel = styled.h3`
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 500;
-`;
-
-const SectionBtn = styled.button`
+  justify-content: center;
   border: none;
   background: none;
   color: ${props => props.theme.text};
-  padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 0.84rem;
-  opacity: 0.7;
+  opacity: 0.45;
   cursor: pointer;
+  border-radius: 6px;
   transition: opacity 0.15s, background 0.15s;
 
   &:hover {
-    opacity: 1;
-    background: ${props => props.theme.hover || 'rgba(128,128,128,0.08)'};
+    opacity: 0.9;
+    background: ${props => props.theme.hover || 'rgba(128,128,128,0.1)'};
   }
+
+  svg { width: 15px; height: 15px; }
+`;
+
+const PanelActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
 `;
 
 const BodyText = styled.p`
   margin: 0;
-  font-size: 0.84rem;
+  font-size: 0.83rem;
   line-height: 1.55;
-  opacity: 0.82;
+  opacity: 0.8;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `;
 
 const Muted = styled.p`
-  margin: 5px 0 0;
-  font-size: 0.74rem;
-  opacity: 0.55;
+  margin: 6px 0 0;
+  font-size: 0.73rem;
+  opacity: 0.5;
 `;
 
-const InstructionsTextarea = styled.textarea`
+/* ── Inline editor ── */
+
+const EditTextarea = styled.textarea`
   width: 100%;
-  min-height: 90px;
-  border-radius: 10px;
+  min-height: 80px;
+  border-radius: 8px;
   border: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.inputBackground};
+  background: ${props => props.theme.inputBackground || props.theme.background};
   color: ${props => props.theme.text};
-  padding: 10px;
+  padding: 8px 10px;
   resize: vertical;
-  font-size: 0.84rem;
+  font-size: 0.83rem;
   font-family: ${props => props.theme.fontFamily || 'inherit'};
+  line-height: 1.5;
+  outline: none;
 
   &:focus {
-    outline: none;
     border-color: ${props => props.theme.primary || '#007AFF'};
   }
 `;
 
-const InstructionBtns = styled.div`
-  margin-top: 8px;
+const EditBtns = styled.div`
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 6px;
+  margin-top: 6px;
 `;
 
 const SmallBtn = styled.button`
-  border: 1px solid ${props => (props.$ghost ? props.theme.border : props.theme.primary || '#007AFF')};
+  border: 1px solid ${props => (props.$ghost ? props.theme.border : 'transparent')};
   background: ${props => (props.$ghost ? 'transparent' : props.theme.primary || '#007AFF')};
-  color: ${props => (props.$ghost ? props.theme.text : props.theme.primaryForeground || '#fff')};
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 0.78rem;
+  color: ${props => (props.$ghost ? props.theme.text : '#fff')};
+  border-radius: 6px;
+  padding: 5px 11px;
+  font-size: 0.77rem;
   cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:hover { opacity: 0.85; }
 `;
 
-const UsageRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.73rem;
-  opacity: 0.65;
-  margin-bottom: 6px;
-`;
+/* ── Files area ── */
 
-const StatusDot = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-
-  &::before {
-    content: '';
-    width: 5px;
-    height: 5px;
-    border-radius: 999px;
-    background: currentColor;
-  }
-`;
-
-const Bar = styled.div`
-  width: 100%;
-  height: 4px;
-  border-radius: 999px;
-  background: ${props => props.theme.inputBackground};
-  overflow: hidden;
-`;
-
-const BarFill = styled.div`
-  width: ${props => props.$pct}%;
-  height: 100%;
-  background: ${props => props.theme.primary || props.theme.text};
-  border-radius: 999px;
-  opacity: 0.6;
-`;
-
-const FileList = styled.div`
+const FilesArea = styled.div`
+  min-height: 64px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 10px;
 `;
 
 const FileRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.inputBackground};
-  border-radius: 10px;
-  padding: 8px 10px;
+  background: ${props => props.theme.inputBackground || props.theme.background};
+  border-radius: 8px;
+  padding: 7px 10px;
 `;
 
 const FileBadge = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 38px;
-  padding: 2px 7px;
+  min-width: 34px;
+  padding: 2px 5px;
   border: 1px solid ${props => props.theme.border};
-  border-radius: 5px;
-  font-size: 0.68rem;
-  font-weight: 600;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   flex-shrink: 0;
@@ -546,16 +435,15 @@ const FileDetails = styled.div`
 `;
 
 const FileName = styled.div`
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
 const FileSize = styled.div`
-  font-size: 0.72rem;
-  opacity: 0.55;
-  margin-top: 1px;
+  font-size: 0.7rem;
+  opacity: 0.5;
 `;
 
 const RemoveBtn = styled.button`
@@ -564,27 +452,30 @@ const RemoveBtn = styled.button`
   color: ${props => props.theme.text};
   opacity: 0.4;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
   padding: 2px 4px;
   border-radius: 4px;
   transition: opacity 0.15s;
+  flex-shrink: 0;
 
-  &:hover {
-    opacity: 1;
-  }
+  &:hover { opacity: 1; }
 `;
 
 const AddFileBtn = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 6px;
   border: 1px dashed ${props => props.theme.border};
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   color: ${props => props.theme.text};
-  font-size: 0.8rem;
-  padding: 9px;
-  opacity: 0.65;
+  font-size: 0.78rem;
+  padding: 8px;
+  opacity: 0.55;
   cursor: pointer;
   transition: opacity 0.15s, border-color 0.15s;
 
@@ -592,6 +483,8 @@ const AddFileBtn = styled.button`
     opacity: 1;
     border-color: ${props => props.theme.primary || '#007AFF'};
   }
+
+  svg { width: 14px; height: 14px; }
 `;
 
 const HiddenInput = styled.input`
@@ -602,14 +495,12 @@ const HiddenInput = styled.input`
 
 const relTime = (input) => {
   if (!input) return '';
-  const d = typeof input === 'number' ? new Date(input) : new Date(input);
+  const d = new Date(input);
   if (Number.isNaN(d.getTime())) return '';
-
   const ms = Date.now() - d.getTime();
   const m = Math.floor(ms / 60000);
   const h = Math.floor(m / 60);
   const days = Math.floor(h / 24);
-
   if (m < 1) return 'just now';
   if (m < 60) return `${m}m ago`;
   if (h < 24) return `${h}h ago`;
@@ -636,15 +527,7 @@ const chatTs = (chat) => {
   const last = chat?.messages?.[chat.messages.length - 1];
   if (last?.createdAt) return new Date(last.createdAt).getTime();
   if (typeof last?.id === 'number') return last.id;
-  return 0;
-};
-
-const chatPreview = (chat) => {
-  const last = chat?.messages?.[chat.messages.length - 1];
-  if (typeof last?.content === 'string' && last.content.trim()) {
-    return last.content.replace(/\s+/g, ' ');
-  }
-  return null;
+  return new Date(chat?.createdAt || 0).getTime();
 };
 
 /* ── Component ── */
@@ -653,13 +536,13 @@ const ProjectDetailPage = (props) => {
   const {
     projects = [],
     chats = [],
-    addMessage,
     createNewChat,
-    activeChat,
     setActiveChat,
     addKnowledgeToProject,
     updateProjectInstructions,
+    updateProjectDescription,
     removeKnowledgeFromProject,
+    toggleProjectStar,
     collapsed = true,
     availableModels = [],
     selectedModel,
@@ -670,13 +553,15 @@ const ProjectDetailPage = (props) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const { projectId } = useParams();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const textareaRef = useRef(null);
-  const messagesEndRef = useRef(null);
 
   const [draft, setDraft] = useState('');
-  const [isEditingInstructions, setIsEditingInstructions] = useState(false);
+  const [editingInstructions, setEditingInstructions] = useState(false);
   const [instrDraft, setInstrDraft] = useState('');
+  const [editingMemory, setEditingMemory] = useState(false);
+  const [memoryDraft, setMemoryDraft] = useState('');
 
   const project = projects.find(p => p.id === projectId);
 
@@ -686,53 +571,22 @@ const ProjectDetailPage = (props) => {
       .sort((a, b) => chatTs(b) - chatTs(a));
   }, [chats, projectId]);
 
-  const currentChat = useMemo(
-    () => projectChats.find(c => c.id === activeChat) || projectChats[0] || null,
-    [projectChats, activeChat]
-  );
-
-  const currentMessages = currentChat?.messages || [];
-
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [currentMessages.length, scrollToBottom]);
-
-  const totalBytes = useMemo(
-    () => (project?.knowledge || []).reduce((s, f) => s + (f.size || 0), 0),
-    [project]
-  );
-  const usagePct = Math.min(100, Math.round((totalBytes / KNOWLEDGE_CAPACITY_BYTES) * 100));
-
   useEffect(() => {
     setInstrDraft(project?.projectInstructions || '');
   }, [project?.projectInstructions]);
 
   useEffect(() => {
-    if (projectChats.length > 0 && !projectChats.some(c => c.id === activeChat)) {
-      setActiveChat(projectChats[0].id);
-    }
-  }, [projectChats, activeChat, setActiveChat]);
-
-  const ensureChatId = () => {
-    const existing = projectChats.find(c => c.id === activeChat);
-    if (existing) return existing.id;
-    const created = createNewChat(projectId, { stayOnCurrentRoute: true });
-    if (created?.id) { setActiveChat(created.id); return created.id; }
-    return null;
-  };
+    setMemoryDraft(project?.projectDescription || '');
+  }, [project?.projectDescription]);
 
   const handleSend = () => {
     const text = draft.trim();
-    if (!text) return;
-    const chatId = ensureChatId();
-    if (!chatId) return;
-    addMessage(chatId, { id: Date.now(), role: 'user', content: text, model: selectedModel || 'user' });
+    if (!text || !createNewChat) return;
+    const newChat = createNewChat(projectId, { stayOnCurrentRoute: false, initialMessage: text });
+    if (newChat?.id) {
+      setActiveChat(newChat.id);
+    }
     setDraft('');
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
   };
 
   const handleKeyDown = (e) => {
@@ -749,8 +603,13 @@ const ProjectDetailPage = (props) => {
   };
 
   const handleNewChat = () => {
-    const created = createNewChat(projectId, { stayOnCurrentRoute: true });
-    if (created?.id) setActiveChat(created.id);
+    const newChat = createNewChat(projectId, { stayOnCurrentRoute: false });
+    if (newChat?.id) setActiveChat(newChat.id);
+  };
+
+  const handleChatClick = (chat) => {
+    setActiveChat(chat.id);
+    navigate('/');
   };
 
   const handleFileChange = (e) => {
@@ -769,19 +628,20 @@ const ProjectDetailPage = (props) => {
 
   const handleSaveInstructions = () => {
     updateProjectInstructions?.(projectId, instrDraft);
-    setIsEditingInstructions(false);
+    setEditingInstructions(false);
+  };
+
+  const handleSaveMemory = () => {
+    updateProjectDescription?.(projectId, memoryDraft);
+    setEditingMemory(false);
   };
 
   if (!project) {
     return (
       <PageContainer $collapsed={collapsed}>
         <ContentWrapper>
-          <EmptyChats>
-            {t('projects.notFound', 'Project not found')}
-            <div style={{ marginTop: 10 }}>
-              <BackLink to="/projects">← {t('projects.backToProjects', 'Back to projects')}</BackLink>
-            </div>
-          </EmptyChats>
+          <BackLink to="/projects">← All projects</BackLink>
+          <EmptyChats>Project not found.</EmptyChats>
         </ContentWrapper>
       </PageContainer>
     );
@@ -795,8 +655,12 @@ const ProjectDetailPage = (props) => {
         <TitleRow>
           <ProjectTitle>{project.projectName}</ProjectTitle>
           <TitleActions>
-            <IconBtn title="Star">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <IconBtn
+              title={project.starred ? 'Remove star' : 'Star project'}
+              $starred={project.starred}
+              onClick={() => toggleProjectStar?.(projectId)}
+            >
+              <svg viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
             </IconBtn>
@@ -804,6 +668,7 @@ const ProjectDetailPage = (props) => {
         </TitleRow>
 
         <LayoutGrid>
+          {/* ── Left column ── */}
           <MainColumn>
             <ComposerCard>
               <ComposerInner>
@@ -813,7 +678,7 @@ const ProjectDetailPage = (props) => {
                   value={draft}
                   onChange={handleTextareaInput}
                   onKeyDown={handleKeyDown}
-                  placeholder="Reply..."
+                  placeholder="How can I help you today?"
                 />
               </ComposerInner>
               <ComposerFooter>
@@ -838,113 +703,112 @@ const ProjectDetailPage = (props) => {
               </ComposerFooter>
             </ComposerCard>
 
-            {currentMessages.length > 0 ? (
-              <MessagesArea>
-                {currentMessages.map(msg => (
-                  <ChatMessage key={msg.id} message={msg} settings={settings} theme={theme} />
+            {projectChats.length > 0 ? (
+              <ChatsList>
+                {projectChats.map(chat => (
+                  <ChatRow key={chat.id} onClick={() => handleChatClick(chat)}>
+                    <ChatInfo>
+                      <ChatName>{chat.title || 'New Chat'}</ChatName>
+                      <ChatTime>Last message {relTime(chatTs(chat) || chat.createdAt)}</ChatTime>
+                    </ChatInfo>
+                  </ChatRow>
                 ))}
-                <div ref={messagesEndRef} />
-              </MessagesArea>
+              </ChatsList>
             ) : (
-              <EmptyMessages>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                <EmptyMsgTitle>{t('projects.startConversation', 'Start a conversation')}</EmptyMsgTitle>
-                <EmptyMsgSub>{t('projects.conversationContext', 'Your project instructions and knowledge files will be included as context in every message.')}</EmptyMsgSub>
-              </EmptyMessages>
+              <EmptyChats>No conversations yet. Start one above.</EmptyChats>
             )}
-
-            <ChatSection>
-              <ChatSectionHead>
-                <NewChatBtn onClick={handleNewChat}>+ New chat</NewChatBtn>
-              </ChatSectionHead>
-              {projectChats.length > 0 ? (
-                <ChatsList>
-                  {projectChats.map(chat => {
-                    const preview = chatPreview(chat);
-                    const ts = chatTs(chat);
-                    return (
-                      <ChatRow
-                        key={chat.id}
-                        $active={chat.id === activeChat}
-                        onClick={() => setActiveChat(chat.id)}
-                      >
-                        <ChatInfo>
-                          <ChatName>{chat.title || t('chat.defaultTitle', 'New Chat')}</ChatName>
-                          <ChatSub>
-                            {preview
-                              ? preview
-                              : t('projects.noMessagesYet', 'No messages yet')}
-                          </ChatSub>
-                        </ChatInfo>
-                        {ts > 0 && <ChatTime>Last message {relTime(ts)}</ChatTime>}
-                      </ChatRow>
-                    );
-                  })}
-                </ChatsList>
-              ) : (
-                <EmptyChats>
-                  {t('projects.startConversation', 'Start a conversation')}
-                </EmptyChats>
-              )}
-            </ChatSection>
           </MainColumn>
 
+          {/* ── Right panel ── */}
           <SidePanel>
-            <PanelHeadRow>
-              <PanelTitle>{t('projects.memory', 'Memory')}</PanelTitle>
-              <BadgePill>
-                <span>🔒</span> Only you
-              </BadgePill>
-            </PanelHeadRow>
-            <BodyText>
-              {project.projectDescription || t('projects.noDescription', 'No project description.')}
-            </BodyText>
-            <Muted>Last updated {relTime(project.updatedAt || project.createdAt)}</Muted>
+            {/* Memory */}
+            <PanelSection>
+              <PanelHeadRow>
+                <PanelTitle>Memory</PanelTitle>
+                <PanelActions>
+                  <BadgePill>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 11, height: 11 }}>
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    Only you
+                  </BadgePill>
+                  <PanelEditBtn onClick={() => setEditingMemory(prev => !prev)} title="Edit description">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </PanelEditBtn>
+                </PanelActions>
+              </PanelHeadRow>
 
-            <Section>
-              <SectionHead>
-                <SectionLabel>{t('projects.instructions', 'Instructions')}</SectionLabel>
-                <SectionBtn onClick={() => setIsEditingInstructions(prev => !prev)}>
-                  {isEditingInstructions ? 'Cancel' : '+'}
-                </SectionBtn>
-              </SectionHead>
-
-              {isEditingInstructions ? (
+              {editingMemory ? (
                 <>
-                  <InstructionsTextarea
+                  <EditTextarea
+                    value={memoryDraft}
+                    onChange={e => setMemoryDraft(e.target.value)}
+                    placeholder="Describe this project..."
+                    rows={4}
+                  />
+                  <EditBtns>
+                    <SmallBtn $ghost onClick={() => { setMemoryDraft(project.projectDescription || ''); setEditingMemory(false); }}>Cancel</SmallBtn>
+                    <SmallBtn onClick={handleSaveMemory}>Save</SmallBtn>
+                  </EditBtns>
+                </>
+              ) : (
+                <>
+                  <BodyText>{project.projectDescription || 'No project description.'}</BodyText>
+                  <Muted>Last updated {relTime(project.updatedAt || project.createdAt)}</Muted>
+                </>
+              )}
+            </PanelSection>
+
+            {/* Instructions */}
+            <PanelSection>
+              <PanelHeadRow>
+                <PanelTitle>Instructions</PanelTitle>
+                <PanelEditBtn onClick={() => setEditingInstructions(prev => !prev)} title="Edit instructions">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </PanelEditBtn>
+              </PanelHeadRow>
+
+              {editingInstructions ? (
+                <>
+                  <EditTextarea
                     value={instrDraft}
                     onChange={e => setInstrDraft(e.target.value)}
                     placeholder="Add instructions to tailor responses..."
+                    rows={5}
+                    maxLength={MAX_INSTRUCTIONS_LENGTH}
                   />
-                  <InstructionBtns>
-                    <SmallBtn $ghost onClick={() => { setInstrDraft(project.projectInstructions || ''); setIsEditingInstructions(false); }}>Cancel</SmallBtn>
+                  <EditBtns>
+                    <SmallBtn $ghost onClick={() => { setInstrDraft(project.projectInstructions || ''); setEditingInstructions(false); }}>Cancel</SmallBtn>
                     <SmallBtn onClick={handleSaveInstructions}>Save</SmallBtn>
-                  </InstructionBtns>
+                  </EditBtns>
                 </>
               ) : (
-                <BodyText>
-                  {project.projectInstructions || 'Add instructions to tailor responses.'}
+                <BodyText style={{ WebkitLineClamp: 5 }}>
+                  {project.projectInstructions || 'No instructions set.'}
                 </BodyText>
               )}
-            </Section>
+            </PanelSection>
 
-            <Section>
-              <SectionHead>
-                <SectionLabel>{t('projects.files', 'Files')}</SectionLabel>
-                <SectionBtn onClick={() => fileInputRef.current?.click()}>+</SectionBtn>
-              </SectionHead>
+            {/* Files */}
+            <PanelSection>
+              <PanelHeadRow>
+                <PanelTitle>Files</PanelTitle>
+                <PanelEditBtn onClick={() => fileInputRef.current?.click()} title="Add file">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </PanelEditBtn>
+              </PanelHeadRow>
 
-              <UsageRow>
-                <span>{usagePct}% of project capacity used</span>
-                <StatusDot>Indexing</StatusDot>
-              </UsageRow>
-              <Bar><BarFill $pct={usagePct} /></Bar>
-
-              {(project.knowledge || []).length > 0 ? (
-                <FileList>
-                  {(project.knowledge || []).map(item => (
+              <FilesArea>
+                {(project.knowledge || []).length > 0 ? (
+                  (project.knowledge || []).map(item => (
                     <FileRow key={item.id}>
                       <FileBadge>{fileTag(item.name, item.type)}</FileBadge>
                       <FileDetails>
@@ -953,22 +817,24 @@ const ProjectDetailPage = (props) => {
                       </FileDetails>
                       <RemoveBtn onClick={() => removeKnowledgeFromProject?.(projectId, item.id)} title="Remove">×</RemoveBtn>
                     </FileRow>
-                  ))}
-                </FileList>
-              ) : (
-                <Muted>No files added yet</Muted>
-              )}
+                  ))
+                ) : (
+                  <AddFileBtn onClick={() => fileInputRef.current?.click()}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Add files to this project
+                  </AddFileBtn>
+                )}
+              </FilesArea>
 
-              <AddFileBtn onClick={() => fileInputRef.current?.click()}>
-                + Add files
-              </AddFileBtn>
               <HiddenInput
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 accept=".txt,.md,.json,.js,.jsx,.ts,.tsx,.py,.html,.css,.csv,.pdf"
               />
-            </Section>
+            </PanelSection>
           </SidePanel>
         </LayoutGrid>
       </ContentWrapper>

@@ -10,6 +10,17 @@ import { processCodeBlocks } from '../utils/codeBlockProcessor';
 import CodeBlockWithExecution from './CodeBlockWithExecution';
 import useSupportedLanguages from '../hooks/useSupportedLanguages';
 
+// Helper for generating IDs from header text
+const slugify = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+};
+
 // Styled components for markdown formatting aligned with design language
 const Bold = styled.span`
   font-weight: 700;
@@ -30,6 +41,7 @@ const Heading1 = styled.h1`
   padding-bottom: 0.25rem;
   line-height: 1.3;
   letter-spacing: -0.02em;
+  scroll-margin-top: 100px;
   
   &:first-child {
     margin-top: 0;
@@ -43,6 +55,7 @@ const Heading2 = styled.h2`
   color: ${props => props.theme.text};
   line-height: 1.3;
   letter-spacing: -0.015em;
+  scroll-margin-top: 100px;
   
   &:first-child {
     margin-top: 0;
@@ -56,6 +69,7 @@ const Heading3 = styled.h3`
   color: ${props => props.theme.text};
   line-height: 1.3;
   letter-spacing: -0.01em;
+  scroll-margin-top: 100px;
   
   &:first-child {
     margin-top: 0;
@@ -332,135 +346,6 @@ const Strikethrough = styled.del`
   color: ${props => props.theme.text};
 `;
 
-// Process inline formatting (bold, italic, inline code, links)
-const processInlineFormatting = (text, theme) => {
-  if (!text) return text;
-  
-  const parts = [];
-  let lastIndex = 0;
-  
-  // Handle inline code first
-  const inlineCodePattern = /`([^`]+)`/g;
-  let match;
-  
-  while ((match = inlineCodePattern.exec(text)) !== null) {
-    // Add text before the code
-    if (match.index > lastIndex) {
-      const beforeText = text.substring(lastIndex, match.index);
-      parts.push(<span key={`text-${lastIndex}`}>{processTextFormatting(beforeText, theme)}</span>);
-    }
-    
-    // Add the inline code
-    parts.push(<InlineCode key={`code-${match.index}`} theme={theme}>{match[1]}</InlineCode>);
-    
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add any remaining text
-  if (lastIndex < text.length) {
-    const remainingText = text.substring(lastIndex);
-    parts.push(<span key={`text-${lastIndex}`}>{processTextFormatting(remainingText, theme)}</span>);
-  }
-  
-  return parts.length > 0 ? <>{parts}</> : processTextFormatting(text, theme);
-};
-
-// Process bold, italic, and links
-const processTextFormatting = (text, theme) => {
-  if (!text) return text;
-  
-  const parts = [];
-  let lastIndex = 0;
-  
-  // Handle links first
-  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
-  let match;
-  
-  while ((match = linkPattern.exec(text)) !== null) {
-    // Add text before the link
-    if (match.index > lastIndex) {
-      const beforeText = text.substring(lastIndex, match.index);
-      parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(beforeText, theme)}</span>);
-    }
-    
-    // Add the link
-    parts.push(
-      <Link key={`link-${match.index}`} href={match[2]} target="_blank" rel="noopener noreferrer" theme={theme}>
-        {processBoldItalic(match[1], theme)}
-      </Link>
-    );
-    
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add any remaining text
-  if (lastIndex < text.length) {
-    const remainingText = text.substring(lastIndex);
-    parts.push(<span key={`text-${lastIndex}`}>{processBoldItalic(remainingText, theme)}</span>);
-  }
-  
-  return parts.length > 0 ? <>{parts}</> : processBoldItalic(text, theme);
-};
-
-// Process bold and italic formatting
-const processBoldItalic = (text, theme) => {
-  if (!text) return text;
-  
-  // First handle bold text
-  const boldPattern = /\*\*(.*?)\*\*/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-  
-  while ((match = boldPattern.exec(text)) !== null) {
-    // Add text before the bold part
-    if (match.index > lastIndex) {
-      parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex, match.index), theme)}</span>);
-    }
-    
-    // Add the bold text (also process any italic within it)
-    parts.push(<Bold key={`bold-${match.index}`} theme={theme}>{processItalic(match[1], theme)}</Bold>);
-    
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add any remaining text
-  if (lastIndex < text.length) {
-    parts.push(<span key={`text-${lastIndex}`}>{processItalic(text.substring(lastIndex), theme)}</span>);
-  }
-  
-  return parts.length > 0 ? <>{parts}</> : processItalic(text, theme);
-};
-
-// Process italic formatting
-const processItalic = (text, theme) => {
-  if (!text) return text;
-  
-  const italicPattern = /\*((?!\*).+?)\*/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-  
-  while ((match = italicPattern.exec(text)) !== null) {
-    // Add text before the italic part
-    if (match.index > lastIndex) {
-      parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex, match.index)}</span>);
-    }
-    
-    // Add the italic text
-    parts.push(<Italic key={`italic-${match.index}`} theme={theme}>{match[1]}</Italic>);
-    
-    lastIndex = match.index + match[0].length;
-  }
-  
-  // Add any remaining text
-  if (lastIndex < text.length) {
-    parts.push(<span key={`text-${lastIndex}`}>{text.substring(lastIndex)}</span>);
-  }
-  
-  return parts.length > 0 ? <>{parts}</> : text;
-};
-
 const StreamingMarkdownRenderer = ({ 
   text = '', 
   isStreaming = false,
@@ -474,23 +359,20 @@ const StreamingMarkdownRenderer = ({
     return isStreaming && showCursor ? <Cursor $show={true} theme={theme}>|</Cursor> : null;
   }
 
-  // Helper to render LaTeX
-  const renderLatex = (latex, displayMode) => (
-    <ReactKatex
-      key={`latex-${Math.random()}`}
-      displayMode={displayMode}
-      throwOnError={false}
-      strict={false}
-    >
-      {latex}
-    </ReactKatex>
-  );
-
   // Custom renderers for markdown elements
   const components = {
-    h1: props => <Heading1 {...props} theme={theme} />,
-    h2: props => <Heading2 {...props} theme={theme} />,
-    h3: props => <Heading3 {...props} theme={theme} />,
+    h1: ({node, children, ...props}) => {
+      const id = slugify(children?.[0]?.toString());
+      return <Heading1 id={id} {...props} theme={theme}>{children}</Heading1>;
+    },
+    h2: ({node, children, ...props}) => {
+      const id = slugify(children?.[0]?.toString());
+      return <Heading2 id={id} {...props} theme={theme}>{children}</Heading2>;
+    },
+    h3: ({node, children, ...props}) => {
+      const id = slugify(children?.[0]?.toString());
+      return <Heading3 id={id} {...props} theme={theme}>{children}</Heading3>;
+    },
     h4: props => <Heading4 {...props} theme={theme} />,
     h5: props => <Heading5 {...props} theme={theme} />,
     h6: props => <Heading6 {...props} theme={theme} />,
@@ -508,7 +390,6 @@ const StreamingMarkdownRenderer = ({
       const match = /language-(\w+)/.exec(className || '');
       const language = match ? match[1] : '';
       if (!inline) {
-        // Use CodeBlockWithExecution for executable code
         if (enableCodeExecution && isLanguageExecutable && isLanguageExecutable(language)) {
           return (
             <CodeBlockWithExecution
@@ -519,7 +400,6 @@ const StreamingMarkdownRenderer = ({
             />
           );
         }
-        // Otherwise, use styled code block
         return (
           <CodeBlock key={`code-block-${Math.random()}`} theme={theme}>
             <CodeHeader theme={theme}>
@@ -534,10 +414,8 @@ const StreamingMarkdownRenderer = ({
           </CodeBlock>
         );
       }
-      // Inline code
       return <InlineCode theme={theme}>{children}</InlineCode>;
     },
-    // Optionally, add math/latex support here if you want to parse $...$ and $$...$$
   };
 
   return (

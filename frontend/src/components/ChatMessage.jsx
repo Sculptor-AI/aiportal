@@ -12,6 +12,7 @@ import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
 import { useTranslation } from '../contexts/TranslationContext';
 import { downloadGeneratedVideo } from '../services/videoService';
+import kokoroTTSService from '../services/kokoroTTSService';
 
 // Helper function to parse and render LaTeX
 const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
@@ -1824,34 +1825,34 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // TTS state for toggle
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const speechSynthesisRef = useRef(null);
 
   // Function to handle text-to-speech (toggle)
-  const handleReadAloud = () => {
-    if ('speechSynthesis' in window) {
-      if (isSpeaking) {
-        window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-        return;
-      }
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      const textToRead = cleanedContent || content;
-      const utterance = new window.SpeechSynthesisUtterance(textToRead);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
+  const handleReadAloud = async () => {
+    if (isSpeaking) {
+      kokoroTTSService.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const textToRead = cleanedContent || content;
+    if (!textToRead) {
+      return;
+    }
+
+    try {
       setIsSpeaking(true);
-      window.speechSynthesis.speak(utterance);
-      speechSynthesisRef.current = utterance;
-    } else {
-      console.error('Text-to-speech not supported in this browser');
+      await kokoroTTSService.speak(textToRead);
+    } catch (error) {
+      console.error('Kokoro text-to-speech failed:', error);
+    } finally {
+      setIsSpeaking(false);
     }
   };
 
   // Ensure TTS state resets if user navigates away or message changes
   useEffect(() => {
     return () => {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      kokoroTTSService.cancel();
       setIsSpeaking(false);
     };
   }, [content, cleanedContent]);

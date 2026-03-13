@@ -96,8 +96,8 @@ const GameBoard = styled.div`
 const GameCell = styled.div`
   width: ${CELL_SIZE}px;
   height: ${CELL_SIZE}px;
-  background: ${(props) => (props.empty ? '#050607' : '#2a3140')};
-  border: 1px solid ${(props) => (props.ghost ? 'rgba(255, 255, 255, 0.28)' : '#3a4355')};
+  background: ${(props) => (props.$empty ? '#050607' : '#2a3140')};
+  border: 1px solid ${(props) => (props.$ghost ? 'rgba(255, 255, 255, 0.28)' : '#3a4355')};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -108,8 +108,8 @@ const GameCell = styled.div`
     width: 24px;
     height: 24px;
     object-fit: contain;
-    opacity: ${(props) => (props.ghost ? 0.28 : 1)};
-    filter: ${(props) => (props.ghost ? 'grayscale(0.2)' : 'none')};
+    opacity: ${(props) => (props.$ghost ? 0.28 : 1)};
+    filter: ${(props) => (props.$ghost ? 'grayscale(0.2)' : 'none')};
     pointer-events: none;
   }
 `;
@@ -193,8 +193,8 @@ const PreviewCell = styled.div`
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: ${(props) => (props.empty ? '#0a0c10' : '#2a3140')};
-  border: 1px solid ${(props) => (props.empty ? 'rgba(255, 255, 255, 0.04)' : '#3a4355')};
+  background: ${(props) => (props.$empty ? '#0a0c10' : '#2a3140')};
+  border: 1px solid ${(props) => (props.$empty ? 'rgba(255, 255, 255, 0.04)' : '#3a4355')};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -738,8 +738,8 @@ const TetrisGame = ({ onExit }) => {
         return (
           <GameCell
             key={`${rowIndex}-${colIndex}`}
-            empty={!shapeKey}
-            ghost={isGhost}
+            $empty={!shapeKey}
+            $ghost={isGhost}
           >
             {shapeKey && (
               <img
@@ -808,7 +808,7 @@ const TetrisGame = ({ onExit }) => {
                   row.map((cell, colIndex) => (
                     <PreviewCell
                       key={`${rowIndex}-${colIndex}`}
-                      empty={!cell}
+                      $empty={!cell}
                     >
                       {cell && (
                         <img

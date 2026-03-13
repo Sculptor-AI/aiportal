@@ -31,6 +31,7 @@ const useMessageSender = ({
   selectedModel,
   settings,
   availableModels,
+  projects, // (optional) array of project objects for injecting project instructions
   addMessage, // (chatId, message) => void
   updateMessage, // (chatId, messageId, updates) => void
   updateChatTitle, // (chatId, title) => void
@@ -595,12 +596,29 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
 
         // Build the complete system prompt starting with SculptorAI base prompt
         let systemPromptToUse = SCULPTOR_AI_SYSTEM_PROMPT;
-        
+
         // Add custom model system prompt if applicable
         if (currentModelObj?.isCustomModel && currentModelObj?.systemPrompt) {
           systemPromptToUse = `${systemPromptToUse}\n\n${currentModelObj.systemPrompt}`;
         }
-        
+
+        // Add project instructions if this chat belongs to a project
+        if (chat?.projectId && Array.isArray(projects) && projects.length > 0) {
+          const project = projects.find(p => p.id === chat.projectId);
+          if (project?.projectInstructions?.trim()) {
+            systemPromptToUse = `${systemPromptToUse}\n\n<project_instructions>\n${project.projectInstructions.trim()}\n</project_instructions>`;
+          }
+          if (project?.knowledge?.length > 0) {
+            const knowledgeContext = project.knowledge
+              .filter(k => k.content)
+              .map(k => `<file name="${k.name}">\n${k.content}\n</file>`)
+              .join('\n');
+            if (knowledgeContext) {
+              systemPromptToUse = `${systemPromptToUse}\n\n<project_knowledge>\n${knowledgeContext}\n</project_knowledge>`;
+            }
+          }
+        }
+
         // Add thinking mode prompt if applicable
         if (thinkingModeSystemPrompt) {
           systemPromptToUse = `${systemPromptToUse}\n\n${thinkingModeSystemPrompt}`;

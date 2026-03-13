@@ -1,185 +1,290 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import ModelIcon from './ModelIcon';
-import useGeminiLive from '../hooks/useGeminiLive';
 import AudioVisualizer from './AudioVisualizer';
+import useGeminiLive from '../hooks/useGeminiLive';
 import { useTranslation } from '../contexts/TranslationContext';
 import { GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID } from '../config/modelConfig';
-
-// --- Animations ---
+import kokoroTTSService, { DEFAULT_KOKORO_VOICE } from '../services/kokoroTTSService';
 
 const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
 
-const slideUp = keyframes`
-  from { transform: translateY(50px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-`;
-
-const float = keyframes`
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
-`;
-
-// --- Styled Components ---
-
-const Container = styled.div`
-  /* Changed from fixed to absolute/flex to fill the container */
-  position: absolute;
-  inset: 0;
-  z-index: 10; /* Lower than modals but above standard chat content */
-  background-color: ${props => props.theme.background};
-  /* Subtle gradient overlay that respects theme */
-  background-image: ${props => props.theme.name === 'dark' ?
-    `radial-gradient(circle at 50% 0%, rgba(66, 133, 244, 0.15) 0%, transparent 50%),
-     radial-gradient(circle at 100% 100%, rgba(219, 68, 55, 0.1) 0%, transparent 40%)` :
-    'none'
-  };
-  display: flex;
-  flex-direction: column;
-  color: ${props => props.theme.text};
-  animation: ${fadeIn} 0.5s ease-out;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  overflow: hidden;
-`;
-
-const Header = styled.div`
-  display: flex;
-  justify-content: flex-end; /* Only CloseButton remains here */
-  align-items: center;
-  padding: 24px 32px;
-  z-index: 10;
-  pointer-events: none; /* Let clicks pass through to ChatWindow header elements if any */
-`;
-
-const StatusBadge = styled.div`
-  position: absolute;
-  top: 80px; /* Position below the main header area */
-  left: 32px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: ${props => props.theme.inputBackground};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  color: ${props => props.theme.text};
-  z-index: 20;
-  
-  /* Optimization for crispness */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  -webkit-font-smoothing: antialiased;
-  backface-visibility: hidden;
-  transform: translateZ(0);
-  
-  &::before {
-    content: '';
-    display: block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: ${props => {
-    switch (props.$status) {
-      case 'connected': return '#34A853'; // Green
-      case 'recording': return '#EA4335'; // Red
-      case 'processing': return '#FBBC04'; // Yellow
-      default: return '#9AA0A6'; // Grey
-    }
-  }};
-    box-shadow: ${props => props.$status === 'connected' || props.$status === 'recording' ? `0 0 8px ${props.$status === 'connected' ? '#34A853' : '#EA4335'}` : 'none'};
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 `;
 
-/* Header removed as it is no longer used */
+const pulseGlow = keyframes`
+  0% {
+    opacity: 0.28;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 0.68;
+    transform: scale(1.04);
+  }
+
+  100% {
+    opacity: 0.28;
+    transform: scale(0.92);
+  }
+`;
+
+const shimmer = keyframes`
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+`;
+
+const Container = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 220;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  color: ${props => props.theme.text};
+  background:
+    radial-gradient(circle at top left, ${props => `${props.theme.text}0f`} 0%, transparent 42%),
+    radial-gradient(circle at bottom right, ${props => `${props.theme.border}66`} 0%, transparent 34%),
+    linear-gradient(180deg, ${props => props.theme.background} 0%, ${props => props.theme.inputBackground} 100%);
+  overflow: hidden;
+  animation: ${fadeIn} 0.32s ease-out;
+  font-family: ${props => props.theme.fontFamily || 'var(--font-family)'};
+
+  @media (max-width: 980px) {
+    gap: 18px;
+    padding:
+      max(18px, env(safe-area-inset-top))
+      max(18px, env(safe-area-inset-right))
+      max(18px, env(safe-area-inset-bottom))
+      max(18px, env(safe-area-inset-left));
+  }
+`;
+
+const TopBar = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+`;
+
+const TopBarGroup = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+`;
+
+const Chip = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => `${props.theme.inputBackground}dd`};
+  color: ${props => props.theme.text};
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  font-size: 0.86rem;
+  letter-spacing: 0.01em;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+
+  ${props => props.$tone === 'recording' && css`
+    border-color: rgba(234, 67, 53, 0.36);
+
+    &::before {
+      background: #ea4335;
+      box-shadow: 0 0 0 6px rgba(234, 67, 53, 0.14);
+    }
+  `}
+
+  ${props => props.$tone === 'processing' && css`
+    border-color: rgba(251, 188, 4, 0.38);
+
+    &::before {
+      background: #fbbc04;
+      box-shadow: 0 0 0 6px rgba(251, 188, 4, 0.12);
+    }
+  `}
+
+  ${props => props.$tone === 'connected' && css`
+    border-color: rgba(52, 168, 83, 0.3);
+
+    &::before {
+      background: #34a853;
+      box-shadow: 0 0 0 6px rgba(52, 168, 83, 0.12);
+    }
+  `}
+
+  ${props => props.$withDot && css`
+    &::before {
+      content: '';
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      flex: 0 0 auto;
+    }
+  `}
+`;
 
 const CloseButton = styled.button`
-  position: absolute;
-  top: 80px;
-  right: 32px;
-  background: ${props => props.theme.inputBackground};
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
   border: 1px solid ${props => props.theme.border};
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
+  background: ${props => `${props.theme.inputBackground}dd`};
+  color: ${props => props.theme.text};
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: ${props => props.theme.text};
-  transition: background-color 0.2s ease, transform 0.2s ease;
-  pointer-events: auto;
-  z-index: 50;
-  
-  /* Ensure no transforms or filters are causing blur on the base state */
-  transform: none;
-  filter: none;
-  backdrop-filter: none;
-  
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
   &:hover {
-    background: ${props => props.theme.border};
-    transform: scale(1.05);
+    transform: translateY(-1px);
+    background: ${props => props.theme.inputBackground};
+    border-color: ${props => `${props.theme.text}33`};
   }
-  
+
   &:active {
-    transform: scale(0.95);
-  }
-  
-  svg {
-    shape-rendering: geometricPrecision;
-    width: 24px;
-    height: 24px;
+    transform: translateY(0);
   }
 `;
 
-const MainContent = styled.div`
+const ContentGrid = styled.div`
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.95fr);
+  gap: 24px;
+
+  @media (max-width: 980px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(320px, 0.95fr) minmax(0, 1fr);
+    gap: 18px;
+  }
+`;
+
+const Panel = styled.section`
   position: relative;
-  padding-bottom: 120px; /* Space for controls */
+  min-height: 0;
+  border-radius: 32px;
+  border: 1px solid ${props => `${props.theme.border}cc`};
+  background: linear-gradient(180deg, ${props => `${props.theme.inputBackground}f7`} 0%, ${props => `${props.theme.background}f5`} 100%);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
 `;
 
-const CenterStage = styled.div`
-  width: 100%;
-  max-width: ${props => props.$hasVideo ? '1200px' : '600px'};
-  height: ${props => props.$hasVideo ? 'calc(100vh - 200px)' : 'auto'};
+const StagePanel = styled(Panel)`
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.5s ease;
+  justify-content: space-between;
+  padding: 28px;
+  gap: 24px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 18% 12%, ${props => `${props.theme.text}10`} 0%, transparent 32%),
+      radial-gradient(circle at 85% 78%, ${props => `${props.theme.border}4d`} 0%, transparent 24%);
+    pointer-events: none;
+  }
+
+  @media (max-width: 980px) {
+    padding: 22px;
+    gap: 18px;
+  }
 `;
 
-const AvatarContainer = styled.div`
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  background: ${props => props.theme.inputBackground};
-  border: 4px solid ${props => props.theme.border};
+const StageMeta = styled.div`
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+`;
+
+const StageTitle = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const Eyebrow = styled.span`
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${props => `${props.theme.text}88`};
+`;
+
+const StageHeading = styled.h2`
+  margin: 0;
+  font-size: clamp(1.7rem, 2.8vw, 2.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+`;
+
+const StageSubcopy = styled.p`
+  margin: 0;
+  font-size: 0.96rem;
+  color: ${props => `${props.theme.text}a0`};
+  max-width: 42rem;
+`;
+
+const ModeChips = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+`;
+
+const StageBody = styled.div`
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 40px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  animation: ${float} 6s ease-in-out infinite;
-  
-  /* Optimization */
-  backface-visibility: hidden;
-  will-change: transform;
-  
-  img, svg {
-    width: 80px;
-    height: 80px;
-    /* Removed opacity: 0.9 to let icons be full color */
+`;
+
+const MediaFrame = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid ${props => `${props.theme.border}cc`};
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  @media (max-width: 980px) {
+    min-height: 300px;
   }
 `;
 
@@ -187,217 +292,478 @@ const VideoSurface = styled.video`
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 24px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
-  background: #000;
-  animation: ${fadeIn} 0.5s ease;
+  background: #020617;
 `;
 
-const TranscriptionOverlay = styled.div`
-  position: absolute;
-  bottom: 0px;
-  left: 0;
-  right: 0;
-  padding: 40px 20px 140px;
-  text-align: center;
-  /* Updated gradient to use theme background */
-  background: linear-gradient(to top, ${props => props.theme.background} 0%, rgba(0,0,0,0) 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  pointer-events: none;
-`;
-
-const TextBubble = styled.div`
-  max-width: 800px;
-  font-size: 24px;
-  line-height: 1.4;
-  color: ${props => props.theme.text};
-  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-top: 16px;
-  font-weight: 500;
-  
-  /* Highlight user vs AI text */
-  ${props => props.$isUser && css`
-    color: ${props => props.theme.text};
-    opacity: 0.7;
-    font-size: 20px;
-  `}
-`;
-
-const ControlsBar = styled.div`
-  position: absolute;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 24px;
-  background: ${props => props.theme.inputBackground};
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 100px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  z-index: 100;
-  animation: ${slideUp} 0.5s ease-out 0.2s backwards;
-  
-  /* Optimize rendering */
-  backface-visibility: hidden;
-  -webkit-font-smoothing: subpixel-antialiased;
-  transform: translateX(-50%) translateZ(0); /* Add translateZ for GPU */
-`;
-
-const ControlButton = styled.button`
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
+const OrbStage = styled.div`
+  position: relative;
+  width: min(100%, 520px);
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+`;
+
+const OrbGlow = styled.div`
+  position: absolute;
+  inset: 8%;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, ${props => `${props.theme.text}18`} 0%, ${props => `${props.theme.border}10`} 48%, transparent 74%);
+  filter: blur(24px);
+  animation: ${pulseGlow} 4.4s ease-in-out infinite;
+`;
+
+const OrbShell = styled.div`
   position: relative;
-  
-  /* Icons size */
+  width: min(100%, 310px);
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid ${props => `${props.theme.border}cc`};
+  background:
+    linear-gradient(145deg, ${props => `${props.theme.inputBackground}ff`} 0%, ${props => `${props.theme.background}fb`} 100%);
+  box-shadow:
+    0 24px 50px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+`;
+
+const OrbLabel = styled.div`
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: center;
+  text-align: center;
+  color: ${props => `${props.theme.text}92`};
+  font-size: 0.94rem;
+`;
+
+const StageFooter = styled.div`
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const DetailCard = styled.div`
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid ${props => `${props.theme.border}b3`};
+  background: ${props => `${props.theme.background}b8`};
+`;
+
+const DetailLabel = styled.div`
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${props => `${props.theme.text}75`};
+  margin-bottom: 8px;
+`;
+
+const DetailValue = styled.div`
+  font-size: 0.95rem;
+  color: ${props => `${props.theme.text}d8`};
+`;
+
+const TranscriptPanel = styled(Panel)`
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+`;
+
+const TranscriptHeader = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid ${props => `${props.theme.border}a6`};
+`;
+
+const TranscriptHeading = styled.h3`
+  margin: 0;
+  font-size: 1.1rem;
+`;
+
+const TranscriptSubcopy = styled.p`
+  margin: 6px 0 0;
+  color: ${props => `${props.theme.text}8f`};
+  font-size: 0.92rem;
+`;
+
+const TranscriptBody = styled.div`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 24px 24px;
+  overflow-y: auto;
+`;
+
+const TranscriptCard = styled.article`
+  padding: 16px 18px;
+  border-radius: 22px;
+  border: 1px solid ${props => props.$role === 'user' ? `${props.theme.border}dd` : `${props.theme.text}22`};
+  background: ${props => props.$role === 'user' ? `${props.theme.background}c4` : `${props.theme.text}0a`};
+  color: ${props => props.theme.text};
+  animation: ${fadeIn} 0.22s ease-out;
+`;
+
+const TranscriptLabel = styled.div`
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${props => `${props.theme.text}72`};
+  margin-bottom: 10px;
+`;
+
+const TranscriptText = styled.p`
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+  font-size: 0.98rem;
+`;
+
+const PlaceholderState = styled.div`
+  flex: 1;
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: ${props => `${props.theme.text}72`};
+  padding: 28px;
+`;
+
+const ControlsBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px 22px;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  border: 1px solid ${props => `${props.theme.border}cc`};
+  background: ${props => `${props.theme.inputBackground}e6`};
+  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  @media (max-width: 640px) {
+    width: 100%;
+    justify-content: space-between;
+    padding: 14px 16px;
+  }
+`;
+
+const ControlButton = styled.button`
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  border: 1px solid ${props => props.$isActive ? 'transparent' : `${props.theme.border}cc`};
+  background: ${props => {
+    if (props.$variant === 'danger' && props.$isActive) {
+      return '#ea4335';
+    }
+
+    if (props.$isActive) {
+      return props.theme.text;
+    }
+
+    return props.theme.background;
+  }};
+  color: ${props => {
+    if (props.$variant === 'danger' && props.$isActive) {
+      return '#ffffff';
+    }
+
+    return props.$isActive ? props.theme.background : props.theme.text;
+  }};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.18s ease, opacity 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+  box-shadow: ${props => props.$isActive ? '0 12px 30px rgba(15, 23, 42, 0.18)' : 'none'};
+
+  &:hover {
+    transform: translateY(-1px);
+    opacity: 0.96;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
   svg {
     width: 24px;
     height: 24px;
   }
-  
-  ${props => {
-    // Active State (e.g. Mic On, Camera On)
-    if (props.$isActive) {
-      if (props.$variant === 'danger') {
-        return css`
-          background: #EA4335;
-          color: white;
-          &:hover { background: #D93025; transform: scale(1.1); }
-        `;
-      }
-      return css`
-        background: ${props.theme.text};
-        color: ${props.theme.background};
-        &:hover { opacity: 0.9; transform: scale(1.1); }
-      `;
-    }
-    // Inactive State
-    else {
-      return css`
-        background: transparent;
-        color: ${props.theme.text};
-        border: 1px solid ${props.theme.border};
-        &:hover { background: ${props.theme.border}; transform: scale(1.1); }
-      `;
-    }
-  }}
 `;
 
 const ErrorBanner = styled.div`
-  position: absolute;
-  top: 80px;
-  left: 50%;
-  transform: translateX(-50%) translateZ(0);
-  background: rgba(234, 67, 53, 0.95); /* Little more opaque */
-  color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  animation: ${slideUp} 0.3s ease-out;
-  z-index: 50;
-  
-  /* Crisp text */
-  -webkit-font-smoothing: antialiased;
+  padding: 12px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(234, 67, 53, 0.22);
+  background: rgba(234, 67, 53, 0.12);
+  color: #ea4335;
+  font-size: 0.92rem;
 `;
+
+const ProgressTrack = styled.div`
+  position: relative;
+  width: 180px;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: ${props => `${props.theme.text}12`};
+`;
+
+const ProgressFill = styled.div`
+  position: absolute;
+  inset: 0;
+  width: ${props => `${Math.max(6, Math.round(props.$value * 100))}%`};
+  border-radius: inherit;
+  background: linear-gradient(90deg, #34a853 0%, #4285f4 100%);
+  transition: width 0.2s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    animation: ${shimmer} 1.8s linear infinite;
+  }
+`;
+
+const MAX_TRANSCRIPT_TURNS = 10;
+
+const createTurnId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `turn-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const normalizeText = (value = '') => value.replace(/\s+/g, ' ').trim();
+
+const appendTurn = (turns, role, text) => {
+  const normalizedText = normalizeText(text);
+
+  if (!normalizedText) {
+    return turns;
+  }
+
+  return [
+    ...turns,
+    {
+      id: createTurnId(),
+      role,
+      text: normalizedText,
+    },
+  ].slice(-MAX_TRANSCRIPT_TURNS);
+};
+
+const getProgressValue = (payload) => {
+  if (typeof payload?.progress === 'number') {
+    return payload.progress > 1 ? payload.progress / 100 : payload.progress;
+  }
+
+  if (typeof payload?.loaded === 'number' && typeof payload?.total === 'number' && payload.total > 0) {
+    return payload.loaded / payload.total;
+  }
+
+  return null;
+};
+
+const getProgressLabel = (payload) => {
+  if (typeof payload?.file === 'string') {
+    return payload.file.split('/').pop();
+  }
+
+  if (typeof payload?.status === 'string') {
+    return payload.status.replace(/_/g, ' ');
+  }
+
+  return 'Preparing Kokoro voice engine';
+};
 
 const LiveModeUI = ({ selectedModel, onClose }) => {
   const { t } = useTranslation();
-  const [microphoneActive, setMicrophoneActive] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [screenShareActive, setScreenShareActive] = useState(false);
-
   const [cameraStream, setCameraStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
-
   const [cameraError, setCameraError] = useState('');
   const [screenError, setScreenError] = useState('');
+  const [ttsStatus, setTtsStatus] = useState('loading');
+  const [ttsProgress, setTtsProgress] = useState(0);
+  const [ttsProgressLabel, setTtsProgressLabel] = useState('Preparing Kokoro voice engine');
+  const [ttsError, setTtsError] = useState('');
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [transcriptTurns, setTranscriptTurns] = useState([]);
 
   const cameraVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
+  const transcriptBodyRef = useRef(null);
+  const previousStatusRef = useRef('disconnected');
+  const assistantTurnCommittedRef = useRef(false);
+  const latestAssistantResponseRef = useRef('');
+  const pendingSpeechTextRef = useRef('');
 
-  // Gemini Live Hook (connects via backend proxy - no API key needed in frontend)
   const {
     isConnected,
     isRecording,
     sessionActive,
-    transcription,
     response,
     error: geminiError,
     status,
     inputTranscription,
+    inputModeLabel,
     connect,
     disconnect,
     startSession,
-    endSession,
     startRecording,
     stopRecording,
   } = useGeminiLive({
     model: selectedModel?.includes('gemini') ? selectedModel : GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID,
-    responseModality: 'audio', // Use audio for voice responses
-    voiceName: 'Aoede', // Default voice
-    systemInstruction: 'You are a helpful AI assistant having a voice conversation. Be concise, friendly, and conversational.',
+    responseModality: 'text',
+    voiceName: 'Aoede',
+    systemInstruction: 'You are a helpful AI assistant having a live spoken conversation. Respond naturally, speak in short paragraphs, and leave small pauses where helpful.',
     inputTranscriptionEnabled: true,
     outputTranscriptionEnabled: true,
-    autoConnect: false
+    autoConnect: false,
+    outputAudioMode: 'none',
   });
 
-  // Sync mic state
-  useEffect(() => {
-    setMicrophoneActive(isRecording);
-  }, [isRecording]);
+  const stopCameraStream = useCallback(() => {
+    setCameraStream((currentStream) => {
+      currentStream?.getTracks().forEach((track) => track.stop());
+      return null;
+    });
+    setCameraActive(false);
+  }, []);
 
-  // Initial connection
+  const stopScreenStream = useCallback(() => {
+    setScreenStream((currentStream) => {
+      currentStream?.getTracks().forEach((track) => track.stop());
+      return null;
+    });
+    setScreenShareActive(false);
+  }, []);
+
+  const speakAssistantText = useCallback(async (text) => {
+    const nextText = normalizeText(text);
+
+    if (!nextText || ttsStatus !== 'ready') {
+      return;
+    }
+
+    pendingSpeechTextRef.current = '';
+    setIsSpeaking(true);
+
+    try {
+      await kokoroTTSService.speak(nextText, {
+        voice: DEFAULT_KOKORO_VOICE,
+      });
+      setTtsError('');
+    } catch (error) {
+      console.error('Kokoro playback failed:', error);
+      setTtsStatus('error');
+      setTtsError('Kokoro playback failed. Responses will stay on screen, but voice playback is unavailable for now.');
+    } finally {
+      setIsSpeaking(false);
+    }
+  }, [ttsStatus]);
+
   useEffect(() => {
-    const init = async () => {
-      if (!isConnected) await connect();
+    let cancelled = false;
+
+    const initialize = async () => {
+      try {
+        setTtsStatus('loading');
+        await kokoroTTSService.preload({
+          progressCallback: (payload) => {
+            if (cancelled) {
+              return;
+            }
+
+            const nextProgress = getProgressValue(payload);
+            if (typeof nextProgress === 'number') {
+              setTtsProgress(Math.max(0, Math.min(1, nextProgress)));
+            }
+
+            setTtsProgressLabel(getProgressLabel(payload));
+          },
+        });
+
+        if (!cancelled) {
+          setTtsStatus('ready');
+          setTtsProgress(1);
+          setTtsProgressLabel('Kokoro voice engine ready');
+        }
+      } catch (error) {
+        console.error('Failed to preload Kokoro:', error);
+
+        if (!cancelled) {
+          setTtsStatus('error');
+          setTtsError('Kokoro voice engine could not load. Live mode will continue with text responses only.');
+        }
+      }
     };
-    init();
 
-    // Cleanup
+    initialize();
+
     return () => {
-      stopMediaStreams();
-      if (sessionActive) endSession();
-      disconnect();
+      cancelled = true;
+      kokoroTTSService.stop();
     };
   }, []);
 
-  // Auto-start session when connected
   useEffect(() => {
-    if (isConnected && !sessionActive && status === 'connected') {
-      startSession();
+    if (!isConnected) {
+      connect();
     }
-  }, [isConnected, sessionActive, status]);
+  }, [connect, isConnected]);
 
-  // Stream cleanup helper
-  const stopMediaStreams = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(t => t.stop());
-      setCameraStream(null);
-    }
-    if (screenStream) {
-      screenStream.getTracks().forEach(t => t.stop());
-      setScreenStream(null);
-    }
-  };
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+      stopScreenStream();
+      disconnect();
+    };
+  }, [disconnect, stopCameraStream, stopScreenStream]);
 
-  // Video refs
+  useEffect(() => {
+    if (!isConnected || sessionActive || status !== 'connected') {
+      return;
+    }
+
+    startSession({
+      responseModality: 'text',
+      outputAudioMode: 'none',
+      inputTranscription: true,
+      outputTranscription: true,
+    });
+  }, [isConnected, sessionActive, startSession, status]);
+
   useEffect(() => {
     if (cameraVideoRef.current && cameraStream) {
       cameraVideoRef.current.srcObject = cameraStream;
@@ -410,146 +776,351 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
     }
   }, [screenStream]);
 
-  // Toggle Handlers
-  const handleMicrophoneToggle = async () => {
-    if (microphoneActive) {
-      await stopRecording();
-    } else {
-      if (!isConnected) await connect();
-      if (!sessionActive) await startSession();
-      await startRecording();
-    }
-  };
+  useEffect(() => {
+    latestAssistantResponseRef.current = normalizeText(response);
+  }, [response]);
 
-  const handleCameraToggle = async () => {
+  useEffect(() => {
+    if (status === 'processing' && previousStatusRef.current !== 'processing') {
+      const transcriptText = normalizeText(inputTranscription);
+
+      if (transcriptText) {
+        assistantTurnCommittedRef.current = false;
+        setTranscriptTurns((currentTurns) => appendTurn(currentTurns, 'user', transcriptText));
+      }
+    }
+
+    previousStatusRef.current = status;
+  }, [inputTranscription, status]);
+
+  useEffect(() => {
+    if (status !== 'turn_complete' || assistantTurnCommittedRef.current) {
+      return;
+    }
+
+    const finalAssistantText = latestAssistantResponseRef.current;
+
+    if (!finalAssistantText) {
+      return;
+    }
+
+    assistantTurnCommittedRef.current = true;
+    setTranscriptTurns((currentTurns) => appendTurn(currentTurns, 'assistant', finalAssistantText));
+
+    if (ttsStatus === 'ready') {
+      speakAssistantText(finalAssistantText);
+    } else if (ttsStatus === 'loading') {
+      pendingSpeechTextRef.current = finalAssistantText;
+    }
+  }, [speakAssistantText, status, ttsStatus]);
+
+  useEffect(() => {
+    if (ttsStatus !== 'ready' || !pendingSpeechTextRef.current || isSpeaking) {
+      return;
+    }
+
+    speakAssistantText(pendingSpeechTextRef.current);
+  }, [isSpeaking, speakAssistantText, ttsStatus]);
+
+  useEffect(() => {
+    transcriptBodyRef.current?.scrollTo({
+      top: transcriptBodyRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+  }, [inputTranscription, response, transcriptTurns]);
+
+  const handleMicrophoneToggle = useCallback(async () => {
+    if (isSpeaking) {
+      kokoroTTSService.stop();
+      setIsSpeaking(false);
+    }
+
+    if (isRecording) {
+      stopRecording();
+      return;
+    }
+
+    if (!isConnected) {
+      await connect();
+    }
+
+    if (!sessionActive) {
+      await startSession({
+        responseModality: 'text',
+        outputAudioMode: 'none',
+        inputTranscription: true,
+        outputTranscription: true,
+      });
+    }
+
+    await startRecording();
+  }, [connect, isConnected, isRecording, isSpeaking, sessionActive, startRecording, startSession, stopRecording]);
+
+  const handleCameraToggle = useCallback(async () => {
     if (cameraActive) {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        setCameraStream(null);
-      }
-      setCameraActive(false);
-    } else {
-      // Disable screen share if active (one video source at a time for simplicity)
-      if (screenShareActive) handleScreenShareToggle();
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } });
-        setCameraStream(stream);
-        setCameraActive(true);
-        setCameraError('');
-      } catch (e) {
-        console.error(e);
-        setCameraError(t('liveMode.errors.cameraDenied', 'Camera access denied'));
-      }
+      stopCameraStream();
+      return;
     }
-  };
 
-  const handleScreenShareToggle = async () => {
     if (screenShareActive) {
-      if (screenStream) {
-        screenStream.getTracks().forEach(t => t.stop());
-        setScreenStream(null);
-      }
-      setScreenShareActive(false);
-    } else {
-      // Disable camera if active
-      if (cameraActive) handleCameraToggle();
-
-      try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false });
-        stream.getVideoTracks()[0].addEventListener('ended', () => {
-          setScreenShareActive(false);
-          setScreenStream(null);
-        });
-        setScreenStream(stream);
-        setScreenShareActive(true);
-        setScreenError('');
-      } catch (e) {
-        console.error(e);
-        setScreenError(t('liveMode.errors.screenDenied', 'Screen share denied'));
-      }
+      stopScreenStream();
     }
-  };
 
-  // Status Text
-  const getStatusText = () => {
-    if (!isConnected) return t('liveMode.status.connecting', 'Connecting...');
-    if (!sessionActive) return t('liveMode.status.starting', 'Starting...');
-    if (isRecording) return t('liveMode.status.listening', 'Listening');
-    if (status === 'processing') return t('liveMode.status.thinking', 'Thinking');
-    return t('liveMode.status.ready', 'Ready');
-  };
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user',
+        },
+      });
 
-  const getStatusColor = () => {
-    if (!isConnected) return 'disconnected';
-    if (isRecording) return 'recording';
-    return 'connected';
-  };
+      setCameraStream(stream);
+      setCameraActive(true);
+      setCameraError('');
+    } catch (error) {
+      console.error(error);
+      setCameraError(t('liveMode.errors.cameraDenied', 'Camera access denied'));
+    }
+  }, [cameraActive, screenShareActive, stopCameraStream, stopScreenStream, t]);
 
+  const handleScreenShareToggle = useCallback(async () => {
+    if (screenShareActive) {
+      stopScreenStream();
+      return;
+    }
+
+    if (cameraActive) {
+      stopCameraStream();
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: 'always' },
+        audio: false,
+      });
+
+      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+        stopScreenStream();
+      });
+
+      setScreenStream(stream);
+      setScreenShareActive(true);
+      setScreenError('');
+    } catch (error) {
+      console.error(error);
+      setScreenError(t('liveMode.errors.screenDenied', 'Screen share denied'));
+    }
+  }, [cameraActive, screenShareActive, stopCameraStream, stopScreenStream, t]);
+
+  const activeError = cameraError || screenError || ttsError || (typeof geminiError === 'string' ? geminiError : '');
   const hasVideo = cameraActive || screenShareActive;
+  const liveDraft = normalizeText(inputTranscription);
+  const liveResponse = normalizeText(response);
+
+  const stageCopy = useMemo(() => {
+    if (isRecording) {
+      return t('liveMode.status.listening', 'Listening');
+    }
+
+    if (isSpeaking) {
+      return 'Speaking';
+    }
+
+    if (status === 'processing' || status === 'responding') {
+      return t('liveMode.status.thinking', 'Thinking');
+    }
+
+    if (ttsStatus === 'loading') {
+      return 'Preparing voice';
+    }
+
+    return t('liveMode.status.ready', 'Ready');
+  }, [isRecording, isSpeaking, status, t, ttsStatus]);
+
+  const topStatusTone = useMemo(() => {
+    if (!isConnected || !sessionActive) {
+      return 'processing';
+    }
+
+    if (isRecording) {
+      return 'recording';
+    }
+
+    if (isSpeaking || status === 'processing' || status === 'responding' || ttsStatus === 'loading') {
+      return 'processing';
+    }
+
+    return 'connected';
+  }, [isConnected, isRecording, isSpeaking, sessionActive, status, ttsStatus]);
+
+  const topStatusText = useMemo(() => {
+    if (!isConnected) {
+      return t('liveMode.status.connecting', 'Connecting...');
+    }
+
+    if (!sessionActive) {
+      return t('liveMode.status.starting', 'Starting...');
+    }
+
+    return stageCopy;
+  }, [isConnected, sessionActive, stageCopy, t]);
+
+  const transcriptItems = useMemo(() => {
+    const items = [...transcriptTurns];
+
+    if (isRecording && liveDraft) {
+      items.push({
+        id: 'draft-user',
+        role: 'user',
+        text: liveDraft,
+        isDraft: true,
+      });
+    }
+
+    if (status === 'responding' && liveResponse) {
+      items.push({
+        id: 'draft-assistant',
+        role: 'assistant',
+        text: liveResponse,
+        isDraft: true,
+      });
+    }
+
+    return items;
+  }, [isRecording, liveDraft, liveResponse, status, transcriptTurns]);
 
   return (
     <Container>
-      {/* Header removed, buttons are absolute now */}
+      <TopBar>
+        <TopBarGroup>
+          <Chip $tone={topStatusTone} $withDot>
+            {topStatusText}
+          </Chip>
+          <Chip>{inputModeLabel}</Chip>
+          <Chip>
+            {ttsStatus === 'ready' ? 'Kokoro voice' : ttsStatus === 'loading' ? 'Loading Kokoro' : 'Text only'}
+          </Chip>
+        </TopBarGroup>
 
-      <StatusBadge $status={getStatusColor()}>
-        {getStatusText()}
-      </StatusBadge>
+        <CloseButton onClick={onClose} aria-label={t('liveMode.controls.close', 'Close Live Mode')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </CloseButton>
+      </TopBar>
 
-      <CloseButton onClick={onClose} aria-label={t('liveMode.controls.close', 'Close Live Mode')}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </CloseButton>
-
-      {/* Errors */}
-      {(cameraError || screenError || geminiError) && (
+      {activeError && (
         <ErrorBanner>
-          {cameraError || screenError || (typeof geminiError === 'string' ? geminiError : t('liveMode.errors.connection', 'Connection error'))}
+          {activeError}
         </ErrorBanner>
       )}
 
-      <MainContent>
-        <CenterStage $hasVideo={hasVideo}>
-          {hasVideo ? (
-            <VideoSurface
-              ref={cameraActive ? cameraVideoRef : screenVideoRef}
-              autoPlay
-              muted
-              playsInline
-            />
-          ) : (
-            <AvatarContainer>
-              {/* Show visualizer when recording/active, else static icon */}
-              {isRecording || status === 'processing' ? (
-                <AudioVisualizer isActive={true} />
-              ) : (
-                <ModelIcon modelId={selectedModel} size="large" />
-              )}
-            </AvatarContainer>
-          )}
+      <ContentGrid>
+        <StagePanel>
+          <StageMeta>
+            <StageTitle>
+              <Eyebrow>Live conversation</Eyebrow>
+              <StageHeading>{stageCopy}</StageHeading>
+              <StageSubcopy>
+                Voice replies come from Kokoro in the browser. Speech input prefers native browser speech recognition when the platform exposes it.
+              </StageSubcopy>
+            </StageTitle>
 
-          {/* Transcriptions overlay at bottom of stage */}
-          <TranscriptionOverlay>
-            {inputTranscription && (
-              <TextBubble $isUser>{inputTranscription}</TextBubble>
+            <ModeChips>
+              <Chip>{cameraActive ? 'Camera on' : screenShareActive ? 'Screen sharing' : 'Audio focus'}</Chip>
+              <Chip>{selectedModel || GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID}</Chip>
+            </ModeChips>
+          </StageMeta>
+
+          <StageBody>
+            {hasVideo ? (
+              <MediaFrame>
+                <VideoSurface
+                  ref={cameraActive ? cameraVideoRef : screenVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                />
+              </MediaFrame>
+            ) : (
+              <OrbStage>
+                <OrbGlow />
+                <OrbShell>
+                  <AudioVisualizer isActive={isRecording || isSpeaking || status === 'processing' || status === 'responding'} />
+                  <ModelIcon modelId={selectedModel} size="large" />
+                  <OrbLabel>
+                    {isRecording ? 'Speak naturally, then pause.' : isSpeaking ? 'Kokoro is reading the reply.' : 'Tap the mic to start the next turn.'}
+                  </OrbLabel>
+                </OrbShell>
+              </OrbStage>
             )}
-            {response && (
-              <TextBubble>{response}</TextBubble>
+          </StageBody>
+
+          <StageFooter>
+            <DetailCard>
+              <DetailLabel>Speech input</DetailLabel>
+              <DetailValue>{inputModeLabel}</DetailValue>
+            </DetailCard>
+            <DetailCard>
+              <DetailLabel>Speech output</DetailLabel>
+              <DetailValue>{ttsStatus === 'ready' ? 'Kokoro local browser TTS' : ttsStatus === 'loading' ? ttsProgressLabel : 'Text responses only'}</DetailValue>
+            </DetailCard>
+            <DetailCard>
+              <DetailLabel>Current model</DetailLabel>
+              <DetailValue>{selectedModel?.includes('gemini') ? selectedModel : GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID}</DetailValue>
+            </DetailCard>
+          </StageFooter>
+        </StagePanel>
+
+        <TranscriptPanel>
+          <TranscriptHeader>
+            <div>
+              <TranscriptHeading>Conversation</TranscriptHeading>
+              <TranscriptSubcopy>
+                The right panel keeps the last turns readable instead of layering them over the stage.
+              </TranscriptSubcopy>
+            </div>
+
+            {ttsStatus === 'loading' && (
+              <div>
+                <TranscriptLabel>{ttsProgressLabel}</TranscriptLabel>
+                <ProgressTrack>
+                  <ProgressFill $value={ttsProgress} />
+                </ProgressTrack>
+              </div>
             )}
-          </TranscriptionOverlay>
-        </CenterStage>
-      </MainContent>
+          </TranscriptHeader>
+
+          <TranscriptBody ref={transcriptBodyRef}>
+            {transcriptItems.length === 0 ? (
+              <PlaceholderState>
+                Tap the microphone to start the first turn. Transcripts and model replies will stack here as a readable live feed.
+              </PlaceholderState>
+            ) : (
+              transcriptItems.map((item) => (
+                <TranscriptCard key={item.id} $role={item.role}>
+                  <TranscriptLabel>
+                    {item.role === 'user' ? 'You' : 'Assistant'}
+                    {item.isDraft ? ' • live' : ''}
+                  </TranscriptLabel>
+                  <TranscriptText>{item.text}</TranscriptText>
+                </TranscriptCard>
+              ))
+            )}
+          </TranscriptBody>
+        </TranscriptPanel>
+      </ContentGrid>
 
       <ControlsBar>
         <ControlButton
-          $isActive={microphoneActive}
-          $variant="danger" // Red when active
+          $isActive={isRecording}
+          $variant="danger"
           onClick={handleMicrophoneToggle}
-          title={microphoneActive ? t('liveMode.controls.mic.mute', 'Mute Microphone') : t('liveMode.controls.mic.unmute', 'Unmute Microphone')}
+          title={isRecording ? t('liveMode.controls.mic.mute', 'Mute Microphone') : t('liveMode.controls.mic.unmute', 'Unmute Microphone')}
         >
-          {microphoneActive ? (
+          {isRecording ? (
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
               <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />

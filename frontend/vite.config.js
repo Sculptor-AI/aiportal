@@ -58,6 +58,9 @@ export default defineConfig(({ mode }) => {
     'https://73.118.140.130:3000',
     'https://api.rss2json.com',
     'https://api.allorigins.win',
+    'https://huggingface.co',
+    'https://cdn-lfs.huggingface.co',
+    'https://cdn.jsdelivr.net',
   ]);
 
   if (remoteBackendUrl) {

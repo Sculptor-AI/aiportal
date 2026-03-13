@@ -2,6 +2,7 @@ import { getBackendApiBase } from './backendConfig';
 import { getAuthHeaders } from './authService';
 
 const SAME_ORIGIN_API_BASE = '/api';
+const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0']);
 
 const buildApiUrlWithBase = (base, endpoint) => {
   if (!endpoint) {
@@ -19,20 +20,40 @@ const buildApiUrlWithBase = (base, endpoint) => {
 
 const buildApiUrl = (endpoint) => buildApiUrlWithBase(getBackendApiBase(), endpoint);
 
+const isLocalRuntime = () => {
+  if (typeof window === 'undefined' || !window.location) {
+    return false;
+  }
+
+  return LOCALHOST_HOSTNAMES.has(window.location.hostname);
+};
+
+const shouldRetrySameOrigin = (response, backendBase) => {
+  if (backendBase === SAME_ORIGIN_API_BASE || !isLocalRuntime()) {
+    return false;
+  }
+
+  return response.status === 404 || response.status >= 500;
+};
+
 const fetchWithFallback = async (endpoint, options) => {
   const backendBase = getBackendApiBase();
   const primaryUrl = buildApiUrl(endpoint);
+  const fallbackUrl = buildApiUrlWithBase(SAME_ORIGIN_API_BASE, endpoint);
 
   try {
-    return await fetch(primaryUrl, options);
+    const response = await fetch(primaryUrl, options);
+
+    if (!shouldRetrySameOrigin(response, backendBase)) {
+      return response;
+    }
   } catch (error) {
     if (backendBase === SAME_ORIGIN_API_BASE) {
       throw error;
     }
-
-    const fallbackUrl = buildApiUrlWithBase(SAME_ORIGIN_API_BASE, endpoint);
-    return fetch(fallbackUrl, options);
   }
+
+  return fetch(fallbackUrl, options);
 };
 
 const readJson = async (response, fallbackMessage) => {
