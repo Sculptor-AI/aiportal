@@ -7,6 +7,7 @@ import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
 import ImageModelSelector from './ImageModelSelector';
 import HtmlArtifactModal from './HtmlArtifactModal';
+import FileViewerModal from './FileViewerModal';
 import { useToast } from '../contexts/ToastContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
@@ -96,6 +97,8 @@ const ChatWindow = forwardRef(({
   const [resetFileUpload, setResetFileUpload] = useState(false);
   const [artifactHTML, setArtifactHTML] = useState(null);
   const [isArtifactModalOpen, setIsArtifactModalOpen] = useState(false);
+  const [isFileViewerOpen, setIsFileViewerOpen] = useState(false);
+  const [fileToView, setFileToView] = useState(null);
   const [animateDown, setAnimateDown] = useState(false);
   const [profilePicture, setProfilePicture] = useState(() => {
     try {
@@ -263,7 +266,8 @@ const ChatWindow = forwardRef(({
             type: 'image',
             content: dataUrl,
             dataUrl: dataUrl,
-            name: file.name
+            name: file.name,
+            originalFile: file
           });
         } else if (isText) {
           if (file.isPastedText) {
@@ -336,7 +340,8 @@ const ChatWindow = forwardRef(({
             content: trimmedText,
             text: trimmedText,
             name: file.name,
-            pdfThumbnail: pdfThumbnail
+            pdfThumbnail: pdfThumbnail,
+            originalFile: file
           });
         } else if (isCodeFile) {
           // Handle code files as text
@@ -403,6 +408,25 @@ const ChatWindow = forwardRef(({
       }
     }
   }, [availableModels, onModelChange]);
+
+  const handleFilePreview = useCallback((file, index) => {
+    if (!file) return;
+    setFileToView({ ...file, __fileIndex: index });
+    setIsFileViewerOpen(true);
+  }, []);
+
+  const handleFileSave = useCallback((updatedFile) => {
+    if (!updatedFile || typeof updatedFile.__fileIndex !== 'number') return;
+    setUploadedFileData(prev => {
+      if (!prev) return prev;
+      const filesArray = Array.isArray(prev) ? [...prev] : [prev];
+      if (!filesArray[updatedFile.__fileIndex]) return prev;
+      const { __fileIndex, ...cleanFile } = updatedFile;
+      filesArray[updatedFile.__fileIndex] = cleanFile;
+      return filesArray;
+    });
+    setFileToView(prev => (prev ? { ...updatedFile } : prev));
+  }, []);
 
   const handleLiveModeToggle = useCallback((isOpen) => {
     setIsLiveModeOpen(isOpen);
@@ -739,6 +763,7 @@ const ChatWindow = forwardRef(({
           onImageModeChange={setIsImagePromptMode}
           selectedImageModel={selectedImageModel}
           onActionChipChange={setActiveActionChip}
+          onFilePreview={handleFilePreview}
           onUserTyping={onUserTyping}
           onMessageSent={onMessageSent}
         />
@@ -748,6 +773,15 @@ const ChatWindow = forwardRef(({
         isOpen={isArtifactModalOpen}
         onClose={() => setIsArtifactModalOpen(false)}
         htmlContent={artifactHTML}
+      />
+      <FileViewerModal
+        isOpen={isFileViewerOpen}
+        onClose={() => {
+          setIsFileViewerOpen(false);
+          setFileToView(null);
+        }}
+        file={fileToView}
+        onSave={handleFileSave}
       />
     </ChatWindowContainer>
   );
