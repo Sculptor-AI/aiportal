@@ -119,7 +119,7 @@ const ChatInputArea = forwardRef(({
     reasoningEffortLevels.length > 0;
   const supportsCodeExecution = modelCapabilities?.code_execution === true;
   const allChipTypes = useMemo(() => {
-    const chips = ['search'];
+    const chips = ['search', 'deep-research'];
     if (supportsNativeThinking) {
       chips.unshift('mode');
     }
@@ -659,6 +659,42 @@ const ChatInputArea = forwardRef(({
             </svg>
           )}
           {t('composer.chip.search')}
+        </ActionChip>
+      );
+    } else if (type === 'deep-research') {
+      return (
+        <ActionChip
+          key="deep-research"
+          ref={ref}
+          selected={selectedActionChip === 'deep-research'}
+          onClick={() => {
+            if (isHidden) setShowOverflowDropdown(false);
+            if (selectedActionChip === 'deep-research') {
+              setSelectedActionChip(null);
+            } else {
+              setSelectedActionChip('deep-research');
+              setThinkingMode(null);
+              setCreateType(null);
+              setIsImagePromptMode(false);
+              setIsVideoPromptMode(false);
+              setIsFlowchartPromptMode(false);
+            }
+          }}
+          title={t('composer.chip.deepResearch', 'Deep Research')}
+        >
+          {theme.name === 'retro' ? (
+            <RetroIconWrapper>
+              <img src="/images/retroTheme/deepResearch.png" alt={t('composer.chip.deepResearch', 'Deep Research')} style={{ width: '16px', height: '16px' }} />
+            </RetroIconWrapper>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="M21 21l-4.35-4.35"></path>
+              <path d="M8 11h6"></path>
+              <path d="M11 8v6"></path>
+            </svg>
+          )}
+          {t('composer.chip.deepResearch', 'Deep Research')}
         </ActionChip>
       );
     } else if (type === 'analysis-tool') {
