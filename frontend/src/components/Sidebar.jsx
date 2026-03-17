@@ -866,7 +866,8 @@ const Sidebar = ({
   theme,
   settings = {},
   onSignOut,
-  focusModeActive = false
+  focusModeActive = false,
+  disabled = false
 }) => {
   const { t, language } = useTranslation();
   const [isMobileExpanded, setIsMobileExpanded] = useState(false);
@@ -883,10 +884,23 @@ const Sidebar = ({
 
   // Ensure sidebar is always expanded in retro theme
   useEffect(() => {
-    if (theme && theme.name === 'retro' && $collapsed) {
+    if (theme && theme.name === 'retro' && $collapsed && !disabled) {
       setCollapsed(false);
     }
-  }, [theme, $collapsed, setCollapsed]);
+  }, [theme, $collapsed, setCollapsed, disabled]);
+
+  useEffect(() => {
+    if (!disabled) {
+      return;
+    }
+
+    if (!$collapsed) {
+      setCollapsed(true);
+    }
+    setIsMobileExpanded(false);
+    setIsModelDropdownOpen(false);
+    setIsProfileDropdownOpen(false);
+  }, [disabled, $collapsed, setCollapsed]);
 
   // Listen for profile picture changes
   useEffect(() => {
@@ -921,13 +935,14 @@ const Sidebar = ({
 
   // Toggle mobile content visibility
   const toggleMobileExpanded = () => {
+    if (disabled) return;
     setIsMobileExpanded(!isMobileExpanded);
   };
 
   // Toggle desktop sidebar collapsed state
   const toggleCollapsed = () => {
     // Don't allow collapsing if retro theme
-    if (theme && theme.name === 'retro') return;
+    if ((theme && theme.name === 'retro') || disabled) return;
 
     const newState = !$collapsed;
     setCollapsed(newState);

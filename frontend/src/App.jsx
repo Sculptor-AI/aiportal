@@ -463,9 +463,11 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const [flowchartData, setFlowchartData] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showDinosaurGame, setShowDinosaurGame] = useState(false);
+  const [isFileViewerOpen, setIsFileViewerOpen] = useState(false);
   const chatWindowRef = useRef(null);
   const [isFocusModeActive, setIsFocusModeActive] = useState(false);
   const focusModeDefaultedRef = useRef(false);
+  const effectiveSidebarCollapsed = collapsed || isFileViewerOpen;
 
   // Easter eggs hook
   const {
@@ -881,6 +883,12 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     }
   }, [isFocusModeActive]);
 
+  useEffect(() => {
+    if (isFileViewerOpen && !collapsed) {
+      setCollapsed(true);
+    }
+  }, [isFileViewerOpen, collapsed]);
+
   // Function to reset chats and start fresh
   const resetChats = () => {
     const newChat = { id: uuidv4(), title: getDefaultChatTitle(settings?.language || getLanguagePreference()), messages: [] };
@@ -992,7 +1000,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         ...base,
         name: 'custom',
         background: overrides.background || base.background,
-        sidebar: overrides.background || base.sidebar,
+        sidebar: overrides.sidebar || base.sidebar,
         chat: overrides.background || base.chat,
         text: overrides.text || base.text,
         border: overrides.border || base.border,
@@ -1072,9 +1080,9 @@ const AppContent = ({ onSettingsLanguageChange }) => {
             $flowchartOpen={isFlowchartOpen}
             $sandbox3DOpen={isSandbox3DOpen}
             $sidebarStyle={settings.sidebarStyle || 'floating'}
-            $sidebarCollapsed={collapsed}
+            $sidebarCollapsed={effectiveSidebarCollapsed}
           >
-            {collapsed && (
+            {effectiveSidebarCollapsed && !isFileViewerOpen && (
               <FloatingMenuButton onClick={() => setCollapsed(false)}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -1092,7 +1100,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 $graphingOpen={isGraphingOpen}
                 $flowchartOpen={isFlowchartOpen}
                 $sandbox3DOpen={isSandbox3DOpen}
-                $sidebarCollapsed={collapsed}
+                $sidebarCollapsed={effectiveSidebarCollapsed}
               >
                 <img src="/sculptor.svg" alt="Sculptor Logo" className="logo" onDoubleClick={handleSculptorDoubleClick} />
                 <h1 onDoubleClick={handleSculptorDoubleClick}>Sculptor</h1>
@@ -1114,11 +1122,12 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               username={user?.username}
               isAdmin={!!adminUser}
               onModelChange={handleModelChange}
-              collapsed={collapsed}
+              collapsed={effectiveSidebarCollapsed}
               setCollapsed={setCollapsed}
               settings={settings}
               onSignOut={logout}
               focusModeActive={isFocusModeActive}
+              disabled={isFileViewerOpen}
             />
             {console.log('Available models for ChatWindow:', availableModels)}
             <Routes>
@@ -1134,7 +1143,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   updateChatTitle={updateChatTitle}
                   selectedModel={selectedModel}
                   settings={settings}
-                  $sidebarCollapsed={collapsed}
+                  $sidebarCollapsed={effectiveSidebarCollapsed}
                   availableModels={availableModels}
                   onAttachmentChange={setHasAttachment}
                   onModelChange={handleModelChange}
@@ -1158,20 +1167,21 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   onUserTyping={handleUserTyping}
                   focusModeActive={isFocusModeActive}
                   onMessageSent={handleMessageSent}
+                  onFileViewerOpenChange={setIsFileViewerOpen}
                 />
               } />
               <Route path="/auth/callback" element={<OAuthCallbackPage />} />
-              <Route path="/media" element={<MediaPage collapsed={collapsed} />} />
-              <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
-              <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
-              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} toggleProjectStar={toggleProjectStar} collapsed={collapsed} chats={chats} />} />
-              <Route path="/workspace" element={<WorkspacePage collapsed={collapsed} />} />
+              <Route path="/media" element={<MediaPage collapsed={effectiveSidebarCollapsed} />} />
+              <Route path="/news" element={<NewsPage collapsed={effectiveSidebarCollapsed} />} />
+              <Route path="/admin" element={<AdminPage collapsed={effectiveSidebarCollapsed} />} />
+              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} toggleProjectStar={toggleProjectStar} collapsed={effectiveSidebarCollapsed} chats={chats} />} />
+              <Route path="/workspace" element={<WorkspacePage collapsed={effectiveSidebarCollapsed} />} />
               <Route path="/projects/:projectId" element={
                 <ProjectDetailPage
                   projects={projects}
                   chats={chats}
                   createNewChat={createNewChat}
-                  collapsed={collapsed}
+                  collapsed={effectiveSidebarCollapsed}
                   setActiveChat={setActiveChat}
                   activeChat={activeChat}
                   addKnowledgeToProject={addKnowledgeToProject}
@@ -1285,7 +1295,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               <DinosaurRunGame
                 onExit={handleExitGame}
                 $toolbarOpen={isToolbarOpen}
-                $sidebarCollapsed={collapsed}
+                $sidebarCollapsed={effectiveSidebarCollapsed}
                 $whiteboardOpen={isWhiteboardOpen}
                 $equationEditorOpen={isEquationEditorOpen}
                 $graphingOpen={isGraphingOpen}

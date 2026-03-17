@@ -15,7 +15,7 @@ import ChatInputArea from './ChatInputArea';
 import LiveModeUI from './LiveModeUI';
 import useMessageSender from '../hooks/useMessageSender';
 import { listImageModelsApi } from '../services/imageService';
-import { DEFAULT_CHAT_MODEL_ID } from '../config/modelConfig';
+import { DEFAULT_CHAT_MODEL_ID, DEEP_RESEARCH_MODEL_ID, getPreferredModelId } from '../config/modelConfig';
 
 const ProjectBadge = styled(Link)`
   display: inline-flex;
@@ -85,6 +85,7 @@ const ChatWindow = forwardRef(({
   projects = [],
   pendingMessage = null,
   onPendingMessageConsumed,
+  onFileViewerOpenChange,
 }, ref) => {
   // All hooks at the top level - no conditional returns before this
   const [selectedModel, setSelectedModel] = useState(initialSelectedModel || DEFAULT_CHAT_MODEL_ID);
@@ -113,10 +114,13 @@ const ChatWindow = forwardRef(({
   const [isImagePromptMode, setIsImagePromptMode] = useState(false);
   const [availableImageModels, setAvailableImageModels] = useState([]);
   const [selectedImageModel, setSelectedImageModel] = useState(null);
+  const [activeActionChip, setActiveActionChip] = useState(null);
 
   const messagesEndRef = useRef(null);
   const chatInputAreaRef = useRef(null);
   const prevIsEmptyRef = useRef(false);
+  const previousNonDeepResearchModelRef = useRef(initialSelectedModel || DEFAULT_CHAT_MODEL_ID);
+  const deepResearchChipLockRef = useRef(false);
 
   const { t } = useTranslation();
   const toast = useToast();
@@ -394,6 +398,9 @@ const ChatWindow = forwardRef(({
   }, [uploadedFileData, clearUploadedFile]);
 
   const handleModelChange = useCallback((modelId) => {
+    if (modelId !== DEEP_RESEARCH_MODEL_ID) {
+      deepResearchChipLockRef.current = false;
+    }
     setSelectedModel(modelId);
     if (availableModels) {
       localStorage.setItem('selectedModel', modelId);
@@ -537,6 +544,54 @@ const ChatWindow = forwardRef(({
       setSelectedModel(initialSelectedModel);
     }
   }, [initialSelectedModel, selectedModel]);
+
+  useEffect(() => {
+    if (typeof onFileViewerOpenChange === 'function') {
+      onFileViewerOpenChange(isFileViewerOpen);
+    }
+
+    return () => {
+      if (typeof onFileViewerOpenChange === 'function') {
+        onFileViewerOpenChange(false);
+      }
+    };
+  }, [isFileViewerOpen, onFileViewerOpenChange]);
+
+  useEffect(() => {
+    if (selectedModel && selectedModel !== DEEP_RESEARCH_MODEL_ID) {
+      previousNonDeepResearchModelRef.current = selectedModel;
+    }
+  }, [selectedModel]);
+
+  useEffect(() => {
+    if (activeActionChip === 'deep-research') {
+      deepResearchChipLockRef.current = true;
+      if (selectedModel !== DEEP_RESEARCH_MODEL_ID) {
+        handleModelChange(DEEP_RESEARCH_MODEL_ID);
+      }
+      return;
+    }
+
+    if (!deepResearchChipLockRef.current) {
+      return;
+    }
+
+    deepResearchChipLockRef.current = false;
+
+    if (selectedModel !== DEEP_RESEARCH_MODEL_ID) {
+      return;
+    }
+
+    const nonDeepResearchModels = (availableModels || []).filter((model) => model?.id && model.id !== DEEP_RESEARCH_MODEL_ID);
+    const fallbackModel =
+      previousNonDeepResearchModelRef.current && previousNonDeepResearchModelRef.current !== DEEP_RESEARCH_MODEL_ID
+        ? previousNonDeepResearchModelRef.current
+        : getPreferredModelId(nonDeepResearchModels, DEFAULT_CHAT_MODEL_ID);
+
+    if (fallbackModel && fallbackModel !== selectedModel) {
+      handleModelChange(fallbackModel);
+    }
+  }, [activeActionChip, availableModels, handleModelChange, selectedModel]);
 
   useEffect(() => {
     if (chat?.id && initialSelectedModel && $sidebarCollapsed) {
@@ -739,6 +794,7 @@ const ChatWindow = forwardRef(({
           isImagePromptMode={isImagePromptMode}
           onImageModeChange={setIsImagePromptMode}
           selectedImageModel={selectedImageModel}
+          onActionChipChange={setActiveActionChip}
           onFilePreview={handleFilePreview}
           onUserTyping={onUserTyping}
           onMessageSent={onMessageSent}

@@ -663,7 +663,7 @@ const MobileAppContent = () => {
         ...base,
         name: 'custom',
         background: overrides.background || base.background,
-        sidebar: overrides.background || base.sidebar,
+        sidebar: overrides.sidebar || base.sidebar,
         chat: overrides.background || base.chat,
         text: overrides.text || base.text,
         border: overrides.border || base.border,

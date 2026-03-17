@@ -32,6 +32,7 @@ import {
   OverflowDropdown,
   InputGreeting
 } from './ChatWindow.styled';
+import { DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
 
 const ChatInputArea = forwardRef(({
   chatIsEmpty,
@@ -111,6 +112,7 @@ const ChatInputArea = forwardRef(({
   const chipsContainerRef = useRef(null);
   const chipRefs = useRef([]);
   const overflowButtonRef = useRef(null);
+  const deepResearchSyncPendingRef = useRef(false);
   const reasoningEffortLevels = Array.isArray(modelCapabilities?.reasoning_effort_levels)
     ? modelCapabilities.reasoning_effort_levels.filter((level) => typeof level === 'string' && level.trim().length > 0)
     : [];
@@ -118,17 +120,48 @@ const ChatInputArea = forwardRef(({
     modelCapabilities?.reasoning_effort === true &&
     reasoningEffortLevels.length > 0;
   const supportsCodeExecution = modelCapabilities?.code_execution === true;
+  const isDeepResearchSelected = selectedActionChip === 'deep-research';
+  const isSearchSelected = selectedActionChip === 'search';
+  const isAnalysisSelected = selectedActionChip === 'analysis-tool';
+  const isCreateSelectionActive =
+    selectedActionChip === 'create-image' ||
+    selectedActionChip === 'create-video' ||
+    selectedActionChip === 'create-flowchart' ||
+    createType === 'image' ||
+    createType === 'video' ||
+    createType === 'flowchart';
+  const isFocusedToolMode = thinkingMode === 'thinking' || isSearchSelected || isAnalysisSelected;
   const allChipTypes = useMemo(() => {
-    const chips = ['search', 'deep-research'];
-    if (supportsNativeThinking) {
-      chips.unshift('mode');
+    if (isDeepResearchSelected) {
+      return ['deep-research'];
     }
-    if (supportsCodeExecution) {
-      chips.push('analysis-tool');
+
+    if (isCreateSelectionActive) {
+      return ['create'];
     }
-    chips.push('create');
-    return chips;
-  }, [supportsNativeThinking, supportsCodeExecution]);
+
+    if (isFocusedToolMode) {
+      return [
+        ...(supportsNativeThinking ? ['mode'] : []),
+        'search',
+        ...(supportsCodeExecution ? ['analysis-tool'] : [])
+      ];
+    }
+
+    return [
+      ...(supportsNativeThinking ? ['mode'] : []),
+      'search',
+      'deep-research',
+      ...(supportsCodeExecution ? ['analysis-tool'] : []),
+      'create'
+    ];
+  }, [
+    isCreateSelectionActive,
+    isDeepResearchSelected,
+    isFocusedToolMode,
+    supportsCodeExecution,
+    supportsNativeThinking
+  ]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -195,10 +228,46 @@ const ChatInputArea = forwardRef(({
   }, [supportsCodeExecution, selectedActionChip]);
 
   useEffect(() => {
+    if (selectedActionChip !== 'deep-research') {
+      deepResearchSyncPendingRef.current = false;
+      return;
+    }
+
+    if (currentModel === DEEP_RESEARCH_MODEL_ID) {
+      deepResearchSyncPendingRef.current = false;
+      return;
+    }
+
+    if (deepResearchSyncPendingRef.current) {
+      const timeoutId = setTimeout(() => {
+        if (currentModel !== DEEP_RESEARCH_MODEL_ID) {
+          deepResearchSyncPendingRef.current = false;
+          setSelectedActionChip(null);
+        }
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+
+    setSelectedActionChip(null);
+  }, [currentModel, selectedActionChip]);
+
+  useEffect(() => {
     if (typeof onActionChipChange === 'function') {
       onActionChipChange(selectedActionChip);
     }
   }, [selectedActionChip, onActionChipChange]);
+
+  useEffect(() => {
+    if (!isDeepResearchSelected) {
+      return;
+    }
+
+    setShowToolbar(false);
+    setShowModeModal(false);
+    setShowCreateModal(false);
+    setShowOverflowDropdown(false);
+  }, [isDeepResearchSelected]);
 
   // Responsive chip management
   useEffect(() => {
@@ -206,7 +275,7 @@ const ChatInputArea = forwardRef(({
       if (!chipsContainerRef.current) return;
 
       const containerWidth = chipsContainerRef.current.offsetWidth;
-      const hammerButtonWidth = 44; // HammerButton width + gap
+      const hammerButtonWidth = isDeepResearchSelected ? 0 : 44; // HammerButton width + gap
       const overflowButtonWidth = 50; // Width for "..." button
       let availableWidth = containerWidth - hammerButtonWidth;
 
@@ -262,7 +331,7 @@ const ChatInputArea = forwardRef(({
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [allChipTypes, thinkingMode, selectedActionChip, createType, chipsExpanded, chatIsEmpty, visibleChips, hiddenChips]);
+  }, [allChipTypes, chatIsEmpty, chipsExpanded, isDeepResearchSelected, thinkingMode, selectedActionChip, createType, visibleChips, hiddenChips]);
 
   const handleToggleChips = () => {
     if (chipsExpanded) {
@@ -670,8 +739,10 @@ const ChatInputArea = forwardRef(({
           onClick={() => {
             if (isHidden) setShowOverflowDropdown(false);
             if (selectedActionChip === 'deep-research') {
+              deepResearchSyncPendingRef.current = false;
               setSelectedActionChip(null);
             } else {
+              deepResearchSyncPendingRef.current = true;
               setSelectedActionChip('deep-research');
               setThinkingMode(null);
               setCreateType(null);
@@ -830,60 +901,64 @@ const ChatInputArea = forwardRef(({
 
       <ChipsDock $visible={chatIsEmpty || chipsExpanded} $indent={chatIsEmpty || chipsExpanded}>
         <ActionChipsContainer ref={chipsContainerRef}>
-          <HammerButton
-            ref={toolbarRef}
-            $isOpen={showToolbar}
-            onClick={() => setShowToolbar(!showToolbar)}
-            type="button"
-            title={toolbarToggleLabel}
-            aria-label={toolbarToggleLabel}
-            aria-expanded={showToolbar}
-          >
-            <HammerIcon aria-hidden="true" $isOpen={showToolbar}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-              </svg>
-            </HammerIcon>
-            <CloseIcon aria-hidden="true" $isOpen={showToolbar}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </CloseIcon>
-          </HammerButton>
+          {!isDeepResearchSelected && (
+            <HammerButton
+              ref={toolbarRef}
+              $isOpen={showToolbar}
+              onClick={() => setShowToolbar(!showToolbar)}
+              type="button"
+              title={toolbarToggleLabel}
+              aria-label={toolbarToggleLabel}
+              aria-expanded={showToolbar}
+            >
+              <HammerIcon aria-hidden="true" $isOpen={showToolbar}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                </svg>
+              </HammerIcon>
+              <CloseIcon aria-hidden="true" $isOpen={showToolbar}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </CloseIcon>
+            </HammerButton>
+          )}
 
-          <ToolbarContainer $isOpen={showToolbar} $isEmpty={chatIsEmpty} ref={toolbarContainerRef}>
-            <ToolbarItem title={t('composer.toolbar.equationEditor')} onClick={onToggleEquationEditor}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 4H6L12 12L6 20H18" />
-              </svg>
-            </ToolbarItem>
-            <ToolbarItem title={t('composer.toolbar.whiteboard')} onClick={onToggleWhiteboard}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"></path><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"></path></svg>
-            </ToolbarItem>
-            <ToolbarItem title={t('composer.toolbar.graphing')} onClick={onToggleGraphing}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                <polyline points="17 6 23 6 23 12"></polyline>
-              </svg>
-            </ToolbarItem>
-            <ToolbarItem title={t('composer.toolbar.flowchart')} onClick={onToggleFlowchart}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="18" r="3"></circle>
-                <circle cx="6" cy="6" r="3"></circle>
-                <circle cx="18" cy="6" r="3"></circle>
-                <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
-                <path d="M12 12v3"></path>
-              </svg>
-            </ToolbarItem>
-            <ToolbarItem title={t('composer.toolbar.sandbox3d')} onClick={onToggleSandbox3D}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                <line x1="12" y1="22.08" x2="12" y2="12"></line>
-              </svg>
-            </ToolbarItem>
-          </ToolbarContainer>
+          {!isDeepResearchSelected && (
+            <ToolbarContainer $isOpen={showToolbar} $isEmpty={chatIsEmpty} ref={toolbarContainerRef}>
+              <ToolbarItem title={t('composer.toolbar.equationEditor')} onClick={onToggleEquationEditor}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 4H6L12 12L6 20H18" />
+                </svg>
+              </ToolbarItem>
+              <ToolbarItem title={t('composer.toolbar.whiteboard')} onClick={onToggleWhiteboard}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"></path><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"></path></svg>
+              </ToolbarItem>
+              <ToolbarItem title={t('composer.toolbar.graphing')} onClick={onToggleGraphing}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </ToolbarItem>
+              <ToolbarItem title={t('composer.toolbar.flowchart')} onClick={onToggleFlowchart}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="18" r="3"></circle>
+                  <circle cx="6" cy="6" r="3"></circle>
+                  <circle cx="18" cy="6" r="3"></circle>
+                  <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
+                  <path d="M12 12v3"></path>
+                </svg>
+              </ToolbarItem>
+              <ToolbarItem title={t('composer.toolbar.sandbox3d')} onClick={onToggleSandbox3D}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+              </ToolbarItem>
+            </ToolbarContainer>
+          )}
 
           {/* Render visible chips */}
           {visibleChips.map((chip, index) => renderChip({
@@ -891,7 +966,7 @@ const ChatInputArea = forwardRef(({
           }, index))}
 
           {/* Render overflow button if there are hidden chips */}
-          {hiddenChips.length > 0 && (
+          {!isDeepResearchSelected && hiddenChips.length > 0 && (
             <div style={{ position: 'relative' }}>
               <OverflowChipButton
                 ref={overflowButtonRef}
