@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { useTheme } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
 import FileUploadButton from './FileUploadButton';
@@ -71,6 +71,7 @@ const ChatInputArea = forwardRef(({
   isImagePromptMode: isImagePromptModeProp,
   onImageModeChange,
   selectedImageModel,
+  onActionChipChange,
   onUserTyping,
   onMessageSent,
 }, ref) => {
@@ -88,7 +89,7 @@ const ChatInputArea = forwardRef(({
   const [isVideoPromptMode, setIsVideoPromptMode] = useState(false);
   const [isFlowchartPromptMode, setIsFlowchartPromptMode] = useState(false);
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
-  const [visibleChips, setVisibleChips] = useState(['mode', 'search', 'analysis-tool', 'create']);
+  const [visibleChips, setVisibleChips] = useState([]);
   const [hiddenChips, setHiddenChips] = useState([]);
   const [showOverflowDropdown, setShowOverflowDropdown] = useState(false);
   const [chipsExpanded, setChipsExpanded] = useState(chatIsEmpty);
@@ -110,6 +111,24 @@ const ChatInputArea = forwardRef(({
   const chipsContainerRef = useRef(null);
   const chipRefs = useRef([]);
   const overflowButtonRef = useRef(null);
+  const reasoningEffortLevels = Array.isArray(modelCapabilities?.reasoning_effort_levels)
+    ? modelCapabilities.reasoning_effort_levels.filter((level) => typeof level === 'string' && level.trim().length > 0)
+    : [];
+  const supportsNativeThinking =
+    modelCapabilities?.reasoning_effort === true &&
+    reasoningEffortLevels.length > 0;
+  const supportsCodeExecution = modelCapabilities?.code_execution === true;
+  const allChipTypes = useMemo(() => {
+    const chips = ['search'];
+    if (supportsNativeThinking) {
+      chips.unshift('mode');
+    }
+    if (supportsCodeExecution) {
+      chips.push('analysis-tool');
+    }
+    chips.push('create');
+    return chips;
+  }, [supportsNativeThinking, supportsCodeExecution]);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -163,6 +182,24 @@ const ChatInputArea = forwardRef(({
     }
   }, [chatIsEmpty]);
 
+  useEffect(() => {
+    if (!supportsNativeThinking && thinkingMode !== null) {
+      setThinkingMode(null);
+    }
+  }, [supportsNativeThinking, thinkingMode]);
+
+  useEffect(() => {
+    if (!supportsCodeExecution && selectedActionChip === 'analysis-tool') {
+      setSelectedActionChip(null);
+    }
+  }, [supportsCodeExecution, selectedActionChip]);
+
+  useEffect(() => {
+    if (typeof onActionChipChange === 'function') {
+      onActionChipChange(selectedActionChip);
+    }
+  }, [selectedActionChip, onActionChipChange]);
+
   // Responsive chip management
   useEffect(() => {
     const handleResize = () => {
@@ -174,7 +211,7 @@ const ChatInputArea = forwardRef(({
       let availableWidth = containerWidth - hammerButtonWidth;
 
       // Define all chips
-      const allChips = ['mode', 'search', 'analysis-tool', 'create'];
+      const allChips = allChipTypes;
 
       let currentWidth = 0;
       const visible = [];
@@ -225,7 +262,7 @@ const ChatInputArea = forwardRef(({
       clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
     };
-  }, [thinkingMode, selectedActionChip, createType, chipsExpanded, chatIsEmpty]);
+  }, [allChipTypes, thinkingMode, selectedActionChip, createType, chipsExpanded, chatIsEmpty, visibleChips, hiddenChips]);
 
   const handleToggleChips = () => {
     if (chipsExpanded) {
@@ -316,7 +353,11 @@ const ChatInputArea = forwardRef(({
       file: uploadedFile,
       actionChip: selectedActionChip,
       mode: thinkingMode,
-      createType: createType
+      createType: createType,
+      reasoningEffort:
+        supportsNativeThinking && thinkingMode === 'thinking'
+          ? modelCapabilities?.reasoning_effort_default || reasoningEffortLevels[0] || 'medium'
+          : null
     });
     setInputMessage(''); // Clear input after submission attempt
     if (onMessageSent) {
@@ -550,6 +591,10 @@ const ChatInputArea = forwardRef(({
     const ref = isHidden ? null : (el) => { chipRefs.current[index] = el; };
 
     if (type === 'mode') {
+      if (!supportsNativeThinking) {
+        return null;
+      }
+
       return (
         <ActionChip
           key="mode"
@@ -617,11 +662,7 @@ const ChatInputArea = forwardRef(({
         </ActionChip>
       );
     } else if (type === 'analysis-tool') {
-      // Only show analysis tool (code execution) if the current model supports it
-      const supportsCodeExecution = modelCapabilities?.code_execution === true;
-
       if (!supportsCodeExecution) {
-        // Don't render the chip if the model doesn't support code execution
         return null;
       }
 

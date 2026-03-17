@@ -389,8 +389,20 @@ const useMessageSender = ({
     const supportsReasoningEffort =
       currentModelObj?.capabilities?.reasoning_effort === true &&
       reasoningEffortLevels.length > 1;
-    const thinkingEnabled = thinkingMode === 'thinking';
+    const supportsCodeExecution = currentModelObj?.capabilities?.code_execution === true;
+    const normalizedActionChip =
+      actionChip === 'analysis-tool' && !supportsCodeExecution
+        ? null
+        : actionChip;
+    const thinkingEnabled = thinkingMode === 'thinking' && supportsReasoningEffort;
     const useNativeThinking = thinkingEnabled && supportsReasoningEffort;
+    const selectedReasoningEffort =
+      useNativeThinking
+        ? reasoningEffort ||
+          currentModelObj?.capabilities?.reasoning_effort_default ||
+          reasoningEffortLevels[0] ||
+          'medium'
+        : null;
 
     // For custom models, use the base model ID for the API call
     const modelIdForApi = currentModelObj?.isCustomModel && currentModelObj?.baseModel 
@@ -399,7 +411,7 @@ const useMessageSender = ({
     const providerHint = resolveProviderHint(currentModelObj, availableModels || []);
     const requestOptions = {
       ...(providerHint ? { provider: providerHint } : {}),
-      ...(useNativeThinking && reasoningEffort ? { reasoningEffort } : {})
+      ...(selectedReasoningEffort ? { reasoningEffort: selectedReasoningEffort } : {})
     };
 
     // All models now go through backend API - no local API key validation needed
@@ -576,24 +588,6 @@ const useMessageSender = ({
     let finalAssistantContent = '';
 
     try {
-        const thinkingModeSystemPrompt = thinkingEnabled && !useNativeThinking ?
-            `You are a Deep Analysis Chain of Thought model. You MUST provide both thinking and a final answer.
-
-CRITICAL: Your response must have TWO parts:
-
-1. FIRST: Put your thinking inside <think></think> tags with your reasoning process.
-
-2. SECOND: After the </think> tag, you MUST provide your actual answer to the user's question. Do not stop after the thinking block.
-
-Example format:
-<think>
-[Your reasoning here]
-</think>
-
-[Your actual answer here]
-
-IMPORTANT: Always provide content after the </think> tag. Never end your response with just the thinking block.` : null;
-
         // Build the complete system prompt starting with SculptorAI base prompt
         let systemPromptToUse = SCULPTOR_AI_SYSTEM_PROMPT;
 
@@ -619,17 +613,12 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
           }
         }
 
-        // Add thinking mode prompt if applicable
-        if (thinkingModeSystemPrompt) {
-          systemPromptToUse = `${systemPromptToUse}\n\n${thinkingModeSystemPrompt}`;
-        }
-
         // UNIFIED LOGIC: All models are sent through the sendMessage generator,
         // which handles routing to the backend. The isBackendModel check is removed.
         // Action chips: 'search' = web_search, 'analysis-tool' = code_execution
         const messageGenerator = sendMessage(
           messageToSend, modelIdForApi, formattedHistory, imageDataToSend, fileTextToSend,
-          currentActionChip === 'search', currentActionChip === 'analysis-tool', currentActionChip === 'create-image',
+          normalizedActionChip === 'search', normalizedActionChip === 'analysis-tool', normalizedActionChip === 'create-image',
           systemPromptToUse,
           requestOptions
         );

@@ -56,8 +56,19 @@ health.get('/models/config', requireAuth, requireAdmin, (c) => {
 health.get('/capabilities', (c) => {
   const deepResearch = getDeepResearchConfig(c.env || {});
   const chatModels = listChatModels();
-  const openAIWebSearchModels = chatModels
-    .filter((model) => model.provider === 'openai' && model.capabilities?.web_search)
+  const getModelsByCapability = (provider, capability) =>
+    chatModels
+      .filter((model) => model.provider === provider && model.capabilities?.[capability])
+      .map((model) => model.id);
+
+  const openAIWebSearchModels = getModelsByCapability('openai', 'web_search');
+  const anthropicWebSearchModels = getModelsByCapability('anthropic', 'web_search');
+  const geminiWebSearchModels = getModelsByCapability('gemini', 'web_search');
+  const openAICodeExecutionModels = getModelsByCapability('openai', 'code_execution');
+  const anthropicCodeExecutionModels = getModelsByCapability('anthropic', 'code_execution');
+  const geminiCodeExecutionModels = getModelsByCapability('gemini', 'code_execution');
+  const urlContextModels = chatModels
+    .filter((model) => model.capabilities?.url_context)
     .map((model) => model.id);
   const reasoningEffortModels = chatModels
     .filter((model) => model.capabilities?.reasoning_effort)
@@ -91,20 +102,22 @@ health.get('/capabilities', (c) => {
 
       // Web search
       web_search: {
-        google: ['gemini'],
-        anthropic: ['claude-sonnet-4.6'],
+        google: geminiWebSearchModels,
+        anthropic: anthropicWebSearchModels,
         openai: openAIWebSearchModels,
         openrouter: true
       },
 
       // Code execution
       code_execution: {
-        gemini: true
+        gemini: geminiCodeExecutionModels,
+        anthropic: anthropicCodeExecutionModels,
+        openai: openAICodeExecutionModels
       },
 
       // Reasoning/Thinking
       reasoning: {
-        display_thinking: ['gemini', 'anthropic'],
+        display_thinking: ['gemini', 'anthropic', 'openai'],
         reasoning_effort: reasoningEffortModels
       },
 
@@ -122,7 +135,7 @@ health.get('/capabilities', (c) => {
       // Provider-specific features
       computer_use: ['anthropic'],
       citations: ['anthropic'],
-      url_context: ['gemini'],
+      url_context: urlContextModels,
 
       // Deep research orchestration
       deep_research: {

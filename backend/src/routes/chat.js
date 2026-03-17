@@ -91,7 +91,7 @@ function validateToolRequest(provider, body, c) {
  * - Vision/multimodal (images, audio, video, PDFs)
  * - Tool/function calling (tools array)
  * - Web search (web_search: true)
- * - Code execution (code_execution: true, Gemini and Anthropic)
+ * - Code execution (code_execution: true, provider/model dependent)
  * - JSON mode (response_format: { type: 'json_object' })
  * - Structured outputs (response_format: { json_schema: {...} })
  * - Thinking/reasoning (thinking: true, reasoning: true)

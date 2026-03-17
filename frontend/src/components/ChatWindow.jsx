@@ -15,7 +15,7 @@ import ChatInputArea from './ChatInputArea';
 import LiveModeUI from './LiveModeUI';
 import useMessageSender from '../hooks/useMessageSender';
 import { listImageModelsApi } from '../services/imageService';
-import { DEFAULT_CHAT_MODEL_ID, DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
+import { DEFAULT_CHAT_MODEL_ID } from '../config/modelConfig';
 
 const ProjectBadge = styled(Link)`
   display: inline-flex;
@@ -113,7 +113,6 @@ const ChatWindow = forwardRef(({
   const [isImagePromptMode, setIsImagePromptMode] = useState(false);
   const [availableImageModels, setAvailableImageModels] = useState([]);
   const [selectedImageModel, setSelectedImageModel] = useState(null);
-  const [activeActionChip, setActiveActionChip] = useState(null);
 
   const messagesEndRef = useRef(null);
   const chatInputAreaRef = useRef(null);
@@ -124,11 +123,6 @@ const ChatWindow = forwardRef(({
   const theme = useTheme();
   const showProfilePicture = settings?.showProfilePicture !== false;
   const newConversationLabel = t('chat.newConversation', 'New Conversation');
-  const selectableModels = useMemo(
-    () => (availableModels || []).filter((model) => model.id !== DEEP_RESEARCH_MODEL_ID),
-    [availableModels]
-  );
-  const isDeepResearchChipActive = activeActionChip === 'deep-research';
 
   // Memoized values
   const chatIsEmpty = useMemo(() => {
@@ -545,21 +539,6 @@ const ChatWindow = forwardRef(({
   }, [initialSelectedModel, selectedModel]);
 
   useEffect(() => {
-    if (selectedModel !== DEEP_RESEARCH_MODEL_ID || selectableModels.length === 0) {
-      return;
-    }
-
-    const fallbackModel =
-      selectableModels.find((model) => model.isDefault)?.id ||
-      selectableModels[0]?.id ||
-      DEFAULT_CHAT_MODEL_ID;
-
-    if (fallbackModel && fallbackModel !== selectedModel) {
-      handleModelChange(fallbackModel);
-    }
-  }, [selectedModel, selectableModels, handleModelChange]);
-
-  useEffect(() => {
     if (chat?.id && initialSelectedModel && $sidebarCollapsed) {
       setSelectedModel(initialSelectedModel);
       setResetFileUpload(false);
@@ -661,10 +640,10 @@ const ChatWindow = forwardRef(({
       >
         <ChatTitleSection $sidebarCollapsed={$sidebarCollapsed}>
           <ModelSelectorsRow>
-            {!isDeepResearchChipActive && selectedModel !== 'instant' && !isImagePromptMode && (
+            {selectedModel !== 'instant' && !isImagePromptMode && (
               <ModelSelector
                 selectedModel={selectedModel}
-                models={selectableModels}
+                models={availableModels}
                 onChange={handleModelChange}
                 key="model-selector"
                 theme={theme}
@@ -681,15 +660,13 @@ const ChatWindow = forwardRef(({
                 </ProjectBadge>
               ) : null;
             })()}
-            {!isDeepResearchChipActive && (
-              <ImageModelSelector
-                availableModels={availableImageModels}
-                selectedModel={selectedImageModel}
-                onSelectModel={setSelectedImageModel}
-                isVisible={isImagePromptMode}
-                theme={theme}
-              />
-            )}
+            <ImageModelSelector
+              availableModels={availableImageModels}
+              selectedModel={selectedImageModel}
+              onSelectModel={setSelectedImageModel}
+              isVisible={isImagePromptMode}
+              theme={theme}
+            />
           </ModelSelectorsRow>
         </ChatTitleSection>
       </ChatHeader>
@@ -762,7 +739,6 @@ const ChatWindow = forwardRef(({
           isImagePromptMode={isImagePromptMode}
           onImageModeChange={setIsImagePromptMode}
           selectedImageModel={selectedImageModel}
-          onActionChipChange={setActiveActionChip}
           onFilePreview={handleFilePreview}
           onUserTyping={onUserTyping}
           onMessageSent={onMessageSent}

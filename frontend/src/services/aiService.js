@@ -156,7 +156,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       requestPayload.web_search = true;
     }
 
-    // Add code execution if requested (Gemini only - backend will validate)
+    // Add code execution if requested - backend validates provider/model support
     if (codeExecution) {
       requestPayload.code_execution = true;
     }
@@ -548,7 +548,7 @@ This only needs to be done once per browser session.
  * @param {string} modelId - The model ID to use
  * @param {string} message - The message content
  * @param {boolean} search - Whether to use search feature
- * @param {boolean} codeExecution - Whether to use code execution (Gemini only)
+ * @param {boolean} codeExecution - Whether to use code execution
  * @param {boolean} imageGen - Whether to generate images
  * @param {string} imageData - Optional base64 image data
  * @param {string} fileTextContent - Optional text content from PDF or text file

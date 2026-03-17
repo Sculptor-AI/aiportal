@@ -36,6 +36,7 @@ import MatrixRain from './components/MatrixRain';
 import useEasterEggs from './hooks/useEasterEggs';
 import {
   DEFAULT_CUSTOM_BASE_MODEL_ID,
+  appendDeepResearchModel,
   getPreferredModelId
 } from './config/modelConfig';
 import { setBackendMode, shouldUseRealBackend } from './services/backendConfig';
@@ -358,10 +359,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         const backendModels = await fetchModelsFromBackend();
 
         // Combine backend models with enabled custom models
-        const allModels = [
+        const allModels = appendDeepResearchModel([
           ...(backendModels || []),
           ...enabledCustomModels
-        ];
+        ]);
 
         if (allModels.length > 0) {
           setAvailableModels(allModels);
@@ -383,9 +384,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
 
-        setAvailableModels(enabledCustomModels);
-        if (enabledCustomModels.length > 0 && !enabledCustomModels.some(m => m.id === selectedModel)) {
-          const defaultModel = getPreferredModelId(enabledCustomModels);
+        const allModels = appendDeepResearchModel(enabledCustomModels);
+        setAvailableModels(allModels);
+        if (allModels.length > 0 && !allModels.some(m => m.id === selectedModel)) {
+          const defaultModel = getPreferredModelId(allModels);
           setSelectedModel(defaultModel);
         }
       }

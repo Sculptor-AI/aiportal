@@ -222,7 +222,7 @@ export function validateToolsForProvider(provider, requestedTools) {
     if (capabilities.code_execution) {
       supported.push('code_execution');
     } else {
-      errors.push(`Code execution is not supported by ${provider} models. This feature is available for Gemini and Anthropic models.`);
+      errors.push(`Code execution is not supported by ${provider} models. This feature is available only on providers configured with code execution support.`);
     }
   }
   
