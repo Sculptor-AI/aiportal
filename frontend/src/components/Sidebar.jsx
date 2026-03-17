@@ -1085,12 +1085,12 @@ const Sidebar = ({
   return (
     <>
       {/* Main Sidebar container */}
-      <SidebarContainer
-        $isExpanded={isMobileExpanded}
-        $collapsed={theme && theme.name === 'retro' ? false : $collapsed}
-        $sidebarStyle={settings.sidebarStyle || 'floating'}
-        $focusModeActive={focusModeActive}
-      >
+        <SidebarContainer
+          $isExpanded={isMobileExpanded}
+          $collapsed={theme && theme.name === 'retro' ? false : $collapsed}
+          $sidebarStyle={settings.sidebarStyle || 'traditional'}
+          $focusModeActive={focusModeActive}
+        >
         {/* Top Bar for Desktop */}
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
           <LogoContainer>

@@ -67,19 +67,25 @@ function getOpenAIInstructions(body) {
   return null;
 }
 
-function convertContentToResponsesInput(content) {
+function getResponsesTextItemType(role) {
+  return role === 'assistant' ? 'output_text' : 'input_text';
+}
+
+function convertContentToResponsesInput(content, role = 'user') {
+  const textItemType = getResponsesTextItemType(role);
+
   if (typeof content === 'string') {
-    return [{ type: 'input_text', text: content }];
+    return [{ type: textItemType, text: content }];
   }
 
   if (!Array.isArray(content)) {
-    return [{ type: 'input_text', text: String(content) }];
+    return [{ type: textItemType, text: String(content) }];
   }
 
   return content
     .map((item) => {
       if (item?.type === 'text') {
-        return { type: 'input_text', text: item.text };
+        return { type: textItemType, text: item.text };
       }
 
       if (item?.type === 'image_url') {
@@ -157,7 +163,7 @@ function buildOpenAIResponsesBody(body) {
     .filter((message) => message && message.role && message.role !== 'system')
     .map((message) => ({
       role: message.role,
-      content: convertContentToResponsesInput(message.content)
+      content: convertContentToResponsesInput(message.content, message.role)
     }))
     .filter((message) => Array.isArray(message.content) && message.content.length > 0);
 

@@ -561,7 +561,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
   const [selections, setSelections] = useState({
     theme: 'light',
     fontSize: 'medium',
-    sidebarStyle: 'floating'
+    sidebarStyle: 'traditional'
   });
   const [customColors, setCustomColors] = useState({
     background: '#0f172a',

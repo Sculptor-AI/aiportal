@@ -438,6 +438,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       codeHighlighting: true,
       bubbleStyle: 'minimal',
       messageSpacing: 'comfortable',
+      sidebarStyle: 'traditional',
       sidebarAutoCollapse: false,
       focusMode: false,
       highContrast: false,
@@ -467,7 +468,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const chatWindowRef = useRef(null);
   const [isFocusModeActive, setIsFocusModeActive] = useState(false);
   const focusModeDefaultedRef = useRef(false);
-  const effectiveSidebarCollapsed = collapsed || isFileViewerOpen;
 
   // Easter eggs hook
   const {
@@ -1079,10 +1079,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
             $graphingOpen={isGraphingOpen}
             $flowchartOpen={isFlowchartOpen}
             $sandbox3DOpen={isSandbox3DOpen}
-            $sidebarStyle={settings.sidebarStyle || 'floating'}
-            $sidebarCollapsed={effectiveSidebarCollapsed}
+            $sidebarStyle={settings.sidebarStyle || 'traditional'}
+            $sidebarCollapsed={collapsed}
           >
-            {effectiveSidebarCollapsed && !isFileViewerOpen && (
+            {collapsed && !isFileViewerOpen && (
               <FloatingMenuButton onClick={() => setCollapsed(false)}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -1100,7 +1100,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 $graphingOpen={isGraphingOpen}
                 $flowchartOpen={isFlowchartOpen}
                 $sandbox3DOpen={isSandbox3DOpen}
-                $sidebarCollapsed={effectiveSidebarCollapsed}
+                $sidebarCollapsed={collapsed}
               >
                 <img src="/sculptor.svg" alt="Sculptor Logo" className="logo" onDoubleClick={handleSculptorDoubleClick} />
                 <h1 onDoubleClick={handleSculptorDoubleClick}>Sculptor</h1>
@@ -1122,7 +1122,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               username={user?.username}
               isAdmin={!!adminUser}
               onModelChange={handleModelChange}
-              collapsed={effectiveSidebarCollapsed}
+              collapsed={collapsed}
               setCollapsed={setCollapsed}
               settings={settings}
               onSignOut={logout}
@@ -1143,7 +1143,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   updateChatTitle={updateChatTitle}
                   selectedModel={selectedModel}
                   settings={settings}
-                  $sidebarCollapsed={effectiveSidebarCollapsed}
+                  $sidebarCollapsed={collapsed}
                   availableModels={availableModels}
                   onAttachmentChange={setHasAttachment}
                   onModelChange={handleModelChange}
@@ -1171,17 +1171,17 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 />
               } />
               <Route path="/auth/callback" element={<OAuthCallbackPage />} />
-              <Route path="/media" element={<MediaPage collapsed={effectiveSidebarCollapsed} />} />
-              <Route path="/news" element={<NewsPage collapsed={effectiveSidebarCollapsed} />} />
-              <Route path="/admin" element={<AdminPage collapsed={effectiveSidebarCollapsed} />} />
-              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} toggleProjectStar={toggleProjectStar} collapsed={effectiveSidebarCollapsed} chats={chats} />} />
-              <Route path="/workspace" element={<WorkspacePage collapsed={effectiveSidebarCollapsed} />} />
+              <Route path="/media" element={<MediaPage collapsed={collapsed} />} />
+              <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
+              <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
+              <Route path="/projects" element={<ProjectsPage projects={projects} createNewProject={createNewProject} deleteProject={deleteProject} toggleProjectStar={toggleProjectStar} collapsed={collapsed} chats={chats} />} />
+              <Route path="/workspace" element={<WorkspacePage collapsed={collapsed} />} />
               <Route path="/projects/:projectId" element={
                 <ProjectDetailPage
                   projects={projects}
                   chats={chats}
                   createNewChat={createNewChat}
-                  collapsed={effectiveSidebarCollapsed}
+                  collapsed={collapsed}
                   setActiveChat={setActiveChat}
                   activeChat={activeChat}
                   addKnowledgeToProject={addKnowledgeToProject}
@@ -1295,7 +1295,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               <DinosaurRunGame
                 onExit={handleExitGame}
                 $toolbarOpen={isToolbarOpen}
-                $sidebarCollapsed={effectiveSidebarCollapsed}
+                $sidebarCollapsed={collapsed}
                 $whiteboardOpen={isWhiteboardOpen}
                 $equationEditorOpen={isEquationEditorOpen}
                 $graphingOpen={isGraphingOpen}

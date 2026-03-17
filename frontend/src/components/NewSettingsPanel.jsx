@@ -1604,13 +1604,13 @@ const SettingDescription = styled.p`
                   {sidebarStyleOptions.map(option => (
                     <RadioOption
                       key={option}
-                      isSelected={localSettings.sidebarStyle === option || (!localSettings.sidebarStyle && option === 'floating')}
+                      isSelected={localSettings.sidebarStyle === option || (!localSettings.sidebarStyle && option === 'traditional')}
                     >
                       <input
                         type="radio"
                         name="sidebarStyle"
                         value={option}
-                        checked={localSettings.sidebarStyle === option || (!localSettings.sidebarStyle && option === 'floating')}
+                        checked={localSettings.sidebarStyle === option || (!localSettings.sidebarStyle && option === 'traditional')}
                         onChange={() => handleChange('sidebarStyle', option)}
                       />
                       {t(`settings.appearance.sidebarStyle.${option}`)}

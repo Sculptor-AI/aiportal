@@ -1,6 +1,6 @@
 {
   "_description": "Centralized model configuration. Update this file when models change.",
-  "_lastUpdated": "2026-03-17",
+  "_lastUpdated": "2026-03-18",
 
   "default": "chatgpt-5.3-instant",
 
@@ -31,9 +31,9 @@
 
     "anthropic": {
       "models": {
-        "claude-opus-4.6": "claude-opus-4-6",
-        "claude-sonnet-4.6": "claude-sonnet-4-6",
-        "claude-haiku-4.5": "claude-haiku-4-5"
+        "claude-opus-4.6": "claude-opus-4-1-20250805",
+        "claude-sonnet-4.6": "claude-sonnet-4-20250514",
+        "claude-haiku-4.5": "claude-3-5-haiku-20241022"
       },
       "modelCapabilities": {
         "claude-opus-4.6": {

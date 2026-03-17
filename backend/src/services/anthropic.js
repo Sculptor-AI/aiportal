@@ -20,12 +20,13 @@ import { resolveModel, getDefaultModel } from '../config/index.js';
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_VERSION = '2023-06-01';
 const ANTHROPIC_MODELS_WITH_REASONING_EFFORT = new Set([
-  'claude-opus-4-6',
-  'claude-sonnet-4-6',
-  'claude-opus-4-5'
+  'claude-opus-4-1-20250805',
+  'claude-opus-4-20250514',
+  'claude-sonnet-4-20250514',
+  'claude-3-7-sonnet-20250219'
 ]);
 const ANTHROPIC_MODELS_WITH_MAX_EFFORT = new Set([
-  'claude-opus-4-6'
+  'claude-opus-4-1-20250805'
 ]);
 
 function normalizeReasoningEffort(reasoningEffort) {
@@ -255,8 +256,8 @@ function convertToolsToAnthropic(tools, options = {}) {
  * Build Anthropic request body with all supported features
  */
 function buildAnthropicBody(body) {
-  const modelId = body.model?.replace('anthropic/', '') || 'claude-sonnet-4';
-  const model = resolveModel('anthropic', modelId);
+  const modelId = body.model?.replace('anthropic/', '') || getDefaultModel('anthropic') || 'claude-sonnet-4-20250514';
+  const model = resolveModel('anthropic', modelId) || getDefaultModel('anthropic') || 'claude-sonnet-4-20250514';
 
   // Convert messages
   const messages = [];
