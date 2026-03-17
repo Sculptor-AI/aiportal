@@ -1,40 +1,35 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { getBackendApiBase } from './backendConfig';
 
-// Helper function to get API base URL
-const getApiBaseUrl = () => {
-  const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
-  let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
-  
-  if (cleanedBase.endsWith('/api')) {
-    cleanedBase = cleanedBase.slice(0, -4);
+const getApiBaseUrl = () => getBackendApiBase();
+
+const toDeepResearchErrorMessage = (error) => {
+  const message = String(error?.message || error || 'Deep research failed');
+  if (/operation was aborted|aborterror/i.test(message)) {
+    return 'Deep research connection was interrupted before completion. Please retry.';
   }
-  
-  return `${cleanedBase}/api`;
+  if (/timed out|timeout/i.test(message)) {
+    return 'Deep research timed out while waiting for upstream models. Please retry.';
+  }
+  return message;
 };
 
 // Helper function to get authentication headers
 const getAuthHeaders = () => {
-  let apiKey = null;
-  let user = null;
+  let accessToken = null;
   
   try {
-    const userJSON = sessionStorage.getItem('ai_portal_current_user');
+    const userJSON = localStorage.getItem('ai_portal_current_user');
     if (userJSON) {
-      user = JSON.parse(userJSON);
-      if (user.accessToken && user.accessToken.startsWith('ak_')) {
-        apiKey = user.accessToken;
-      } else if (user.accessToken) {
-        apiKey = user.accessToken;
-      }
+      const user = JSON.parse(userJSON);
+      accessToken = user?.accessToken || null;
     }
   } catch (e) {
     console.error('Error getting user session:', e);
   }
 
-  // Fallback API key for development/testing
-  if (!apiKey) {
-    apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
+  if (!accessToken) {
+    throw new Error('Authentication required. Please log in to use deep research.');
   }
 
   const headers = {
@@ -42,10 +37,10 @@ const getAuthHeaders = () => {
     'Accept': 'text/event-stream'
   };
 
-  if (apiKey.startsWith('ak_')) {
-    headers['x-api-key'] = apiKey;
+  if (accessToken.startsWith('ak_')) {
+    headers['x-api-key'] = accessToken;
   } else {
-    headers['Authorization'] = `Bearer ${apiKey}`;
+    headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
   return headers;
@@ -83,7 +78,8 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      cache: 'no-store'
     });
 
     if (!response.ok) {
@@ -94,9 +90,11 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
         errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
       }
       
-      const errorMessage = errorData.error || `Request failed with status ${response.status}`;
-      if (onError) onError(errorMessage);
-      throw new Error(errorMessage);
+      throw new Error(errorData.error || `Request failed with status ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error('Deep research endpoint did not return a stream.');
     }
 
     const reader = response.body.getReader();
@@ -134,7 +132,7 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
               }
             } else if (event.type === 'error') {
               if (onError) {
-                onError(event.message);
+                onError(toDeepResearchErrorMessage(event.message));
               }
             }
           } catch (e) {
@@ -164,11 +162,12 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
       }
     }
   } catch (error) {
+    const friendlyMessage = toDeepResearchErrorMessage(error);
     console.error('Deep research error:', error);
     if (onError) {
-      onError(error.message);
+      onError(friendlyMessage);
     }
-    throw error;
+    throw new Error(friendlyMessage);
   }
 };
 

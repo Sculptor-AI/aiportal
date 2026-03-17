@@ -1,14 +1,29 @@
 import { useState } from 'react';
 import { sendMessage, sendMessageToBackend, streamMessageFromBackend, generateChatTitle } from '../services/aiService';
-import { generateImageApi } from '../services/imageService';
+import { generateImageApi, generateVideoApi } from '../services/imageService';
+import { performDeepResearch } from '../services/deepResearchService';
 import { getFlowchartSystemPrompt } from '../utils/flowchartTools';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
 import { hasIncompleteCodeBlock, validateCodeBlockSyntax } from '../utils/codeBlockProcessor';
+import { DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
 
 // Helper function (can be outside or passed in if it uses external context like toast)
 const generateId = () => {
   return Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+};
+
+const resolveProviderHint = (model, models = []) => {
+  if (!model) {
+    return null;
+  }
+
+  if (model.isCustomModel && model.baseModel) {
+    const baseModel = models.find((candidate) => candidate.id === model.baseModel);
+    return baseModel?.provider || null;
+  }
+
+  return model.provider || null;
 };
 
 const useMessageSender = ({
@@ -16,6 +31,7 @@ const useMessageSender = ({
   selectedModel,
   settings,
   availableModels,
+  projects, // (optional) array of project objects for injecting project instructions
   addMessage, // (chatId, message) => void
   updateMessage, // (chatId, messageId, updates) => void
   updateChatTitle, // (chatId, title) => void
@@ -166,9 +182,10 @@ const useMessageSender = ({
         prompt: prompt,
         status: 'loading',
         videoUrl: null,
+        videoId: null,
         content: '',
         timestamp: new Date().toISOString(),
-        modelId: 'video-generator',
+        modelId: 'sora-2',
       };
       addMessage(chat.id, videoPlaceholderMessage);
       
@@ -177,6 +194,7 @@ const useMessageSender = ({
       try {
         const response = await generateVideoApi(prompt);
         const videoUrl = response.videoData || response.videoUrl;
+        const videoId = response.videoId || null;
         
         if (!videoUrl) {
           throw new Error('No video URL returned from API');
@@ -184,80 +202,8 @@ const useMessageSender = ({
         
         updateMessage(chat.id, videoPlaceholderId, { 
           status: 'completed', 
-          videoUrl: videoUrl, 
-          isLoading: false 
-        });
-        
-        // Generate title for new chat if this is the first message
-        if (chat.messages.length === 0) {
-          const title = `Video: ${prompt.substring(0, 30)}${prompt.length > 30 ? '...' : ''}`;
-          if (updateChatTitle) updateChatTitle(chat.id, title);
-        }
-      } catch (error) {
-        console.error('[useMessageSender] Error generating video:', error);
-        updateMessage(chat.id, videoPlaceholderId, { 
-          status: 'error', 
-          content: error.message || 'Failed to generate video', 
-          isLoading: false, 
-          isError: true 
-        });
-        addAlert({
-          message: `Video generation failed: ${error.message || 'Unknown error'}`,
-          type: 'error',
-          autoHide: true
-        });
-      } finally {
-        setIsLoading(false);
-      }
-      
-      return;
-    }
-
-    // Check if this is a video generation request
-    if (messagePayload.type === 'generate-video') {
-      const prompt = messagePayload.prompt;
-      
-      if (!prompt || !chat?.id) return;
-      
-      setIsLoading(true);
-      
-      // Add user message indicating the prompt
-      const userPromptMessage = {
-        id: generateId(),
-        role: 'user',
-        content: `Generate video: "${prompt}"`,
-        timestamp: new Date().toISOString(),
-      };
-      addMessage(chat.id, userPromptMessage);
-      
-      // Add placeholder message for the generated video
-      const videoPlaceholderId = generateId();
-      const videoPlaceholderMessage = {
-        id: videoPlaceholderId,
-        role: 'assistant',
-        type: 'generated-video',
-        prompt: prompt,
-        status: 'loading',
-        videoUrl: null,
-        content: '',
-        timestamp: new Date().toISOString(),
-        modelId: 'video-generator',
-      };
-      addMessage(chat.id, videoPlaceholderMessage);
-      
-      if (scrollToBottom) setTimeout(scrollToBottom, 100);
-      
-      try {
-        const response = await generateVideoApi(prompt);
-        const videoUrl = response.videoData || response.videoUrl;
-        
-        if (!videoUrl) {
-          throw new Error('No video URL returned from API');
-        }
-        
-        updateMessage(chat.id, videoPlaceholderId, { 
-          status: 'completed', 
-          videoUrl: videoUrl, 
+          videoUrl: videoUrl,
+          videoId,
           isLoading: false 
         });
         
@@ -330,6 +276,11 @@ const useMessageSender = ({
           role: msg.role,
           content: msg.content
         }));
+        const flowchartModelObj = (availableModels || []).find(model => model.id === selectedModel);
+        const flowchartProviderHint = resolveProviderHint(flowchartModelObj, availableModels || []);
+        const flowchartRequestOptions = flowchartProviderHint
+          ? { provider: flowchartProviderHint }
+          : {};
         
         let streamedContent = '';
         const messageGenerator = sendMessage(
@@ -341,7 +292,8 @@ const useMessageSender = ({
           false, // not search
           false, // not deep research
           false, // not create image
-          combinedSystemPrompt // combined system prompt
+          combinedSystemPrompt, // combined system prompt
+          flowchartRequestOptions
         );
         
         for await (const chunk of messageGenerator) {
@@ -399,6 +351,7 @@ const useMessageSender = ({
     const actionChip = messagePayload.actionChip;
     const thinkingMode = messagePayload.mode;
     const createType = messagePayload.createType;
+    const reasoningEffort = messagePayload.reasoningEffort;
     
     const messageToSend = messageText ? messageText.trim() : '';
     
@@ -429,13 +382,25 @@ const useMessageSender = ({
     const currentChatId = chat.id;
     const currentModel = selectedModel;
     const currentHistory = chat.messages;
-    const currentModelObj = availableModels.find(model => model.id === currentModel);
-    const isBackendModel = currentModelObj?.isBackendModel === true;
+    const currentModelObj = (availableModels || []).find(model => model.id === currentModel);
+    const reasoningEffortLevels = Array.isArray(currentModelObj?.capabilities?.reasoning_effort_levels)
+      ? currentModelObj.capabilities.reasoning_effort_levels.filter((level) => typeof level === 'string' && level.trim().length > 0)
+      : [];
+    const supportsReasoningEffort =
+      currentModelObj?.capabilities?.reasoning_effort === true &&
+      reasoningEffortLevels.length > 1;
+    const thinkingEnabled = thinkingMode === 'thinking';
+    const useNativeThinking = thinkingEnabled && supportsReasoningEffort;
 
     // For custom models, use the base model ID for the API call
     const modelIdForApi = currentModelObj?.isCustomModel && currentModelObj?.baseModel 
       ? currentModelObj.baseModel 
       : currentModel;
+    const providerHint = resolveProviderHint(currentModelObj, availableModels || []);
+    const requestOptions = {
+      ...(providerHint ? { provider: providerHint } : {}),
+      ...(useNativeThinking && reasoningEffort ? { reasoningEffort } : {})
+    };
 
     // All models now go through backend API - no local API key validation needed
 
@@ -475,6 +440,105 @@ const useMessageSender = ({
     if (setResetFileUpload) setTimeout(() => setResetFileUpload(false), 0);
     if (onAttachmentChange) onAttachmentChange(false);
 
+    const shouldRunDeepResearch =
+      currentActionChip === 'deep-research' || currentModel === DEEP_RESEARCH_MODEL_ID;
+
+    // Dedicated deep research flow (SSE progress + structured completion payload)
+    if (shouldRunDeepResearch) {
+      const deepResearchModelId =
+        currentActionChip === 'deep-research' || currentModel === DEEP_RESEARCH_MODEL_ID
+          ? DEEP_RESEARCH_MODEL_ID
+          : currentModel;
+      const deepResearchMessageId = generateId();
+      const deepResearchMessage = {
+        id: deepResearchMessageId,
+        role: 'assistant',
+        type: 'deep-research',
+        status: 'loading',
+        query: messageToSend,
+        content: messageToSend,
+        progress: 0,
+        statusMessage: 'Initializing deep research...',
+        timestamp: new Date().toISOString(),
+        modelId: deepResearchModelId
+      };
+      addMessage(currentChatId, deepResearchMessage);
+
+      if (currentHistory.length === 0 && messageToSend) {
+        if (updateChatTitle) updateChatTitle(currentChatId, messageToSend);
+      }
+
+      if (scrollToBottom) setTimeout(scrollToBottom, 100);
+
+        try {
+          const maxAgents = Math.max(
+            2,
+            Math.min(12, Number.parseInt(settings?.deepResearchMaxAgents, 10) || 8)
+          );
+          const researchModel =
+            currentActionChip === 'deep-research' || currentModel === DEEP_RESEARCH_MODEL_ID
+              ? DEEP_RESEARCH_MODEL_ID
+              : modelIdForApi;
+
+          await performDeepResearch(
+            messageToSend,
+            researchModel,
+            maxAgents,
+          (progress, statusMessage) => {
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'loading',
+              progress,
+              statusMessage: statusMessage || 'Researching...'
+            });
+          },
+          (result) => {
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'completed',
+              progress: 100,
+              statusMessage: 'Deep research complete',
+              query: messageToSend,
+              content: result.content || result.report || '',
+              subQuestions: result.subQuestions || [],
+              agentResults: result.agentResults || [],
+              sources: result.sources || [],
+              metadata: result.metadata || null,
+              qualityIssues: result.qualityIssues || [],
+              isLoading: false
+            });
+          },
+          (errorMessage) => {
+            updateMessage(currentChatId, deepResearchMessageId, {
+              status: 'error',
+              query: messageToSend,
+              content: messageToSend,
+              errorMessage: errorMessage || 'Deep research failed',
+              isError: true,
+              isLoading: false
+            });
+          }
+        );
+      } catch (error) {
+        console.error('[useMessageSender] Deep research failed:', error);
+        updateMessage(currentChatId, deepResearchMessageId, {
+          status: 'error',
+          query: messageToSend,
+          content: messageToSend,
+          errorMessage: error.message || 'Deep research failed',
+          isError: true,
+          isLoading: false
+        });
+        addAlert({
+          message: `Deep research failed: ${error.message || 'Unknown error'}`,
+          type: 'error',
+          autoHide: true
+        });
+      } finally {
+        setIsLoading(false);
+      }
+
+      return;
+    }
+
     const formattedHistory = currentHistory
       .filter(msg => msg.role !== 'system') // Filter out system messages
       .map(msg => ({
@@ -496,6 +560,7 @@ const useMessageSender = ({
       id: aiMessageId,
       role: 'assistant',
       content: '',
+      reasoningTrace: '',
       isLoading: true,
       timestamp: new Date().toISOString(),
       modelId: currentModel,
@@ -511,7 +576,7 @@ const useMessageSender = ({
     let finalAssistantContent = '';
 
     try {
-        const thinkingModeSystemPrompt = thinkingMode === 'thinking' ?
+        const thinkingModeSystemPrompt = thinkingEnabled && !useNativeThinking ?
             `You are a Deep Analysis Chain of Thought model. You MUST provide both thinking and a final answer.
 
 CRITICAL: Your response must have TWO parts:
@@ -531,12 +596,29 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
 
         // Build the complete system prompt starting with SculptorAI base prompt
         let systemPromptToUse = SCULPTOR_AI_SYSTEM_PROMPT;
-        
+
         // Add custom model system prompt if applicable
         if (currentModelObj?.isCustomModel && currentModelObj?.systemPrompt) {
           systemPromptToUse = `${systemPromptToUse}\n\n${currentModelObj.systemPrompt}`;
         }
-        
+
+        // Add project instructions if this chat belongs to a project
+        if (chat?.projectId && Array.isArray(projects) && projects.length > 0) {
+          const project = projects.find(p => p.id === chat.projectId);
+          if (project?.projectInstructions?.trim()) {
+            systemPromptToUse = `${systemPromptToUse}\n\n<project_instructions>\n${project.projectInstructions.trim()}\n</project_instructions>`;
+          }
+          if (project?.knowledge?.length > 0) {
+            const knowledgeContext = project.knowledge
+              .filter(k => k.content)
+              .map(k => `<file name="${k.name}">\n${k.content}\n</file>`)
+              .join('\n');
+            if (knowledgeContext) {
+              systemPromptToUse = `${systemPromptToUse}\n\n<project_knowledge>\n${knowledgeContext}\n</project_knowledge>`;
+            }
+          }
+        }
+
         // Add thinking mode prompt if applicable
         if (thinkingModeSystemPrompt) {
           systemPromptToUse = `${systemPromptToUse}\n\n${thinkingModeSystemPrompt}`;
@@ -548,17 +630,31 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
         const messageGenerator = sendMessage(
           messageToSend, modelIdForApi, formattedHistory, imageDataToSend, fileTextToSend,
           currentActionChip === 'search', currentActionChip === 'analysis-tool', currentActionChip === 'create-image',
-          systemPromptToUse
+          systemPromptToUse,
+          requestOptions
         );
         
         let messageSources = [];
         let toolCalls = [];
+        let reasoningTrace = '';
         
         for await (const chunk of messageGenerator) {
           // Check if chunk is an object with type 'sources'
           if (typeof chunk === 'object' && chunk.type === 'sources') {
             messageSources = chunk.sources;
             // Don't add sources to content - they'll be handled separately
+            continue;
+          }
+
+          // Handle provider-native reasoning deltas
+          if (typeof chunk === 'object' && chunk.type === 'reasoning') {
+            reasoningTrace += chunk.content || '';
+            updateMessage(currentChatId, aiMessageId, {
+              content: streamedContent,
+              reasoningTrace,
+              isLoading: true,
+              toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined
+            });
             continue;
           }
           
@@ -667,6 +763,10 @@ IMPORTANT: Always provide content after the </think> tag. Never end your respons
         finalAssistantContent = streamedContent;
         
         const messageUpdates = { content: streamedContent, isLoading: false };
+
+        if (reasoningTrace) {
+          messageUpdates.reasoningTrace = reasoningTrace;
+        }
         
         // Add tool calls if we have them
         if (toolCalls.length > 0) {

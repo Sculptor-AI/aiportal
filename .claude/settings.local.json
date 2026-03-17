@@ -34,7 +34,8 @@
       "WebSearch",
       "Bash(findstr:*)",
       "WebFetch(domain:gist.github.com)",
-      "Skill(frontend-design)"
+      "Skill(frontend-design)",
+      "mcp__Claude_Preview__preview_start"
     ],
     "deny": []
   }

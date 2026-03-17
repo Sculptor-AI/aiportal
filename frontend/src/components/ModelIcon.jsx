@@ -1,7 +1,6 @@
 import React from 'react';
 import styled, { useTheme } from 'styled-components';
 import { modelThemes } from '../styles/themes';
-import { useAuth } from '../contexts/AuthContext';
 
 // Moved sizeMap to module scope
 const sizeMap = {
@@ -48,6 +47,8 @@ const MODEL_LOGOS = {
   // OpenAI models
   'openai/gpt-4o': '/images/openai-logo.png',
   'chatgpt-4o': '/images/openai-logo.png',
+  'sora-2': '/images/openai-logo.png',
+  'sora-2-pro': '/images/openai-logo.png',
 
   // Google models
   'google/gemini-2.5-pro-exp-03-25': '/images/gemini-logo.png',
@@ -76,6 +77,22 @@ const MODEL_LOGOS = {
   'ursa-minor': '/images/sculptor.svg'
 };
 
+const PROVIDER_LOGOS = {
+  google: '/images/gemini-logo.png',
+  gemini: '/images/gemini-logo.png',
+  openai: '/images/openai-logo.png',
+  anthropic: '/images/claude-logo.png',
+  claude: '/images/claude-logo.png',
+  meta: '/images/meta-logo.png',
+  llama: '/images/meta-logo.png',
+  deepseek: '/images/deepseek-logo.png',
+  grok: '/images/grok-logo.png',
+  'x-ai': '/images/grok-logo.png',
+  xai: '/images/grok-logo.png',
+  mercury: '/images/inception-logo.png',
+  inception: '/images/inception-logo.png'
+};
+
 const ModelIconContainer = styled.div`
   display: flex;
   align-items: center;
@@ -101,9 +118,8 @@ const ModelIconContainer = styled.div`
   }
 `;
 
-const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
+const ModelIcon = ({ modelId, provider, size = 'medium', $inMessage = false }) => {
   const theme = useTheme();
-  const { settings } = useAuth(); // Access settings from AuthContext
   let iconComponent;
   let iconBackground;
 
@@ -114,29 +130,29 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
 
   // Try to get image from the MODEL_LOGOS mapping (unless it's a custom model)
   let imageUrl = !isCustomModel ? MODEL_LOGOS[modelId] : null;
+  const normalizedProvider = typeof provider === 'string' ? provider.toLowerCase() : null;
 
-  // For custom models, we'll use the emoji instead of an image
+  // For custom models, prefer the uploaded avatar image and fall back to emoji/initials.
   if (isCustomModel) {
-    // Get the available models from the parent context to find the emoji
-    // Since we don't have access to availableModels here, we'll need to parse the model ID
-    // The modelId format is 'custom-{id}', we need to get the emoji from localStorage
     try {
       const customModelsJson = localStorage.getItem('customModels');
       if (customModelsJson) {
         const customModels = JSON.parse(customModelsJson);
         const modelNumericId = modelId.replace('custom-', '');
         const customModel = customModels.find(m => m.id.toString() === modelNumericId);
-        if (customModel && customModel.avatar) {
+
+        if (customModel?.avatarImage) {
+          imageUrl = customModel.avatarImage;
+        } else if (customModel?.avatar) {
           iconComponent = <span style={{ fontSize: '1.2em' }}>{customModel.avatar}</span>;
           iconBackground = 'transparent';
         } else {
-          // Fallback to first letter
-          iconComponent = 'C';
+          iconComponent = customModel?.name?.charAt(0)?.toUpperCase() || 'C';
           iconBackground = '#888';
         }
       }
     } catch (err) {
-      console.error('Error getting custom model emoji:', err);
+      console.error('Error getting custom model avatar:', err);
       iconComponent = 'C';
       iconBackground = '#888';
     }
@@ -146,7 +162,11 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
       // Check if the modelId contains any of our known provider names
       if (modelId?.includes('mercury')) {
         imageUrl = '/images/inception-logo.png';
-      } else if (modelId?.includes('openai') || modelId?.includes('gpt')) {
+      } else if (modelId?.includes('imagen') || modelId?.includes('nano-banana')) {
+        imageUrl = '/images/gemini-logo.png';
+      } else if (modelId?.includes('gpt-image') || modelId?.includes('chatgpt-image')) {
+        imageUrl = '/images/openai-logo.png';
+      } else if (modelId?.includes('openai') || modelId?.includes('gpt') || modelId?.includes('sora')) {
         imageUrl = '/images/openai-logo.png';
       } else if (modelId?.includes('gemini')) {
         imageUrl = '/images/gemini-logo.png';
@@ -161,6 +181,10 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
       }
     }
 
+    if (!imageUrl && normalizedProvider) {
+      imageUrl = PROVIDER_LOGOS[normalizedProvider] || null;
+    }
+
     // If no image available, set icon based on model
     if (!imageUrl) {
       switch (true) {
@@ -172,7 +196,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
           iconComponent = <ClaudeIcon />;
           iconBackground = model.gradient;
           break;
-        case modelId?.includes('gpt') || modelId?.includes('openai'):
+        case modelId?.includes('gpt') || modelId?.includes('openai') || modelId?.includes('sora'):
           iconComponent = <ChatGPTIcon />;
           iconBackground = model.gradient;
           break;
@@ -191,6 +215,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
 
   const $useImage = !!imageUrl;
   const $noMargin = $inMessage && !!imageUrl; // Determine if margin should be applied
+  const isCustomAvatarImage = isCustomModel && !!imageUrl;
 
   return (
     <ModelIconContainer
@@ -200,7 +225,7 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
       $useImage={$useImage}
       $noMargin={$noMargin}
       style={{ background: !$useImage && iconBackground ? iconBackground : undefined }}
-      title={`${model?.name || modelId} (${model?.provider || 'Local'})`}
+      title={`${model?.name || modelId} (${model?.provider || provider || 'Local'})`}
     >
       {imageUrl ? (
         <img
@@ -209,8 +234,8 @@ const ModelIcon = ({ modelId, size = 'medium', $inMessage = false }) => {
           style={{
             width: '100%',
             height: '100%',
-            objectFit: 'contain',
-            filter: (modelId?.includes('gpt') || modelId?.includes('openai')) && theme.isDark ? 'invert(1) brightness(1.5)' : 'none'
+            objectFit: isCustomAvatarImage ? 'cover' : 'contain',
+            filter: (modelId?.includes('gpt') || modelId?.includes('openai') || modelId?.includes('sora')) && theme.isDark ? 'invert(1) brightness(1.5)' : 'none'
           }}
         />
       ) : (

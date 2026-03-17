@@ -22,7 +22,7 @@ If the frontend is not accessible in your browser:
 If the frontend is running but it can't fetch data from the backend:
 
 1.  **Verify the backend is running**: The Cloudflare Worker backend must be running concurrently. Start it in a separate terminal with `yarn wrangler:dev`.
-2.  **Check the Backend URL**: Ensure the `VITE_BACKEND_API_URL` variable in your `.env` file is set correctly. For local development, it should point to the Wrangler dev server, which defaults to `http://localhost:8787`.
+2.  **Check the backend mode and URLs**: Ensure `VITE_REMOTE_BACKEND_URL` points at your hosted backend and `VITE_LOCAL_BACKEND_PROXY_TARGET` points at the Wrangler dev server (`http://localhost:8787` by default). Then confirm the frontend is set to the backend mode you intend to use.
 3.  **Check the Browser Console**: Open your browser's developer tools (F12) and check the "Console" tab for any errors. Look for CORS errors, which can indicate a problem with the backend URL or configuration.
 
 ## Backend Issues (Cloudflare Worker)

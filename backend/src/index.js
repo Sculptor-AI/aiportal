@@ -5,6 +5,7 @@
 
 import { Hono } from 'hono';
 import { apiCors } from './middleware/cors.js';
+import { apiSecurityHeaders } from './middleware/securityHeaders.js';
 
 // Import route modules
 import healthRoutes from './routes/health.js';
@@ -14,10 +15,12 @@ import rssRoutes from './routes/rss.js';
 import chatRoutes from './routes/chat.js';
 import imageRoutes from './routes/image.js';
 import videoRoutes from './routes/video.js';
+import researchRoutes from './routes/research.js';
+import gamesRoutes from './routes/games.js';
 import staticRoutes from './routes/static.js';
 // Note: Gemini Live WebSocket is handled directly in worker.js
 
-// Initialize state (seeds demo users)
+// State module (user data now in KV)
 import './state.js';
 
 // Create main app
@@ -27,6 +30,7 @@ const app = new Hono();
 // CORS Middleware
 // ============================================
 app.use('/api/*', apiCors);
+app.use('/api/*', apiSecurityHeaders);
 
 // ============================================
 // Mount Route Modules
@@ -52,6 +56,12 @@ app.route('/api/image', imageRoutes);
 
 // Video Generation
 app.route('/api/video', videoRoutes);
+
+// Deep Research
+app.route('/api', researchRoutes);
+
+// Game leaderboards and stats
+app.route('/api/games', gamesRoutes);
 
 // Note: Gemini Live WebSocket (/api/v1/live) is handled in worker.js
 

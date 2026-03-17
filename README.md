@@ -1,5 +1,6 @@
 <div align="center">
-  <img src="https://ai.explodingcb.com/images/sculptor.svg" width="120" height="120" alt="Sculptor AI Logo" />
+  <img width="2048" height="2048" alt="download" src="https://github.com/user-attachments/assets/c771bd0d-122a-4fe4-9823-9bda7a02b601" />
+
   <h1>Sculptor AI</h1>
   <p><strong>Your All in One AI Portal</strong></p>
   <p>A powerful, feature-rich interface for interacting with multiple AI models, creating content, and exploring ideas.</p>
@@ -125,11 +126,21 @@ This application is optimized for **Cloudflare Pages**, offering edge deployment
 Set these in your Cloudflare Pages dashboard or `.env` file:
 
 ```bash
-VITE_BACKEND_API_URL=https://your-backend-api.com
-VITE_OPENAI_API_KEY=sk-...
-VITE_ANTHROPIC_API_KEY=sk-ant-...
-VITE_GOOGLE_API_KEY=AIzaSy...
-VITE_CUSTOM_GGUF_API_URL=http://localhost:8000
+VITE_REMOTE_BACKEND_URL=https://your-backend-api.com
+VITE_LOCAL_BACKEND_PROXY_TARGET=http://localhost:8787
+# Frontend should NOT include provider API keys.
+# Configure provider keys on the backend (Worker secrets/.dev.vars) only:
+OPENROUTER_API_KEY=...
+GEMINI_API_KEY=...
+ANTHROPIC_API_KEY=...
+OPENAI_API_KEY=...
+CORS_ALLOWED_ORIGINS=https://sculptorai.org,http://localhost:3009
+
+# Optional deep research overrides
+DEEP_RESEARCH_PLANNER_MODEL=gemini-3.1-pro
+DEEP_RESEARCH_RESEARCHER_MODEL=gemini-3-flash
+DEEP_RESEARCH_WRITER_MODEL=claude-sonnet-4.6
+DEEP_RESEARCH_MAX_AGENTS=12
 ```
 </details>
 

@@ -14,12 +14,20 @@ import ModelIcon from '../ModelIcon';
 import OnboardingFlow from '../OnboardingFlow';
 import { getDefaultChatTitle, isDefaultChatTitle } from '../../utils/chatLocalization';
 import { useTranslation } from '../../contexts/TranslationContext';
+import { appendDeepResearchModel, getPreferredModelId } from '../../config/modelConfig';
+import { setBackendMode, shouldUseRealBackend } from '../../services/backendConfig';
+import {
+  readLocalStorageItem,
+  readLocalStorageJSON,
+  removeLocalStorageItem,
+  writeLocalStorageItem
+} from '../../utils/storage';
 
 const MobileAppContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100vh;
-  height: 100dvh; /* Dynamic viewport height for mobile */
+  height: 100dvh;
   width: 100vw;
   background: ${props => props.theme.background};
   color: ${props => props.theme.text};
@@ -33,33 +41,39 @@ const MobileHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: ${props => props.theme.background};
-  border-bottom: 1px solid ${props => props.theme.border};
-  height: 60px;
+  padding: 10px 16px;
+  background: ${props => {
+    const bg = props.theme.sidebar || props.theme.background;
+    if (bg.includes('gradient') || bg.includes('url(')) return bg;
+    return bg.replace(/,\s*[\d.]+\)$/, ', 0.72)').replace(/rgb\(/, 'rgba(');
+  }};
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 0.5px solid ${props => props.theme.border};
+  min-height: 56px;
   flex-shrink: 0;
   z-index: 10;
-  
-  /* Safe area for notched phones */
-  padding-top: max(12px, env(safe-area-inset-top));
+  padding-top: max(10px, env(safe-area-inset-top));
+  transition: background 0.3s ease;
 `;
 
 const MobileHeaderLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-shrink: 0;
 `;
 
 const MobileHeaderCenter = styled.div`
-  flex-grow: 1;
+  flex: 1;
   display: flex;
   justify-content: center;
+  min-width: 0;
 `;
 
 const MobileHeaderRight = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-shrink: 0;
 `;
 
 const MenuButton = styled.button`
@@ -67,50 +81,57 @@ const MenuButton = styled.button`
   border: none;
   color: ${props => props.theme.text};
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
   
   &:active {
-    background: ${props => props.theme.border};
+    transform: scale(0.88);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'};
   }
   
   svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.8;
   }
 `;
 
 const NewChatButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.text};
+  color: ${props => props.theme.primary || props.theme.text};
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
   
   &:active {
-    background: ${props => props.theme.border};
+    transform: scale(0.88);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'};
   }
   
   svg {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.8;
   }
 `;
 
 const AppTitle = styled.h1`
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   margin: 0;
   color: ${props => props.theme.text};
+  letter-spacing: -0.02em;
 `;
 
 const MobileContent = styled.div`
@@ -121,32 +142,42 @@ const MobileContent = styled.div`
   position: relative;
 `;
 
-const ModelSelectorStyled = styled.div`
-  /* Add any specific styling for the container if needed */
-`;
+const ModelSelectorStyled = styled.div``;
 
 const ModelButton = styled.button`
   display: flex;
   align-items: center;
-  padding: 8px 12px;
-  background: ${props => props.theme.inputBackground};
-  border: 1px solid ${props => props.theme.border};
-  border-radius: 18px; /* Pill shape */
+  padding: 7px 14px;
+  background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
+  border: 0.5px solid ${props => props.theme.border};
+  border-radius: 20px;
   color: ${props => props.theme.text};
   cursor: pointer;
   touch-action: manipulation;
-  gap: 8px;
-  font-size: 14px;
+  gap: 7px;
+  font-size: 15px;
   font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+  max-width: 220px;
   
   &:active {
-    background: ${props => props.theme.border};
+    transform: scale(0.96);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'};
+  }
+
+  span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   svg:last-child {
-    width: 16px;
-    height: 16px;
-    color: ${props => props.theme.text}88;
+    width: 14px;
+    height: 14px;
+    color: ${props => props.theme.text}66;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
   }
 `;
 
@@ -156,9 +187,12 @@ const ModelMenuOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 1002; 
-  display: ${props => props.$isOpen ? 'block' : 'none'};
+  background: rgba(0, 0, 0, ${props => props.$isOpen ? '0.4' : '0'});
+  backdrop-filter: ${props => props.$isOpen ? 'blur(2px)' : 'none'};
+  -webkit-backdrop-filter: ${props => props.$isOpen ? 'blur(2px)' : 'none'};
+  z-index: 1002;
+  pointer-events: ${props => props.$isOpen ? 'auto' : 'none'};
+  transition: all 0.35s cubic-bezier(0.32, 0.72, 0, 1);
 `;
 
 const ModelMenuContainer = styled.div`
@@ -166,50 +200,80 @@ const ModelMenuContainer = styled.div`
   bottom: 0;
   left: 0;
   right: 0;
-  background: ${props => props.theme.backgroundSecondary || props.theme.background };
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  z-index: 1003; 
-  padding: 16px;
+  background: ${props => {
+    const bg = props.theme.sidebar || props.theme.background;
+    if (bg.includes('gradient') || bg.includes('url(')) return bg;
+    return bg;
+  }};
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  z-index: 1003;
+  padding: 8px 16px 16px;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-  max-height: 50vh;
+  box-shadow: 0 -8px 40px rgba(0,0,0,${props => props.theme.isDark ? '0.4' : '0.12'});
+  max-height: 55vh;
   overflow-y: auto;
   transform: translateY(${props => props.$isOpen ? '0%' : '100%'});
-  transition: transform 0.3s ease-out;
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  
+  &::-webkit-scrollbar { display: none; }
+  scrollbar-width: none;
+
+  &::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 5px;
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'};
+    border-radius: 3px;
+    margin: 4px auto 14px;
+  }
 `;
 
 const ModelMenuItem = styled.div`
   display: flex;
   align-items: center;
-  padding: 12px 8px;
-  border-radius: 8px;
+  padding: 11px 12px;
+  border-radius: 12px;
   cursor: pointer;
   gap: 12px;
+  transition: all 0.15s ease;
   
-  &:hover {
-    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
+  &:active {
+    transform: scale(0.98);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'};
   }
   
   &.selected {
-    background: ${props => props.theme.primary + '20'};
-    font-weight: bold;
+    background: ${props => {
+      const p = props.theme.primary;
+      if (typeof p === 'string' && !p.includes('gradient')) return p + '18';
+      return props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
+    }};
   }
 `;
 
 const ModelMenuItemName = styled.span`
   font-size: 16px;
+  font-weight: 400;
   color: ${props => props.theme.text};
+  letter-spacing: -0.01em;
+  
+  .selected & {
+    font-weight: 600;
+  }
 `;
 
 const SectionHeaderStyled = styled.div`
-  padding: 0 0 10px 0;
+  padding: 0 0 8px 0;
   text-align: center;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: ${props => props.theme.text}88;
+  color: ${props => props.theme.textSecondary || (props.theme.text + '88')};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 `;
 
 const MobileAppContent = () => {
@@ -220,17 +284,12 @@ const MobileAppContent = () => {
     if (user?.settings?.language) {
       return user.settings.language;
     }
-    try {
-      const savedSettings = localStorage.getItem('settings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        if (parsedSettings.language) {
-          return parsedSettings.language;
-        }
-      }
-    } catch (error) {
-      console.error('Error reading saved language preference:', error);
+
+    const savedSettings = readLocalStorageJSON('settings');
+    if (savedSettings?.language) {
+      return savedSettings.language;
     }
+
     return 'en-US';
   };
   
@@ -272,17 +331,19 @@ const MobileAppContent = () => {
   const [availableModels, setAvailableModels] = useState([]);
   
   const [selectedModel, setSelectedModel] = useState(() => {
-    const savedModel = localStorage.getItem('selectedModel');
-    return savedModel || null;
+    return readLocalStorageItem('selectedModel') || null;
   });
 
   const [settings, setSettings] = useState(() => {
     if (user && user.settings) {
-      return user.settings;
+      return {
+        ...user.settings,
+        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
+      };
     }
     
-    const savedSettings = localStorage.getItem('settings');
-    return savedSettings ? JSON.parse(savedSettings) : {
+    const savedSettings = readLocalStorageJSON('settings');
+    return savedSettings || {
       theme: 'light',
       fontSize: 'medium',
       fontFamily: 'system',
@@ -299,9 +360,14 @@ const MobileAppContent = () => {
       highContrast: false,
       reducedMotion: false,
       lineSpacing: 'normal',
+      useRealBackend: shouldUseRealBackend(),
       language: 'en-US'
     };
   });
+
+  useEffect(() => {
+    setBackendMode(settings.useRealBackend !== false);
+  }, [settings.useRealBackend]);
   
   // UI state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -317,11 +383,12 @@ const MobileAppContent = () => {
       try {
         const backendModels = await fetchModelsFromBackend();
         if (backendModels && backendModels.length > 0) {
-          setAvailableModels(backendModels);
+          const allModels = appendDeepResearchModel(backendModels);
+          setAvailableModels(allModels);
 
-          const currentSelectedModelIsValid = backendModels.some(m => m.id === selectedModel);
-          if (!currentSelectedModelIsValid && backendModels.length > 0) {
-            setSelectedModel(backendModels[0].id);
+          const currentSelectedModelIsValid = allModels.some(m => m.id === selectedModel);
+          if (!currentSelectedModelIsValid && allModels.length > 0) {
+            setSelectedModel(getPreferredModelId(allModels));
           }
         } else {
           setAvailableModels([]);
@@ -354,20 +421,20 @@ const MobileAppContent = () => {
   }, [chats, activeChat]);
 
   useEffect(() => {
-    localStorage.setItem('chats', JSON.stringify(chats));
+    writeLocalStorageItem('chats', JSON.stringify(chats));
   }, [chats]);
 
   useEffect(() => {
-    localStorage.setItem('activeChat', JSON.stringify(activeChat));
+    writeLocalStorageItem('activeChat', JSON.stringify(activeChat));
   }, [activeChat]);
 
   useEffect(() => {
-    localStorage.setItem('selectedModel', selectedModel);
+    writeLocalStorageItem('selectedModel', selectedModel);
   }, [selectedModel]);
   
   useEffect(() => {
     if (!user) {
-      localStorage.setItem('settings', JSON.stringify(settings));
+      writeLocalStorageItem('settings', JSON.stringify(settings));
     }
   }, [settings, user]);
 
@@ -392,7 +459,7 @@ const MobileAppContent = () => {
   useEffect(() => {
     if (user && !loading) {
       // Check if user has completed onboarding
-      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+      const hasCompletedOnboarding = readLocalStorageItem(`onboarding_completed_${user.id}`);
       
       // Show onboarding if:
       // 1. User hasn't completed onboarding AND
@@ -503,7 +570,7 @@ const MobileAppContent = () => {
         }
         return chat;
       });
-      localStorage.setItem('chats', JSON.stringify(updatedChats));
+      writeLocalStorageItem('chats', JSON.stringify(updatedChats));
       return updatedChats;
     });
   };
@@ -554,6 +621,7 @@ const MobileAppContent = () => {
     if (user) {
       updateUserSettings(newSettings);
     }
+    setBackendMode(newSettings.useRealBackend !== false);
   };
 
   const handleModelChange = (modelId) => {
@@ -566,8 +634,8 @@ const MobileAppContent = () => {
     setChats([newChat]);
     setActiveChat(newChat.id);
     // Clear localStorage to start fresh
-    localStorage.removeItem('chats');
-    localStorage.removeItem('activeChat');
+    removeLocalStorageItem('chats');
+    removeLocalStorageItem('activeChat');
     console.log('Chats reset to fresh state');
   };
 
@@ -575,7 +643,7 @@ const MobileAppContent = () => {
   const handleOnboardingComplete = (onboardingSettings) => {
     if (user) {
       // Mark onboarding as completed
-      localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+      writeLocalStorageItem(`onboarding_completed_${user.id}`, 'true');
       
       // Apply the selected settings
       const newSettings = { ...settings, ...onboardingSettings };

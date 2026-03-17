@@ -4,36 +4,56 @@ import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
+import { openExternalUrl } from '../utils/urlSecurity';
 import { processCodeBlocks } from '../utils/codeBlockProcessor';
 import CodeBlockWithExecution from './CodeBlockWithExecution';
 import useSupportedLanguages from '../hooks/useSupportedLanguages';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
 import { useTranslation } from '../contexts/TranslationContext';
+import { downloadGeneratedVideo } from '../services/videoService';
+import kokoroTTSService from '../services/kokoroTTSService';
 
 // Helper function to parse and render LaTeX
 const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
-  <ReactKatex key={`${keyPrefix}-${latex.length}-${displayMode}`} displayMode={displayMode}>
+  <ReactKatex
+    key={`${keyPrefix}-${latex.length}-${displayMode}`}
+    displayMode={displayMode}
+    throwOnError={false}
+    strict={false}
+  >
     {latex}
   </ReactKatex>
 );
+
+const extractThinkingFromContent = (content = '') => {
+  if (!content) {
+    return { mainContent: '', thinkingContent: null };
+  }
+
+  const thinkingRegex = /<think>([\s\S]*?)<\/think>/gi;
+  const matches = [...content.matchAll(thinkingRegex)];
+
+  if (matches.length === 0) {
+    return { mainContent: content, thinkingContent: null };
+  }
+
+  const thinkingContent = matches
+    .map((match) => match[1]?.trim())
+    .filter(Boolean)
+    .join('\n\n');
+
+  return {
+    mainContent: content.replace(thinkingRegex, '').trim(),
+    thinkingContent: thinkingContent || null
+  };
+};
 
 // Format markdown text including bold, italic, bullet points and code blocks
 const robustFormatContent = (content, isLanguageExecutable = null, supportedLanguages = [], theme = {}) => {
   if (!content) return '';
 
-  // Extract thinking content if present
-  const thinkingRegex = /<think>([\s\S]*?)<\/think>/;
-  const thinkingMatch = content.match(thinkingRegex);
-
-  let mainContent = content;
-  let thinkingContent = null;
-
-  if (thinkingMatch) {
-    thinkingContent = thinkingMatch[1];
-    // Remove the thinking tags and their content from the main content
-    mainContent = content.replace(thinkingRegex, '').trim();
-  }
+  const { mainContent, thinkingContent } = extractThinkingFromContent(content);
 
   // If we have thinking content, return an object with both processed contents
   if (thinkingContent) {
@@ -97,46 +117,46 @@ const processMarkdown = (text, theme = {}) => {
   // Regex for inline math: $...$ (not starting/ending with space)
   const inlineRegex = /\$([^\s].*?[^\s])\$/g;
 
-  // First handle display math
-  let match;
-  while ((match = displayRegex.exec(text)) !== null) {
-    // Add text before
-    if (match.index > lastIndex) {
+  const pushInlineSegments = (segment) => {
+    let inlineLastIndex = 0;
+    let inlineMatch;
+
+    while ((inlineMatch = inlineRegex.exec(segment)) !== null) {
+      if (inlineMatch.index > inlineLastIndex) {
+        parts.push(
+          <span key={`text-${keyCounter++}`}>
+            {processMarkdownText(segment.substring(inlineLastIndex, inlineMatch.index), theme)}
+          </span>
+        );
+      }
+
+      parts.push(renderLatex(inlineMatch[1], false, `inline-${keyCounter++}`));
+      inlineLastIndex = inlineMatch.index + inlineMatch[0].length;
+    }
+
+    if (inlineLastIndex < segment.length) {
       parts.push(
         <span key={`text-${keyCounter++}`}>
-          {processMarkdownText(text.substring(lastIndex, match.index), theme)}
+          {processMarkdownText(segment.substring(inlineLastIndex), theme)}
         </span>
       );
     }
-    // Add LaTeX
+
+    inlineRegex.lastIndex = 0;
+  };
+
+  let match;
+  while ((match = displayRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      pushInlineSegments(text.substring(lastIndex, match.index));
+    }
+
     parts.push(renderLatex(match[1], true, `display-${keyCounter++}`));
     lastIndex = match.index + match[0].length;
   }
-  // Add remaining after display
-  let remaining = text.substring(lastIndex);
 
-  // Now handle inline in the remaining parts
-  lastIndex = 0;
-  while ((match = inlineRegex.exec(remaining)) !== null) {
-    // Add text before
-    if (match.index > lastIndex) {
-      parts.push(
-        <span key={`text-${keyCounter++}`}>
-          {processMarkdownText(remaining.substring(lastIndex, match.index), theme)}
-        </span>
-      );
-    }
-    // Add inline LaTeX
-    parts.push(renderLatex(match[1], false, `inline-${keyCounter++}`));
-    lastIndex = match.index + match[0].length;
-  }
-  // Add final remaining
-  if (lastIndex < remaining.length) {
-    parts.push(
-      <span key={`text-${keyCounter++}`}>
-        {processMarkdownText(remaining.substring(lastIndex), theme)}
-      </span>
-    );
+  if (lastIndex < text.length) {
+    pushInlineSegments(text.substring(lastIndex));
   }
 
   return <>{parts}</>;
@@ -563,61 +583,64 @@ const processItalic = (text, theme = {}) => {
 };
 
 const CodeBlock = styled.div`
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  border-radius: 12px;
-  margin: 12px 0;
+  background: ${props => props.theme.name === 'light' ? '#f8f9fb' : 'rgba(24, 24, 27, 0.95)'};
+  border-radius: 10px;
+  margin: 14px 0;
   overflow: hidden;
-  border: 1px solid ${props => props.theme.border};
+  border: 1px solid ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'};
   max-width: 100%;
   width: 100%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 `;
 
 const CodeHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
-  border-bottom: 1px solid ${props => props.theme.border};
+  align-items: center;
+  padding: 8px 14px;
+  background: ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)'};
+  border-bottom: 1px solid ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'};
 `;
 
 const CodeLanguage = styled.div`
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: ${props => props.theme.text};
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: ${props => `${props.theme.text}88`};
+  letter-spacing: 0.01em;
+  text-transform: lowercase;
 `;
 
 const CopyButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.primary.split(',')[0].replace('linear-gradient(145deg', '').trim()};
-  font-size: 0.85rem;
+  color: ${props => `${props.theme.text}66`};
+  font-size: 0.78rem;
   cursor: pointer;
-  padding: 0;
+  padding: 2px 6px;
   font-weight: 500;
+  border-radius: 4px;
+  transition: all 0.15s ease;
   
   &:hover {
-    text-decoration: underline;
+    color: ${props => props.theme.text};
+    background: ${props => `${props.theme.text}0a`};
   }
 `;
 
 const Pre = styled.pre`
   margin: 0;
-  padding: 14px;
+  padding: 14px 16px;
   overflow-x: auto;
-  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.84rem;
+  line-height: 1.6;
   max-width: 100%;
   word-wrap: normal;
   white-space: pre;
   text-overflow: ellipsis;
+  color: ${props => props.theme.text};
   
-  /* Stylish scrollbar */
   &::-webkit-scrollbar {
-    height: 6px;
+    height: 5px;
   }
   
   &::-webkit-scrollbar-track {
@@ -625,7 +648,7 @@ const Pre = styled.pre`
   }
   
   &::-webkit-scrollbar-thumb {
-    background: ${props => props.theme.border};
+    background: ${props => `${props.theme.text}18`};
     border-radius: 3px;
   }
 `;
@@ -635,23 +658,23 @@ const Message = styled.div`
   flex-direction: ${props => props.$alignment === 'right' ? 'row-reverse' : 'row'};
   align-items: flex-start;
   justify-content: flex-start;
-  margin-bottom: var(--message-spacing, 24px);
-  max-width: 100%;
+  margin-bottom: var(--message-spacing, 28px);
+  max-width: 780px;
   width: 100%;
-  padding-left: ${props => props.$alignment === 'left' ? '12px' : '0'};
-  padding-right: ${props => props.$alignment === 'right' ? '12px' : '0'};
+  padding-left: ${props => props.$alignment === 'left' ? '16px' : '16px'};
+  padding-right: ${props => props.$alignment === 'right' ? '16px' : '16px'};
 `;
 
 const Avatar = styled.div`
-  width: ${props => props.role === 'user' ? '24px' : '36px'};
-  height: ${props => props.role === 'user' ? '24px' : '36px'};
-  border-radius: 50%;
+  width: ${props => props.role === 'user' ? '26px' : '28px'};
+  height: ${props => props.role === 'user' ? '26px' : '28px'};
+  border-radius: ${props => props.role === 'user' ? '50%' : '8px'};
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: ${props => props.$alignment === 'right' ? '0' : '10px'};
-  margin-left: ${props => props.$alignment === 'left' ? '0' : '10px'};
-  margin-top: 4px;
+  margin-right: ${props => props.$alignment === 'right' ? '0' : '12px'};
+  margin-left: ${props => props.$alignment === 'left' ? '0' : '12px'};
+  margin-top: 2px;
   font-weight: 600;
   flex-shrink: 0;
   background: ${props => props.$profilePicture
@@ -659,40 +682,34 @@ const Avatar = styled.div`
     : (props.$useModelIcon
       ? 'transparent'
       : (props.role === 'user'
-        ? props.theme.buttonGradient
+        ? `${props.theme.text}12`
         : props.theme.secondary))};
-  color: ${props => props.$profilePicture ? 'transparent' : (props.role === 'user' ? props.theme.text : 'white')};
+  color: ${props => props.$profilePicture ? 'transparent' : (props.role === 'user' ? `${props.theme.text}70` : 'white')};
   transition: all 0.2s ease;
-  box-shadow: ${props => props.role === 'user' ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.1)'};
-  opacity: ${props => props.role === 'user' ? '0.6' : '1'};
+  box-shadow: none;
+  opacity: 1;
   
   &:hover {
-    transform: ${props => props.role === 'user' ? 'none' : 'scale(1.05)'};
-    box-shadow: ${props => props.role === 'user' ? 'none' : '0 3px 10px rgba(0, 0, 0, 0.15)'};
-    opacity: ${props => props.role === 'user' ? '0.8' : '1'};
+    opacity: 0.85;
   }
   
   svg {
-    width: ${props => props.role === 'user' ? '16px' : '20px'};
-    height: ${props => props.role === 'user' ? '16px' : '20px'};
+    width: ${props => props.role === 'user' ? '14px' : '18px'};
+    height: ${props => props.role === 'user' ? '14px' : '18px'};
   }
 `;
 
 const MessageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  max-width: ${props => props.role === 'user' ? '70%' : 'calc(100% - 60px)'};
+  max-width: ${props => props.role === 'user' ? '72%' : 'calc(100% - 52px)'};
   flex: ${props => props.role === 'user' ? '0 1 auto' : '1'};
   align-items: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   
   @media (max-width: 768px) {
-    max-width: ${props => props.role === 'user' ? '85%' : 'calc(100% - 60px)'};
+    max-width: ${props => props.role === 'user' ? '85%' : 'calc(100% - 52px)'};
   }
 `;
-
-const DEFAULT_USER_ACCENT_BG = 'rgba(148, 163, 184, 0.18)';
-const DEFAULT_AI_ACCENT_BG = 'rgba(148, 163, 184, 0.1)';
-const LIGHT_THEME_USER_BG = 'rgba(59, 130, 246, 0.15)';
 
 const isCustomAccent = (theme) => theme?.accentChoice && theme.accentChoice !== 'theme';
 
@@ -700,18 +717,21 @@ const getBubbleBackground = (role, theme) => {
   const customAccent = isCustomAccent(theme);
   if (role === 'user') {
     if (customAccent) return theme.accentBackground;
-    return theme.name === 'light' ? LIGHT_THEME_USER_BG : DEFAULT_USER_ACCENT_BG;
+    return theme.name === 'light' ? `${theme.text}08` : `${theme.text}0c`;
   }
-  return customAccent ? theme.accentBackground : DEFAULT_AI_ACCENT_BG;
+  return 'transparent';
 };
 
-const getBubbleBorderColor = (theme) => isCustomAccent(theme) ? theme.accentColor : theme.border;
+const getBubbleBorderColor = (role, theme) => {
+  if (role !== 'user') return 'transparent';
+  return isCustomAccent(theme) ? theme.accentColor : theme.border;
+};
 
 const getBubbleTextColor = (theme) => isCustomAccent(theme) ? '#FFFFFF' : theme.text;
 
 const Content = styled.div`
-  width: fit-content;
-  white-space: pre-wrap;
+  width: ${props => props.role === 'user' ? 'fit-content' : '100%'};
+  white-space: ${props => props.role === 'user' ? 'pre-wrap' : 'normal'};
   color: ${props => getBubbleTextColor(props.theme)};
   line-height: var(--line-height, 1.6);
   overflow: hidden;
@@ -722,16 +742,23 @@ const Content = styled.div`
   text-align: ${props => props.$alignment === 'right' ? 'right' : 'left'};
   direction: ltr;
   unicode-bidi: plaintext;
-  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease;
   background: ${props => getBubbleBackground(props.role, props.theme)};
-  border: var(--bubble-border, 1px solid ${props => getBubbleBorderColor(props.theme)});
-  border-radius: var(--bubble-radius, 18px);
-  padding: var(--bubble-padding-vertical, 14px) var(--bubble-padding-horizontal, 18px);
-  box-shadow: var(--bubble-box-shadow, 0 2px 10px ${props => props.theme.shadow});
-  backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
-  -webkit-backdrop-filter: var(--bubble-backdrop-filter, blur(5px));
+  border: ${props => props.role === 'user'
+    ? `var(--bubble-border, 1px solid ${getBubbleBorderColor(props.role, props.theme)})`
+    : 'none'};
+  border-radius: ${props => props.role === 'user'
+    ? 'var(--bubble-radius, 20px)'
+    : '0'};
+  padding: ${props => props.role === 'user'
+    ? 'var(--bubble-padding-vertical, 12px) var(--bubble-padding-horizontal, 18px)'
+    : '2px 0'};
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  font-size: 0.94rem;
+  letter-spacing: -0.008em;
   
-  /* Special border for bisexual theme */
   ${props => props.theme.name === 'bisexual' && props.role === 'user' && `
     border: none !important;
     &::before {
@@ -742,28 +769,26 @@ const Content = styled.div`
       right: -1px;
       bottom: -1px;
       background: linear-gradient(145deg, #D60270, #9B4F96);
-      border-radius: 19px;
+      border-radius: 21px;
       z-index: -1;
       opacity: 0.3;
     }
   `}
   
-  /* Force code blocks to stay within container width */
   & > ${CodeBlock} {
     max-width: 100%;
     text-align: left;
     direction: ltr;
   }
   
-  /* Style for AI model signatures */
   & > em:last-child {
     display: block;
     margin-top: 12px;
-    opacity: 0.7;
-    font-size: 0.85em;
+    opacity: 0.5;
+    font-size: 0.82em;
     text-align: right;
     font-style: normal;
-    color: ${props => props.theme.text}aa;
+    color: ${props => props.theme.text}99;
     ${props => props.theme.name === 'bisexual' && `
       background: ${props.theme.accentGradient};
       -webkit-background-clip: text;
@@ -778,52 +803,60 @@ const Content = styled.div`
 `;
 
 const Timestamp = styled.div`
-  font-size: 0.75rem;
-  color: ${props => props.theme.text}80;
+  font-size: 0.72rem;
+  color: ${props => `${props.theme.text}55`};
   display: flex;
   align-items: center;
+  letter-spacing: 0.01em;
 `;
 
 const MessageActions = styled.div`
   display: flex;
   justify-content: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 4px;
+  margin-top: 4px;
   padding: 0;
-  opacity: 1;
+  opacity: 0.7;
   width: ${props => props.$alignment === 'right' ? '100%' : 'fit-content'};
   max-width: 100%;
   align-self: ${props => props.$alignment === 'right' ? 'flex-end' : 'flex-start'};
+  transition: opacity 0.15s ease;
+  
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const ActionButton = styled.button`
   background: none;
   border: none;
-  font-size: 0.8rem;
-  color: ${props => props.theme.text}60;
+  font-size: 0.78rem;
+  color: ${props => `${props.theme.text}50`};
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
   padding: 4px 8px;
-  border-radius: 8px;
-  transition: all 0.2s;
+  border-radius: 6px;
+  transition: all 0.15s ease;
   
   &:hover {
-    background: ${props => props.theme.text}10;
-    color: ${props => props.theme.text}90;
+    background: ${props => `${props.theme.text}08`};
+    color: ${props => `${props.theme.text}90`};
   }
   
   svg {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 `;
 
 const ErrorMessage = styled(Content)`
-  background: rgba(255, 240, 240, 0.8);
-  border: 1px solid rgba(255, 200, 200, 0.4);
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
 `;
 
 const pulse = keyframes`
@@ -871,13 +904,14 @@ const Italic = styled.span`
 `;
 
 const Heading1 = styled.h1`
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin: 1.5rem 0 1rem 0;
+  margin: 0.8em 0 0.3em 0;
   color: ${props => props.theme.text};
-  border-bottom: 2px solid ${props => props.theme.border};
-  padding-bottom: 0.5rem;
+  border-bottom: 1px solid ${props => props.theme.border};
+  padding-bottom: 0.25rem;
   line-height: 1.3;
+  letter-spacing: -0.02em;
   
   &:first-child {
     margin-top: 0;
@@ -885,13 +919,12 @@ const Heading1 = styled.h1`
 `;
 
 const Heading2 = styled.h2`
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 1.3rem 0 0.8rem 0;
+  font-size: 1.25rem;
+  font-weight: 650;
+  margin: 0.7em 0 0.25em 0;
   color: ${props => props.theme.text};
-  border-bottom: 1px solid ${props => props.theme.border};
-  padding-bottom: 0.4rem;
   line-height: 1.3;
+  letter-spacing: -0.015em;
   
   &:first-child {
     margin-top: 0;
@@ -899,11 +932,12 @@ const Heading2 = styled.h2`
 `;
 
 const Heading3 = styled.h3`
-  font-size: 1.3rem;
+  font-size: 1.08rem;
   font-weight: 600;
-  margin: 1.1rem 0 0.6rem 0;
+  margin: 0.6em 0 0.2em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
+  letter-spacing: -0.01em;
   
   &:first-child {
     margin-top: 0;
@@ -911,9 +945,9 @@ const Heading3 = styled.h3`
 `;
 
 const Heading4 = styled.h4`
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
-  margin: 1rem 0 0.5rem 0;
+  margin: 0.5em 0 0.2em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -923,9 +957,9 @@ const Heading4 = styled.h4`
 `;
 
 const Heading5 = styled.h5`
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 600;
-  margin: 0.9rem 0 0.4rem 0;
+  margin: 0.4em 0 0.15em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -935,9 +969,9 @@ const Heading5 = styled.h5`
 `;
 
 const Heading6 = styled.h6`
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  margin: 0.8rem 0 0.3rem 0;
+  margin: 0.35em 0 0.1em 0;
   color: ${props => props.theme.text};
   line-height: 1.3;
   
@@ -947,7 +981,7 @@ const Heading6 = styled.h6`
 `;
 
 const Paragraph = styled.p`
-  margin: 0.8rem 0;
+  margin: 0.4em 0;
   line-height: 1.6;
   color: ${props => props.theme.text};
   
@@ -962,46 +996,55 @@ const Paragraph = styled.p`
 
 const BulletList = styled.ul`
   list-style-type: none;
-  padding-left: 0;
-  margin: 0.8rem 0;
+  padding-left: 1em;
+  margin: 0.35em 0;
   
   li {
     position: relative;
-    padding-left: 1.5em;
-    margin: 0.5em 0;
+    padding-left: 1.3em;
+    margin: 0.2em 0;
     line-height: 1.6;
     color: ${props => props.theme.text};
     
     &:before {
       content: "•";
       position: absolute;
-      left: 0.3em;
-      color: ${props => props.theme.primary};
+      left: 0.15em;
+      color: ${props => props.theme.accentColor || props.theme.text};
       font-weight: bold;
-      font-size: 1.2em;
+      font-size: 1em;
+      opacity: 0.55;
     }
   }
 `;
 
 const NumberedList = styled.ol`
-  padding-left: 1.5em;
-  margin: 0.8rem 0;
+  padding-left: 1.4em;
+  margin: 0.35em 0;
   
   li {
-    margin: 0.5em 0;
+    margin: 0.2em 0;
     line-height: 1.6;
     color: ${props => props.theme.text};
+    padding-left: 0.2em;
+    
+    &::marker {
+      color: ${props => props.theme.accentColor || props.theme.text};
+      opacity: 0.55;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
   }
 `;
 
 const Blockquote = styled.blockquote`
-  border-left: 4px solid ${props => props.theme.primary};
-  margin: 1rem 0;
-  padding: 0.8rem 0 0.8rem 1.2rem;
-  background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
-  border-radius: 0 8px 8px 0;
+  border-left: 3px solid ${props => `${props.theme.accentColor || props.theme.text}44`};
+  margin: 0.4em 0;
+  padding: 0.3rem 0 0.3rem 0.9rem;
+  background: transparent;
+  border-radius: 0;
   font-style: italic;
-  color: ${props => props.theme.text};
+  color: ${props => `${props.theme.text}cc`};
   
   p {
     margin: 0;
@@ -1010,13 +1053,14 @@ const Blockquote = styled.blockquote`
 `;
 
 const Link = styled.a`
-  color: ${props => props.theme.primary};
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-bottom-color 0.2s ease;
+  color: ${props => props.theme.accentColor || props.theme.primary};
+  text-decoration: underline;
+  text-decoration-color: ${props => `${props.theme.accentColor || props.theme.primary}44`};
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s ease;
   
   &:hover {
-    border-bottom-color: ${props => props.theme.primary};
+    text-decoration-color: ${props => props.theme.accentColor || props.theme.primary};
   }
 `;
 
@@ -1027,22 +1071,23 @@ const Table = styled.table`
   border: 1px solid ${props => props.theme.border};
   border-radius: 8px;
   overflow: hidden;
-  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: transparent;
+  font-size: 0.88rem;
 `;
 
 const TableHeader = styled.th`
-  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
-  padding: 12px;
+  background: ${props => `${props.theme.text}06`};
+  padding: 10px 14px;
   text-align: left;
   font-weight: 600;
-  color: ${props => props.theme.text};
+  font-size: 0.82rem;
+  color: ${props => `${props.theme.text}cc`};
   border-bottom: 1px solid ${props => props.theme.border};
+  letter-spacing: 0.01em;
 `;
 
 const TableCell = styled.td`
-  padding: 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid ${props => props.theme.border};
   color: ${props => props.theme.text};
   
@@ -1057,7 +1102,7 @@ const TableRow = styled.tr`
   }
   
   &:hover {
-    background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
+    background: ${props => `${props.theme.text}04`};
   }
 `;
 
@@ -1065,7 +1110,7 @@ const HorizontalRule = styled.hr`
   border: none;
   height: 1px;
   background: ${props => props.theme.border};
-  margin: 2rem 0;
+  margin: 1rem 0;
   border-radius: 1px;
 `;
 
@@ -1199,47 +1244,83 @@ const SourceFavicon = styled.img`
 
 // Add a ThinkingDropdown component
 const ThinkingDropdownContainer = styled.div`
-  margin: 10px 0;
+  margin: 10px 0 12px;
   border-radius: 12px;
   overflow: hidden;
-  border: none;
+  border: 1px solid ${props => props.theme.border || '#e1e5e9'};
+  background: ${props => props.theme.name === 'light' ? 'rgba(248, 249, 251, 0.8)' : 'rgba(24, 24, 27, 0.45)'};
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 `;
 
 const ThinkingHeader = styled.div`
   display: flex;
   align-items: center;
-  padding: 10px 0;
+  justify-content: space-between;
+  padding: 9px 12px;
   cursor: pointer;
   user-select: none;
   font-weight: 500;
-  color: ${props => props.theme.text}aa;
-  justify-content: flex-start;
+  font-size: 0.85rem;
+  color: ${props => `${props.theme.text}88`};
+  transition: color 0.15s ease;
   
   &:hover {
     color: ${props => props.theme.text};
   }
 `;
 
+const ThinkingHeaderTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+`;
+
+const ThinkingBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid ${props => `${props.theme.text}22`};
+  background: ${props => `${props.theme.text}10`};
+  color: ${props => `${props.theme.text}dd`};
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+`;
+
+const ThinkingPreview = styled.div`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  color: ${props => `${props.theme.text}aa`};
+`;
+
 const ThinkingArrow = styled.span`
-  margin-left: 8px;
   transition: transform 0.2s ease;
   transform: ${props => props.expanded ? 'rotate(180deg)' : 'rotate(0deg)'};
   font-size: 12px;
   display: inline-block;
-  width: 16px;
+  width: 14px;
   text-align: center;
+  opacity: 0.8;
 `;
 
 const ThinkingContent = styled.div`
-  padding: ${props => props.expanded ? '10px 0 10px 16px' : '0'};
+  padding: ${props => props.expanded ? '10px 12px 12px 12px' : '0 12px'};
   max-height: ${props => props.expanded ? '1000px' : '0'};
   opacity: ${props => props.expanded ? '1' : '0'};
-  transition: all 0.3s ease;
+  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.25s ease;
   overflow: hidden;
-  border-top: none;
-  margin-bottom: ${props => props.expanded ? '15px' : '0'};
-  margin-left: 10px;
-  border-left: ${props => props.expanded ? `2px solid ${props.theme.text}30` : 'none'};
+  border-top: ${props => props.expanded ? `1px solid ${props.theme.border || '#e1e5e9'}40` : 'none'};
+  font-size: 0.88rem;
+  color: ${props => `${props.theme.text}cc`};
 `;
 
 const ToolActivitySection = styled.div`
@@ -1519,7 +1600,7 @@ const ThinkingSectionHeader = styled.div`
   gap: 6px;
 `;
 
-const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
+const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls, isStreaming = false }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
@@ -1540,21 +1621,36 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
     return t('chat.thinking.header.tools');
   };
 
+  const normalizedThinkingPreview = typeof thinkingPreviewText === 'string'
+    ? thinkingPreviewText.replace(/\s+/g, ' ').trim()
+    : '';
+  const clippedThinkingPreview = normalizedThinkingPreview.length > 140
+    ? `${normalizedThinkingPreview.slice(0, 140)}...`
+    : normalizedThinkingPreview;
+  const thinkingLabel = t('composer.chip.thinking', 'Thinking');
+
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'pending': return '⏳';
-      case 'executing': return '⚙️';
-      case 'completed': return '✅';
-      case 'error': return '❌';
-      default: return '🔧';
+      case 'pending': return '[...]';
+      case 'executing': return '[~]';
+      case 'completed': return '[ok]';
+      case 'error': return '[x]';
+      default: return '[*]';
     }
   };
 
   return (
     <ThinkingDropdownContainer>
       <ThinkingHeader onClick={toggleExpanded}>
-        <span>{getHeaderTitle()}</span>
-        <ThinkingArrow expanded={expanded}>▾</ThinkingArrow>
+        <ThinkingHeaderTitle>
+          <ThinkingBadge>{thinkingLabel}</ThinkingBadge>
+          {!expanded && (
+            <ThinkingPreview>
+              {clippedThinkingPreview || (isStreaming ? t('chat.status.thinking') : getHeaderTitle())}
+            </ThinkingPreview>
+          )}
+        </ThinkingHeaderTitle>
+        <ThinkingArrow expanded={expanded}>v</ThinkingArrow>
       </ThinkingHeader>
       <ThinkingContent expanded={expanded}>
         {hasToolActivity && (
@@ -1607,7 +1703,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
         {hasThinking && (
           <ThinkingSection hasToolActivity={hasToolActivity}>
-            {hasToolActivity && <ThinkingSectionHeader>{t('chat.thinking.section.reasoning')}</ThinkingSectionHeader>}
+            {hasToolActivity && <ThinkingSectionHeader>{thinkingLabel}</ThinkingSectionHeader>}
             {thinkingContent}
           </ThinkingSection>
         )}
@@ -1618,7 +1714,7 @@ const ThinkingDropdown = ({ thinkingContent, toolCalls }) => {
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
   const { t } = useTranslation();
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
 
   // Debug logging
@@ -1729,34 +1825,34 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // TTS state for toggle
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const speechSynthesisRef = useRef(null);
 
   // Function to handle text-to-speech (toggle)
-  const handleReadAloud = () => {
-    if ('speechSynthesis' in window) {
-      if (isSpeaking) {
-        window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-        return;
-      }
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      const textToRead = cleanedContent || content;
-      const utterance = new window.SpeechSynthesisUtterance(textToRead);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
+  const handleReadAloud = async () => {
+    if (isSpeaking) {
+      kokoroTTSService.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const textToRead = cleanedContent || content;
+    if (!textToRead) {
+      return;
+    }
+
+    try {
       setIsSpeaking(true);
-      window.speechSynthesis.speak(utterance);
-      speechSynthesisRef.current = utterance;
-    } else {
-      console.error('Text-to-speech not supported in this browser');
+      await kokoroTTSService.speak(textToRead);
+    } catch (error) {
+      console.error('Kokoro text-to-speech failed:', error);
+    } finally {
+      setIsSpeaking(false);
     }
   };
 
   // Ensure TTS state resets if user navigates away or message changes
   useEffect(() => {
     return () => {
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      kokoroTTSService.cancel();
       setIsSpeaking(false);
     };
   }, [content, cleanedContent]);
@@ -1891,7 +1987,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             <span>{t('chat.research.performing')}</span>
           </div>
           <div style={{ fontSize: '0.9em', opacity: 0.7 }}>
-            {t('chat.labels.query')}: "{content || t('chat.labels.yourQuery')}"
+            {t('chat.labels.query')}: "{message.query || content || t('chat.labels.yourQuery')}"
           </div>
           {message.progress !== undefined && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1955,6 +2051,38 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 {t('chat.research.analyzedBy', { count: message.agentResults.length })}
               </div>
             )}
+            {message.metadata?.models && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: theme.inputBackground || 'rgba(0,0,0,0.04)',
+                border: `1px solid ${theme.border || 'rgba(0,0,0,0.1)'}`,
+                fontSize: '0.82em',
+                lineHeight: '1.5',
+                opacity: 0.86
+              }}>
+                <div>Planner: {message.metadata.models.planner || 'N/A'}</div>
+                <div>Research agents: {message.metadata.models.researcher || 'N/A'}</div>
+                <div>Writer: {message.metadata.models.writer || 'N/A'}</div>
+                {message.metadata.agentCount && (
+                  <div>Agents used: {message.metadata.agentCount}</div>
+                )}
+              </div>
+            )}
+            {Array.isArray(message.qualityIssues) && message.qualityIssues.length > 0 && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: '#7f1d1d1f',
+                border: '1px solid #ef444466',
+                fontSize: '0.82em',
+                lineHeight: '1.4'
+              }}>
+                Quality notes: {message.qualityIssues.join(' | ')}
+              </div>
+            )}
           </div>
           <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
             {robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)}
@@ -1967,8 +2095,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
             {t('chat.research.failed')}
           </p>
-          <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.query')}: "{content || t('chat.labels.yourQuery')}"</p>
-          {message.content && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {message.content}</p>}
+          <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.query')}: "{message.query || content || t('chat.labels.yourQuery')}"</p>
+          {(message.errorMessage || message.content) && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {message.errorMessage || message.content}</p>}
         </div>
       );
     }
@@ -1994,7 +2122,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 {displaySources.map((source, index) => (
                   <SourceButton
                     key={index}
-                    onClick={() => window.open(source.url, '_blank')}
+                  onClick={() => openExternalUrl(source.url)}
                     title={source.title}
                   >
                     <SourceFavicon
@@ -2111,7 +2239,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Handle generated video message type
   if (type === 'generated-video') {
-    const { videoUrl } = message;
+    const { videoUrl, videoId } = message;
     let generatedVideoContent;
     if (status === 'loading') {
       generatedVideoContent = (
@@ -2120,7 +2248,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           {t('chat.video.generating', { prompt: imagePrompt || t('chat.labels.yourPrompt') })}
         </ThinkingContainer>
       );
-    } else if (status === 'completed' && videoUrl) {
+    } else if (status === 'completed' && (videoUrl || videoId)) {
       generatedVideoContent = (
         <>
           {imagePrompt && (
@@ -2128,7 +2256,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               {t('chat.labels.prompt')}: "{imagePrompt}"
             </p>
           )}
-          <MessageVideo controls src={videoUrl} style={{ maxHeight: '400px' }} />
+          {videoUrl ? (
+            <MessageVideo controls src={videoUrl} style={{ maxHeight: '400px' }} />
+          ) : (
+            <p style={{ margin: 0, opacity: 0.85 }}>
+              {t('chat.video.previewUnavailable', 'Preview unavailable. Download the video to view it.')}
+            </p>
+          )}
         </>
       );
     } else if (status === 'error') {
@@ -2165,15 +2299,16 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
               <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
-                {status === 'completed' && videoUrl && (
+                {status === 'completed' && videoId && (
                   <>
                     <div style={{ flexGrow: 1 }}></div>
-                    <ActionButton onClick={() => navigator.clipboard.writeText(videoUrl).then(() => console.log('Video URL copied'))}>
+                    <ActionButton onClick={() => downloadGeneratedVideo(videoId).catch((error) => console.error('Video download failed', error))}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
                       </svg>
-                      {t('chat.actions.copyUrl')}
+                      {t('chat.actions.download', 'Download')}
                     </ActionButton>
                   </>
                 )}
@@ -2241,7 +2376,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             )}
             {(() => {
               // If loading and no content yet, show thinking indicator
-              if (isLoading && !content) {
+              if (
+                isLoading &&
+                !content &&
+                !(typeof reasoningTrace === 'string' && reasoningTrace.trim()) &&
+                !(toolCalls && toolCalls.length > 0)
+              ) {
                 return (
                   <ThinkingContainer>
                     <SpinnerIcon />
@@ -2251,16 +2391,29 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               }
 
               // Process content and show main content + thinking dropdown if applicable
-              const processedContent = robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme);
-              const isMercury = modelId?.toLowerCase().includes('mercury');
+              const { mainContent: mainContentWithoutThinking, thinkingContent: rawThinkingContent } =
+                extractThinkingFromContent(contentToProcess);
+              const combinedThinkingText = [reasoningTrace, rawThinkingContent]
+                .map(value => (typeof value === 'string' ? value.trim() : ''))
+                .filter(Boolean)
+                .filter((value, index, array) => array.indexOf(value) === index)
+                .join('\n\n');
+              const formattedThinkingContent = combinedThinkingText
+                ? processText(combinedThinkingText, true, isLanguageExecutable, supportedLanguages, theme)
+                : null;
 
-              if (typeof processedContent === 'object' && processedContent.main && processedContent.thinking) {
-                // If content has thinking tags, show thinking dropdown first, then main content
+              if (formattedThinkingContent) {
+                // If content has reasoning/thinking traces, show the collapsible trace first.
                 return (
                   <>
-                    <ThinkingDropdown thinkingContent={processedContent.thinking} toolCalls={toolCalls} />
+                    <ThinkingDropdown
+                      thinkingContent={formattedThinkingContent}
+                      thinkingPreviewText={combinedThinkingText}
+                      toolCalls={toolCalls}
+                      isStreaming={isLoading}
+                    />
                     <StreamingMarkdownRenderer
-                      text={typeof processedContent.main === 'string' ? processedContent.main : contentToProcess}
+                      text={mainContentWithoutThinking}
                       isStreaming={isLoading}
                       theme={theme}
                     />
@@ -2274,7 +2427,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
               return (
                 <>
                   {hasToolActivity && (
-                    <ThinkingDropdown thinkingContent={null} toolCalls={toolCalls} />
+                    <ThinkingDropdown
+                      thinkingContent={null}
+                      thinkingPreviewText=""
+                      toolCalls={toolCalls}
+                      isStreaming={isLoading}
+                    />
                   )}
 
                   {/* Code Execution Display (Gemini) */}
@@ -2331,7 +2489,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   )}
 
                   <StreamingMarkdownRenderer
-                    text={contentToProcess}
+                    text={mainContentWithoutThinking}
                     isStreaming={isLoading}
                     theme={theme}
                   />
@@ -2345,7 +2503,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
           {hasSources && !isLoading && (
             <SourcesContainer>
               {displaySources.map((source, index) => (
-                <SourceButton key={`source-${index}`} onClick={() => window.open(source.url, '_blank')}>
+                <SourceButton key={`source-${index}`} onClick={() => openExternalUrl(source.url)}>
                   <SourceFavicon src={getFaviconUrl(source.url)} alt="" onError={(e) => e.target.src = 'https://www.google.com/s2/favicons?domain=' + source.url} />
                   {source.domain || extractDomain(source.url)}
                 </SourceButton>

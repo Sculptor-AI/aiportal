@@ -9,11 +9,12 @@ const SidebarOverlay = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 1);
+  background: rgba(0, 0, 0, ${props => props.$isOpen ? '0.35' : '0'});
+  backdrop-filter: ${props => props.$isOpen ? 'blur(4px)' : 'none'};
+  -webkit-backdrop-filter: ${props => props.$isOpen ? 'blur(4px)' : 'none'};
   z-index: 1000;
-  opacity: ${props => props.$isOpen ? 1 : 0};
-  visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: ${props => props.$isOpen ? 'auto' : 'none'};
+  transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   touch-action: none;
 `;
 
@@ -22,40 +23,27 @@ const SidebarContainer = styled.div`
   top: 0;
   left: 0;
   bottom: 0;
-  width: 280px;
+  width: min(310px, 82vw);
   background: ${props => props.theme.sidebar || props.theme.background};
-  border-right: 1px solid ${props => props.theme.border};
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-right: 0.5px solid ${props => props.theme.border};
   z-index: 1001;
   transform: translateX(${props => props.$isOpen ? '0' : '-100%'});
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   padding-top: env(safe-area-inset-top);
-  
-  @keyframes slideIn {
-    from {
-      transform: translateX(-100%);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-  
-  ${props => props.$isOpen && `
-    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  `}
+  box-shadow: ${props => props.$isOpen ? `8px 0 40px rgba(0,0,0,${props.theme.isDark ? '0.5' : '0.1'})` : 'none'};
 `;
 
 const SidebarHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.background};
+  padding: 14px 18px;
+  border-bottom: 0.5px solid ${props => props.theme.border};
 `;
 
 const SidebarTitleContainer = styled.div`
@@ -65,49 +53,43 @@ const SidebarTitleContainer = styled.div`
 `;
 
 const SidebarLogo = styled.img`
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
 `;
 
 const SidebarTitle = styled.h2`
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   color: ${props => props.theme.text};
+  letter-spacing: -0.02em;
 `;
 
 const CloseButton = styled.button`
-  background: none;
+  background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.04)'};
   border: none;
-  color: ${props => props.theme.text};
-  padding: 8px;
-  border-radius: 8px;
+  color: ${props => props.theme.textSecondary || (props.theme.text + 'aa')};
+  padding: 6px;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background: ${props => props.theme.border};
-    transform: scale(1.05);
-  }
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
   
   &:active {
-    background: ${props => props.theme.border};
-    transform: scale(0.95);
+    transform: scale(0.88);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'};
   }
   
   svg {
-    width: 20px;
-    height: 20px;
-    transition: transform 0.2s ease;
-  }
-  
-  &:hover svg {
-    transform: rotate(90deg);
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.2;
   }
 `;
 
@@ -117,19 +99,22 @@ const SidebarContent = styled.div`
   -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
+  
+  &::-webkit-scrollbar { display: none; }
+  scrollbar-width: none;
 `;
 
 const SectionHeader = styled.div`
-  padding: 16px 20px 8px 20px;
-  font-size: 14px;
+  padding: 18px 20px 8px 20px;
+  font-size: 12px;
   font-weight: 600;
-  color: ${props => props.theme.text}88;
+  color: ${props => props.theme.textSecondary || (props.theme.text + '77')};
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
 `;
 
 const ChatList = styled.div`
-  padding: 0 12px;
+  padding: 0 10px;
   flex: 1;
 `;
 
@@ -137,35 +122,20 @@ const ChatItem = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  margin: 2px 0;
-  border-radius: 12px;
+  padding: 11px 14px;
+  margin: 1px 0;
+  border-radius: 10px;
   cursor: pointer;
   touch-action: manipulation;
-  background: ${props => props.$active ? (props.theme.primary + '20') : 'transparent'};
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: ${props => props.$active 
+    ? (props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)') 
+    : 'transparent'};
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
   position: relative;
-  overflow: hidden;
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: ${props => props.theme.primary};
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-  
-  &:hover::before {
-    opacity: 0.05;
-  }
   
   &:active {
-    transform: scale(0.98);
-    background: ${props => props.$active ? (props.theme.primary + '30') : props.theme.border};
+    transform: scale(0.97);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
   }
 `;
 
@@ -175,71 +145,61 @@ const ChatItemContent = styled.div`
 `;
 
 const ChatTitle = styled.div`
-  font-size: 16px;
-  font-weight: 500;
-  color: ${props => props.$active ? props.theme.primary : props.theme.text};
+  font-size: 15px;
+  font-weight: ${props => props.$active ? '600' : '400'};
+  color: ${props => props.theme.text};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 2px;
+  letter-spacing: -0.01em;
 `;
 
 const ChatPreview = styled.div`
-  font-size: 14px;
-  color: ${props => props.theme.text}66;
+  font-size: 13px;
+  color: ${props => props.theme.textSecondary || (props.theme.text + '66')};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 `;
 
 const ChatActions = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   margin-left: 8px;
+  opacity: 0.6;
 `;
 
 const ActionButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.text}66;
+  color: ${props => props.theme.textSecondary || (props.theme.text + '77')};
   padding: 6px;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
-  transition: all 0.2s ease;
-  position: relative;
-  
-  &:hover {
-    background: ${props => props.theme.border};
-    color: ${props => props.theme.text};
-    transform: translateY(-1px);
-  }
+  transition: all 0.15s ease;
   
   &:active {
-    background: ${props => props.theme.border};
-    transform: translateY(0);
+    transform: scale(0.88);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'};
   }
   
   svg {
     width: 16px;
     height: 16px;
-    transition: transform 0.2s ease;
-  }
-  
-  &:hover svg {
-    transform: scale(1.1);
   }
 `;
 
 const SidebarFooter = styled.div`
-  padding: 16px 20px;
-  border-top: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.background};
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding: 12px 14px;
+  border-top: 0.5px solid ${props => props.theme.border};
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
 `;
 
 const FooterButton = styled.button`
@@ -247,64 +207,33 @@ const FooterButton = styled.button`
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 11px 14px;
   background: transparent;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   color: ${props => props.theme.text};
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
   cursor: pointer;
   touch-action: manipulation;
-  margin-bottom: 8px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  margin-bottom: 4px;
+  transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
   
   &:last-child {
     margin-bottom: 0;
   }
   
-  &::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: ${props => props.theme.primary};
-    opacity: 0.1;
-    transform: translate(-50%, -50%);
-    transition: width 0.4s ease, height 0.4s ease;
-  }
-  
-  &:hover::before {
-    width: 100%;
-    height: 100%;
-    border-radius: 12px;
-  }
-  
-  &:hover {
-    background: ${props => props.theme.border}33;
-    transform: translateX(4px);
-  }
-  
   &:active {
-    background: ${props => props.theme.border};
-    transform: translateX(2px);
+    transform: scale(0.97);
+    background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
   }
   
   svg {
     width: 20px;
     height: 20px;
-    color: ${props => props.theme.text}88;
-    transition: all 0.2s ease;
-    z-index: 1;
-  }
-  
-  &:hover svg {
-    color: ${props => props.theme.primary};
-    transform: rotate(5deg) scale(1.1);
+    color: ${props => props.theme.textSecondary || (props.theme.text + '88')};
+    flex-shrink: 0;
   }
 `;
 

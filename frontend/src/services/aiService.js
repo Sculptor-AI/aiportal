@@ -1,9 +1,8 @@
-import { fetchEventSource } from '@microsoft/fetch-event-source'; // Use a robust SSE client library
-import axios from 'axios';
-
 // All models now go through backend API - no direct API keys needed
 
 // All models now go through backend API - no direct API configurations needed
+import { TITLE_GENERATION_MODEL_ID } from '../config/modelConfig';
+import { getBackendApiBase, getRemoteBackendHost } from './backendConfig';
 
 // Helper function to parse SSE data chunks
 // This needs to handle different formats potentially sent by APIs
@@ -28,44 +27,48 @@ const isBackendModel = (modelId, availableModels = []) => {
   return true; // All models go through backend
 };
 
-// New backend streaming function
-export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null) {
-  // Get user's assigned backend API key from session
-  let apiKey = null;
-  let user = null;
-  let isLoggedIn = false;
-  
+const getCurrentUserSession = () => {
   try {
-    const userJSON = sessionStorage.getItem('ai_portal_current_user');
-    if (userJSON) {
-      user = JSON.parse(userJSON);
-      isLoggedIn = true;
-      console.log('[aiService] User found in session:', user.username);
-      
-      // User's assigned backend API key should be stored as their accessToken
-      if (user.accessToken && user.accessToken.startsWith('ak_')) {
-        apiKey = user.accessToken;
-        console.log('[aiService] Using user API key');
-      } else if (user.accessToken) {
-        // Use JWT token if available
-        apiKey = user.accessToken;
-        console.log('[aiService] Using user JWT token');
-      }
-    } else {
-      console.log('[aiService] No user session found');
-    }
-  } catch (e) {
-    console.error('Error getting user session:', e);
+    const userJSON = localStorage.getItem('ai_portal_current_user');
+    return userJSON ? JSON.parse(userJSON) : null;
+  } catch (error) {
+    console.error('Error getting user session:', error);
+    return null;
+  }
+};
+
+const buildAuthHeaders = (accessToken) => {
+  if (!accessToken) return null;
+  if (accessToken.startsWith('ak_')) {
+    return { 'X-API-Key': accessToken };
+  }
+  return { 'Authorization': `Bearer ${accessToken}` };
+};
+
+const VALID_PROVIDER_HINTS = new Set([
+  'anthropic',
+  'claude',
+  'gemini',
+  'google',
+  'openai',
+  'openrouter'
+]);
+
+const normalizeProviderHint = (provider) => {
+  if (typeof provider !== 'string') {
+    return null;
   }
 
-  // Fallback API key for development/testing - but warn about it
-  if (!apiKey) {
-    console.warn('[aiService] No user authentication found, using fallback API key');
-    apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
-  }
+  const normalized = provider.trim().toLowerCase();
+  return VALID_PROVIDER_HINTS.has(normalized) ? normalized : null;
+};
 
+// New backend streaming function
+export async function* sendMessageToBackendStream(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null, requestOptions = {}) {
+  const user = getCurrentUserSession();
+  const apiKey = user?.accessToken || null;
   if (!apiKey) {
-    throw new Error('Backend API key is required. Please log in to use AI features.');
+    throw new Error('Authentication required. Please log in to use AI features.');
   }
 
   try {
@@ -133,6 +136,15 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       stream: true
     };
 
+    const providerHint = normalizeProviderHint(requestOptions?.provider);
+    if (providerHint) {
+      requestPayload.provider = providerHint;
+    }
+
+    if (requestOptions?.reasoningEffort && requestOptions.reasoningEffort !== 'none') {
+      requestPayload.reasoning_effort = requestOptions.reasoningEffort;
+    }
+
     // Add system prompt as top-level parameter if provided
     if (systemPrompt) {
       requestPayload.system = systemPrompt;
@@ -155,22 +167,19 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     }
 
     // Prepare headers based on token type
-    const headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream'
-    };
-    
-    // Use appropriate auth header based on token type
-    if (apiKey.startsWith('ak_')) {
-      headers['X-API-Key'] = apiKey;
-    } else {
-      headers['Authorization'] = `Bearer ${apiKey}`;
+    const authHeaders = buildAuthHeaders(apiKey);
+    if (!authHeaders) {
+      throw new Error('Authentication required. Please log in to use AI features.');
     }
 
-    const url = buildApiUrl('/v1/chat/completions');
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+      ...authHeaders
+    };
 
     // Use fetch with streaming
-    const response = await fetch(url, {
+    const response = await fetchWithFallback('/v1/chat/completions', {
       method: 'POST',
       headers,
       body: JSON.stringify(requestPayload)
@@ -185,7 +194,11 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       }
       
       // Provide specific error messages for common issues
-      let errorMessage = errorData.error?.message || 'Backend request failed';
+      const backendErrorMessage =
+        (typeof errorData.error === 'string' ? errorData.error : errorData.error?.message) ||
+        errorData.message;
+
+      let errorMessage = backendErrorMessage || 'Backend request failed';
       if (response.status === 401 && modelId.includes('gemini')) {
         errorMessage = 'Google API authentication failed on the backend. The Gemini models are currently unavailable.';
       } else if (response.status === 401) {
@@ -299,6 +312,15 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
               };
               continue;
             }
+
+            // Handle provider-native reasoning/thinking deltas
+            if (parsed.choices?.[0]?.delta?.reasoning_content) {
+              yield {
+                type: 'reasoning',
+                content: parsed.choices[0].delta.reasoning_content
+              };
+              continue;
+            }
             
             // Handle content chunks
             if (parsed.choices?.[0]?.delta?.content) {
@@ -347,6 +369,12 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
           if (data !== '[DONE]') {
             try {
               const parsed = JSON.parse(data);
+              if (parsed.choices?.[0]?.delta?.reasoning_content) {
+                yield {
+                  type: 'reasoning',
+                  content: parsed.choices[0].delta.reasoning_content
+                };
+              }
               if (parsed.choices?.[0]?.delta?.content) {
                 yield parsed.choices[0].delta.content;
               }
@@ -368,7 +396,8 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     
     // If it's a certificate/CORS issue, provide helpful guidance
     if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
-      yield `\n🔒 **Backend Connection Issue**\n\nYour backend server is running on HTTPS with a self-signed certificate.\n\n**To fix this:**\n1. Open [${rawBaseUrl}](${rawBaseUrl}) in a new browser tab\n2. Accept the security warning/certificate\n3. Return here and try again\n\nThis only needs to be done once per browser session.\n`;
+      const backendDisplayUrl = getRemoteBackendHost() || 'https://api.sculptorai.org';
+      yield `\n🔒 **Backend Connection Issue**\n\nYour backend server is running on HTTPS with a self-signed certificate.\n\n**To fix this:**\n1. Open [${backendDisplayUrl}](${backendDisplayUrl}) in a new browser tab\n2. Accept the security warning/certificate\n3. Return here and try again\n\nThis only needs to be done once per browser session.\n`;
     } else {
       yield `\n[Error: ${error.message}]\n`;
     }
@@ -376,7 +405,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
 }
 
 // Updated main sendMessage function that routes everything to backend
-export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null) { 
+export async function* sendMessage(message, modelId, history, imageData = null, fileTextContent = null, search = false, codeExecution = false, imageGen = false, systemPrompt = null, requestOptions = {}) { 
   console.log(`sendMessage (streaming) called with model: ${modelId}, message: "${message.substring(0, 30)}..."`, 
     `history length: ${history?.length || 0}`, 
     imageData ? `imageData: Present` : '',
@@ -389,42 +418,46 @@ export async function* sendMessage(message, modelId, history, imageData = null, 
 
   // All models now route to backend (backend acts as unified gateway)
   console.log(`Routing to backend for model: ${modelId}`);
-  yield* sendMessageToBackendStream(message, modelId, history, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt);
+  yield* sendMessageToBackendStream(message, modelId, history, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt, requestOptions);
 }
 
 // Legacy code removed - all models now go through backend API
 
-// Prefer environment variable, otherwise check if we're in dev mode
-// In dev mode (Vite dev server), use empty string to leverage Vite's proxy
-// In production, default to the production backend API
-const isDev = import.meta.env.DEV;
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+const SAME_ORIGIN_API_BASE = '/api';
 
-// Remove trailing slashes
-let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
-
-// Remove a trailing /api if present
-if (cleanedBase.endsWith('/api')) {
-  cleanedBase = cleanedBase.slice(0, -4);
-}
-
-const BACKEND_API_BASE = `${cleanedBase}/api`;
-
-console.log('[aiService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
-
-// Remove duplicated /api in endpoint paths
-const buildApiUrl = (endpoint) => {
-  if (!endpoint) return BACKEND_API_BASE;
+const buildApiUrlWithBase = (base, endpoint) => {
+  if (!endpoint) return base;
 
   // Normalize endpoint to remove a leading slash if it exists
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
 
   // Prevent double "api" segment
   if (normalizedEndpoint.startsWith('api/')) {
-    return `${BACKEND_API_BASE}/${normalizedEndpoint.substring(4)}`;
+    return `${base}/${normalizedEndpoint.substring(4)}`;
   }
 
-  return `${BACKEND_API_BASE}/${normalizedEndpoint}`;
+  return `${base}/${normalizedEndpoint}`;
+};
+
+// Remove duplicated /api in endpoint paths
+const buildApiUrl = (endpoint) => {
+  return buildApiUrlWithBase(getBackendApiBase(), endpoint);
+};
+
+const fetchWithFallback = async (endpoint, options) => {
+  const primaryUrl = buildApiUrl(endpoint);
+
+  try {
+    return await fetch(primaryUrl, options);
+  } catch (error) {
+    if (getBackendApiBase() === SAME_ORIGIN_API_BASE) {
+      throw error;
+    }
+
+    const fallbackUrl = buildApiUrlWithBase(SAME_ORIGIN_API_BASE, endpoint);
+    console.warn(`[aiService] Primary API request failed (${primaryUrl}). Retrying same-origin at ${fallbackUrl}`);
+    return fetch(fallbackUrl, options);
+  }
 };
 
 /**
@@ -433,58 +466,19 @@ const buildApiUrl = (endpoint) => {
  */
 export const fetchModelsFromBackend = async () => {
   try {
-    // Get user's assigned backend API key from session
-    let apiKey = null;
-    let user = null;
-    try {
-      const userJSON = sessionStorage.getItem('ai_portal_current_user');
-      if (userJSON) {
-        user = JSON.parse(userJSON);
-        // User's assigned backend API key should be stored as their accessToken
-        if (user.accessToken && user.accessToken.startsWith('ak_')) {
-          apiKey = user.accessToken;
-        }
-      }
-    } catch (e) {
-      console.error('Error getting user session:', e);
+    const user = getCurrentUserSession();
+    const accessToken = user?.accessToken || null;
+    if (!accessToken) {
+      return [];
     }
-
-    // Fallback API key for development/testing
-    if (!apiKey) {
-      apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
-    }
-
-    // if (!apiKey) {
-    //   console.log('No backend API key available, skipping backend models');
-    //   return [];
-    // }
 
     // Use the main models endpoint that returns all available models
     const endpointUrl = buildApiUrl('/models');
     console.log('Fetching models from:', endpointUrl);
     
     try {
-      // This endpoint requires authentication, so only try if user is logged in
-      let response;
-      if (user && user.accessToken) {
-        const headers = {};
-        
-        // Check if the access token is an API key (starts with ak_) or a JWT token
-        if (user.accessToken.startsWith('ak_')) {
-          // Use API key authentication
-          headers['X-API-Key'] = user.accessToken;
-        } else {
-          // Use JWT Bearer authentication
-          headers['Authorization'] = `Bearer ${user.accessToken}`;
-        }
-        
-        response = await fetch(endpointUrl, { headers });
-      } else {
-        // If no user is logged in, use the fallback API key
-        console.log('No user authentication available, using fallback API key');
-        const headers = { 'X-API-Key': apiKey };
-        response = await fetch(endpointUrl, { headers });
-      }
+      const headers = buildAuthHeaders(accessToken) || {};
+      const response = await fetchWithFallback('/models', { headers });
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -502,7 +496,7 @@ export const fetchModelsFromBackend = async () => {
           name: model.name || model.id.split('/').pop(),
           provider: model.provider,
           description: model.description,
-          capabilities: model.capabilities || [],
+          capabilities: model.capabilities || {},
           isBackendModel: true,
           source: model.source,
           context_length: model.context_length,
@@ -517,7 +511,7 @@ export const fetchModelsFromBackend = async () => {
           name: model.name || model.id.split('/').pop(),
           provider: model.owned_by,
           description: model.description,
-          capabilities: model.capabilities || [],
+          capabilities: model.capabilities || {},
           isBackendModel: true
         }));
       }
@@ -528,11 +522,12 @@ export const fetchModelsFromBackend = async () => {
       
       // If it's a certificate/CORS issue, show helpful message
       if (fetchError.message.includes('Failed to fetch')) {
+        const backendDisplayUrl = getRemoteBackendHost() || 'https://api.sculptorai.org';
         console.warn(`
 🔒 Backend Connection Issue:
 Your backend server is running on HTTPS with a self-signed certificate.
 To fix this:
-1. Open ${rawBaseUrl} in a new browser tab
+1. Open ${backendDisplayUrl} in a new browser tab
 2. Accept the security warning/certificate
 3. Refresh this page
 
@@ -548,12 +543,6 @@ This only needs to be done once per browser session.
   }
 };
 
-// Helper function to get current user (import from authService)
-const getCurrentUser = () => {
-  const userJSON = sessionStorage.getItem('ai_portal_current_user');
-  return userJSON ? JSON.parse(userJSON) : null;
-};
-
 /**
  * Send a message to the backend
  * @param {string} modelId - The model ID to use
@@ -567,10 +556,10 @@ const getCurrentUser = () => {
  * @param {string} mode - Optional mode for the request
  * @returns {Promise<Object>} The response
  */
-export const sendMessageToBackend = async (modelId, message, search = false, codeExecution = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null, conversationHistory = []) => {
+export const sendMessageToBackend = async (modelId, message, search = false, codeExecution = false, imageGen = false, imageData = null, fileTextContent = null, systemPrompt = null, mode = null, conversationHistory = [], requestOptions = {}) => {
   const chunks = [];
   try {
-    for await (const chunk of sendMessageToBackendStream(message, modelId, conversationHistory, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt)) {
+    for await (const chunk of sendMessageToBackendStream(message, modelId, conversationHistory, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt, requestOptions)) {
       chunks.push(chunk);
     }
     return { response: chunks.join('') };
@@ -581,28 +570,9 @@ export const sendMessageToBackend = async (modelId, message, search = false, cod
 
 // Generate chat title function
 export const generateChatTitle = async (userPrompt, assistantResponse) => {
-  // Get user's assigned backend API key from session
-  let apiKey = null;
-  try {
-    const userJSON = sessionStorage.getItem('ai_portal_current_user');
-    if (userJSON) {
-      const user = JSON.parse(userJSON);
-      // User's assigned backend API key should be stored as their accessToken
-      if (user.accessToken && user.accessToken.startsWith('ak_')) {
-        apiKey = user.accessToken;
-      }
-    }
-  } catch (e) {
-    console.error('Error getting user session:', e);
-  }
-
-  // Fallback API key for development/testing
-  if (!apiKey) {
-    apiKey = 'ak_2156e9306161e1c00b64688d4736bf00aecddd486f2a838c44a6e40144b52c19';
-  }
-
-  if (!apiKey) {
-    console.log('Skipping chat title generation - no backend API key');
+  const user = getCurrentUserSession();
+  if (!user?.accessToken) {
+    console.log('Skipping chat title generation - no authenticated session');
     return null;
   }
   
@@ -610,7 +580,7 @@ export const generateChatTitle = async (userPrompt, assistantResponse) => {
     `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\nTitle:`;
   try {
     const result = await sendMessageToBackend(
-      'gemini-2.5-flash', // Use available model from config
+      TITLE_GENERATION_MODEL_ID,
       titlePrompt
     );
     if (result && result.response) {

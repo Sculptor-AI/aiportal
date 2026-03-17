@@ -44,7 +44,10 @@ const CanvasArea = styled.div`
   background-color: #ffffff; /* Always white paper for drawings */
   background-image: radial-gradient(#e0e0e0 1px, transparent 1px);
   background-size: 20px 20px;
-  cursor: crosshair;
+  cursor: ${props => {
+    if (props.$tool === 'eraser') return 'cell';
+    return 'crosshair';
+  }};
 `;
 
 const FloatingToolbar = styled.div`
@@ -245,12 +248,15 @@ const CloseButton = styled.button`
   cursor: pointer;
   z-index: 20;
   transition: all 0.2s;
-  font-size: 24px;
-  line-height: 1;
 
   &:hover {
     background: ${props => props.theme.border};
-    transform: rotate(90deg);
+    transform: scale(1.05);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 `;
 
@@ -260,13 +266,13 @@ const Icons = {
   Square: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>,
   Circle: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle></svg>,
   Line: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="19" x2="19" y2="5"></line></svg>,
-  Text: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>,
   Eraser: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 14.5L14.5 2.5 21.5 9.5 9.5 21.5 2.5 14.5z"></path></svg>,
   Undo: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>,
   Redo: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"></path></svg>,
   Trash: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
   Download: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
-  Send: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+  Send: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>,
+  Close: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
 };
 
 const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
@@ -281,9 +287,6 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState(null); // Currently drawing path/shape
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-
-  // Text Tool State
-  const [textInput, setTextInput] = useState(null); // {x, y, value}
 
   const colors = ['#000000', '#FF3B30', '#34C759', '#007AFF', '#5856D6', '#FF9500', '#AF52DE', '#5AC8FA'];
 
@@ -320,20 +323,11 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
 
     // Helper to draw an action
     const drawItem = (item) => {
+      ctx.save();
       ctx.beginPath();
       ctx.strokeStyle = item.color;
       ctx.lineWidth = item.lineWidth;
       ctx.globalCompositeOperation = item.tool === 'eraser' ? 'destination-out' : 'source-over';
-
-      if (item.tool === 'eraser') {
-        // Eraser usually acts like a thick brush in 'destination-out' mode
-        // But on a white background, we can just paint white if we want to support layers later?
-        // For now, destination-out works well for transparency, but since we have a white bg div behind,
-        // it looks like clearing. 
-        // Actually, let's use 'source-over' with white color for eraser to keep it simple and consistent with paper.
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.strokeStyle = '#ffffff';
-      }
 
       if (item.type === 'path') {
         if (item.points.length > 0) {
@@ -345,17 +339,18 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
         ctx.strokeRect(item.x, item.y, item.w, item.h);
       } else if (item.type === 'circle') {
         ctx.beginPath();
-        ctx.arc(item.cx, item.cy, item.r, 0, 2 * Math.PI);
+        if (typeof item.rx === 'number' && typeof item.ry === 'number') {
+          ctx.ellipse(item.cx, item.cy, item.rx, item.ry, 0, 0, 2 * Math.PI);
+        } else {
+          ctx.arc(item.cx, item.cy, item.r, 0, 2 * Math.PI);
+        }
         ctx.stroke();
       } else if (item.type === 'line') {
         ctx.moveTo(item.x1, item.y1);
         ctx.lineTo(item.x2, item.y2);
         ctx.stroke();
-      } else if (item.type === 'text') {
-        ctx.font = `${item.size * 5}px Inter, sans-serif`; // Scale font size
-        ctx.fillStyle = item.color;
-        ctx.fillText(item.text, item.x, item.y);
       }
+      ctx.restore();
     };
 
     // Draw all completed actions
@@ -381,16 +376,57 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
     return { x, y };
   };
 
+  const getBounds = (from, to) => ({
+    x: Math.min(from.x, to.x),
+    y: Math.min(from.y, to.y),
+    width: Math.abs(to.x - from.x),
+    height: Math.abs(to.y - from.y)
+  });
+
+  const buildShapeFromPoints = useCallback((activeTool, from, to, shape) => {
+    if (!shape) return null;
+
+    if (activeTool === 'square') {
+      return {
+        ...shape,
+        type: 'rect',
+        x: from.x,
+        y: from.y,
+        w: to.x - from.x,
+        h: to.y - from.y
+      };
+    }
+
+    if (activeTool === 'circle') {
+      const bounds = getBounds(from, to);
+      return {
+        ...shape,
+        type: 'circle',
+        cx: bounds.x + bounds.width / 2,
+        cy: bounds.y + bounds.height / 2,
+        rx: Math.max(bounds.width / 2, 1),
+        ry: Math.max(bounds.height / 2, 1),
+        r: Math.max(Math.max(bounds.width, bounds.height) / 2, 1)
+      };
+    }
+
+    if (activeTool === 'line') {
+      return {
+        ...shape,
+        type: 'line',
+        x2: to.x,
+        y2: to.y
+      };
+    }
+
+    return shape;
+  }, []);
+
   const handleMouseDown = (e) => {
     const { x, y } = getPos(e);
+
     setStartPos({ x, y });
     setIsDrawing(true);
-
-    if (tool === 'text') {
-      setTextInput({ x, y, value: '' });
-      setIsDrawing(false); // Text is a click action, not drag
-      return;
-    }
 
     if (tool === 'pencil' || tool === 'eraser') {
       setCurrentPath({
@@ -422,37 +458,32 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
     if (tool === 'pencil' || tool === 'eraser') {
       setCurrentPath(prev => ({
         ...prev,
-        points: [...prev.points, { x, y }]
+          points: [...prev.points, { x, y }]
       }));
-    } else if (tool === 'square') {
-      setCurrentPath(prev => ({
-        ...prev,
-        type: 'rect',
-        w: x - startPos.x,
-        h: y - startPos.y
-      }));
-    } else if (tool === 'circle') {
-      const radius = Math.sqrt(Math.pow(x - startPos.x, 2) + Math.pow(y - startPos.y, 2));
-      setCurrentPath(prev => ({
-        ...prev,
-        type: 'circle',
-        r: radius
-      }));
-    } else if (tool === 'line') {
-      setCurrentPath(prev => ({
-        ...prev,
-        type: 'line',
-        x2: x,
-        y2: y
-      }));
+    } else {
+      setCurrentPath(prev => buildShapeFromPoints(tool, startPos, { x, y }, prev));
     }
   };
 
-  const handleMouseUp = () => {
+  const finalizeCurrentAction = useCallback((e) => {
+    if (!currentPath) return null;
+
+    if (!e || tool === 'pencil' || tool === 'eraser') {
+      return currentPath;
+    }
+
+    const { x, y } = getPos(e);
+    return buildShapeFromPoints(tool, startPos, { x, y }, currentPath);
+  }, [buildShapeFromPoints, currentPath, startPos, tool]);
+
+  const handleMouseUp = (e) => {
     if (!isDrawing) return;
+
     setIsDrawing(false);
-    if (currentPath) {
-      setActions(prev => [...prev, currentPath]);
+    const finalizedAction = finalizeCurrentAction(e);
+
+    if (finalizedAction) {
+      setActions(prev => [...prev, finalizedAction]);
       setCurrentPath(null);
       setRedoStack([]); // Clear redo stack on new action
     }
@@ -481,24 +512,6 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
         if (prev && canvasRef.current) prev.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         return prev;
       });
-    }
-  };
-
-  const handleTextSubmit = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      if (textInput.value.trim()) {
-        setActions(prev => [...prev, {
-          type: 'text',
-          text: textInput.value,
-          x: textInput.x,
-          y: textInput.y,
-          color: color,
-          size: lineWidth,
-          tool: 'text'
-        }]);
-      }
-      setTextInput(null);
-      setTool('pencil'); // Switch back to pencil after text or stay? Let's switch back for flow
     }
   };
 
@@ -551,7 +564,9 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <ModalOverlay $isOpen={isOpen} onClick={onClose}>
       <WhiteboardContainer $isOpen={isOpen} onClick={e => e.stopPropagation()}>
-        <CloseButton onClick={onClose}>×</CloseButton>
+        <CloseButton onClick={onClose} aria-label="Close whiteboard">
+          <Icons.Close />
+        </CloseButton>
 
         <FloatingToolbar>
           <ToolButton $active={tool === 'pencil'} onClick={() => setTool('pencil')} data-tooltip={t('whiteboard.tool.pencil')}>
@@ -565,9 +580,6 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
           </ToolButton>
           <ToolButton $active={tool === 'line'} onClick={() => setTool('line')} data-tooltip={t('whiteboard.tool.line')}>
             <Icons.Line />
-          </ToolButton>
-          <ToolButton $active={tool === 'text'} onClick={() => setTool('text')} data-tooltip={t('whiteboard.tool.text')}>
-            <Icons.Text />
           </ToolButton>
           <ToolButton $active={tool === 'eraser'} onClick={() => setTool('eraser')} data-tooltip={t('whiteboard.tool.eraser')}>
             <Icons.Eraser />
@@ -605,7 +617,7 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
           />
         </PropertiesBar>
 
-        <CanvasArea>
+        <CanvasArea $tool={tool}>
           <canvas
             ref={canvasRef}
             onMouseDown={handleMouseDown}
@@ -614,27 +626,6 @@ const WhiteboardModal = ({ isOpen, onClose, onSubmit }) => {
             onMouseLeave={handleMouseUp}
             style={{ width: '100%', height: '100%', display: 'block' }}
           />
-          {textInput && (
-            <input
-              autoFocus
-              style={{
-                position: 'absolute',
-                left: textInput.x,
-                top: textInput.y,
-                border: '1px solid #007AFF',
-                background: 'transparent',
-                padding: '4px',
-                font: `${lineWidth * 5}px Inter, sans-serif`,
-                color: color,
-                outline: 'none',
-                minWidth: '50px'
-              }}
-              value={textInput.value}
-              onChange={e => setTextInput(prev => ({ ...prev, value: e.target.value }))}
-              onKeyDown={handleTextSubmit}
-              onBlur={() => setTextInput(null)} // Cancel on blur without enter
-            />
-          )}
         </CanvasArea>
 
         <ActionToolbar>

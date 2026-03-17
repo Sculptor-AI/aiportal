@@ -1,3 +1,5 @@
+import { sanitizeExternalUrl } from './urlSecurity';
+
 // Function to extract and parse web search sources from Claude's response
 export const extractSourcesFromResponse = (content) => {
   if (!content || typeof content !== 'string') {
@@ -12,11 +14,14 @@ export const extractSourcesFromResponse = (content) => {
     const cleanContent = content.replace(/<links>.*?<\/links>/, '').trim();
     
     // Convert URLs to source objects for consistency with existing UI
-    const sources = links.map((url, index) => ({
-      title: `Source ${index + 1}`,
-      url: url,
-      domain: extractDomain(url)
-    }));
+    const sources = links
+      .map((url) => sanitizeExternalUrl(url))
+      .filter(Boolean)
+      .map((url, index) => ({
+        title: `Source ${index + 1}`,
+        url,
+        domain: extractDomain(url)
+      }));
     
     return { cleanedContent: cleanContent, sources: sources };
   }
@@ -33,7 +38,8 @@ export const extractSourcesFromResponse = (content) => {
   
   while ((sourceMatch = sourcePattern.exec(content)) !== null) {
     const title = sourceMatch[1];
-    const url = sourceMatch[2];
+    const url = sanitizeExternalUrl(sourceMatch[2]);
+    if (!url) continue;
     
     sources.push({
       title,
@@ -126,11 +132,14 @@ export const parseLinksFromResponse = (content) => {
     const cleanContent = content.replace(/<links>.*?<\/links>/, '').trim();
     
     // Convert URLs to source objects for consistency with existing UI
-    const sources = links.map((url, index) => ({
-      title: `Source ${index + 1}`,
-      url: url,
-      domain: extractDomain(url)
-    }));
+    const sources = links
+      .map((url) => sanitizeExternalUrl(url))
+      .filter(Boolean)
+      .map((url, index) => ({
+        title: `Source ${index + 1}`,
+        url,
+        domain: extractDomain(url)
+      }));
     
     return { content: cleanContent, sources: sources };
   }

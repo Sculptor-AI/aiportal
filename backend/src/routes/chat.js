@@ -1,6 +1,6 @@
 /**
  * Chat Completion Routes
- * 
+ *
  * Unified chat endpoint that routes to the appropriate provider:
  * - OpenRouter (default for most models)
  * - Gemini (direct Google API)
@@ -14,8 +14,13 @@ import { handleGeminiChat, handleGeminiChatNonStreaming } from '../services/gemi
 import { handleAnthropicChat } from '../services/anthropic.js';
 import { handleOpenAIChat } from '../services/openai.js';
 import { validateToolsForProvider } from '../config/index.js';
+import { requireAuthAndApproved } from '../middleware/auth.js';
+import { chatGenerationRateLimit } from '../middleware/rateLimit.js';
 
 const chat = new Hono();
+
+// Apply auth middleware to all chat routes
+chat.use('/*', requireAuthAndApproved);
 
 /**
  * Determine which provider to use based on model ID
@@ -30,7 +35,7 @@ function getProvider(modelId, body) {
   if (modelId.startsWith('claude') || modelId.startsWith('anthropic/')) {
     return 'anthropic';
   }
-  if (modelId.startsWith('gpt') || modelId.startsWith('o1') || modelId.startsWith('o3') || modelId.startsWith('o4') || modelId.startsWith('openai/')) {
+  if (modelId.startsWith('gpt') || modelId.startsWith('chatgpt') || modelId.startsWith('o1') || modelId.startsWith('o3') || modelId.startsWith('o4') || modelId.startsWith('openai/')) {
     // Check if we should use direct OpenAI or OpenRouter
     if (body.use_direct_api || body.provider === 'openai') {
       return 'openai';
@@ -92,7 +97,7 @@ function validateToolRequest(provider, body, c) {
  * - Thinking/reasoning (thinking: true, reasoning: true)
  * - Provider routing (provider: 'gemini'|'anthropic'|'openai'|'openrouter')
  */
-chat.post('/chat/completions', async (c) => {
+chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
   const env = c.env;
 
   try {
@@ -170,7 +175,7 @@ chat.post('/chat/completions', async (c) => {
     }
   } catch (error) {
     console.error('Chat completion error:', error);
-    return c.json({ error: error.message || 'Internal server error' }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 

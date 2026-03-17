@@ -5,13 +5,16 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "build": "npm run build --prefix ../frontend && shx rm -rf dist && shx cp -r ../frontend/dist ./dist"
+    "build": "npm run build --prefix ../frontend && shx rm -rf dist && shx cp -r ../frontend/dist ./dist",
+    "build:worker": "esbuild worker.js --bundle --format=esm --outfile=dist/_worker.js --conditions=workerd --banner:js=\"// Cloudflare Pages Worker\" --external:node:*",
+    "build:pages": "cd .. && npm install && cd frontend && npm run build && cd ../backend && shx rm -rf dist && shx cp -r ../frontend/dist ./dist && npm run build:worker"
   },
   "dependencies": {
-    "hono": "^4.6.0"
+    "hono": "^4.11.10"
   },
   "devDependencies": {
+    "esbuild": "^0.25.12",
     "shx": "^0.4.0",
-    "wrangler": "^4.19.1"
+    "wrangler": "^4.68.1"
   }
 }

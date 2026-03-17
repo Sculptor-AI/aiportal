@@ -1,16 +1,44 @@
 import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { useTheme } from 'styled-components';
+import styled from 'styled-components';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
 import ImageModelSelector from './ImageModelSelector';
 import HtmlArtifactModal from './HtmlArtifactModal';
+import FileViewerModal from './FileViewerModal';
 import { useToast } from '../contexts/ToastContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 import ChatInputArea from './ChatInputArea';
 import LiveModeUI from './LiveModeUI';
 import useMessageSender from '../hooks/useMessageSender';
+import { listImageModelsApi } from '../services/imageService';
+import { DEFAULT_CHAT_MODEL_ID, DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
+
+const ProjectBadge = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.sidebar};
+  color: ${props => props.theme.text};
+  font-size: 0.75rem;
+  opacity: 0.75;
+  text-decoration: none;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover { opacity: 1; }
+
+  svg { width: 12px; height: 12px; flex-shrink: 0; }
+`;
 import {
   ChatWindowContainer,
   ChatHeader,
@@ -54,9 +82,12 @@ const ChatWindow = forwardRef(({
   onUserTyping,
   focusModeActive = false,
   onMessageSent,
+  projects = [],
+  pendingMessage = null,
+  onPendingMessageConsumed,
 }, ref) => {
   // All hooks at the top level - no conditional returns before this
-  const [selectedModel, setSelectedModel] = useState(initialSelectedModel || 'gemini-2-flash');
+  const [selectedModel, setSelectedModel] = useState(initialSelectedModel || DEFAULT_CHAT_MODEL_ID);
   const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [isLiveModeOpen, setIsLiveModeOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -66,6 +97,8 @@ const ChatWindow = forwardRef(({
   const [resetFileUpload, setResetFileUpload] = useState(false);
   const [artifactHTML, setArtifactHTML] = useState(null);
   const [isArtifactModalOpen, setIsArtifactModalOpen] = useState(false);
+  const [isFileViewerOpen, setIsFileViewerOpen] = useState(false);
+  const [fileToView, setFileToView] = useState(null);
   const [animateDown, setAnimateDown] = useState(false);
   const [profilePicture, setProfilePicture] = useState(() => {
     try {
@@ -80,6 +113,7 @@ const ChatWindow = forwardRef(({
   const [isImagePromptMode, setIsImagePromptMode] = useState(false);
   const [availableImageModels, setAvailableImageModels] = useState([]);
   const [selectedImageModel, setSelectedImageModel] = useState(null);
+  const [activeActionChip, setActiveActionChip] = useState(null);
 
   const messagesEndRef = useRef(null);
   const chatInputAreaRef = useRef(null);
@@ -90,6 +124,11 @@ const ChatWindow = forwardRef(({
   const theme = useTheme();
   const showProfilePicture = settings?.showProfilePicture !== false;
   const newConversationLabel = t('chat.newConversation', 'New Conversation');
+  const selectableModels = useMemo(
+    () => (availableModels || []).filter((model) => model.id !== DEEP_RESEARCH_MODEL_ID),
+    [availableModels]
+  );
+  const isDeepResearchChipActive = activeActionChip === 'deep-research';
 
   // Memoized values
   const chatIsEmpty = useMemo(() => {
@@ -227,7 +266,8 @@ const ChatWindow = forwardRef(({
             type: 'image',
             content: dataUrl,
             dataUrl: dataUrl,
-            name: file.name
+            name: file.name,
+            originalFile: file
           });
         } else if (isText) {
           if (file.isPastedText) {
@@ -300,7 +340,8 @@ const ChatWindow = forwardRef(({
             content: trimmedText,
             text: trimmedText,
             name: file.name,
-            pdfThumbnail: pdfThumbnail
+            pdfThumbnail: pdfThumbnail,
+            originalFile: file
           });
         } else if (isCodeFile) {
           // Handle code files as text
@@ -368,6 +409,25 @@ const ChatWindow = forwardRef(({
     }
   }, [availableModels, onModelChange]);
 
+  const handleFilePreview = useCallback((file, index) => {
+    if (!file) return;
+    setFileToView({ ...file, __fileIndex: index });
+    setIsFileViewerOpen(true);
+  }, []);
+
+  const handleFileSave = useCallback((updatedFile) => {
+    if (!updatedFile || typeof updatedFile.__fileIndex !== 'number') return;
+    setUploadedFileData(prev => {
+      if (!prev) return prev;
+      const filesArray = Array.isArray(prev) ? [...prev] : [prev];
+      if (!filesArray[updatedFile.__fileIndex]) return prev;
+      const { __fileIndex, ...cleanFile } = updatedFile;
+      filesArray[updatedFile.__fileIndex] = cleanFile;
+      return filesArray;
+    });
+    setFileToView(prev => (prev ? { ...updatedFile } : prev));
+  }, []);
+
   const handleLiveModeToggle = useCallback((isOpen) => {
     setIsLiveModeOpen(isOpen);
   }, []);
@@ -408,6 +468,7 @@ const ChatWindow = forwardRef(({
     selectedModel,
     settings,
     availableModels,
+    projects,
     addMessage,
     updateMessage,
     updateChatTitle,
@@ -417,6 +478,14 @@ const ChatWindow = forwardRef(({
     setResetFileUpload,
     onAttachmentChange,
   });
+
+  // Handle pending message from project detail page (pre-fill input)
+  useEffect(() => {
+    if (pendingMessage && chatInputAreaRef.current?.appendToInput) {
+      chatInputAreaRef.current.appendToInput(pendingMessage);
+      onPendingMessageConsumed?.();
+    }
+  }, [pendingMessage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Effects
   useEffect(() => {
@@ -439,16 +508,13 @@ const ChatWindow = forwardRef(({
   useEffect(() => {
     const fetchImageModels = async () => {
       try {
-        const response = await fetch('/api/image/models');
-        if (response.ok) {
-          const data = await response.json();
-          const models = data.models || [];
-          setAvailableImageModels(models);
-          // Set default model
-          const defaultModel = models.find(m => m.isDefault) || models[0];
-          if (defaultModel && !selectedImageModel) {
-            setSelectedImageModel(defaultModel);
-          }
+        const data = await listImageModelsApi();
+        const models = data.models || [];
+        setAvailableImageModels(models);
+
+        const defaultModel = models.find(m => m.isDefault) || models[0];
+        if (defaultModel && !selectedImageModel) {
+          setSelectedImageModel(defaultModel);
         }
       } catch (error) {
         console.error('Failed to fetch image models:', error);
@@ -477,6 +543,21 @@ const ChatWindow = forwardRef(({
       setSelectedModel(initialSelectedModel);
     }
   }, [initialSelectedModel, selectedModel]);
+
+  useEffect(() => {
+    if (selectedModel !== DEEP_RESEARCH_MODEL_ID || selectableModels.length === 0) {
+      return;
+    }
+
+    const fallbackModel =
+      selectableModels.find((model) => model.isDefault)?.id ||
+      selectableModels[0]?.id ||
+      DEFAULT_CHAT_MODEL_ID;
+
+    if (fallbackModel && fallbackModel !== selectedModel) {
+      handleModelChange(fallbackModel);
+    }
+  }, [selectedModel, selectableModels, handleModelChange]);
 
   useEffect(() => {
     if (chat?.id && initialSelectedModel && $sidebarCollapsed) {
@@ -580,22 +661,35 @@ const ChatWindow = forwardRef(({
       >
         <ChatTitleSection $sidebarCollapsed={$sidebarCollapsed}>
           <ModelSelectorsRow>
-            {selectedModel !== 'instant' && (
+            {!isDeepResearchChipActive && selectedModel !== 'instant' && !isImagePromptMode && (
               <ModelSelector
                 selectedModel={selectedModel}
-                models={availableModels}
+                models={selectableModels}
                 onChange={handleModelChange}
                 key="model-selector"
                 theme={theme}
               />
             )}
-            <ImageModelSelector
-              availableModels={availableImageModels}
-              selectedModel={selectedImageModel}
-              onSelectModel={setSelectedImageModel}
-              isVisible={isImagePromptMode}
-              theme={theme}
-            />
+            {chat?.projectId && (() => {
+              const proj = (projects || []).find(p => p.id === chat.projectId);
+              return proj ? (
+                <ProjectBadge to={`/projects/${proj.id}`}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                  </svg>
+                  {proj.projectName}
+                </ProjectBadge>
+              ) : null;
+            })()}
+            {!isDeepResearchChipActive && (
+              <ImageModelSelector
+                availableModels={availableImageModels}
+                selectedModel={selectedImageModel}
+                onSelectModel={setSelectedImageModel}
+                isVisible={isImagePromptMode}
+                theme={theme}
+              />
+            )}
           </ModelSelectorsRow>
         </ChatTitleSection>
       </ChatHeader>
@@ -668,6 +762,8 @@ const ChatWindow = forwardRef(({
           isImagePromptMode={isImagePromptMode}
           onImageModeChange={setIsImagePromptMode}
           selectedImageModel={selectedImageModel}
+          onActionChipChange={setActiveActionChip}
+          onFilePreview={handleFilePreview}
           onUserTyping={onUserTyping}
           onMessageSent={onMessageSent}
         />
@@ -677,6 +773,15 @@ const ChatWindow = forwardRef(({
         isOpen={isArtifactModalOpen}
         onClose={() => setIsArtifactModalOpen(false)}
         htmlContent={artifactHTML}
+      />
+      <FileViewerModal
+        isOpen={isFileViewerOpen}
+        onClose={() => {
+          setIsFileViewerOpen(false);
+          setFileToView(null);
+        }}
+        file={fileToView}
+        onSave={handleFileSave}
       />
     </ChatWindowContainer>
   );

@@ -1,66 +1,149 @@
 import axios from 'axios';
+import { getAuthHeaders } from './authService';
+import { getBackendApiBase } from './backendConfig';
 
-// Prefer environment variable, otherwise default to same-origin
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+const getVideoApiUrl = () => `${getBackendApiBase()}/video`;
 
-// Remove trailing slashes
-let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Remove a trailing /api if present
-if (cleanedBase.endsWith('/api')) {
-  cleanedBase = cleanedBase.slice(0, -4);
-}
-
-const BACKEND_API_BASE = `${cleanedBase}/api`;
-const VIDEO_API_URL = `${BACKEND_API_BASE}/video`;
+const resolveVideoDownloadUrl = (videoRef) => {
+  if (!videoRef) return '';
+  if (videoRef.includes('/download?')) {
+    return videoRef;
+  }
+  return `${getVideoApiUrl()}/download?id=${encodeURIComponent(videoRef)}`;
+};
 
 /**
- * Generate a video using Veo 2
- * @param {string} prompt - Text prompt
- * @param {object} options - Configuration options
- * @param {string} options.aspectRatio - '16:9', '9:16', '1:1', '4:3'
- * @param {string} options.negativePrompt - Optional negative prompt
+ * Start a Sora video generation job.
  */
 export const generateVideo = async (prompt, options = {}) => {
   try {
-    const response = await axios.post(`${VIDEO_API_URL}/generate`, {
+    const response = await axios.post(`${getVideoApiUrl()}/generate`, {
       prompt,
       aspectRatio: options.aspectRatio || '16:9',
-      negativePrompt: options.negativePrompt
+    }, {
+      headers: {
+        ...getAuthHeaders()
+      }
     });
-    
-    return response.data; // { success: true, operationName: '...' }
+
+    const payload = response.data;
+
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Unexpected video API response from backend.');
+    }
+
+    if (payload.success && payload.videoId) {
+      return payload; // { success: true, videoId: 'video_...' }
+    }
+
+    if (payload.success && payload.operationName && !payload.videoId) {
+      throw new Error('Video backend returned a legacy job format. Refresh the app and try again.');
+    }
+
+    throw new Error(payload.error || payload.message || 'Failed to start video generation');
   } catch (error) {
     console.error('Error generating video:', error);
-    throw error.response?.data?.error || error.message || 'Failed to start video generation';
+    const message = error.response?.data?.error || error.message || 'Failed to start video generation';
+    throw new Error(message);
   }
 };
 
 /**
- * Poll for video generation status
- * @param {string} operationName - The operation ID returned from generateVideo
+ * Poll for video generation status.
  */
-export const pollVideoStatus = async (operationName) => {
+export const pollVideoStatus = async (videoId) => {
   try {
-    // Pass name via query param to handle special chars/slashes safely
-    const response = await axios.get(`${VIDEO_API_URL}/status`, {
-      params: { name: operationName }
+    const response = await axios.get(`${getVideoApiUrl()}/status`, {
+      params: { id: videoId },
+      headers: {
+        ...getAuthHeaders()
+      }
     });
-    
-    return response.data; // { done: boolean, videoUri: string, ... }
+
+    return response.data;
   } catch (error) {
     console.error('Error polling video status:', error);
-    throw error.response?.data?.error || error.message || 'Failed to check status';
+    const message = error.response?.data?.error || error.message || 'Failed to check status';
+    throw new Error(message);
   }
 };
 
 /**
- * Get the download URL for a video (proxied or direct)
- * @param {string} videoUri - The remote video URI
+ * Wait for a Sora job to reach a terminal state.
  */
-export const getVideoDownloadUrl = (videoUri) => {
-  if (!videoUri) return '';
-  // Use proxy endpoint to avoid CORS issues with Google storage
-  return `${VIDEO_API_URL}/download?url=${encodeURIComponent(videoUri)}`;
+export const waitForVideoCompletion = async (videoId, options = {}) => {
+  const intervalMs = options.intervalMs || 5000;
+  const maxAttempts = options.maxAttempts || 120;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const status = await pollVideoStatus(videoId);
+    options.onPoll?.(status);
+
+    if (status.done) {
+      return status;
+    }
+
+    await sleep(intervalMs);
+  }
+
+  throw new Error('Video generation timed out');
 };
 
+/**
+ * Get the authenticated backend download URL for a video.
+ */
+export const getVideoDownloadUrl = (videoRef) => resolveVideoDownloadUrl(videoRef);
+
+/**
+ * Fetch the generated video as a Blob using authenticated request headers.
+ */
+export const fetchGeneratedVideoBlob = async (videoRef) => {
+  const downloadUrl = resolveVideoDownloadUrl(videoRef);
+  if (!downloadUrl) {
+    throw new Error('Video reference is required');
+  }
+
+  const response = await fetch(downloadUrl, {
+    headers: {
+      ...getAuthHeaders()
+    }
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to download video';
+    try {
+      const payload = await response.json();
+      errorMessage = payload?.error || errorMessage;
+    } catch {
+      // Ignore JSON parse failures and fall back to the generic message.
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.blob();
+};
+
+/**
+ * Create a temporary object URL for authenticated video playback.
+ */
+export const createVideoObjectUrl = async (videoRef) => {
+  const blob = await fetchGeneratedVideoBlob(videoRef);
+  return URL.createObjectURL(blob);
+};
+
+/**
+ * Download a generated video using authenticated request headers.
+ */
+export const downloadGeneratedVideo = async (videoRef) => {
+  const blob = await fetchGeneratedVideoBlob(videoRef);
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = 'generated-video.mp4';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+};

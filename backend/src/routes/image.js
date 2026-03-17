@@ -1,6 +1,6 @@
 /**
  * Image Generation Routes
- * 
+ *
  * Supports multiple providers:
  * - Google Imagen (via Gemini API)
  * - OpenAI DALL-E
@@ -12,8 +12,14 @@ import { generateImageWithImagen } from '../services/gemini.js';
 import { generateImageWithDALLE, editImageWithDALLE } from '../services/openai.js';
 import { listImageModels, getDefaultImageModel } from '../config/index.js';
 import modelsConfig from '../config/models.json';
+import { requireAuthAndApproved } from '../middleware/auth.js';
+import { imageGenerationRateLimit } from '../middleware/rateLimit.js';
 
 const image = new Hono();
+
+// Apply auth middleware to generate and edit routes (models list is public)
+image.use('/generate', requireAuthAndApproved);
+image.use('/edit', requireAuthAndApproved);
 
 /**
  * Look up model info from models.json
@@ -57,7 +63,7 @@ function resolveImageModel(modelName) {
  * - n: number (optional, number of images)
  * - negativePrompt: string (optional, for Imagen)
  */
-image.post('/generate', async (c) => {
+image.post('/generate', imageGenerationRateLimit, async (c) => {
   const env = c.env;
 
   try {
@@ -93,7 +99,8 @@ image.post('/generate', async (c) => {
       });
 
       if (!result.success) {
-        return c.json({ error: result.error }, 500);
+        console.error('OpenAI image generation provider failure:', result.error);
+        return c.json({ error: 'Image generation failed' }, 500);
       }
 
       return c.json({
@@ -125,7 +132,8 @@ image.post('/generate', async (c) => {
     });
 
     if (!result.success) {
-      return c.json({ error: result.error }, 500);
+      console.error('Gemini image generation provider failure:', result.error);
+      return c.json({ error: 'Image generation failed' }, 500);
     }
 
     return c.json({
@@ -138,7 +146,7 @@ image.post('/generate', async (c) => {
 
   } catch (error) {
     console.error('Image generation error:', error);
-    return c.json({ error: error.message || 'Internal server error' }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -153,7 +161,7 @@ image.post('/generate', async (c) => {
  * - size: string (optional)
  * - n: number (optional)
  */
-image.post('/edit', async (c) => {
+image.post('/edit', imageGenerationRateLimit, async (c) => {
   const env = c.env;
   const apiKey = env.OPENAI_API_KEY;
 
@@ -180,7 +188,8 @@ image.post('/edit', async (c) => {
     });
 
     if (!result.success) {
-      return c.json({ error: result.error }, 500);
+      console.error('OpenAI image edit provider failure:', result.error);
+      return c.json({ error: 'Image edit failed' }, 500);
     }
 
     return c.json({
@@ -192,7 +201,7 @@ image.post('/edit', async (c) => {
 
   } catch (error) {
     console.error('Image edit error:', error);
-    return c.json({ error: error.message || 'Internal server error' }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 

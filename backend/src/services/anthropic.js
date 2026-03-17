@@ -19,6 +19,47 @@ import { resolveModel, getDefaultModel } from '../config/index.js';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_VERSION = '2023-06-01';
+const ANTHROPIC_MODELS_WITH_REASONING_EFFORT = new Set([
+  'claude-opus-4-6',
+  'claude-sonnet-4-6',
+  'claude-opus-4-5'
+]);
+const ANTHROPIC_MODELS_WITH_MAX_EFFORT = new Set([
+  'claude-opus-4-6'
+]);
+
+function normalizeReasoningEffort(reasoningEffort) {
+  if (typeof reasoningEffort !== 'string') return null;
+  const normalized = reasoningEffort.toLowerCase();
+  if (['low', 'medium', 'high', 'xhigh', 'max'].includes(normalized)) {
+    return normalized;
+  }
+  return null;
+}
+
+function mapReasoningEffortToBudget(reasoningEffort) {
+  switch (reasoningEffort) {
+    case 'low':
+      return 4096;
+    case 'medium':
+      return 10000;
+    case 'high':
+      return 16000;
+    case 'xhigh':
+    case 'max':
+      return 32000;
+    default:
+      return null;
+  }
+}
+
+function mapReasoningEffortToAnthropicEffort(model, reasoningEffort) {
+  if (!reasoningEffort) return null;
+  if (reasoningEffort === 'xhigh' || reasoningEffort === 'max') {
+    return ANTHROPIC_MODELS_WITH_MAX_EFFORT.has(model) ? 'max' : 'high';
+  }
+  return reasoningEffort;
+}
 
 /**
  * Get Anthropic headers with appropriate beta flags
@@ -348,12 +389,31 @@ function buildAnthropicBody(body) {
     }
   }
 
-  // Extended thinking
-  if (body.thinking || body.extended_thinking) {
-    anthropicBody.thinking = {
-      type: 'enabled',
-      budget_tokens: body.thinking_budget || body.reasoning_budget || 10000
-    };
+  // Extended/adaptive thinking
+  const normalizedReasoningEffort = normalizeReasoningEffort(body.reasoning_effort);
+  const supportsNativeReasoningEffort = ANTHROPIC_MODELS_WITH_REASONING_EFFORT.has(model);
+  const anthropicEffort = supportsNativeReasoningEffort
+    ? mapReasoningEffortToAnthropicEffort(model, normalizedReasoningEffort)
+    : null;
+  const shouldEnableThinking = Boolean(body.thinking || body.extended_thinking || normalizedReasoningEffort);
+
+  if (shouldEnableThinking) {
+    if (anthropicEffort) {
+      anthropicBody.thinking = { type: 'adaptive' };
+      anthropicBody.output_config = {
+        ...(anthropicBody.output_config || {}),
+        effort: anthropicEffort
+      };
+    } else {
+      anthropicBody.thinking = {
+        type: 'enabled',
+        budget_tokens:
+          body.thinking_budget ||
+          body.reasoning_budget ||
+          mapReasoningEffortToBudget(normalizedReasoningEffort) ||
+          10000
+      };
+    }
     options.extended_thinking = true;
   }
 
@@ -579,8 +639,8 @@ export async function handleAnthropicChat(c, body, apiKey) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Anthropic API Error:', errorText);
-      return c.json({ error: `Anthropic API Error: ${errorText}` }, response.status);
+      console.error('Anthropic API Error:', response.status, errorText.slice(0, 500));
+      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
     // Handle non-streaming response
@@ -639,7 +699,7 @@ export async function handleAnthropicChat(c, body, apiKey) {
 
   } catch (error) {
     console.error('Anthropic handler error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 }
 

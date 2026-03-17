@@ -6,6 +6,19 @@ import { Hono } from 'hono';
 
 const staticRoutes = new Hono();
 
+const NO_CACHE_HEADERS = 'no-cache, no-store, must-revalidate';
+
+const withCacheControl = (response, cacheControl) => {
+  const headers = new Headers(response.headers);
+  headers.set('Cache-Control', cacheControl);
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+};
+
 /**
  * Handle static assets and SPA fallback
  */
@@ -28,7 +41,13 @@ staticRoutes.get('*', async (c) => {
     url.pathname.startsWith('/images/') ||
     url.pathname.includes('.')) {
     try {
-      return await env.ASSETS.fetch(c.req.raw);
+      const assetResponse = await env.ASSETS.fetch(c.req.raw);
+
+      if (url.pathname === '/sw.js' || url.pathname === '/index.html') {
+        return withCacheControl(assetResponse, NO_CACHE_HEADERS);
+      }
+
+      return assetResponse;
     } catch (e) {
       return c.json({ error: 'Asset not found' }, 404);
     }
@@ -36,7 +55,8 @@ staticRoutes.get('*', async (c) => {
 
   // For all other requests, serve index.html to handle client-side routing
   try {
-    return await env.ASSETS.fetch(`${url.origin}/index.html`);
+    const appShellResponse = await env.ASSETS.fetch(`${url.origin}/index.html`);
+    return withCacheControl(appShellResponse, NO_CACHE_HEADERS);
   } catch (e) {
     return c.text('Frontend not deployed. API endpoints are available at /api/*', 200);
   }

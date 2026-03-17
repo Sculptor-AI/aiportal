@@ -18,7 +18,7 @@ export function getModelsConfig() {
  * Get the global default model
  */
 export function getGlobalDefault() {
-  return modelsConfig.default || 'gpt-5.2';
+  return modelsConfig.default || 'chatgpt-5.4-thinking';
 }
 
 /**
@@ -159,15 +159,21 @@ export function listChatModels() {
   const globalDefault = modelsConfig.default;
   
   for (const [provider, config] of Object.entries(modelsConfig.chat || {})) {
-    const capabilities = config.capabilities || {};
+    const baseCapabilities = config.capabilities || {};
+    const modelCapabilities = config.modelCapabilities || {};
     
     for (const [name, apiId] of Object.entries(config.models || {})) {
+      const mergedCapabilities = {
+        ...baseCapabilities,
+        ...(modelCapabilities[name] || {})
+      };
+
       models.push({
         id: name,
         apiId: apiId,
         provider,
         isDefault: name === globalDefault,
-        capabilities: capabilities
+        capabilities: mergedCapabilities
       });
     }
   }

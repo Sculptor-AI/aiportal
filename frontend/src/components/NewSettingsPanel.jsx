@@ -4,6 +4,7 @@ import TetrisGame from './TetrisGame';
 import { useAuth } from '../contexts/AuthContext';
 import { accentOptions, getAccentSwatch } from '../styles/accentColors';
 import { useTranslation } from '../contexts/TranslationContext';
+import { setBackendMode } from '../services/backendConfig';
 
 const SettingsOverlay = styled.div`
   position: fixed;
@@ -1196,6 +1197,7 @@ const SettingDescription = styled.p`
   // Add a helper function to determine if in dark mode
   const isDarkMode = () => {
     return localSettings.theme === 'dark' || 
+           localSettings.theme === 'night' ||
            localSettings.theme === 'oled' || 
            localSettings.theme === 'bisexual' ||
     localSettings.theme === 'ocean' ||
@@ -1223,6 +1225,7 @@ const SettingDescription = styled.p`
   const accentValue = localSettings.accentColor || 'theme';
   const selectedAccentLabel = accentOptions.find(option => option.value === accentValue)?.label || 'Same as theme';
   const customThemeValues = localSettings.customTheme || defaultCustomTheme;
+  const useRealBackend = localSettings.useRealBackend !== false;
 
   const getThemeLabel = (value) => {
     const translated = t(`settings.themeOptions.${value}`);
@@ -1255,6 +1258,11 @@ const SettingDescription = styled.p`
     }
   };
 
+  const handleBackendModeChange = (useRealBackend) => {
+    handleChange('useRealBackend', useRealBackend);
+    setBackendMode(useRealBackend);
+  };
+
   const handleSave = () => {
     updateSettings(localSettings);
     closeModal();
@@ -1277,6 +1285,7 @@ const SettingDescription = styled.p`
   const themeOptionValues = [
     'light',
     'dark',
+    'night',
     'oled',
     'ocean',
     'forest',
@@ -1859,6 +1868,24 @@ const SettingDescription = styled.p`
             <div>
               <SectionTitle>{t('settings.sections.developer')}</SectionTitle>
               
+              <SettingGroup>
+                <SettingLabel>Backend source</SettingLabel>
+                <SettingDescription>
+                  Toggle between the hosted API (`https://api.sculptorai.org`) and the built-in local proxy.
+                </SettingDescription>
+                <ToggleWrapper>
+                  <Toggle checked={useRealBackend}>
+                    <input
+                      type="checkbox"
+                      checked={useRealBackend}
+                      onChange={() => handleBackendModeChange(!useRealBackend)}
+                    />
+                    <Slider checked={useRealBackend} />
+                  </Toggle>
+                  {useRealBackend ? 'Use real backend' : 'Use local proxy'}
+                </ToggleWrapper>
+              </SettingGroup>
+
               <SettingGroup>
                 <SettingLabel>{t('settings.developer.onboarding.label')}</SettingLabel>
                 <SettingDescription>

@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import GeminiLiveService from '../services/geminiLiveService';
+import {
+  BrowserSpeechRecognitionSession,
+  detectSpeechRecognitionSupport,
+  getSpeechInputLabel
+} from '../services/browserSpeechRecognition';
+import { GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID } from '../config/modelConfig';
 
 /**
  * React hook for Gemini Live WebSocket API
@@ -15,16 +21,21 @@ const useGeminiLive = (options = {}) => {
   const [status, setStatus] = useState('disconnected');
   const [inputTranscription, setInputTranscription] = useState('');
   const [outputTranscription, setOutputTranscription] = useState('');
+  const [inputMode, setInputMode] = useState('gemini');
 
   const serviceRef = useRef(null);
+  const speechRecognitionRef = useRef(null);
   const {
-    model = 'gemini-2.5-flash-preview-native-audio',
+    model = GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID,
     responseModality = 'audio',
     voiceName = 'Aoede',
     systemInstruction = null,
     inputTranscriptionEnabled = true,
     outputTranscriptionEnabled = true,
-    autoConnect = false
+    autoConnect = false,
+    language = 'en-US',
+    preferNativeSpeechInput = true,
+    outputAudioMode = 'gemini'
   } = options;
 
   // Initialize service
@@ -39,13 +50,7 @@ const useGeminiLive = (options = {}) => {
       });
 
       serviceRef.current.onResponse((responseText) => {
-        setResponse(prev => {
-          // Append or replace based on whether it's streaming
-          if (responseText && responseText.length > 0) {
-            return responseText;
-          }
-          return prev;
-        });
+        setResponse(responseText || '');
         setOutputTranscription(responseText || '');
       });
 
@@ -100,11 +105,40 @@ const useGeminiLive = (options = {}) => {
 
     // Cleanup on unmount
     return () => {
+      speechRecognitionRef.current?.abort();
       if (serviceRef.current) {
         serviceRef.current.disconnect();
       }
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const detectInputMode = async () => {
+      if (!preferNativeSpeechInput) {
+        setInputMode('gemini');
+        return;
+      }
+
+      try {
+        const support = await detectSpeechRecognitionSupport(language);
+        if (!cancelled) {
+          setInputMode(support.supported ? support.mode : 'gemini');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setInputMode('gemini');
+        }
+      }
+    };
+
+    detectInputMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [language, preferNativeSpeechInput]);
 
   // Connect to Gemini Live API (via backend proxy)
   const connect = useCallback(async () => {
@@ -131,7 +165,7 @@ const useGeminiLive = (options = {}) => {
   }, [isConnected]);
 
   // Start session
-  const startSession = useCallback(async () => {
+  const startSession = useCallback(async (overrides = {}) => {
     if (!serviceRef.current) return;
 
     // Connect first if not connected
@@ -156,12 +190,13 @@ const useGeminiLive = (options = {}) => {
     try {
       console.log('Starting new session...');
       const sessionOptions = {
-        model,
-        responseModality,
-        voiceName,
-        systemInstruction,
-        inputTranscription: inputTranscriptionEnabled,
-        outputTranscription: outputTranscriptionEnabled
+        model: overrides.model ?? model,
+        responseModality: overrides.responseModality ?? responseModality,
+        voiceName: overrides.voiceName ?? voiceName,
+        systemInstruction: overrides.systemInstruction ?? systemInstruction,
+        inputTranscription: overrides.inputTranscription ?? inputTranscriptionEnabled,
+        outputTranscription: overrides.outputTranscription ?? outputTranscriptionEnabled,
+        outputAudioMode: overrides.outputAudioMode ?? outputAudioMode
       };
 
       await serviceRef.current.startSession(sessionOptions);
@@ -175,15 +210,15 @@ const useGeminiLive = (options = {}) => {
       setError(errorMessage);
       console.error('Failed to start session:', err);
     }
-  }, [model, responseModality, voiceName, systemInstruction, inputTranscriptionEnabled, outputTranscriptionEnabled]);
+  }, [model, responseModality, voiceName, systemInstruction, inputTranscriptionEnabled, outputTranscriptionEnabled, outputAudioMode]);
 
   // End session
   const endSession = useCallback(async () => {
-    if (serviceRef.current && sessionActive) {
+    if (serviceRef.current && serviceRef.current.isSessionActive()) {
       await serviceRef.current.endSession();
       setSessionActive(false);
     }
-  }, [sessionActive]);
+  }, []);
 
   // Start recording
   const startRecording = useCallback(async () => {
@@ -201,7 +236,64 @@ const useGeminiLive = (options = {}) => {
     }
 
     try {
+      if (preferNativeSpeechInput) {
+        const support = await detectSpeechRecognitionSupport(language);
+
+        if (support.supported) {
+          const recognitionSession = new BrowserSpeechRecognitionSession({
+            language,
+            onStart: ({ mode }) => {
+              setInputMode(mode);
+              setStatus('recording_started');
+              setIsRecording(true);
+              setError(null);
+              setTranscription('');
+              setInputTranscription('');
+            },
+            onTranscription: ({ transcript, mode }) => {
+              setInputMode(mode);
+              setTranscription(transcript || '');
+              setInputTranscription(transcript || '');
+            },
+            onEnd: ({ transcript, mode, error: recognitionError }) => {
+              speechRecognitionRef.current = null;
+              setInputMode(mode || 'browser');
+              setIsRecording(false);
+
+              if (recognitionError) {
+                if (recognitionError.code !== 'no-speech') {
+                  setError(recognitionError.message);
+                } else {
+                  setStatus('ready');
+                }
+                return;
+              }
+
+              if (transcript) {
+                setStatus('processing');
+                setTranscription(transcript);
+                setInputTranscription(transcript);
+                serviceRef.current?.sendText(transcript);
+                setError(null);
+              } else {
+                setStatus('ready');
+              }
+            },
+            onError: (recognitionError) => {
+              if (recognitionError?.code !== 'no-speech') {
+                setError(recognitionError.message);
+              }
+            }
+          });
+
+          speechRecognitionRef.current = recognitionSession;
+          await recognitionSession.start();
+          return;
+        }
+      }
+
       await serviceRef.current.startRecording();
+      setInputMode('gemini');
       setError(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message :
@@ -211,10 +303,15 @@ const useGeminiLive = (options = {}) => {
       setError(errorMessage);
       console.error('Failed to start recording:', err);
     }
-  }, [sessionActive, isRecording]);
+  }, [sessionActive, isRecording, language, preferNativeSpeechInput]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
+    if (speechRecognitionRef.current?.isActive) {
+      speechRecognitionRef.current.stop();
+      return;
+    }
+
     if (serviceRef.current && isRecording) {
       serviceRef.current.stopRecording();
     }
@@ -232,6 +329,9 @@ const useGeminiLive = (options = {}) => {
   // Send text message
   const sendText = useCallback((text) => {
     if (serviceRef.current && sessionActive) {
+      setResponse('');
+      setOutputTranscription('');
+      setStatus('processing');
       serviceRef.current.sendText(text);
       setError(null);
     } else {
@@ -275,6 +375,9 @@ const useGeminiLive = (options = {}) => {
 
   // Disconnect
   const disconnect = useCallback(() => {
+    speechRecognitionRef.current?.abort();
+    speechRecognitionRef.current = null;
+
     if (serviceRef.current) {
       serviceRef.current.disconnect();
       setIsConnected(false);
@@ -307,6 +410,8 @@ const useGeminiLive = (options = {}) => {
     status,
     inputTranscription,
     outputTranscription,
+    inputMode,
+    inputModeLabel: getSpeechInputLabel(inputMode),
 
     // Actions
     connect,

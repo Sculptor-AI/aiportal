@@ -12,12 +12,112 @@
  * - URL-based media fetching
  * - System instructions
  * - Safety settings
- * - Video generation (Veo)
+ * - Legacy Google video generation
  */
 
 import { resolveModel, getImageModelFallbacks } from '../config/index.js';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+const GEMINI_THINKING_LEVELS_BY_MODEL = {
+  'gemini-3.1-pro': ['low', 'medium', 'high'],
+  'gemini-3.1-pro-preview': ['low', 'medium', 'high'],
+  'gemini-3-flash': ['minimal', 'low', 'medium', 'high'],
+  'gemini-3-flash-preview': ['minimal', 'low', 'medium', 'high'],
+  'gemini-3.1-flash-lite': ['minimal', 'low', 'medium', 'high'],
+  'gemini-3.1-flash-lite-preview': ['minimal', 'low', 'medium', 'high']
+};
+const GEMINI_DEFAULT_THINKING_LEVEL_BY_MODEL = {
+  'gemini-3.1-pro': 'high',
+  'gemini-3.1-pro-preview': 'high',
+  'gemini-3-flash': 'high',
+  'gemini-3-flash-preview': 'high',
+  'gemini-3.1-flash-lite': 'minimal',
+  'gemini-3.1-flash-lite-preview': 'minimal'
+};
+
+function normalizeReasoningEffort(reasoningEffort) {
+  if (typeof reasoningEffort !== 'string') return null;
+  const normalized = reasoningEffort.toLowerCase();
+  if (['minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(normalized)) {
+    return normalized;
+  }
+  return null;
+}
+
+function mapReasoningEffortToGeminiThinkingLevel(reasoningEffort) {
+  switch (reasoningEffort) {
+    case 'minimal':
+      return 'minimal';
+    case 'low':
+      return 'low';
+    case 'medium':
+      return 'medium';
+    case 'high':
+    case 'xhigh':
+    case 'max':
+      return 'high';
+    default:
+      return null;
+  }
+}
+
+function getSupportedGeminiThinkingLevels(modelId) {
+  return GEMINI_THINKING_LEVELS_BY_MODEL[modelId] || null;
+}
+
+function getDefaultGeminiThinkingLevel(modelId) {
+  const modelDefault = GEMINI_DEFAULT_THINKING_LEVEL_BY_MODEL[modelId];
+  if (modelDefault) return modelDefault;
+
+  const supportedLevels = getSupportedGeminiThinkingLevels(modelId);
+  if (!supportedLevels || supportedLevels.length === 0) return null;
+
+  if (supportedLevels.includes('high')) return 'high';
+  if (supportedLevels.includes('medium')) return 'medium';
+  if (supportedLevels.includes('low')) return 'low';
+  return supportedLevels[0];
+}
+
+function resolveGeminiThinkingLevel(modelId, reasoningEffort) {
+  const mappedLevel = mapReasoningEffortToGeminiThinkingLevel(reasoningEffort);
+  if (!mappedLevel) return null;
+
+  const supportedLevels = getSupportedGeminiThinkingLevels(modelId);
+  if (!supportedLevels || supportedLevels.length === 0) {
+    return mappedLevel;
+  }
+
+  if (supportedLevels.includes(mappedLevel)) {
+    return mappedLevel;
+  }
+
+  if (mappedLevel === 'medium' && supportedLevels.includes('high')) return 'high';
+  if (mappedLevel === 'minimal' && supportedLevels.includes('low')) return 'low';
+  if (mappedLevel === 'high' && supportedLevels.includes('medium')) return 'medium';
+  if (supportedLevels.includes('medium')) return 'medium';
+  if (supportedLevels.includes('high')) return 'high';
+  if (supportedLevels.includes('low')) return 'low';
+  if (supportedLevels.includes('minimal')) return 'minimal';
+  return supportedLevels[0] || null;
+}
+
+function mapReasoningEffortToGeminiBudget(reasoningEffort) {
+  switch (reasoningEffort) {
+    case 'minimal':
+      return 1024;
+    case 'low':
+      return 2048;
+    case 'medium':
+      return 8192;
+    case 'high':
+      return 16384;
+    case 'xhigh':
+    case 'max':
+      return 24576;
+    default:
+      return null;
+  }
+}
 
 /**
  * Convert OpenAI-style message content to Gemini parts
@@ -95,7 +195,11 @@ function convertToolsToGemini(tools) {
 /**
  * Build Gemini request body with all supported features
  */
-function buildGeminiBody(body) {
+function buildGeminiBody(body, targetModel = '') {
+  const modelId = targetModel || body.model?.replace('google/', '') || '';
+  const normalizedReasoningEffort = normalizeReasoningEffort(body.reasoning_effort);
+  const supportsThinkingLevels = Boolean(getSupportedGeminiThinkingLevels(modelId));
+
   // Convert messages to Gemini format
   const contents = [];
   let systemInstruction = null;
@@ -219,11 +323,32 @@ function buildGeminiBody(body) {
     }
   }
 
-  // Thinking / reasoning budget
-  if (body.thinking || body.reasoning) {
-    geminiBody.generationConfig.thinkingConfig = {
-      thinkingBudget: body.thinking_budget || body.reasoning_budget || 8192
+  // Thinking / reasoning controls
+  if (body.thinking || body.reasoning || normalizedReasoningEffort) {
+    const thinkingConfig = {
+      // Required to return reasoning previews in response parts.
+      includeThoughts: true
     };
+
+    if (normalizedReasoningEffort) {
+      if (supportsThinkingLevels) {
+        thinkingConfig.thinkingLevel = resolveGeminiThinkingLevel(modelId, normalizedReasoningEffort) || 'high';
+      } else {
+        thinkingConfig.thinkingBudget =
+          body.thinking_budget ||
+          body.reasoning_budget ||
+          mapReasoningEffortToGeminiBudget(normalizedReasoningEffort) ||
+          8192;
+      }
+    } else {
+      if (supportsThinkingLevels) {
+        thinkingConfig.thinkingLevel = getDefaultGeminiThinkingLevel(modelId) || 'high';
+      } else {
+        thinkingConfig.thinkingBudget = body.thinking_budget || body.reasoning_budget || 8192;
+      }
+    }
+
+    geminiBody.generationConfig.thinkingConfig = thinkingConfig;
   }
 
   // Safety settings (optional relaxation)
@@ -397,15 +522,13 @@ function createGeminiStreamTransformer(encoder) {
  * Handle streaming chat completion via Gemini API
  */
 export async function handleGeminiChat(c, body, apiKey) {
-  const modelId = body.model?.replace('google/', '') || 'gemini-3-pro';
+  const modelId = body.model?.replace('google/', '') || 'gemini-3.1-pro';
   const targetModel = resolveModel('gemini', modelId);
 
   console.log(`Gemini request: ${body.model} -> ${targetModel}`);
 
-  const geminiBody = buildGeminiBody(body);
+  const geminiBody = buildGeminiBody(body, targetModel);
   const url = `${GEMINI_BASE_URL}/models/${targetModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
-
-  console.log('Gemini request body:', JSON.stringify(geminiBody, null, 2));
 
   try {
     const response = await fetch(url, {
@@ -416,8 +539,8 @@ export async function handleGeminiChat(c, body, apiKey) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API Error:', errorText);
-      return c.json({ error: `Gemini API Error: ${errorText}` }, response.status);
+      console.error('Gemini API Error:', response.status, errorText.slice(0, 500));
+      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
     // Transform Gemini stream to OpenAI-compatible SSE
@@ -434,7 +557,7 @@ export async function handleGeminiChat(c, body, apiKey) {
 
   } catch (error) {
     console.error('Gemini handler error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 }
 
@@ -442,10 +565,10 @@ export async function handleGeminiChat(c, body, apiKey) {
  * Handle non-streaming chat completion via Gemini API
  */
 export async function handleGeminiChatNonStreaming(c, body, apiKey) {
-  const modelId = body.model?.replace('google/', '') || 'gemini-3-pro';
+  const modelId = body.model?.replace('google/', '') || 'gemini-3.1-pro';
   const targetModel = resolveModel('gemini', modelId);
 
-  const geminiBody = buildGeminiBody(body);
+  const geminiBody = buildGeminiBody(body, targetModel);
   const url = `${GEMINI_BASE_URL}/models/${targetModel}:generateContent?key=${apiKey}`;
 
   try {
@@ -457,7 +580,8 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      return c.json({ error: `Gemini API Error: ${errorText}` }, response.status);
+      console.error('Gemini non-stream API Error:', response.status, errorText.slice(0, 500));
+      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
     const result = await response.json();
@@ -487,7 +611,7 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
 
   } catch (error) {
     console.error('Gemini handler error:', error);
-    return c.json({ error: error.message }, 500);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 }
 
@@ -553,7 +677,7 @@ function buildGeminiImageContents(prompt, history = []) {
  */
 async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
   const hasHistory = options.history && options.history.length > 0;
-  console.log(`[Gemini Image] Generating with model: ${model}, history: ${hasHistory ? options.history.length + ' items' : 'none'}`);
+  console.log(`[Gemini Image] Generating with model: ${model}, history: ${hasHistory ? `${options.history.length} items` : 'none'}`);
 
   // Build contents with conversation history for multi-turn editing
   const contents = buildGeminiImageContents(prompt, options.history);
@@ -577,7 +701,7 @@ async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
 
     if (response.ok) {
       const result = await response.json();
-      console.log(`[Gemini Image] Response received`);
+      console.log('[Gemini Image] Response received');
 
       // Extract images from the response
       const images = [];
@@ -607,12 +731,12 @@ async function generateWithGeminiNative(prompt, apiKey, model, options = {}) {
       }
     } else {
       const errorText = await response.text();
-      console.log(`[Gemini Image] Model ${model} returned status: ${response.status}`, errorText);
-      return { success: false, error: `Status ${response.status}: ${errorText}` };
+      console.log(`[Gemini Image] Model ${model} returned status: ${response.status}`, errorText.slice(0, 300));
+      return { success: false, error: `Image generation failed (status ${response.status})` };
     }
   } catch (e) {
     console.error(`[Gemini Image] Model ${model} failed:`, e.message);
-    return { success: false, error: e.message };
+    return { success: false, error: 'Image generation failed' };
   }
 
   return { success: false, error: 'Unknown error' };
@@ -661,11 +785,12 @@ async function generateWithImagen(prompt, apiKey, model, options = {}) {
     } else {
       console.log(`[Imagen] Model ${model} returned status: ${response.status}`);
       const errorText = await response.text();
-      return { success: false, error: `Status ${response.status}: ${errorText}` };
+      console.log('[Imagen] Error payload:', errorText.slice(0, 300));
+      return { success: false, error: `Image generation failed (status ${response.status})` };
     }
   } catch (e) {
     console.error(`[Imagen] Model ${model} failed:`, e.message);
-    return { success: false, error: e.message };
+    return { success: false, error: 'Image generation failed' };
   }
 
   return { success: false, error: 'Unknown error' };
@@ -710,18 +835,16 @@ export async function generateImageWithImagen(prompt, apiKey, options = {}) {
 }
 
 /**
- * Generate video using Veo 2 (Gemini API)
+ * Generate video using the legacy Google video endpoint (Gemini API)
  * 
  * Uses the long-running predictLongRunning endpoint
- * Note: Veo 2 requires specific API access and may not be available to all users
+ * Note: This endpoint requires specific Google API access and may not be available to all users.
  */
 export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
-  // Use the specific model ID for Veo 2
+  // Preserve the original model identifier for compatibility with legacy Google video jobs.
   const model = 'veo-2.0-generate-001';
   
-  console.log(`[Veo Video] Generating with model: ${model}`);
-  console.log(`[Veo Video] Prompt: "${prompt.substring(0, 100)}..."`);
-  console.log(`[Veo Video] Options:`, options);
+  console.log(`[Google Video Legacy] Generating with model: ${model}`);
 
   const requestBody = {
     instances: [{ 
@@ -733,11 +856,9 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
     }
   };
 
-  console.log(`[Veo Video] Request body:`, JSON.stringify(requestBody, null, 2));
-
   try {
     const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
-    console.log(`[Veo Video] URL: ${url.replace(apiKey, 'API_KEY_HIDDEN')}`);
+    console.log(`[Google Video Legacy] URL: ${url.replace(apiKey, 'API_KEY_HIDDEN')}`);
     
     const response = await fetch(url, {
       method: 'POST',
@@ -748,15 +869,15 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
     const result = await response.json();
     
     if (!response.ok) {
-      console.error(`[Veo Video] API Error (${response.status}):`, JSON.stringify(result, null, 2));
+      console.error(`[Google Video Legacy] API Error (${response.status})`);
       
       // Provide more helpful error messages
       let errorMessage = result.error?.message || `API returned status ${response.status}`;
       
       if (response.status === 403) {
-        errorMessage = 'Access denied. Veo 2 video generation requires specific API access. Please check your API key permissions.';
+        errorMessage = 'Access denied. This legacy Google video endpoint requires specific API access. Please check your API key permissions.';
       } else if (response.status === 404) {
-        errorMessage = 'Veo 2 model not found. This model may not be available in your region or requires special access.';
+        errorMessage = 'Legacy Google video model not found. This model may not be available in your region or may require special access.';
       } else if (response.status === 429) {
         errorMessage = 'Rate limit exceeded. Please wait a moment and try again.';
       }
@@ -769,30 +890,30 @@ export async function generateVideoWithVeo(prompt, apiKey, options = {}) {
     
     // Returns an operation name for polling
     if (result.name) {
-      console.log(`[Veo Video] Operation started successfully: ${result.name}`);
+      console.log(`[Google Video Legacy] Operation started successfully: ${result.name}`);
       return {
         success: true,
         operationName: result.name,
         model
       };
     } else {
-      console.error(`[Veo Video] Unexpected response structure:`, JSON.stringify(result, null, 2));
+      console.error('[Google Video Legacy] Unexpected response structure');
       return { success: false, error: 'Unexpected API response - no operation name returned' };
     }
   } catch (e) {
-    console.error(`[Veo Video] Exception:`, e);
+    console.error(`[Google Video Legacy] Exception:`, e);
     return { success: false, error: `Network error: ${e.message}` };
   }
 }
 
 /**
- * Check status of a long-running operation (Veo video generation)
+ * Check status of a long-running legacy Google video operation.
  */
 export async function checkOperationStatus(operationName, apiKey) {
   try {
     // Operation name usually looks like "operations/..."
     const url = `${GEMINI_BASE_URL}/${operationName}?key=${apiKey}`;
-    console.log(`[Veo Status] Checking: ${operationName}`);
+    console.log(`[Google Video Legacy Status] Checking: ${operationName}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -802,19 +923,19 @@ export async function checkOperationStatus(operationName, apiKey) {
     const result = await response.json();
     
     if (!response.ok) {
-      console.error(`[Veo Status] Error (${response.status}):`, JSON.stringify(result, null, 2));
+      console.error(`[Google Video Legacy Status] Error (${response.status})`);
       return { 
         success: false, 
         error: result.error?.message || `Status ${response.status}: Unknown error` 
       };
     }
 
-    console.log(`[Veo Status] Response done=${result.done}:`, JSON.stringify(result, null, 2).substring(0, 500));
+    console.log(`[Google Video Legacy Status] Response done=${result.done}`);
 
     // Check if done
     if (result.done) {
       if (result.error) {
-        console.error(`[Veo Status] Operation failed:`, result.error);
+        console.error(`[Google Video Legacy Status] Operation failed:`, result.error);
         return { success: false, done: true, error: result.error.message || 'Video generation failed' };
       }
       
@@ -839,9 +960,9 @@ export async function checkOperationStatus(operationName, apiKey) {
       }
       
       if (!videoUri) {
-        console.log('[Veo Status] Completed but could not find video URI. Full response:', JSON.stringify(result, null, 2));
+        console.log('[Google Video Legacy Status] Completed but could not find video URI.');
       } else {
-        console.log(`[Veo Status] Video ready at: ${videoUri}`);
+        console.log(`[Google Video Legacy Status] Video ready at: ${videoUri}`);
       }
       
       return {
@@ -859,7 +980,7 @@ export async function checkOperationStatus(operationName, apiKey) {
     };
     
   } catch (e) {
-    console.error(`[Veo Status] Exception:`, e);
+    console.error(`[Google Video Legacy Status] Exception:`, e);
     return { success: false, error: `Network error: ${e.message}` };
   }
 }

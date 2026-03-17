@@ -9,6 +9,8 @@ import {
   listChatModels, 
   listImageModels
 } from '../config/index.js';
+import getDeepResearchConfig from '../config/deepResearch.js';
+import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const health = new Hono();
 
@@ -44,7 +46,7 @@ health.get('/models', (c) => {
  * Get raw models configuration
  * Useful for debugging and frontend model selection
  */
-health.get('/models/config', (c) => {
+health.get('/models/config', requireAuth, requireAdmin, (c) => {
   return c.json(getModelsConfig());
 });
 
@@ -52,6 +54,15 @@ health.get('/models/config', (c) => {
  * List all supported capabilities
  */
 health.get('/capabilities', (c) => {
+  const deepResearch = getDeepResearchConfig(c.env || {});
+  const chatModels = listChatModels();
+  const openAIWebSearchModels = chatModels
+    .filter((model) => model.provider === 'openai' && model.capabilities?.web_search)
+    .map((model) => model.id);
+  const reasoningEffortModels = chatModels
+    .filter((model) => model.capabilities?.reasoning_effort)
+    .map((model) => model.id);
+
   return c.json({
     capabilities: {
       // Chat features
@@ -81,8 +92,8 @@ health.get('/capabilities', (c) => {
       // Web search
       web_search: {
         google: ['gemini'],
-        anthropic: ['claude-sonnet-4.5'],
-        openai: ['gpt-5.2', 'gpt-4o'],
+        anthropic: ['claude-sonnet-4.6'],
+        openai: openAIWebSearchModels,
         openrouter: true
       },
 
@@ -94,7 +105,7 @@ health.get('/capabilities', (c) => {
       // Reasoning/Thinking
       reasoning: {
         display_thinking: ['gemini', 'anthropic'],
-        reasoning_effort: ['openai']
+        reasoning_effort: reasoningEffortModels
       },
 
       // Structured outputs
@@ -111,7 +122,17 @@ health.get('/capabilities', (c) => {
       // Provider-specific features
       computer_use: ['anthropic'],
       citations: ['anthropic'],
-      url_context: ['gemini']
+      url_context: ['gemini'],
+
+      // Deep research orchestration
+      deep_research: {
+        enabled: deepResearch.enabled,
+        planner_model: deepResearch.plannerModel,
+        researcher_model: deepResearch.researcherModel,
+        writer_model: deepResearch.writerModel,
+        default_agents: deepResearch.defaultMaxAgents,
+        max_agents: deepResearch.maxAgents
+      }
     }
   });
 });
@@ -119,7 +140,7 @@ health.get('/capabilities', (c) => {
 /**
  * Get API key status (without exposing keys)
  */
-health.get('/status', (c) => {
+health.get('/status', requireAuth, requireAdmin, (c) => {
   const env = c.env;
 
   return c.json({

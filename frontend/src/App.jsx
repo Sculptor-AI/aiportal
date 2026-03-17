@@ -6,11 +6,6 @@ import SettingsModal from './components/SettingsModal';
 import LoginModal from './components/LoginModal';
 import ProfileModal from './components/ProfileModal';
 import MobileApp from './components/mobile/MobileApp';
-import WhiteboardModal from './components/WhiteboardModal';
-import EquationEditorModal from './components/EquationEditorModal';
-import GraphingModal from './components/GraphingModal';
-import FlowchartModal from './components/FlowchartModal';
-import Sandbox3DModal from './components/Sandbox3DModal';
 import OnboardingFlow from './components/OnboardingFlow';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
@@ -34,10 +29,29 @@ import ProjectDetailPage from './pages/ProjectDetailPage';
 import WorkspacePage from './pages/WorkspacePage';
 import ForcedLoginScreen from './components/ForcedLoginScreen';
 import MobileForcedLoginScreen from './components/mobile/MobileForcedLoginScreen';
-import DinosaurRunGame from './components/DinosaurRunGame';
+import OAuthCallbackPage from './components/OAuthCallbackPage';
+
 import ConfettiExplosion from './components/ConfettiExplosion';
 import MatrixRain from './components/MatrixRain';
 import useEasterEggs from './hooks/useEasterEggs';
+import {
+  DEFAULT_CUSTOM_BASE_MODEL_ID,
+  getPreferredModelId
+} from './config/modelConfig';
+import { setBackendMode, shouldUseRealBackend } from './services/backendConfig';
+import {
+  readLocalStorageItem,
+  readLocalStorageJSON,
+  removeLocalStorageItem,
+  writeLocalStorageItem
+} from './utils/storage';
+
+const WhiteboardModal = React.lazy(() => import('./components/WhiteboardModal'));
+const EquationEditorModal = React.lazy(() => import('./components/EquationEditorModal'));
+const GraphingModal = React.lazy(() => import('./components/GraphingModal'));
+const FlowchartModal = React.lazy(() => import('./components/FlowchartModal'));
+const Sandbox3DModal = React.lazy(() => import('./components/Sandbox3DModal'));
+const DinosaurRunGame = React.lazy(() => import('./components/DinosaurRunGame'));
 
 const AppContainer = styled.div`
   display: flex;
@@ -65,7 +79,7 @@ const MainContentArea = styled.div`
 const FloatingMenuButton = styled.button`
   position: absolute;
   left: 20px;
-  top: 9px; // Adjusted to vertically align with chat title
+  top: 12px; // Align with the model selector row when the sidebar is collapsed
   z-index: 100;
   background: transparent;
   border: none;
@@ -91,91 +105,93 @@ const FloatingMenuButton = styled.button`
 // Main Greeting Component
 const MainGreeting = styled.div`
   position: fixed;
-  top: ${props => props.$toolbarOpen ? '25%' : '28%'}; /* Moved up from 32%/35% */
+  top: ${props => props.$toolbarOpen ? '25%' : '28%'};
   left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160; // Increased from 140px to 160px to account for sidebar's 20px left margin
+    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160;
     return `calc(50% + ${sidebarOffset}px)`;
   }};
   transform: translateX(-50%);
-  max-width: 800px; /* Keep a max width */
-  width: 90%; /* Use percentage width for better flexibility */
+  max-width: 800px;
+  width: 90%;
   text-align: center;
   z-index: 102;
   pointer-events: none;
-  padding: 0 20px; /* Horizontal padding */
-  box-sizing: border-box; /* Include padding in width calculation */
-  transition: all 0.3s ease-out; /* Transition all properties including left */
+  padding: 0 20px;
+  box-sizing: border-box;
+  transition: all 0.3s ease-out;
   
-  /* Flexbox container for logo and text */
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px; /* Increased gap for bigger look */
+  gap: 12px;
   
   .logo {
-    width: 64px; /* Increased from 48px */
-    height: 64px; /* Increased from 48px */
-    flex-shrink: 0; /* Prevent logo from shrinking */
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
     pointer-events: auto;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    opacity: 0.7;
+    transition: opacity 0.2s ease, transform 0.2s ease;
     
     &:hover {
+      opacity: 0.9;
       transform: scale(1.05);
     }
   }
   
   h1 {
-    font-size: min(3.2rem, 8vw); /* Increased from 2.2rem, 6vw */
-    font-weight: 500;
+    font-size: min(2.4rem, 7vw);
+    font-weight: 550;
     color: ${props => props.theme.text};
     margin: 0;
     padding: 0;
-    line-height: 1.2; 
-    word-wrap: break-word; /* Ensure long words break if needed */
-    overflow-wrap: break-word; /* More modern property for word breaking */
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
     pointer-events: auto;
     cursor: pointer;
-    transition: transform 0.2s ease;
+    transition: opacity 0.2s ease;
+    opacity: 0.88;
     
     &:hover {
-      transform: scale(1.02);
+      opacity: 1;
     }
   }
 
-  /* Adjustments for medium to small screens */
   @media (max-width: 768px) {
-    left: 50% !important; /* Always center on mobile */
-    top: ${props => props.$toolbarOpen ? '22%' : '25%'}; /* Moved up from 27%/30% */
-    max-width: 90%; /* Reduce max-width on smaller screens */
+    left: 50% !important;
+    top: ${props => props.$toolbarOpen ? '22%' : '25%'};
+    max-width: 90%;
     padding: 0 15px; 
-    gap: 16px; /* Increased gap on mobile */
+    gap: 10px;
     
     .logo {
-      width: 56px; /* Increased from 40px */
-      height: 56px; /* Increased from 40px */
+      width: 38px;
+      height: 38px;
     }
     
     h1 {
-      font-size: min(2.8rem, 7vw); /* Increased from 2rem, 5.5vw */
+      font-size: min(2rem, 6vw);
     }
   }
 
-  /* Adjustments for very small screens */
   @media (max-width: 480px) {
-    left: 50% !important; /* Always center on mobile */
-    top: ${props => props.$toolbarOpen ? '22%' : '25%'}; /* Moved up from 27%/30% */
-    max-width: 95%; /* Allow slightly more width on very small screens */
+    left: 50% !important;
+    top: ${props => props.$toolbarOpen ? '22%' : '25%'};
+    max-width: 95%;
     padding: 0 10px; 
-    gap: 14px; /* Increased gap on very small screens */
+    gap: 8px;
     
     .logo {
-      width: 48px; /* Increased from 36px */
-      height: 48px; /* Increased from 36px */
+      width: 34px;
+      height: 34px;
     }
     
     h1 {
-      font-size: min(2.2rem, 6vw); /* Increased from 1.7rem, 5vw */
+      font-size: min(1.75rem, 5.5vw);
     }
   }
 `;
@@ -238,18 +254,37 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     if (user?.settings?.language) {
       return user.settings.language;
     }
-    try {
-      const savedSettings = localStorage.getItem('settings');
-      if (savedSettings) {
-        const parsedSettings = JSON.parse(savedSettings);
-        if (parsedSettings.language) {
-          return parsedSettings.language;
-        }
-      }
-    } catch (error) {
-      console.error('Error reading saved language preference:', error);
+
+    const savedSettings = readLocalStorageJSON('settings');
+    if (savedSettings?.language) {
+      return savedSettings.language;
     }
+
     return 'en-US';
+  };
+
+  const getEnabledCustomModels = () => {
+    const customModels = readLocalStorageJSON('customModels', []);
+
+    if (!Array.isArray(customModels)) {
+      return [];
+    }
+
+    return customModels
+      .filter(model => model.enabled)
+      .map(model => ({
+        id: `custom-${model.id}`,
+        name: model.name,
+        description: model.description,
+        isCustomModel: true,
+        systemPrompt: model.systemPrompt,
+        avatar: model.avatar,
+        avatarImage: model.avatarImage || null,
+        avatarColor: model.avatarColor || null,
+        provider: 'Custom Model',
+        isBackendModel: false,
+        baseModel: model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID
+      }));
   };
 
   // ALL HOOKS MUST BE DECLARED BEFORE ANY CONDITIONAL RETURNS
@@ -296,62 +331,37 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
   // Project state
   const [projects, setProjects] = useState(() => {
-    try {
-      const savedProjects = localStorage.getItem('projects');
-      return savedProjects ? JSON.parse(savedProjects) : [];
-    } catch (err) {
-      console.error("Error loading projects from localStorage:", err);
-      return [];
-    }
+    return readLocalStorageJSON('projects', []);
   });
 
   const [activeProject, setActiveProject] = useState(() => {
-    const savedActiveProject = localStorage.getItem('activeProject');
-    return savedActiveProject ? JSON.parse(savedActiveProject) : null;
+    return readLocalStorageJSON('activeProject', null);
   });
 
-  // Models will be loaded exclusively from the backend.
+  const [pendingMessage, setPendingMessage] = useState(null);
+
   const [availableModels, setAvailableModels] = useState([]);
 
   const [selectedModel, setSelectedModel] = useState(() => {
-    const savedModel = localStorage.getItem('selectedModel');
-    return savedModel || null; // Will be set when models are loaded
+    return readLocalStorageItem('selectedModel') || null;
   });
 
   // Fetch models from backend (now the ONLY source) and refresh periodically
   useEffect(() => {
+    removeLocalStorageItem('cachedModels');
+
     const getBackendModels = async () => {
+      const enabledCustomModels = getEnabledCustomModels();
+
       try {
         console.log('Fetching models from backend...');
         const backendModels = await fetchModelsFromBackend();
 
-        // Get enabled custom models from localStorage
-        const customModelsJson = localStorage.getItem('customModels');
-        let enabledCustomModels = [];
-        if (customModelsJson) {
-          try {
-            const customModels = JSON.parse(customModelsJson);
-            // Filter only enabled custom models and format them
-            enabledCustomModels = customModels
-              .filter(model => model.enabled)
-              .map(model => ({
-                id: `custom-${model.id}`, // Prefix with 'custom-' to avoid ID conflicts
-                name: model.name,
-                description: model.description,
-                isCustomModel: true,
-                systemPrompt: model.systemPrompt,
-                avatar: model.avatar,
-                provider: 'Custom Model',
-                isBackendModel: false, // Custom models are frontend models
-                baseModel: model.baseModel || 'gpt-3.5-turbo' // More common fallback
-              }));
-          } catch (err) {
-            console.error('Error parsing custom models:', err);
-          }
-        }
-
         // Combine backend models with enabled custom models
-        const allModels = [...(backendModels || []), ...enabledCustomModels];
+        const allModels = [
+          ...(backendModels || []),
+          ...enabledCustomModels
+        ];
 
         if (allModels.length > 0) {
           setAvailableModels(allModels);
@@ -360,9 +370,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
           // Set default model if none is selected or the selected one is no longer available
           const currentSelectedModelIsValid = allModels.some(m => m.id === selectedModel);
           if (!currentSelectedModelIsValid && allModels.length > 0) {
-            const defaultModel = allModels[0].id;
+            const defaultModel = getPreferredModelId(allModels);
             setSelectedModel(defaultModel);
-            localStorage.setItem('selectedModel', defaultModel);
             console.log(`Set default model to: ${defaultModel}`);
           }
         } else {
@@ -374,34 +383,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
 
-        // Even if backend fails, still try to load custom models
-        const customModelsJson = localStorage.getItem('customModels');
-        let enabledCustomModels = [];
-        if (customModelsJson) {
-          try {
-            const customModels = JSON.parse(customModelsJson);
-            enabledCustomModels = customModels
-              .filter(model => model.enabled)
-              .map(model => ({
-                id: `custom-${model.id}`,
-                name: model.name,
-                description: model.description,
-                isCustomModel: true,
-                systemPrompt: model.systemPrompt,
-                avatar: model.avatar,
-                provider: 'Custom Model',
-                isBackendModel: false,
-                baseModel: model.baseModel || 'gpt-3.5-turbo' // More common fallback
-              }));
-          } catch (err) {
-            console.error('Error parsing custom models:', err);
-          }
-        }
-
         setAvailableModels(enabledCustomModels);
         if (enabledCustomModels.length > 0 && !enabledCustomModels.some(m => m.id === selectedModel)) {
-          setSelectedModel(enabledCustomModels[0].id);
-          localStorage.setItem('selectedModel', enabledCustomModels[0].id);
+          const defaultModel = getPreferredModelId(enabledCustomModels);
+          setSelectedModel(defaultModel);
         }
       }
     };
@@ -430,17 +415,20 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const [settings, setSettings] = useState(() => {
     // If logged in, use user settings
     if (user && user.settings) {
-      return user.settings;
+      return {
+        ...user.settings,
+        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
+      };
     }
 
     // Otherwise, use localStorage
-    const savedSettings = localStorage.getItem('settings');
-      return savedSettings ? JSON.parse(savedSettings) : {
-        theme: 'light',
-        accentColor: 'theme',
-        fontSize: 'medium',
-        fontFamily: 'system',
-        sendWithEnter: true,
+    const savedSettings = readLocalStorageJSON('settings');
+    return savedSettings || {
+      theme: 'light',
+      accentColor: 'theme',
+      fontSize: 'medium',
+      fontFamily: 'system',
+      sendWithEnter: true,
       showTimestamps: true,
       showModelIcons: true,
       showProfilePicture: true,
@@ -454,6 +442,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       reducedMotion: false,
       lineSpacing: 'normal',
       showGreeting: true,
+      useRealBackend: shouldUseRealBackend(),
       language: 'en-US'
     };
   });
@@ -484,10 +473,26 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     closeMatrix,
   } = useEasterEggs();
 
+  // Lazy mount tracking for modals
+  const [hasOpenedWhiteboard, setHasOpenedWhiteboard] = useState(false);
+  const [hasOpenedEquationEditor, setHasOpenedEquationEditor] = useState(false);
+  const [hasOpenedGraphing, setHasOpenedGraphing] = useState(false);
+  const [hasOpenedFlowchart, setHasOpenedFlowchart] = useState(false);
+  const [hasOpenedSandbox3D, setHasOpenedSandbox3D] = useState(false);
+
+  useEffect(() => { if (isWhiteboardOpen) setHasOpenedWhiteboard(true); }, [isWhiteboardOpen]);
+  useEffect(() => { if (isEquationEditorOpen) setHasOpenedEquationEditor(true); }, [isEquationEditorOpen]);
+  useEffect(() => { if (isGraphingOpen) setHasOpenedGraphing(true); }, [isGraphingOpen]);
+  useEffect(() => { if (isFlowchartOpen) setHasOpenedFlowchart(true); }, [isFlowchartOpen]);
+  useEffect(() => { if (isSandbox3DOpen) setHasOpenedSandbox3D(true); }, [isSandbox3DOpen]);
+
   // Update settings when user changes
   useEffect(() => {
     if (user && user.settings) {
-      setSettings(user.settings);
+      setSettings({
+        ...user.settings,
+        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
+      });
     }
   }, [user]);
 
@@ -497,11 +502,15 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     }
   }, [settings.language, onSettingsLanguageChange]);
 
+  useEffect(() => {
+    setBackendMode(settings.useRealBackend !== false);
+  }, [settings.useRealBackend]);
+
   // Check if onboarding is needed for new users
   useEffect(() => {
     if (user && !loading) {
       // Check if user has completed onboarding
-      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
+      const hasCompletedOnboarding = readLocalStorageItem(`onboarding_completed_${user.id}`);
 
       // Show onboarding if:
       // 1. User hasn't completed onboarding AND
@@ -559,25 +568,25 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   }, [chats, activeChat]);
 
   useEffect(() => {
-    localStorage.setItem('activeChat', JSON.stringify(activeChat));
+    writeLocalStorageItem('activeChat', JSON.stringify(activeChat));
   }, [activeChat]);
 
   useEffect(() => {
-    localStorage.setItem('projects', JSON.stringify(projects));
+    writeLocalStorageItem('projects', JSON.stringify(projects));
   }, [projects]);
 
   useEffect(() => {
-    localStorage.setItem('activeProject', JSON.stringify(activeProject));
+    writeLocalStorageItem('activeProject', JSON.stringify(activeProject));
   }, [activeProject]);
 
   useEffect(() => {
-    localStorage.setItem('selectedModel', selectedModel);
+    writeLocalStorageItem('selectedModel', selectedModel);
   }, [selectedModel]);
 
   // Only save settings to localStorage if not logged in
   useEffect(() => {
     if (!user) {
-      localStorage.setItem('settings', JSON.stringify(settings));
+      writeLocalStorageItem('settings', JSON.stringify(settings));
     }
   }, [settings, user]);
 
@@ -598,7 +607,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     });
   }, [settings?.language]);
 
-  const createNewChat = (projectId = null) => {
+  const createNewChat = (projectId = null, options = {}) => {
     const currentLanguage = settings?.language || getLanguagePreference();
     const newChat = {
       id: uuidv4(),
@@ -608,17 +617,17 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     };
     setChats(prevChats => {
       const updatedChats = [newChat, ...prevChats];
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      writeLocalStorageItem('chats', safeStringify(updatedChats));
       return updatedChats;
     });
     setActiveChat(newChat.id);
 
-    // Navigate to chat tab if not already there
-    if (location.pathname !== '/') {
+    if (options.initialMessage) {
+      setPendingMessage(options.initialMessage);
+    }
+
+    // Navigate to chat tab unless caller explicitly keeps the current view.
+    if (!options.stayOnCurrentRoute && location.pathname !== '/') {
       navigate('/');
     }
 
@@ -678,6 +687,19 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     }));
   };
 
+  const updateProjectDescription = (projectId, description) => {
+    setProjects(prevProjects => prevProjects.map(p => {
+      if (p.id === projectId) {
+        return {
+          ...p,
+          projectDescription: description,
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return p;
+    }));
+  };
+
   const toggleProjectStar = (projectId) => {
     setProjects(prevProjects => prevProjects.map(p => {
       if (p.id === projectId) {
@@ -703,18 +725,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       };
       setChats([newChat]);
       setActiveChat(newChat.id);
-      try {
-        localStorage.setItem('chats', safeStringify([newChat]));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      writeLocalStorageItem('chats', safeStringify([newChat]));
     } else {
       setChats(updatedChats);
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      writeLocalStorageItem('chats', safeStringify(updatedChats));
 
       // If the deleted chat was the active one, set a new active chat
       if (chatId === activeChat) {
@@ -736,11 +750,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
         return chat;
       });
-      try {
-        localStorage.setItem('chats', safeStringify(updatedChats));
-      } catch (error) {
-        console.error("Error saving chats to localStorage:", error);
-      }
+      writeLocalStorageItem('chats', safeStringify(updatedChats));
       return updatedChats;
     });
   };
@@ -761,7 +771,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         }
         return chat;
       });
-      localStorage.setItem('chats', safeStringify(updatedChats));
+      writeLocalStorageItem('chats', safeStringify(updatedChats));
       return updatedChats;
     });
   };
@@ -811,6 +821,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     if (user) {
       updateUserSettings(newSettings);
     }
+    setBackendMode(newSettings.useRealBackend !== false);
   };
 
   useEffect(() => {
@@ -826,7 +837,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const handleOnboardingComplete = (onboardingSettings) => {
     if (user) {
       // Mark onboarding as completed
-      localStorage.setItem(`onboarding_completed_${user.id}`, 'true');
+      writeLocalStorageItem(`onboarding_completed_${user.id}`, 'true');
 
       // Apply the selected settings
       const newSettings = { ...settings, ...onboardingSettings };
@@ -841,7 +852,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const handleRestartOnboarding = () => {
     if (user) {
       // Remove the onboarding completion marker
-      localStorage.removeItem(`onboarding_completed_${user.id}`);
+      removeLocalStorageItem(`onboarding_completed_${user.id}`);
 
       // Show onboarding again
       setShowOnboarding(true);
@@ -874,8 +885,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     setChats([newChat]);
     setActiveChat(newChat.id);
     // Clear localStorage to start fresh
-    localStorage.removeItem('chats');
-    localStorage.removeItem('activeChat');
+    removeLocalStorageItem('chats');
+    removeLocalStorageItem('activeChat');
     console.log('Chats reset to fresh state');
   };
 
@@ -921,7 +932,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
           left: '20px',
           useTheme: true,
           onClick: () => {
-            window.open('https://www.google.com/chrome/', '_blank');
+            window.open('https://www.google.com/chrome/', '_blank', 'noopener,noreferrer');
           }
         }
       );
@@ -1021,6 +1032,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
   // Force login if user is not authenticated
   if (!user) {
+    if (location.pathname === '/auth/callback') {
+      return <OAuthCallbackPage />;
+    }
+
     return isMobile ? <MobileForcedLoginScreen /> : <ForcedLoginScreen />;
   }
 
@@ -1109,6 +1124,9 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 <ChatWindow
                   ref={chatWindowRef}
                   chat={currentChat}
+                  projects={projects}
+                  pendingMessage={pendingMessage}
+                  onPendingMessageConsumed={() => setPendingMessage(null)}
                   addMessage={addMessage}
                   updateMessage={updateMessage}
                   updateChatTitle={updateChatTitle}
@@ -1140,6 +1158,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                   onMessageSent={handleMessageSent}
                 />
               } />
+              <Route path="/auth/callback" element={<OAuthCallbackPage />} />
               <Route path="/media" element={<MediaPage collapsed={collapsed} />} />
               <Route path="/news" element={<NewsPage collapsed={collapsed} />} />
               <Route path="/admin" element={<AdminPage collapsed={collapsed} />} />
@@ -1149,103 +1168,98 @@ const AppContent = ({ onSettingsLanguageChange }) => {
                 <ProjectDetailPage
                   projects={projects}
                   chats={chats}
-                  addMessage={addMessage}
-                  updateMessage={updateMessage}
                   createNewChat={createNewChat}
+                  collapsed={collapsed}
                   setActiveChat={setActiveChat}
                   activeChat={activeChat}
                   addKnowledgeToProject={addKnowledgeToProject}
                   removeKnowledgeFromProject={removeKnowledgeFromProject}
                   updateProjectInstructions={updateProjectInstructions}
-                  // Pass down all the props ChatInputArea needs
+                  updateProjectDescription={updateProjectDescription}
+                  toggleProjectStar={toggleProjectStar}
                   settings={settings}
                   availableModels={availableModels}
                   selectedModel={selectedModel}
                   onModelChange={handleModelChange}
-                  isWhiteboardOpen={isWhiteboardOpen}
-                  onToggleWhiteboard={() => setIsWhiteboardOpen(p => !p)}
-                  isEquationEditorOpen={isEquationEditorOpen}
-                  onToggleEquationEditor={() => setIsEquationEditorOpen(p => !p)}
-                  isGraphingOpen={isGraphingOpen}
-                  onToggleGraphing={() => setIsGraphingOpen(p => !p)}
-                  isFlowchartOpen={isFlowchartOpen}
-                  onToggleFlowchart={() => setIsFlowchartOpen(p => !p)}
-                  isSandbox3DOpen={isSandbox3DOpen}
-                  onToggleSandbox3D={() => setIsSandbox3DOpen(p => !p)}
-                  onToolbarToggle={setIsToolbarOpen}
                 />
               } />
             </Routes>
           </MainContentArea>
 
           {/* Render panels in order: whiteboard, equation editor, graphing */}
-          <WhiteboardModal
-            isOpen={isWhiteboardOpen}
-            onClose={() => setIsWhiteboardOpen(false)}
-            onSubmit={(file) => {
-              // Handle whiteboard submission through ChatWindow's file handler
-              if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
-                chatWindowRef.current.handleFileSelected(file);
-              }
-              setIsWhiteboardOpen(false);
-            }}
-            theme={currentTheme}
-          />
+          <React.Suspense fallback={null}>
+            {hasOpenedWhiteboard && <WhiteboardModal
+              isOpen={isWhiteboardOpen}
+              onClose={() => setIsWhiteboardOpen(false)}
+              onSubmit={(file) => {
+                // Handle whiteboard submission through ChatWindow's file handler
+                if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                  chatWindowRef.current.handleFileSelected(file);
+                }
+                setIsWhiteboardOpen(false);
+              }}
+              theme={currentTheme}
+            />}
 
-          <EquationEditorModal
-            isOpen={isEquationEditorOpen}
-            onClose={() => setIsEquationEditorOpen(false)}
-            onSubmit={(latex) => {
-              // Handle equation submission - add to chat input
-              if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
-                chatWindowRef.current.appendToInput(`$${latex}$$ `);
-              }
-              setIsEquationEditorOpen(false);
-            }}
-            theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
-          />
+            {hasOpenedEquationEditor && <EquationEditorModal
+              isOpen={isEquationEditorOpen}
+              onClose={() => setIsEquationEditorOpen(false)}
+              onSubmit={(latex) => {
+                // Handle equation submission - add to chat input
+                if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
+                  chatWindowRef.current.appendToInput(`$$\n${latex}\n$$ `);
+                }
+                setIsEquationEditorOpen(false);
+              }}
+              theme={currentTheme}
+              otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+            />}
 
-          <GraphingModal
-            isOpen={isGraphingOpen}
-            onClose={() => setIsGraphingOpen(false)}
-            theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
-          />
+            {hasOpenedGraphing && <GraphingModal
+              isOpen={isGraphingOpen}
+              onClose={() => setIsGraphingOpen(false)}
+              onSubmit={(file) => {
+                if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                  chatWindowRef.current.handleFileSelected(file);
+                }
+                setIsGraphingOpen(false);
+              }}
+              theme={currentTheme}
+              otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+            />}
 
-          <FlowchartModal
-            isOpen={isFlowchartOpen}
-            onClose={() => {
-              setIsFlowchartOpen(false);
-              setFlowchartData(null); // Clear flowchart data when closing
-            }}
-            onSubmit={(file) => {
-              // Handle flowchart submission through ChatWindow's file handler
-              if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
-                chatWindowRef.current.handleFileSelected(file);
-              }
-              setIsFlowchartOpen(false);
-              setFlowchartData(null); // Clear flowchart data after submission
-            }}
-            theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
-            aiFlowchartData={flowchartData}
-          />
+            {hasOpenedFlowchart && <FlowchartModal
+              isOpen={isFlowchartOpen}
+              onClose={() => {
+                setIsFlowchartOpen(false);
+                setFlowchartData(null); // Clear flowchart data when closing
+              }}
+              onSubmit={(file) => {
+                // Handle flowchart submission through ChatWindow's file handler
+                if (chatWindowRef.current && chatWindowRef.current.handleFileSelected) {
+                  chatWindowRef.current.handleFileSelected(file);
+                }
+                setIsFlowchartOpen(false);
+                setFlowchartData(null); // Clear flowchart data after submission
+              }}
+              theme={currentTheme}
+              otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isSandbox3DOpen ? 1 : 0)}
+              aiFlowchartData={flowchartData}
+            />}
 
-          <Sandbox3DModal
-            isOpen={isSandbox3DOpen}
-            onClose={() => setIsSandbox3DOpen(false)}
-            onSend={(objects) => {
-              if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
-                chatWindowRef.current.appendToInput(`\`\`\`json
-${JSON.stringify(objects, null, 2)}
-\`\`\``);
-              }
-            }}
-            theme={currentTheme}
-            otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0)}
-            initialScene={pendingScene}
-          />
+            {hasOpenedSandbox3D && <Sandbox3DModal
+              isOpen={isSandbox3DOpen}
+              onClose={() => setIsSandbox3DOpen(false)}
+              onSend={(objects) => {
+                if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
+                  chatWindowRef.current.appendToInput(`\`\`\`json\n${JSON.stringify(objects, null, 2)}\n\`\`\``);
+                }
+              }}
+              theme={currentTheme}
+              otherPanelsOpen={(isWhiteboardOpen ? 1 : 0) + (isEquationEditorOpen ? 1 : 0) + (isGraphingOpen ? 1 : 0) + (isFlowchartOpen ? 1 : 0)}
+              initialScene={pendingScene}
+            />}
+          </React.Suspense>
 
           {isSettingsOpen && (
             <NewSettingsPanel
@@ -1265,21 +1279,23 @@ ${JSON.stringify(objects, null, 2)}
           )}
 
           {showDinosaurGame && (
-            <DinosaurRunGame
-              onExit={handleExitGame}
-              $toolbarOpen={isToolbarOpen}
-              $sidebarCollapsed={collapsed}
-              $whiteboardOpen={isWhiteboardOpen}
-              $equationEditorOpen={isEquationEditorOpen}
-              $graphingOpen={isGraphingOpen}
-              $flowchartOpen={isFlowchartOpen}
-              $sandbox3DOpen={isSandbox3DOpen}
-            />
+            <React.Suspense fallback={null}>
+              <DinosaurRunGame
+                onExit={handleExitGame}
+                $toolbarOpen={isToolbarOpen}
+                $sidebarCollapsed={collapsed}
+                $whiteboardOpen={isWhiteboardOpen}
+                $equationEditorOpen={isEquationEditorOpen}
+                $graphingOpen={isGraphingOpen}
+                $flowchartOpen={isFlowchartOpen}
+                $sandbox3DOpen={isSandbox3DOpen}
+              />
+            </React.Suspense>
           )}
 
           {/* Easter Eggs */}
           {showConfetti && (
-            <ConfettiExplosion onComplete={closeConfetti} message={confettiMessage} />
+            <ConfettiExplosion onComplete={closeConfetti} />
           )}
 
           {showMatrix && (

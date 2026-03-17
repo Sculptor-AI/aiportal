@@ -1,22 +1,26 @@
 import axios from 'axios';
+import { getAuthHeaders } from './authService';
+import { getBackendApiBase } from './backendConfig';
+import { createVideoObjectUrl, generateVideo, waitForVideoCompletion } from './videoService';
 
-// Prefer environment variable, otherwise default to same-origin
-const rawBaseUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+const SAME_ORIGIN_API_BASE = '/api';
 
-// Remove trailing slashes
-let cleanedBase = rawBaseUrl.replace(/\/+$/, '');
+const buildApiUrlWithBase = (base, endpoint) => {
+  if (!endpoint) return base;
 
-// Remove a trailing /api if present
-if (cleanedBase.endsWith('/api')) {
-  cleanedBase = cleanedBase.slice(0, -4);
-}
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
 
-const BACKEND_API_BASE = `${cleanedBase}/api`;
+  if (normalizedEndpoint.startsWith('api/')) {
+    return `${base}/${normalizedEndpoint.substring(4)}`;
+  }
 
-console.log('[imageService] Computed BACKEND_API_BASE:', BACKEND_API_BASE);
+  return `${base}/${normalizedEndpoint}`;
+};
 
 // Remove duplicated /api in endpoint paths
 const buildApiUrl = (endpoint) => {
+  const BACKEND_API_BASE = getBackendApiBase();
+
   if (!endpoint) return BACKEND_API_BASE;
 
   // Normalize endpoint to remove a leading slash if it exists
@@ -30,8 +34,42 @@ const buildApiUrl = (endpoint) => {
   return `${BACKEND_API_BASE}/${normalizedEndpoint}`;
 };
 
-const API_URL = buildApiUrl('/image'); // Backend image generation endpoint
-const VIDEO_API_URL = buildApiUrl('/video'); // Backend video generation endpoint
+const getApiUrl = () => buildApiUrl('/image'); // Backend image generation endpoint
+
+const fetchImageApiWithFallback = async (endpoint, config = {}) => {
+  const backendBase = getBackendApiBase();
+  const primaryUrl = buildApiUrl(endpoint);
+
+  try {
+    return await axios.get(primaryUrl, config);
+  } catch (error) {
+    if (backendBase === SAME_ORIGIN_API_BASE) {
+      throw error;
+    }
+
+    const fallbackUrl = buildApiUrlWithBase(SAME_ORIGIN_API_BASE, endpoint);
+    console.warn(`[imageService] Primary API request failed (${primaryUrl}). Retrying same-origin at ${fallbackUrl}`);
+    return axios.get(fallbackUrl, config);
+  }
+};
+
+export const listImageModelsApi = async () => {
+  try {
+    const response = await fetchImageApiWithFallback('/image/models', {
+      headers: {
+        ...getAuthHeaders(),
+      },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching image models:', error.response ? error.response.data : error.message);
+    if (error.response && error.response.data) {
+      throw error.response.data;
+    }
+    throw new Error(error.message || 'Network error or server unresponsive');
+  }
+};
 
 /**
  * Calls the backend API to generate an image based on the provided prompt.
@@ -46,19 +84,20 @@ export const generateImageApi = async (prompt, model, history = []) => {
     const config = {
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
     };
 
     const body = { prompt };
     if (model) body.model = model;
-    
+
     // Include conversation history for multi-turn image generation/editing
     if (history && history.length > 0) {
       body.history = history;
       console.log('[imageService] Sending with history:', history.length, 'items');
     }
 
-    const response = await axios.post(`${API_URL}/generate`, body, config);
+    const response = await axios.post(`${getApiUrl()}/generate`, body, config);
     return response.data; // Expects { imageData: "..." } or { imageUrl: "..." }
   } catch (error) {
     console.error('Error calling generate image API:', error.response ? error.response.data : error.message);
@@ -70,21 +109,27 @@ export const generateImageApi = async (prompt, model, history = []) => {
 };
 
 /**
- * Calls the backend API to generate a video based on the provided prompt.
+ * Starts a Sora video generation job and resolves once the preview is ready.
  * @param {string} prompt - The text prompt for video generation.
- * @returns {Promise<object>} The API response data (e.g., { videoData: 'base64...' } or { videoUrl: '...' })
- * @throws {Error} If the API call fails or returns an error.
+ * @returns {Promise<object>} { videoId, videoUrl }
  */
 export const generateVideoApi = async (prompt) => {
   try {
-    const config = {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    };
+    const job = await generateVideo(prompt);
+    if (!job?.success || !job?.videoId) {
+      throw new Error(job?.error || 'No video ID returned from API');
+    }
 
-    const response = await axios.post(`${VIDEO_API_URL}/generate`, { prompt }, config);
-    return response.data; // Expects { videoData: "..." } or { videoUrl: "..." }
+    const status = await waitForVideoCompletion(job.videoId);
+    if (status?.error || status?.status === 'failed' || status?.status === 'cancelled' || status?.status === 'canceled') {
+      throw new Error(status?.error || 'Video generation failed');
+    }
+
+    const videoUrl = await createVideoObjectUrl(job.videoId);
+    return {
+      videoId: job.videoId,
+      videoUrl
+    };
   } catch (error) {
     console.error('Error calling generate video API:', error.response ? error.response.data : error.message);
     if (error.response && error.response.data) {
@@ -92,4 +137,4 @@ export const generateVideoApi = async (prompt) => {
     }
     throw new Error(error.message || 'Network error or server unresponsive');
   }
-}; 
+};

@@ -1,19 +1,79 @@
-# API Keys for AI Portal Backend
-# Copy this file to .dev.vars and fill in your keys
-# These are loaded securely and never committed to git
+# ============================================================================
+# AI Portal Backend - Local Development Variables
+# ============================================================================
+# 
+# Copy this file to .dev.vars and fill in your API keys:
+#   cp .dev.vars.example .dev.vars
+#
+# This file is for LOCAL DEVELOPMENT only and is loaded by Wrangler.
+# For PRODUCTION, use Cloudflare Secrets instead:
+#   node scripts/setup-secrets.js
+#
+# NEVER commit .dev.vars to version control!
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Required API Keys
+# ----------------------------------------------------------------------------
 
 # OpenRouter - Unified access to 200+ models (GPT, Claude, Llama, etc.)
 # Get your key at: https://openrouter.ai/keys
 OPENROUTER_API_KEY="sk-or-v1-your-openrouter-key-here"
 
-# Google Gemini - Direct access to Gemini, Imagen, Veo
+# Google Gemini - Direct access to Gemini, Imagen, and Live API
 # Get your key at: https://aistudio.google.com/apikey
 GEMINI_API_KEY="your-gemini-api-key-here"
 
-# Anthropic Claude - Direct access to Claude models
+# ----------------------------------------------------------------------------
+# Optional API Keys (for direct provider access)
+# ----------------------------------------------------------------------------
+
+# Anthropic Claude - Direct access to Claude models (optional if using OpenRouter)
 # Get your key at: https://console.anthropic.com/settings/keys
 ANTHROPIC_API_KEY="sk-ant-your-anthropic-key-here"
 
-# OpenAI - Direct access to GPT, DALL-E, Whisper, TTS
+# OpenAI - Direct access to GPT, DALL-E, Sora, Whisper, and TTS (optional if using OpenRouter)
 # Get your key at: https://platform.openai.com/api-keys
 OPENAI_API_KEY="sk-your-openai-key-here"
+
+# Comma-separated allowlist for browser CORS origins
+# Example: "https://sculptorai.org,https://ai.sculptorai.org,http://localhost:3009"
+# If unset, safe defaults are used.
+CORS_ALLOWED_ORIGINS="http://localhost:3000,http://localhost:3009,http://localhost:5173"
+
+# Google OAuth sign-in
+# Create a Web application client in Google Cloud Console and register:
+#   https://ai.sculptorai.org/api/auth/oauth/google/callback
+#   http://localhost:3009/api/auth/oauth/google/callback
+GOOGLE_OAUTH_CLIENT_ID="your-google-oauth-client-id.apps.googleusercontent.com"
+GOOGLE_OAUTH_CLIENT_SECRET="your-google-oauth-client-secret"
+
+# Random secret used to sign OAuth state and callback completion tokens.
+# Generate a long random value and keep it private.
+OAUTH_STATE_SECRET="replace-with-a-long-random-secret"
+
+# ----------------------------------------------------------------------------
+# KV Namespace ID (for create-admin.js script only)
+# ----------------------------------------------------------------------------
+# This is NOT loaded by wrangler dev - it's only used by the create-admin.js script.
+# Get your namespace ID by running: npx wrangler kv namespace list
+# Then set it when running the script:
+#   KV_NAMESPACE_ID=your-id node scripts/create-admin.js admin admin@example.com password
+KV_NAMESPACE_ID="YOUR_KV_NAMESPACE_ID_HERE"
+
+# ----------------------------------------------------------------------------
+# Deep Research Pipeline (optional overrides)
+# ----------------------------------------------------------------------------
+# Set to false to disable deep research endpoint
+DEEP_RESEARCH_ENABLED="true"
+
+# Planner / researcher / writer model names (mapped through src/config/models.json)
+DEEP_RESEARCH_PLANNER_MODEL="gemini-3.1-pro"
+DEEP_RESEARCH_RESEARCHER_MODEL="gemini-3-flash"
+DEEP_RESEARCH_WRITER_MODEL="claude-sonnet-4.6"
+
+# Agent and throughput controls
+DEEP_RESEARCH_MIN_AGENTS="2"
+DEEP_RESEARCH_DEFAULT_MAX_AGENTS="8"
+DEEP_RESEARCH_MAX_AGENTS="12"
+DEEP_RESEARCH_MAX_PARALLEL_AGENTS="4"

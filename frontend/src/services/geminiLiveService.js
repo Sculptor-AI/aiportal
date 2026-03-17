@@ -4,7 +4,12 @@
  * This keeps API keys secure on the backend
  *
  * Backend endpoint: /api/v1/live
+ * Requires authentication token
  */
+
+import { getCurrentUser } from './authService';
+import { GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID } from '../config/modelConfig';
+import { getBackendLiveSocketUrl } from './backendConfig';
 
 class GeminiLiveService {
   constructor() {
@@ -12,6 +17,7 @@ class GeminiLiveService {
     this.isConnected = false;
     this.sessionActive = false;
     this.isRecording = false;
+    this.currentResponseText = '';
 
     // Callbacks
     this.onResponseCallback = null;
@@ -29,35 +35,80 @@ class GeminiLiveService {
     this.audioQueue = [];
     this.isPlaying = false;
     this.playbackAudioContext = null;
+    this.currentPlaybackSource = null;
 
     // Configuration
     this.config = {
-      model: 'models/gemini-2.5-flash-preview-native-audio',
+      model: `models/${GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID}`,
       responseModalities: ['AUDIO'],
       voiceName: 'Aoede',
-      systemInstruction: 'You are a helpful AI assistant. Be concise and friendly.'
+      systemInstruction: 'You are a helpful AI assistant. Be concise and friendly.',
+      outputAudioMode: 'gemini'
     };
   }
 
-  /**
-   * Get WebSocket URL for backend proxy
-   */
-  _getWebSocketUrl() {
-    const backendUrl = import.meta.env.VITE_BACKEND_API_URL || '';
+  _resetTurnState() {
+    this.currentResponseText = '';
+    this.onResponseCallback?.('');
+  }
 
-    // Convert HTTP URL to WebSocket URL
-    let wsUrl;
-    if (backendUrl.startsWith('https://')) {
-      wsUrl = backendUrl.replace('https://', 'wss://');
-    } else if (backendUrl.startsWith('http://')) {
-      wsUrl = backendUrl.replace('http://', 'ws://');
-    } else {
-      // Default to current host
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      wsUrl = `${protocol}//${window.location.host}`;
+  _mergeStreamingText(previousText, nextText) {
+    const incomingText = (nextText || '').trim();
+
+    if (!incomingText) {
+      return previousText || '';
     }
 
-    return `${wsUrl}/api/v1/live`;
+    const currentText = (previousText || '').trim();
+
+    if (!currentText) {
+      return incomingText;
+    }
+
+    if (incomingText === currentText || currentText.endsWith(incomingText)) {
+      return currentText;
+    }
+
+    if (incomingText.startsWith(currentText)) {
+      return incomingText;
+    }
+
+    const maxOverlap = Math.min(currentText.length, incomingText.length);
+    for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+      if (currentText.slice(-overlap) === incomingText.slice(0, overlap)) {
+        return `${currentText}${incomingText.slice(overlap)}`.trim();
+      }
+    }
+
+    return `${currentText}${currentText.endsWith(' ') || incomingText.startsWith(' ') ? '' : ' '}${incomingText}`.trim();
+  }
+
+  /**
+   * Get WebSocket URL for backend proxy (includes auth token)
+   * 
+   * SECURITY NOTE: The token is passed as a query parameter because the WebSocket API
+   * does not support custom headers during the initial handshake. The backend also
+   * accepts the Authorization header for clients that support it. The token in the URL
+   * is redacted in console logs but may appear in:
+   * - Browser history (mitigated: URLs are session-specific)
+   * - Server access logs (backend should filter sensitive params)
+   * 
+   * The token is short-lived (24h session) and can be revoked by logging out.
+   */
+  _getWebSocketUrl() {
+    const wsUrl = getBackendLiveSocketUrl();
+
+    // Get auth token and include in URL
+    // Note: WebSocket API doesn't support custom headers, so we use query param
+    const user = getCurrentUser();
+    const token = user?.accessToken;
+
+    if (!token) {
+      console.error('No auth token available for WebSocket connection');
+      return null;
+    }
+
+    return `${wsUrl}?token=${encodeURIComponent(token)}`;
   }
 
   /**
@@ -72,7 +123,14 @@ class GeminiLiveService {
     }
 
     const wsUrl = this._getWebSocketUrl();
-    console.log('Connecting to backend WebSocket:', wsUrl);
+
+    if (!wsUrl) {
+      const error = new Error('Authentication required. Please log in to use Gemini Live.');
+      this.onErrorCallback?.(error.message);
+      throw error;
+    }
+
+    console.log('Connecting to backend WebSocket:', wsUrl.replace(/token=[^&]+/, 'token=[REDACTED]'));
 
     return new Promise((resolve, reject) => {
       try {
@@ -173,6 +231,8 @@ class GeminiLiveService {
    * Handle server content responses
    */
   _handleServerContent(content) {
+    let receivedResponseChunk = false;
+
     // Handle model turn (generated content)
     if (content.modelTurn) {
       const parts = content.modelTurn.parts || [];
@@ -181,7 +241,8 @@ class GeminiLiveService {
         // Text response
         if (part.text) {
           console.log('Text response:', part.text);
-          this.onResponseCallback?.(part.text);
+          this.currentResponseText = this._mergeStreamingText(this.currentResponseText, part.text);
+          receivedResponseChunk = true;
         }
 
         // Audio response
@@ -189,10 +250,16 @@ class GeminiLiveService {
           const { mimeType, data } = part.inlineData;
           if (mimeType?.startsWith('audio/')) {
             console.log('Audio response received');
+            this.onStatusCallback?.('speaking');
             this._handleAudioResponse(data, mimeType);
           }
         }
       }
+    }
+
+    if (receivedResponseChunk) {
+      this.onStatusCallback?.('responding');
+      this.onResponseCallback?.(this.currentResponseText);
     }
 
     // Handle transcription of user input
@@ -204,13 +271,16 @@ class GeminiLiveService {
     // Handle transcription of model output
     if (content.outputTranscription) {
       console.log('Output transcription:', content.outputTranscription.text);
-      this.onResponseCallback?.(content.outputTranscription.text);
+      this.currentResponseText = this._mergeStreamingText(this.currentResponseText, content.outputTranscription.text);
+      this.onStatusCallback?.('responding');
+      this.onResponseCallback?.(this.currentResponseText);
     }
 
     // Handle interruption
     if (content.interrupted) {
       console.log('Response was interrupted');
       this._stopAudioPlayback();
+      this.onStatusCallback?.('ready');
     }
 
     // Handle turn complete
@@ -229,6 +299,10 @@ class GeminiLiveService {
    * Handle audio response from server
    */
   _handleAudioResponse(base64Data, mimeType) {
+    if (this.config.outputAudioMode !== 'gemini') {
+      return;
+    }
+
     try {
       // Decode base64 to array buffer
       const binaryString = atob(base64Data);
@@ -262,6 +336,8 @@ class GeminiLiveService {
   async _playNextAudio() {
     if (this.audioQueue.length === 0) {
       this.isPlaying = false;
+      this.currentPlaybackSource = null;
+      this.onStatusCallback?.('ready');
       return;
     }
 
@@ -288,7 +364,12 @@ class GeminiLiveService {
       const source = this.playbackAudioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(this.playbackAudioContext.destination);
-      source.onended = () => this._playNextAudio();
+      this.currentPlaybackSource = source;
+      this.onStatusCallback?.('speaking');
+      source.onended = () => {
+        this.currentPlaybackSource = null;
+        this._playNextAudio();
+      };
       source.start();
 
     } catch (error) {
@@ -303,6 +384,15 @@ class GeminiLiveService {
   _stopAudioPlayback() {
     this.audioQueue = [];
     this.isPlaying = false;
+
+    if (this.currentPlaybackSource) {
+      try {
+        this.currentPlaybackSource.stop();
+      } catch (error) {
+        console.warn('Unable to stop playback source cleanly.', error);
+      }
+      this.currentPlaybackSource = null;
+    }
   }
 
   /**
@@ -321,6 +411,9 @@ class GeminiLiveService {
     // Merge options with defaults
     const model = options.model || this.config.model;
     const responseModalities = options.responseModality === 'text' ? ['TEXT'] : ['AUDIO'];
+    this.config.outputAudioMode = options.outputAudioMode || this.config.outputAudioMode;
+    this.config.responseModalities = responseModalities;
+    this._resetTurnState();
 
     // Build setup message
     const setupMessage = {
@@ -377,6 +470,7 @@ class GeminiLiveService {
     console.log('Ending session...');
     this.sessionActive = false;
     this._stopAudioPlayback();
+    this._resetTurnState();
     this.stopRecording();
     this.onStatusCallback?.('session_ended');
   }
@@ -420,6 +514,9 @@ class GeminiLiveService {
       return;
     }
 
+    this._resetTurnState();
+    this.onStatusCallback?.('processing');
+
     const message = {
       clientContent: {
         turns: [{
@@ -448,6 +545,8 @@ class GeminiLiveService {
       console.log('Already recording');
       return;
     }
+
+    this._resetTurnState();
 
     try {
       // Request microphone access
@@ -536,6 +635,7 @@ class GeminiLiveService {
     }
 
     this.onStatusCallback?.('recording_stopped');
+    this.onStatusCallback?.('processing');
   }
 
   /**
@@ -558,6 +658,7 @@ class GeminiLiveService {
 
     this.stopRecording();
     this._stopAudioPlayback();
+    this._resetTurnState();
 
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect');

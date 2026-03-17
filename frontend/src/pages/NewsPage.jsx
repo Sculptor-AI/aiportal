@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import styled, { keyframes, css } from 'styled-components';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import styled, { keyframes, css, useTheme } from 'styled-components';
 import { fetchArticlesByCategory, fetchArticleContent } from '../services/rssService';
 import { sendMessageToBackend } from '../services/aiService';
 import { useTranslation } from '../contexts/TranslationContext';
+import { NEWS_ASSIST_MODEL_ID } from '../config/modelConfig';
+import StreamingMarkdownRenderer from '../components/StreamingMarkdownRenderer';
 
 // ============================================================================
 // ANIMATIONS
@@ -51,18 +53,19 @@ const pulse = keyframes`
 
 const PageContainer = styled.div`
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   min-height: 100vh;
+  box-sizing: border-box;
   color: ${props => props.theme.text};
   overflow-y: auto;
   overflow-x: hidden;
-  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
 
-  width: ${props => props.$collapsed ? '100%' : 'calc(100% - 320px)'};
-  margin-left: ${props => props.$collapsed ? '0' : '320px'};
+  padding-left: ${props => props.$collapsed ? '0' : '300px'};
 
   @media (max-width: 1024px) {
-    width: 100%;
-    margin-left: 0;
+    padding-left: 0;
   }
 `;
 
@@ -539,7 +542,7 @@ const RetryButton = styled.button`
   margin-top: 20px;
   padding: 10px 24px;
   background: ${props => props.theme.accentBackground || props.theme.primary};
-  color: ${props => props.theme.accentText || '#fff'};
+  color: #fff;
   border: none;
   border-radius: 10px;
   font-size: 0.9375rem;
@@ -761,6 +764,164 @@ const LoadingIndicator = styled.div`
 `;
 
 // ============================================================================
+// READER MODE STYLED COMPONENTS
+// ============================================================================
+
+const ReaderContainer = styled.div`
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  
+  @media (max-width: 640px) {
+    padding: 20px 16px;
+  }
+`;
+
+const ReaderHeader = styled.div`
+  margin-bottom: 40px;
+  text-align: center;
+`;
+
+const ReaderSource = styled.div`
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: ${props => props.theme.accentColor || props.theme.primary};
+  margin-bottom: 12px;
+`;
+
+const ReaderTitle = styled.h1`
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  margin: 0 0 16px;
+  color: ${props => props.theme.text};
+
+  @media (max-width: 640px) {
+    font-size: 2rem;
+  }
+`;
+
+const ReaderMeta = styled.div`
+  font-size: 0.9375rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+`;
+
+const StickyTabNav = styled.nav`
+  position: sticky;
+  top: 73px; /* Just below DetailHeader */
+  z-index: 9;
+  background: ${props => `${props.theme.sidebar}f0`};
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid ${props => props.theme.border};
+  margin: 0 -32px 32px;
+  padding: 0 32px;
+  overflow-x: auto;
+  display: flex;
+  gap: 24px;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+
+  @media (max-width: 768px) {
+    margin: 0 -20px 24px;
+    padding: 0 20px;
+    top: 61px;
+  }
+`;
+
+const TabButton = styled.button`
+  padding: 16px 0;
+  background: transparent;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: ${props => props.$active ? props.theme.text : (props.theme.textSecondary || `${props.theme.text}60`)};
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  transition: all 0.2s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: ${props => props.theme.accentColor || props.theme.primary};
+    opacity: ${props => props.$active ? 1 : 0};
+    transform: scaleX(${props => props.$active ? 1 : 0});
+    transition: all 0.2s ease;
+  }
+
+  &:hover {
+    color: ${props => props.theme.text};
+  }
+`;
+
+const ReaderBody = styled.div`
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: ${props => props.theme.text};
+  
+  /* Apple Reader specific typography feel */
+  p {
+    margin-bottom: 1.5em;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 2em 0 1em;
+    letter-spacing: -0.02em;
+  }
+
+  h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 1.5em 0 0.8em;
+  }
+`;
+
+const SummaryBriefing = styled.div`
+  background: ${props => props.theme.isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)'};
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 48px;
+  border: 1px solid ${props => props.theme.border};
+
+  @media (max-width: 640px) {
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+`;
+
+const BriefingBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: ${props => props.theme.accentColor || props.theme.primary}15;
+  color: ${props => props.theme.accentColor || props.theme.primary};
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 20px;
+
+  svg { width: 14px; height: 14px; }
+`;
+
+// ============================================================================
 // FILTER OPTIONS DATA
 // ============================================================================
 
@@ -932,26 +1093,84 @@ const ArticleCard = ({ article, filter, isSaved, onSave, onClick, delay, feature
 // ARTICLE DETAIL VIEW COMPONENT
 // ============================================================================
 
+const slugify = (text) => {
+  if (!text) return '';
+  return text.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+};
+
+const HorizontalRule = styled.hr`
+  border: none;
+  height: 1px;
+  background: ${props => props.theme.border};
+  margin: 40px 0;
+`;
+
 const ArticleDetailView = ({ article, onClose }) => {
   const { t } = useTranslation();
+  const theme = useTheme();
   const [summary, setSummary] = useState('');
+  const [articleBody, setArticleBody] = useState('');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
   const [imageError, setImageError] = useState(false);
   const panelRef = useRef(null);
+  const contentRef = useRef(null);
+
+  const sections = useMemo(() => {
+    if (!summary) return [];
+    
+    const headerRegex = /^##\s+(.+)$/gm;
+    const matches = [];
+    let match;
+    while ((match = headerRegex.exec(summary)) !== null) {
+      matches.push({
+        title: match[1].trim(),
+        id: slugify(match[1].trim())
+      });
+    }
+    return matches;
+  }, [summary]);
 
   useEffect(() => {
     const loadContent = async () => {
       setLoading(true);
       setSummary('');
+      setArticleBody('');
 
       try {
-        const content = await fetchArticleContent(article.url, article.description);
+        const content = await fetchArticleContent(article.url, {
+          fallbackDescription: article.description,
+          rawContent: article.rawContent
+        });
         const textContent = content?.content || article.description;
+        setArticleBody(textContent || article.description || '');
 
         if (textContent && textContent.length > 20) {
           try {
-            const prompt = `Please provide a concise, well-structured summary of the following news article. Focus on the key points and main takeaways:\n\n---\n\n${textContent}`;
-            const result = await sendMessageToBackend('gemini-2.5-flash', prompt);
+            const prompt = `You are an expert news analyst providing a comprehensive, Perplexity-style briefing for the following article: "${article.title}".
+
+Structure your briefing as follows:
+## Overview
+A high-level, 1-2 sentence summary of the story.
+
+## Key Takeaways
+A bulleted list of the most important facts and developments.
+
+## Background & Context
+Why this matters and what led to this situation.
+
+## In-Depth Analysis
+Detailed breakdown of the main points, structured with subheadings if necessary.
+
+## What's Next
+Potential future developments or implications.
+
+Use markdown formatting with clear headings (## for main sections) and bold text for emphasis. Maintain a neutral, objective tone while being highly informative.
+
+ARTICLE CONTENT:
+${textContent}`;
+
+            const result = await sendMessageToBackend(NEWS_ASSIST_MODEL_ID, prompt);
             if (result?.response) {
               setSummary(result.response);
             } else {
@@ -964,18 +1183,7 @@ const ArticleDetailView = ({ article, onClose }) => {
         }
       } catch (err) {
         console.error('Content fetch failed:', err);
-        // Fall back to description-based summary
-        if (article.description && article.description.length > 20) {
-          try {
-            const prompt = `Please provide a concise summary and analysis of: ${article.title}\n\n${article.description}`;
-            const result = await sendMessageToBackend('gemini-2.5-flash', prompt);
-            if (result?.response) {
-              setSummary(result.response);
-            }
-          } catch (summaryErr) {
-            console.error('Fallback summary failed:', summaryErr);
-          }
-        }
+        setArticleBody(article.description || '');
       } finally {
         setLoading(false);
       }
@@ -983,10 +1191,7 @@ const ArticleDetailView = ({ article, onClose }) => {
 
     loadContent();
 
-    // Handle escape key
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
+    const handleEscape = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleEscape);
     document.body.style.overflow = 'hidden';
 
@@ -996,9 +1201,20 @@ const ArticleDetailView = ({ article, onClose }) => {
     };
   }, [article, t, onClose]);
 
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) onClose();
+  const scrollToSection = (id) => {
+    setActiveTab(id);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    } else if (id === 'overview') {
+      panelRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (id === 'full-story') {
+      const fullStoryEl = document.getElementById('full-story-content');
+      fullStoryEl?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
+
+  const handleOverlayClick = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const filter = filterOptions.find(f => f.id === article.category);
 
@@ -1025,52 +1241,73 @@ const ArticleDetailView = ({ article, onClose }) => {
         </DetailHeader>
 
         {article.image && !imageError && (
-          <DetailImage
-            src={article.image}
-            alt={article.title}
-            onError={() => setImageError(true)}
-          />
+          <DetailImage src={article.image} alt={article.title} onError={() => setImageError(true)} />
         )}
 
-        <DetailContent>
-          <DetailMeta>
-            {filter && <CategoryBadge>{filter.icon}{t(filter.labelKey)}</CategoryBadge>}
-            <DetailSource>{article.source}</DetailSource>
-            <DetailDot />
-            <DetailSource>{new Date(article.pubDate).toLocaleDateString()}</DetailSource>
-          </DetailMeta>
+        <ReaderContainer>
+          <ReaderHeader>
+            <ReaderSource>{article.source}</ReaderSource>
+            <ReaderTitle>{article.title}</ReaderTitle>
+            <ReaderMeta>
+              {new Date(article.pubDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+              <DetailDot />
+              {filter && t(filter.labelKey)}
+            </ReaderMeta>
+          </ReaderHeader>
 
-          <DetailTitle>{article.title}</DetailTitle>
-
-          {loading ? (
-            <LoadingIndicator>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 12a9 9 0 11-6.219-8.56" />
-              </svg>
-              {t('news.generatingSummary', 'Generating summary...')}
-            </LoadingIndicator>
-          ) : summary ? (
-            <SummarySection>
-              <SummaryLabel>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-                {t('news.summary.label', 'AI Summary')}
-              </SummaryLabel>
-              <SummaryText>
-                {summary.split('\n\n').map((para, i) => (
-                  <p key={i}>{para}</p>
-                ))}
-              </SummaryText>
-            </SummarySection>
-          ) : null}
-
-          {article.description && (
-            <DetailBody>
-              <p>{article.description}</p>
-            </DetailBody>
+          {!loading && (sections.length > 0 || articleBody) && (
+            <StickyTabNav>
+              <TabButton $active={activeTab === 'overview'} onClick={() => scrollToSection('overview')}>
+                Overview
+              </TabButton>
+              {sections.map(section => (
+                <TabButton 
+                  key={section.id} 
+                  $active={activeTab === section.id} 
+                  onClick={() => scrollToSection(section.id)}
+                >
+                  {section.title}
+                </TabButton>
+              ))}
+              {articleBody && (
+                <TabButton $active={activeTab === 'full-story'} onClick={() => scrollToSection('full-story')}>
+                  Full Story
+                </TabButton>
+              )}
+            </StickyTabNav>
           )}
-        </DetailContent>
+
+          <div ref={contentRef}>
+            {loading ? (
+              <LoadingIndicator>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 11-6.219-8.56" />
+                </svg>
+                {t('news.generatingSummary', 'Generating analyst briefing...')}
+              </LoadingIndicator>
+            ) : summary ? (
+              <SummaryBriefing>
+                <BriefingBadge>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
+                  Analyst Briefing
+                </BriefingBadge>
+                <StreamingMarkdownRenderer text={summary} theme={theme} />
+              </SummaryBriefing>
+            ) : null}
+
+            {articleBody && (
+              <div id="full-story-content">
+                <HorizontalRule />
+                <ReaderSource style={{ marginTop: '40px', textAlign: 'center' }}>Original Content</ReaderSource>
+                <ReaderBody>
+                  <StreamingMarkdownRenderer text={articleBody} theme={theme} />
+                </ReaderBody>
+              </div>
+            )}
+          </div>
+        </ReaderContainer>
       </DetailPanel>
     </DetailOverlay>
   );

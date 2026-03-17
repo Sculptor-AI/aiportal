@@ -4,23 +4,29 @@ import { createGlobalStyle } from 'styled-components';
 export const lightTheme = {
   name: 'light',
   isDark: false,
-  background: 'linear-gradient(145deg, #f0f2f5, #e6e9ee)',
+  background: 'linear-gradient(160deg, #f5f5f7, #eeeff2)',
   sidebar: 'rgba(255, 255, 255, 1)',
   chat: 'rgba(255, 255, 255, 1)',
-  text: '#212529',
+  text: '#1d1d1f',
+  textSecondary: '#86868b',
   border: 'rgba(0, 0, 0, 0.06)',
   messageUser: 'rgba(255, 255, 255, 0.8)',
   messageAi: 'rgba(236, 246, 254, 0.8)',
   hover: 'rgba(255, 255, 255, 0.9)',
   primary: '#007AFF',
+  primaryForeground: '#ffffff',
   primaryGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   secondary: 'linear-gradient(145deg, #05a3ff, #0099e6)',
-  shadow: 'rgba(0, 0, 0, 0.08)',
+  shadow: 'rgba(0, 0, 0, 0.05)',
   glassBlur: '10px',
   glassEffect: 'blur(10px) saturate(180%)',
   inputBackground: 'rgba(255, 255, 255, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #1E90FF, #007AFF)',
+  accentColor: '#007AFF',
+  accentBackground: '#007AFF',
+  accentText: '#ffffff',
+  accentSurface: 'rgba(0, 122, 255, 0.08)',
 };
 
 export const darkTheme = {
@@ -30,11 +36,13 @@ export const darkTheme = {
   sidebar: 'rgba(30, 30, 30, 1)',
   chat: 'rgba(30, 30, 30, 1)',
   text: '#f0f2f5',
+  textSecondary: '#86868b',
   border: 'rgba(255, 255, 255, 0.06)',
   messageUser: 'rgba(50, 50, 50, 0.8)',
   messageAi: 'rgba(35, 45, 60, 0.8)',
   hover: 'rgba(60, 60, 60, 0.9)',
   primary: '#0A84FF',
+  primaryForeground: '#ffffff',
   primaryGradient: 'linear-gradient(145deg, #0A84FF, #38B0FF)',
   secondary: 'linear-gradient(145deg, #38B0FF, #50C8FF)',
   shadow: 'rgba(0, 0, 0, 0.2)',
@@ -43,21 +51,28 @@ export const darkTheme = {
   inputBackground: 'rgba(40, 40, 40, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #0A84FF, #38B0FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #38B0FF, #0A84FF)',
+  accentColor: '#0A84FF',
+  accentBackground: '#0A84FF',
+  accentText: '#ffffff',
+  accentSurface: 'rgba(10, 132, 255, 0.12)',
 };
 
 // Add a new OLED theme definition after the darkTheme
 export const oledTheme = {
   name: 'oled',
   isDark: true,
-  background: '#000000', // True black background
+  background: '#000000',
   sidebar: 'rgba(10, 10, 10, 1)',
   chat: 'rgba(10, 10, 10, 1)',
   text: '#f0f2f5',
+  textSecondary: '#86868b',
   border: 'rgba(255, 255, 255, 0.06)',
   messageUser: 'rgba(30, 30, 30, 0.8)',
   messageAi: 'rgba(15, 15, 15, 0.8)',
   hover: 'rgba(40, 40, 40, 0.5)',
-  primary: 'linear-gradient(145deg, #007AFF, #1E90FF)',
+  primary: '#007AFF',
+  primaryForeground: '#ffffff',
+  primaryGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   secondary: 'linear-gradient(145deg, #05a3ff, #0099e6)',
   shadow: 'rgba(0, 0, 0, 0.3)',
   glassBlur: '10px',
@@ -65,7 +80,11 @@ export const oledTheme = {
   inputBackground: 'rgba(20, 20, 20, 1.0)',
   buttonGradient: 'linear-gradient(145deg, #007AFF, #1E90FF)',
   buttonHoverGradient: 'linear-gradient(145deg, #1E90FF, #007AFF)',
-  cardBackground: 'rgba(15, 15, 15, 0.7)'
+  cardBackground: 'rgba(15, 15, 15, 0.7)',
+  accentColor: '#007AFF',
+  accentBackground: '#007AFF',
+  accentText: '#ffffff',
+  accentSurface: 'rgba(0, 122, 255, 0.12)',
 };
 
 // Update the oceanTheme sidebar style
@@ -422,6 +441,39 @@ export const oceanBreezeTheme = {
   highlightBorder: 'linear-gradient(to right, #2EA8E2, #85C9F2)', // Border for active elements
 };
 
+// Ultra-dark night theme - optimized for late-night use (3am sessions)
+// Features: Ultra dark backgrounds, warm tones, reduced blue light, lower contrast
+export const nightTheme = {
+  name: 'night',
+  isDark: true,
+  // Ultra dark background - almost black with subtle warm tint
+  background: 'linear-gradient(145deg, #080808, #0a0a0a)',
+  sidebar: 'rgba(12, 12, 12, 1)', // Slightly lighter than background for subtle separation
+  chat: 'rgba(10, 10, 10, 1)', // Ultra dark chat area
+  // Warm, dim text color - easier on eyes than bright white
+  text: '#d4c5b8', // Warm beige-gray, much softer than pure white
+  border: 'rgba(200, 180, 160, 0.08)', // Very subtle warm borders
+  // Soft, warm message backgrounds
+  messageUser: 'rgba(20, 18, 16, 0.9)', // Very dark with warm tint
+  messageAi: 'rgba(15, 14, 12, 0.9)', // Even darker for AI messages
+  hover: 'rgba(30, 28, 25, 0.6)', // Subtle warm hover effect
+  // Warm, muted accent colors - amber/orange tones instead of bright blue
+  primary: '#c49a6c', // Muted warm amber
+  primaryGradient: 'linear-gradient(145deg, #c49a6c, #b8875a)', // Warm gradient
+  secondary: 'linear-gradient(145deg, #b8875a, #a67548)', // Warmer secondary
+  shadow: 'rgba(0, 0, 0, 0.5)', // Softer shadows
+  glassBlur: '8px', // Less blur for clarity
+  glassEffect: 'blur(8px) saturate(100%)', // Reduced saturation
+  inputBackground: 'rgba(15, 14, 12, 1.0)', // Ultra dark input background
+  buttonGradient: 'linear-gradient(145deg, #c49a6c, #b8875a)', // Warm button gradient
+  buttonHoverGradient: 'linear-gradient(145deg, #b8875a, #a67548)', // Warmer hover
+  cardBackground: 'rgba(12, 11, 10, 0.9)', // Ultra dark cards
+  // Additional night-mode specific properties
+  textSecondary: '#a89a8f', // Dimmer secondary text
+  accentColor: '#d4a574', // Slightly brighter accent for important elements
+  accentSurface: 'rgba(196, 154, 108, 0.1)', // Very subtle accent highlights
+};
+
 // Custom theme for the model icons with enhanced gradients
 export const modelThemes = {
   'gemini-2-flash': {
@@ -488,6 +540,7 @@ export const getTheme = (themeName) => {
     case 'lakeside': return lakesideTheme;
     case 'retro': return retroTheme;
     case 'ocean-breeze': return oceanBreezeTheme;
+    case 'night': return nightTheme;
     default: return lightTheme;
   }
 };
