@@ -199,7 +199,7 @@ const CreateButton = styled.button`
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: ${props => props.theme.accentBackground || props.theme.primary};
+  background: ${props => props.theme.buttonGradient || props.theme.primary};
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -211,7 +211,8 @@ const CreateButton = styled.button`
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 16px ${props => props.theme.accentColor || props.theme.primary}40;
+    background: ${props => props.theme.buttonHoverGradient || props.theme.primary};
+    box-shadow: 0 4px 16px ${props => props.theme.buttonShadow || `${props.theme.primary}4D`};
   }
 
   &:active {
@@ -900,14 +901,15 @@ const Button = styled.button`
 `;
 
 const PrimaryButton = styled(Button)`
-  background: ${props => props.theme.accentBackground || props.theme.primary};
+  background: ${props => props.theme.buttonGradient || props.theme.primary};
   color: #fff;
   padding: 11px 24px;
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px ${props => props.theme.accentColor || props.theme.primary}45;
-    filter: brightness(1.05);
+    background: ${props => props.theme.buttonHoverGradient || props.theme.primary};
+    box-shadow: ${props =>
+      props.theme.buttonShadow || `0 4px 12px ${props.theme.primary}40`};
   }
 
   &:active {
@@ -1104,17 +1106,90 @@ const WorkspacePage = ({ collapsed }) => {
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
+    if (!file) {
+      return;
+    }
+
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a JPEG or PNG image file.');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size should be less than 2MB.');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const imageSource = event.target?.result;
+      if (typeof imageSource !== 'string') {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        const maxSize = 200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = Math.round((height / width) * maxSize);
+            width = maxSize;
+          } else {
+            width = Math.round((width / height) * maxSize);
+            height = maxSize;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          console.error('Unable to obtain 2D canvas context for avatar image resizing.');
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const resizedDataUrl = file.type === 'image/png'
+          ? canvas.toDataURL('image/png')
+          : canvas.toDataURL('image/jpeg', 0.85);
+
         setFormData(prev => ({
           ...prev,
-          avatarImage: event.target.result,
+          avatarImage: resizedDataUrl,
           avatar: '' // Clear emoji when image is set
         }));
       };
-      reader.readAsDataURL(file);
-    }
+
+      img.onerror = () => {
+        alert('Invalid or corrupted image file. Please choose another image.');
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      };
+
+      img.src = imageSource;
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
@@ -1360,7 +1435,7 @@ const WorkspacePage = ({ collapsed }) => {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/jpg,image/png"
                         onChange={handleImageUpload}
                       />
                     </UploadButton>
