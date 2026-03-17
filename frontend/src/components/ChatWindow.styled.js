@@ -6,8 +6,8 @@ export const ChatWindowContainer = styled.div`
   flex-direction: column;
   height: 100%;
   width: 100%;
-  margin-left: ${props => props.$sidebarCollapsed ? '0' : '300px'}; /* 280px sidebar + 20px margin */
-  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  margin-left: ${props => props.$sidebarCollapsed ? '0' : '280px'};
+  transition: margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   background: ${props => props.theme.sidebar};
   font-size: ${props => {
     switch (props.fontSize) {
@@ -35,7 +35,7 @@ export const ChatHeader = styled.div`
   -webkit-backdrop-filter: blur(5px);
   z-index: 101; // Changed from 10 to 101
   position: relative;
-  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1),
+  transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
               opacity 0.3s ease,
               filter 0.3s ease;
   opacity: ${props => props.$focusModeActive ? 0.12 : 1};
@@ -49,7 +49,7 @@ export const ChatTitleSection = styled.div`
   flex: 1;
   gap: 4px; // Use gap instead of margin for more consistent spacing
   padding-left: ${props => props.$sidebarCollapsed ? '20px' : '0px'}; // Reset padding when sidebar is open
-  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 `;
 
 export const ModelSelectorsRow = styled.div`
@@ -241,7 +241,7 @@ export const InputContainer = styled.div`
 
     const centerPosition = $sidebarCollapsed
       ? `calc(50%)`
-      : `calc(50% + 160px)`; // Increased from 140px to 160px to account for sidebar's 20px left margin // 140px is half of sidebar width 280px
+      : `calc(50% + 140px)`;
 
     if ($animateDown) {
       return css`

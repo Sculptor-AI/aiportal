@@ -8,7 +8,7 @@ import { useTranslation } from '../contexts/TranslationContext';
 const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
   display: flex;
   flex-direction: column;
-  width: ${props => props.$collapsed ? '0' : '280px'};
+  width: 280px;
   height: ${props => props.$sidebarStyle === 'traditional' ? '100vh' : 'calc(100vh - 40px)'};
   background: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
@@ -18,21 +18,28 @@ const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
   overflow: hidden;
   position: fixed;
   top: ${props => props.$sidebarStyle === 'traditional' ? '0' : '20px'};
-  left: ${props => {
-    if (props.$collapsed) {
-      return '-280px';
-    }
-    return props.$sidebarStyle === 'traditional' ? '0' : '20px';
-  }};
+  left: ${props => props.$sidebarStyle === 'traditional' ? '0' : '20px'};
   z-index: 101;
   opacity: ${props => props.$collapsed ? '0' : (props.$focusModeActive ? '0.12' : '1')};
   box-shadow: ${props => props.$sidebarStyle === 'traditional' ? 'none' : '0 8px 28px rgba(0, 0, 0, 0.16)'};
   filter: ${props => props.$focusModeActive ? 'blur(6px)' : 'none'};
-  pointer-events: ${props => props.$focusModeActive ? 'none' : 'auto'};
-  transition: all 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+  pointer-events: ${props => (props.$collapsed || props.$focusModeActive) ? 'none' : 'auto'};
+  transform: ${props => {
+    if (!props.$collapsed) {
+      return 'translateX(0)';
+    }
+    return props.$sidebarStyle === 'traditional'
+      ? 'translateX(-100%)'
+      : 'translateX(calc(-100% - 20px))';
+  }};
+  will-change: transform, opacity;
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    filter 0.3s ease;
   
   @media (max-width: 768px) {
-    left: ${props => (props.$collapsed ? '-100%' : '0')};
+    left: 0;
     top: 0;
     width: 100%;
     height: 100vh;
@@ -40,7 +47,11 @@ const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
     border: none;
     border-radius: 0;
     box-shadow: none;
-    transition: all 0.3s ease;
+    transform: ${props => props.$collapsed ? 'translateX(-100%)' : 'translateX(0)'};
+    transition:
+      transform 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.24s ease,
+      filter 0.3s ease;
   }
 `;
 

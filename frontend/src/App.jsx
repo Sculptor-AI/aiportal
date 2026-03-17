@@ -53,6 +53,8 @@ const GraphingModal = React.lazy(() => import('./components/GraphingModal'));
 const FlowchartModal = React.lazy(() => import('./components/FlowchartModal'));
 const Sandbox3DModal = React.lazy(() => import('./components/Sandbox3DModal'));
 const DinosaurRunGame = React.lazy(() => import('./components/DinosaurRunGame'));
+const DESKTOP_SIDEBAR_WIDTH = 280;
+const LEGACY_FLOATING_SIDEBAR_MIGRATION_KEY = 'sidebar_style_restored_2026_03_17';
 
 const AppContainer = styled.div`
   display: flex;
@@ -108,7 +110,7 @@ const MainGreeting = styled.div`
   position: fixed;
   top: ${props => props.$toolbarOpen ? '25%' : '28%'};
   left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 0 : 160;
+    const sidebarOffset = props.$sidebarCollapsed ? 0 : DESKTOP_SIDEBAR_WIDTH / 2;
     return `calc(50% + ${sidebarOffset}px)`;
   }};
   transform: translateX(-50%);
@@ -242,6 +244,47 @@ const useIsMobile = () => {
 
   return isMobile;
 };
+
+const getDefaultAppSettings = () => ({
+  theme: 'light',
+  accentColor: 'theme',
+  fontSize: 'medium',
+  fontFamily: 'system',
+  sendWithEnter: true,
+  showTimestamps: true,
+  showModelIcons: true,
+  showProfilePicture: true,
+  messageAlignment: 'default',
+  codeHighlighting: true,
+  bubbleStyle: 'minimal',
+  messageSpacing: 'comfortable',
+  sidebarStyle: 'traditional',
+  sidebarAutoCollapse: false,
+  focusMode: false,
+  highContrast: false,
+  reducedMotion: false,
+  lineSpacing: 'normal',
+  showGreeting: true,
+  useRealBackend: shouldUseRealBackend(),
+  language: 'en-US'
+});
+
+const normalizeSidebarStyle = (sidebarStyle, allowFloating = false) => {
+  if (sidebarStyle === 'floating' && !allowFloating) {
+    return 'traditional';
+  }
+
+  return sidebarStyle === 'floating' || sidebarStyle === 'traditional'
+    ? sidebarStyle
+    : 'traditional';
+};
+
+const normalizeSettings = (rawSettings = {}, allowFloating = false) => ({
+  ...getDefaultAppSettings(),
+  ...rawSettings,
+  useRealBackend: rawSettings.useRealBackend ?? shouldUseRealBackend(),
+  sidebarStyle: normalizeSidebarStyle(rawSettings.sidebarStyle, allowFloating)
+});
 
 // Main app component
 const AppContent = ({ onSettingsLanguageChange }) => {
@@ -415,39 +458,16 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
   // Settings - from user account or localStorage
   const [settings, setSettings] = useState(() => {
+    const allowFloatingSidebar = readLocalStorageItem(LEGACY_FLOATING_SIDEBAR_MIGRATION_KEY) === 'true';
+
     // If logged in, use user settings
     if (user && user.settings) {
-      return {
-        ...user.settings,
-        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
-      };
+      return normalizeSettings(user.settings, allowFloatingSidebar);
     }
 
     // Otherwise, use localStorage
     const savedSettings = readLocalStorageJSON('settings');
-    return savedSettings || {
-      theme: 'light',
-      accentColor: 'theme',
-      fontSize: 'medium',
-      fontFamily: 'system',
-      sendWithEnter: true,
-      showTimestamps: true,
-      showModelIcons: true,
-      showProfilePicture: true,
-      messageAlignment: 'default',
-      codeHighlighting: true,
-      bubbleStyle: 'minimal',
-      messageSpacing: 'comfortable',
-      sidebarStyle: 'traditional',
-      sidebarAutoCollapse: false,
-      focusMode: false,
-      highContrast: false,
-      reducedMotion: false,
-      lineSpacing: 'normal',
-      showGreeting: true,
-      useRealBackend: shouldUseRealBackend(),
-      language: 'en-US'
-    };
+    return normalizeSettings(savedSettings || {}, allowFloatingSidebar);
   });
 
   // Modal states
@@ -493,10 +513,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   // Update settings when user changes
   useEffect(() => {
     if (user && user.settings) {
-      setSettings({
-        ...user.settings,
-        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
-      });
+      const allowFloatingSidebar = readLocalStorageItem(LEGACY_FLOATING_SIDEBAR_MIGRATION_KEY) === 'true';
+      setSettings(normalizeSettings(user.settings, allowFloatingSidebar));
     }
   }, [user]);
 
@@ -819,13 +837,18 @@ const AppContent = ({ onSettingsLanguageChange }) => {
 
   // Update settings
   const updateSettings = (newSettings) => {
-    setSettings(newSettings);
+    const normalizedSettings = normalizeSettings(newSettings, true);
+    setSettings(normalizedSettings);
+
+    if (normalizedSettings.sidebarStyle === 'floating') {
+      writeLocalStorageItem(LEGACY_FLOATING_SIDEBAR_MIGRATION_KEY, 'true');
+    }
 
     // If logged in, also update user settings
     if (user) {
-      updateUserSettings(newSettings);
+      updateUserSettings(normalizedSettings);
     }
-    setBackendMode(newSettings.useRealBackend !== false);
+    setBackendMode(normalizedSettings.useRealBackend !== false);
   };
 
   useEffect(() => {
@@ -1001,11 +1024,11 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         name: 'custom',
         background: overrides.background || base.background,
         sidebar: overrides.sidebar || base.sidebar,
-        chat: overrides.background || base.chat,
+        chat: overrides.chat || base.chat,
         text: overrides.text || base.text,
         border: overrides.border || base.border,
-        primary: overrides.border || base.primary,
-        inputBackground: overrides.background || base.inputBackground
+        primary: overrides.primary || overrides.border || base.primary,
+        inputBackground: overrides.inputBackground || base.inputBackground
       };
     };
 

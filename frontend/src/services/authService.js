@@ -507,3 +507,67 @@ export const getDashboardStats = async () => {
     throw error;
   }
 };
+
+export const getUsageLimits = async () => {
+  try {
+    const response = await fetchWithFallback('/admin/usage/limits', {
+      method: 'GET',
+      headers: getAdminAuthHeaders()
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch usage limits');
+    }
+
+    return data.data.limits;
+  } catch (error) {
+    console.error('Get usage limits error:', error);
+    throw error;
+  }
+};
+
+export const updateUsageLimits = async (limits) => {
+  try {
+    const response = await fetchWithFallback('/admin/usage/limits', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAdminAuthHeaders()
+      },
+      body: JSON.stringify(limits)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update usage limits');
+    }
+
+    return data.data.limits;
+  } catch (error) {
+    console.error('Update usage limits error:', error);
+    throw error;
+  }
+};
+
+export const resetUserUsage = async (userId) => {
+  try {
+    const response = await fetchWithFallback(`/admin/users/${userId}/usage/reset`, {
+      method: 'POST',
+      headers: getAdminAuthHeaders()
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to reset user usage');
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error('Reset user usage error:', error);
+    throw error;
+  }
+};

@@ -23,6 +23,43 @@ import {
   writeLocalStorageItem
 } from '../../utils/storage';
 
+const LEGACY_FLOATING_SIDEBAR_MIGRATION_KEY = 'sidebar_style_restored_2026_03_17';
+
+const getDefaultMobileSettings = () => ({
+  theme: 'light',
+  accentColor: 'theme',
+  fontSize: 'medium',
+  fontFamily: 'system',
+  sendWithEnter: true,
+  showTimestamps: true,
+  showModelIcons: true,
+  showProfilePicture: true,
+  messageAlignment: 'default',
+  codeHighlighting: true,
+  bubbleStyle: 'minimal',
+  messageSpacing: 'comfortable',
+  sidebarStyle: 'traditional',
+  sidebarAutoCollapse: false,
+  focusMode: false,
+  highContrast: false,
+  reducedMotion: false,
+  lineSpacing: 'normal',
+  showGreeting: true,
+  useRealBackend: shouldUseRealBackend(),
+  language: 'en-US'
+});
+
+const normalizeMobileSettings = (rawSettings = {}, allowFloating = false) => ({
+  ...getDefaultMobileSettings(),
+  ...rawSettings,
+  useRealBackend: rawSettings.useRealBackend ?? shouldUseRealBackend(),
+  sidebarStyle: rawSettings.sidebarStyle === 'floating' && !allowFloating
+    ? 'traditional'
+    : (rawSettings.sidebarStyle === 'floating' || rawSettings.sidebarStyle === 'traditional'
+      ? rawSettings.sidebarStyle
+      : 'traditional')
+});
+
 const MobileAppContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -335,35 +372,14 @@ const MobileAppContent = () => {
   });
 
   const [settings, setSettings] = useState(() => {
+    const allowFloatingSidebar = readLocalStorageItem(LEGACY_FLOATING_SIDEBAR_MIGRATION_KEY) === 'true';
     if (user && user.settings) {
-      return {
-        ...user.settings,
-        useRealBackend: user.settings.useRealBackend ?? shouldUseRealBackend()
-      };
+      return normalizeMobileSettings(user.settings, allowFloatingSidebar);
     }
-    
+      
     const savedSettings = readLocalStorageJSON('settings');
-    return savedSettings || {
-      theme: 'light',
-      fontSize: 'medium',
-      fontFamily: 'system',
-      sendWithEnter: true,
-      showTimestamps: true,
-      showModelIcons: true,
-      showProfilePicture: true,
-      messageAlignment: 'default',
-      codeHighlighting: true,
-      bubbleStyle: 'minimal',
-      messageSpacing: 'comfortable',
-      sidebarAutoCollapse: false,
-      focusMode: false,
-      highContrast: false,
-      reducedMotion: false,
-      lineSpacing: 'normal',
-      useRealBackend: shouldUseRealBackend(),
-      language: 'en-US'
-    };
-  });
+      return normalizeMobileSettings(savedSettings || {}, allowFloatingSidebar);
+    });
 
   useEffect(() => {
     setBackendMode(settings.useRealBackend !== false);
@@ -616,13 +632,18 @@ const MobileAppContent = () => {
   };
   
   const updateSettings = (newSettings) => {
-    setSettings(newSettings);
-    
-    if (user) {
-      updateUserSettings(newSettings);
-    }
-    setBackendMode(newSettings.useRealBackend !== false);
-  };
+      const normalizedSettings = normalizeMobileSettings(newSettings, true);
+      setSettings(normalizedSettings);
+
+      if (normalizedSettings.sidebarStyle === 'floating') {
+        writeLocalStorageItem(LEGACY_FLOATING_SIDEBAR_MIGRATION_KEY, 'true');
+      }
+      
+      if (user) {
+        updateUserSettings(normalizedSettings);
+      }
+      setBackendMode(normalizedSettings.useRealBackend !== false);
+    };
 
   const handleModelChange = (modelId) => {
     setSelectedModel(modelId);
@@ -664,11 +685,11 @@ const MobileAppContent = () => {
         name: 'custom',
         background: overrides.background || base.background,
         sidebar: overrides.sidebar || base.sidebar,
-        chat: overrides.background || base.chat,
+        chat: overrides.chat || base.chat,
         text: overrides.text || base.text,
         border: overrides.border || base.border,
-        primary: overrides.border || base.primary,
-        inputBackground: overrides.background || base.inputBackground
+        primary: overrides.primary || overrides.border || base.primary,
+        inputBackground: overrides.inputBackground || base.inputBackground
       };
     }
     return getTheme(settings.theme);

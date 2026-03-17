@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import ModelSelector from '../components/ModelSelector';
 
-const PAGE_SIDEBAR_OFFSET = 320;
+const PAGE_SIDEBAR_OFFSET = 280;
 const KNOWLEDGE_CAPACITY_BYTES = 10 * 1024 * 1024;
 const MAX_INSTRUCTIONS_LENGTH = 8000;
 
@@ -16,7 +16,7 @@ const PageContainer = styled.div`
   color: ${props => props.theme.text};
   background: ${props => props.theme.background};
   overflow-y: auto;
-  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1), width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   width: ${props => (props.$collapsed ? '100%' : `calc(100% - ${PAGE_SIDEBAR_OFFSET}px)`)};
   margin-left: ${props => (props.$collapsed ? '0' : `${PAGE_SIDEBAR_OFFSET}px`)};
 

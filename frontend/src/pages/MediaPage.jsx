@@ -38,8 +38,8 @@ const PageContainer = styled.div`
   color: ${p => p.theme.text};
   overflow-y: auto;
   overflow-x: hidden;
-  transition: padding-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-  padding-left: ${p => p.$collapsed ? '0' : '300px'};
+  transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+  padding-left: ${p => p.$collapsed ? '0' : '280px'};
   padding-bottom: 100px;
 
   @media (max-width: 1024px) {
@@ -428,7 +428,7 @@ const BottomBarWrap = styled.div`
   box-sizing: border-box;
   pointer-events: none;
   margin-left: ${p => p.$collapsed ? '0' : '150px'};
-  transition: margin-left 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  transition: margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   animation: ${slideUp} 0.4s ease-out;
 
   @media (max-width: 1024px) {

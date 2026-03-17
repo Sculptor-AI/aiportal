@@ -10,13 +10,15 @@
  *   but user.username remains "JohnDoe" for display
  */
 
+import { withNormalizedUserUsage } from './usageLimits.js';
+
 /**
  * Remove sensitive data from user object before returning
  */
 export const sanitizeUser = (user) => {
   if (!user) return null;
   const { passwordHash, passwordSalt, ...safeUser } = user;
-  return safeUser;
+  return withNormalizedUserUsage(safeUser);
 };
 
 /**

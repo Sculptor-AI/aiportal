@@ -14,6 +14,7 @@ import { listImageModels, getDefaultImageModel } from '../config/index.js';
 import modelsConfig from '../config/models.json';
 import { requireAuthAndApproved } from '../middleware/auth.js';
 import { imageGenerationRateLimit } from '../middleware/rateLimit.js';
+import { evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
 
 const image = new Hono();
 
@@ -65,13 +66,38 @@ function resolveImageModel(modelName) {
  */
 image.post('/generate', imageGenerationRateLimit, async (c) => {
   const env = c.env;
+  const kv = env.KV;
+  const user = c.get('user');
 
   try {
+    if (!kv) {
+      return c.json({ error: 'Storage not configured' }, 500);
+    }
+
     const body = await c.req.json();
     const { prompt, provider, model } = body;
+    const imageCount = Math.max(1, Number(body.n) || 1);
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
       return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
+    }
+
+    const usageLimits = await getGlobalUsageLimits(kv);
+    const usageEvaluation = evaluateUsageRequest({
+      user,
+      limits: usageLimits,
+      requested: { images: imageCount }
+    });
+
+    if (!usageEvaluation.allowed) {
+      return c.json({
+        error: usageEvaluation.message,
+        code: 'usage_limit_exceeded',
+        usage: usageEvaluation.usage,
+        limits: usageEvaluation.limits,
+        requested: usageEvaluation.requested,
+        exceeded: usageEvaluation.field
+      }, 429);
     }
 
     // Resolve model to get provider and API ID
@@ -94,7 +120,7 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
         size: body.size || '1024x1024',
         quality: body.quality || 'auto',
         style: body.style || 'auto',
-        n: body.n || 1,
+        n: imageCount,
         response_format: 'b64_json'
       });
 
@@ -102,6 +128,10 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
         console.error('OpenAI image generation provider failure:', result.error);
         return c.json({ error: 'Image generation failed' }, 500);
       }
+
+      await incrementUserUsage(kv, user.id, { images: result.images?.length || imageCount }).catch((error) => {
+        console.error('Failed to increment image usage:', error);
+      });
 
       return c.json({
         provider: 'openai',
@@ -125,7 +155,7 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
       apiId: resolvedApiId,
       aspectRatio: body.aspectRatio || '1:1',
       imageSize: body.imageSize,
-      count: body.n || 1,
+      count: imageCount,
       negativePrompt: body.negativePrompt,
       seed: body.seed,
       history: body.history // Multi-turn conversation history
@@ -135,6 +165,10 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
       console.error('Gemini image generation provider failure:', result.error);
       return c.json({ error: 'Image generation failed' }, 500);
     }
+
+    await incrementUserUsage(kv, user.id, { images: result.images?.length || imageCount }).catch((error) => {
+      console.error('Failed to increment image usage:', error);
+    });
 
     return c.json({
       provider: 'imagen',
@@ -164,14 +198,21 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
 image.post('/edit', imageGenerationRateLimit, async (c) => {
   const env = c.env;
   const apiKey = env.OPENAI_API_KEY;
+  const kv = env.KV;
+  const user = c.get('user');
 
   if (!apiKey) {
     return c.json({ error: 'OPENAI_API_KEY is not configured.' }, 500);
   }
 
   try {
+    if (!kv) {
+      return c.json({ error: 'Storage not configured' }, 500);
+    }
+
     const body = await c.req.json();
     const { image: imageData, prompt, mask, size, n, model } = body;
+    const imageCount = Math.max(1, Number(n) || 1);
 
     if (!imageData) {
       return c.json({ error: 'Image is required' }, 400);
@@ -180,10 +221,28 @@ image.post('/edit', imageGenerationRateLimit, async (c) => {
       return c.json({ error: 'Prompt is required' }, 400);
     }
 
+    const usageLimits = await getGlobalUsageLimits(kv);
+    const usageEvaluation = evaluateUsageRequest({
+      user,
+      limits: usageLimits,
+      requested: { images: imageCount }
+    });
+
+    if (!usageEvaluation.allowed) {
+      return c.json({
+        error: usageEvaluation.message,
+        code: 'usage_limit_exceeded',
+        usage: usageEvaluation.usage,
+        limits: usageEvaluation.limits,
+        requested: usageEvaluation.requested,
+        exceeded: usageEvaluation.field
+      }, 429);
+    }
+
     const result = await editImageWithDALLE(imageData, prompt, apiKey, {
       mask,
       size: size || '1024x1024',
-      n: n || 1,
+      n: imageCount,
       model: model || 'gpt-image-1'
     });
 
@@ -191,6 +250,10 @@ image.post('/edit', imageGenerationRateLimit, async (c) => {
       console.error('OpenAI image edit provider failure:', result.error);
       return c.json({ error: 'Image edit failed' }, 500);
     }
+
+    await incrementUserUsage(kv, user.id, { images: result.images?.length || imageCount }).catch((error) => {
+      console.error('Failed to increment image usage:', error);
+    });
 
     return c.json({
       images: result.images.map(img => ({

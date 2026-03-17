@@ -9,6 +9,7 @@ import { sanitizeUser, findUserByUsername, findUserById, getAllUsers, updateUser
 import { hashPassword, verifyPassword, generateSessionToken, hashToken } from '../utils/crypto.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { adminLoginRateLimit } from '../middleware/rateLimit.js';
+import { getGlobalUsageLimits, resetUserUsage, summarizeUsageTotals, updateGlobalUsageLimits } from '../utils/usageLimits.js';
 
 const admin = new Hono();
 const MAX_PASSWORD_LENGTH = 128;
@@ -137,6 +138,37 @@ admin.get('/users/:userId', requireAuth, requireAdmin, async (c) => {
   }
 
   return c.json({ success: true, data: { user: sanitizeUser(user) } });
+});
+
+/**
+ * Get global usage limits
+ */
+admin.get('/usage/limits', requireAuth, requireAdmin, async (c) => {
+  const kv = c.env.KV;
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  const limits = await getGlobalUsageLimits(kv);
+  return c.json({ success: true, data: { limits } });
+});
+
+/**
+ * Update global usage limits
+ */
+admin.put('/usage/limits', requireAuth, requireAdmin, async (c) => {
+  const kv = c.env.KV;
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const limits = await updateGlobalUsageLimits(kv, body);
+    return c.json({ success: true, data: { limits } });
+  } catch (error) {
+    return c.json({ error: error.message || 'Failed to update usage limits' }, 400);
+  }
 });
 
 /**
@@ -338,6 +370,26 @@ admin.put('/users/:userId', requireAuth, requireAdmin, async (c) => {
 });
 
 /**
+ * Reset a user's usage counters
+ */
+admin.post('/users/:userId/usage/reset', requireAuth, requireAdmin, async (c) => {
+  const kv = c.env.KV;
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  const userId = c.req.param('userId');
+  const user = await findUserById(kv, userId);
+
+  if (!user) {
+    return c.json({ error: 'User not found' }, 404);
+  }
+
+  const usage = await resetUserUsage(kv, userId);
+  return c.json({ success: true, data: { userId, usage } });
+});
+
+/**
  * Delete user
  */
 admin.delete('/users/:userId', requireAuth, requireAdmin, async (c) => {
@@ -387,6 +439,8 @@ admin.get('/dashboard/stats', requireAuth, requireAdmin, async (c) => {
   }
 
   const users = await getAllUsers(kv);
+  const usageTotals = summarizeUsageTotals(users);
+  const usageLimits = await getGlobalUsageLimits(kv);
 
   let totalUsers = 0;
   let pendingUsers = 0;
@@ -405,7 +459,15 @@ admin.get('/dashboard/stats', requireAuth, requireAdmin, async (c) => {
   return c.json({
     success: true,
     data: {
-      stats: { totalUsers, pendingUsers, activeUsers, adminUsers, suspendedUsers }
+      stats: {
+        totalUsers,
+        pendingUsers,
+        activeUsers,
+        adminUsers,
+        suspendedUsers,
+        ...usageTotals,
+        usageLimits
+      }
     }
   });
 });

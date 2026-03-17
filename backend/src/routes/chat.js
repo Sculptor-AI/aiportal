@@ -16,6 +16,7 @@ import { handleOpenAIChat } from '../services/openai.js';
 import { validateToolsForProvider } from '../config/index.js';
 import { requireAuthAndApproved } from '../middleware/auth.js';
 import { chatGenerationRateLimit } from '../middleware/rateLimit.js';
+import { evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
 
 const chat = new Hono();
 
@@ -99,13 +100,36 @@ function validateToolRequest(provider, body, c) {
  */
 chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
   const env = c.env;
+  const kv = env.KV;
+  const user = c.get('user');
 
   try {
+    if (!kv) {
+      return c.json({ error: 'Storage not configured' }, 500);
+    }
+
     const body = await c.req.json();
     const modelId = body.model;
     const provider = getProvider(modelId, body);
+    const usageLimits = await getGlobalUsageLimits(kv);
+    const usageEvaluation = evaluateUsageRequest({
+      user,
+      limits: usageLimits,
+      requested: { turns: 1 }
+    });
 
     console.log(`Chat request: model=${modelId}, provider=${provider}, web_search=${body.web_search}, code_execution=${body.code_execution}`);
+
+    if (!usageEvaluation.allowed) {
+      return c.json({
+        error: usageEvaluation.message,
+        code: 'usage_limit_exceeded',
+        usage: usageEvaluation.usage,
+        limits: usageEvaluation.limits,
+        requested: usageEvaluation.requested,
+        exceeded: usageEvaluation.field
+      }, 429);
+    }
 
     // Validate tool requests against provider capabilities
     const validationError = validateToolRequest(provider, body, c);
@@ -124,10 +148,18 @@ chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
         if (!apiKey) {
           return c.json({ error: 'GEMINI_API_KEY is not configured.' }, 500);
         }
+        let response;
         if (body.stream === false) {
-          return handleGeminiChatNonStreaming(c, body, apiKey);
+          response = await handleGeminiChatNonStreaming(c, body, apiKey);
+        } else {
+          response = await handleGeminiChat(c, body, apiKey);
         }
-        return handleGeminiChat(c, body, apiKey);
+        if (response.ok) {
+          await incrementUserUsage(kv, user.id, { turns: 1 }).catch((error) => {
+            console.error('Failed to increment chat usage:', error);
+          });
+        }
+        return response;
       }
 
       case 'anthropic': {
@@ -135,7 +167,13 @@ chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
         if (!apiKey) {
           return c.json({ error: 'ANTHROPIC_API_KEY is not configured.' }, 500);
         }
-        return handleAnthropicChat(c, body, apiKey);
+        const response = await handleAnthropicChat(c, body, apiKey);
+        if (response.ok) {
+          await incrementUserUsage(kv, user.id, { turns: 1 }).catch((error) => {
+            console.error('Failed to increment chat usage:', error);
+          });
+        }
+        return response;
       }
 
       case 'openai': {
@@ -143,7 +181,13 @@ chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
         if (!apiKey) {
           return c.json({ error: 'OPENAI_API_KEY is not configured.' }, 500);
         }
-        return handleOpenAIChat(c, body, apiKey);
+        const response = await handleOpenAIChat(c, body, apiKey);
+        if (response.ok) {
+          await incrementUserUsage(kv, user.id, { turns: 1 }).catch((error) => {
+            console.error('Failed to increment chat usage:', error);
+          });
+        }
+        return response;
       }
 
       case 'openrouter':
@@ -170,7 +214,13 @@ chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
             }
           });
         }
-        return handleOpenRouterChat(c, body, apiKey);
+        const response = await handleOpenRouterChat(c, body, apiKey);
+        if (response.ok) {
+          await incrementUserUsage(kv, user.id, { turns: 1 }).catch((error) => {
+            console.error('Failed to increment chat usage:', error);
+          });
+        }
+        return response;
       }
     }
   } catch (error) {

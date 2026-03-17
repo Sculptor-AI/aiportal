@@ -10,6 +10,7 @@ import { requireAuthAndApproved } from '../middleware/auth.js';
 import { videoGenerationRateLimit } from '../middleware/rateLimit.js';
 import { validateOutboundUrl } from '../utils/urlValidation.js';
 import { canUserAccessVideo, createVideoOwnershipRecord, getVideoOwnershipRecord } from '../utils/videoOwnership.js';
+import { evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
 
 const video = new Hono();
 const VIDEO_DOWNLOAD_HOST_ALLOWLIST = [
@@ -82,6 +83,24 @@ video.post('/generate', videoGenerationRateLimit, async (c) => {
       return c.json({ error: 'Unsupported aspect ratio. Sora currently supports 16:9 and 9:16.' }, 400);
     }
 
+    const usageLimits = await getGlobalUsageLimits(kv);
+    const usageEvaluation = evaluateUsageRequest({
+      user,
+      limits: usageLimits,
+      requested: { videos: 1 }
+    });
+
+    if (!usageEvaluation.allowed) {
+      return c.json({
+        error: usageEvaluation.message,
+        code: 'usage_limit_exceeded',
+        usage: usageEvaluation.usage,
+        limits: usageEvaluation.limits,
+        requested: usageEvaluation.requested,
+        exceeded: usageEvaluation.field
+      }, 429);
+    }
+
     console.log('Sora video generation request received');
 
     const result = await generateVideoWithSora(prompt, apiKey, { aspectRatio });
@@ -101,6 +120,10 @@ video.post('/generate', videoGenerationRateLimit, async (c) => {
       console.error('Unable to persist video ownership:', error);
       return c.json({ error: 'Unable to persist video request' }, 500);
     }
+
+    await incrementUserUsage(kv, user.id, { videos: 1 }).catch((error) => {
+      console.error('Failed to increment video usage:', error);
+    });
 
     return c.json({
       success: true,
