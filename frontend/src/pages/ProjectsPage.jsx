@@ -47,14 +47,10 @@ const PageContainer = styled.div`
   overflow-x: hidden;
   padding-left: ${props => (props.$collapsed ? '0' : '280px')};
   transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
-
-  @media (max-width: 1024px) {
-    padding-left: 0;
-  }
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1400px;
+  max-width: calc(100vw - ${props => props.$collapsed ? '0' : '280px'});
   margin: 0 auto;
   padding: 48px 40px 80px;
 

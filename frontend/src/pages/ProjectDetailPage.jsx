@@ -19,20 +19,15 @@ const PageContainer = styled.div`
   transition: margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1), width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   width: ${props => (props.$collapsed ? '100%' : `calc(100% - ${PAGE_SIDEBAR_OFFSET}px)`)};
   margin-left: ${props => (props.$collapsed ? '0' : `${PAGE_SIDEBAR_OFFSET}px`)};
-
-  @media (max-width: 1024px) {
-    width: 100%;
-    margin-left: 0;
-  }
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1180px;
+  max-width: calc(100vw - ${props => props.$collapsed ? '0' : '280px'});
   margin: 0 auto;
-  padding: 28px 36px 60px;
+  padding: 48px 40px 80px;
 
-  @media (max-width: 900px) {
-    padding: 20px 16px 40px;
+  @media (max-width: 768px) {
+    padding: 32px 20px 60px;
   }
 `;
 
@@ -639,7 +634,7 @@ const ProjectDetailPage = (props) => {
   if (!project) {
     return (
       <PageContainer $collapsed={collapsed}>
-        <ContentWrapper>
+        <ContentWrapper $collapsed={collapsed}>
           <BackLink to="/projects">← All projects</BackLink>
           <EmptyChats>Project not found.</EmptyChats>
         </ContentWrapper>
@@ -649,7 +644,7 @@ const ProjectDetailPage = (props) => {
 
   return (
     <PageContainer $collapsed={collapsed}>
-      <ContentWrapper>
+      <ContentWrapper $collapsed={collapsed}>
         <BackLink to="/projects">← All projects</BackLink>
 
         <TitleRow>

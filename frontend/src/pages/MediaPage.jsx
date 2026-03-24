@@ -41,19 +41,15 @@ const PageContainer = styled.div`
   transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   padding-left: ${p => p.$collapsed ? '0' : '280px'};
   padding-bottom: 100px;
-
-  @media (max-width: 1024px) {
-    padding-left: 0;
-  }
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1400px;
+  max-width: calc(100vw - ${props => props.$collapsed ? '0' : '280px'});
   margin: 0 auto;
-  padding: 48px 40px 0;
+  padding: 48px 40px 0px;
 
   @media (max-width: 768px) {
-    padding: 32px 20px 0;
+    padding: 32px 20px 60px;
   }
 `;
 
@@ -965,8 +961,7 @@ const MediaPage = ({ collapsed }) => {
 
   return (
     <PageContainer $collapsed={collapsed}>
-
-      <ContentWrapper>
+      <ContentWrapper $collapsed={collapsed}>
         <Header>
           <TitleSection>
             <PageTitle>Media Studio</PageTitle>
