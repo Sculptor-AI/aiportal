@@ -113,28 +113,12 @@ async function main() {
     settings: { theme: 'light' }
   };
 
-  // Write user data to a temporary file instead of logging sensitive data
+  // Write user data to a JSON file instead of logging sensitive data
   const userJson = JSON.stringify(user);
   const fs = await import('fs/promises');
   const path = await import('path');
   const tempFile = path.join(process.cwd(), `admin-user-${id}.json`);
   await fs.writeFile(tempFile, userJson, 'utf-8');
-
-  // Register cleanup handlers for automatic temp file deletion
-  const cleanupTempFile = () => {
-    fs.unlink(tempFile).catch(() => {
-      // Ignore errors during cleanup (file may already be deleted)
-    });
-  };
-  process.on('exit', cleanupTempFile);
-  process.on('SIGINT', () => {
-    cleanupTempFile();
-    process.exit(1);
-  });
-  process.on('SIGTERM', () => {
-    cleanupTempFile();
-    process.exit(1);
-  });
 
   // Get KV namespace ID from environment variable
   const kvNamespaceId = process.env.KV_NAMESPACE_ID;
@@ -168,16 +152,16 @@ async function main() {
   console.log('');
   console.log('# Add user data (reads from file to avoid logging sensitive data)');
   if (process.platform === 'win32') {
-    console.log(`$content = Get-Content "${tempFile}" -Raw; npx wrangler kv put --namespace-id=${kvNamespaceId} "user:${id}" $content`);
+    console.log(`npx wrangler kv key put --namespace-id=${kvNamespaceId} "user:${id}" --path "${tempFile}"`);
   } else {
-    console.log(`npx wrangler kv put --namespace-id=${kvNamespaceId} "user:${id}" "$(cat '${tempFile}')"`);
+    console.log(`npx wrangler kv key put --namespace-id=${kvNamespaceId} "user:${id}" --path '${tempFile}'`);
   }
   console.log('');
   console.log('# Add username index');
-  console.log(`npx wrangler kv put --namespace-id=${kvNamespaceId} "username:${username.toLowerCase()}" "${id}"`);
+  console.log(`npx wrangler kv key put --namespace-id=${kvNamespaceId} "username:${username.toLowerCase()}" "${id}"`);
   console.log('');
   console.log('# Add email index');
-  console.log(`npx wrangler kv put --namespace-id=${kvNamespaceId} "email:${email.toLowerCase()}" "${id}"`);
+  console.log(`npx wrangler kv key put --namespace-id=${kvNamespaceId} "email:${email.toLowerCase()}" "${id}"`);
   console.log('');
   console.log('# Delete the temporary file after import');
   if (process.platform === 'win32') {
