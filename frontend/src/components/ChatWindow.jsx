@@ -695,10 +695,10 @@ const ChatWindow = forwardRef(({
       >
         <ChatTitleSection $sidebarCollapsed={$sidebarCollapsed}>
           <ModelSelectorsRow>
-            {selectedModel !== 'instant' && !isImagePromptMode && (
+            {selectedModel !== 'instant' && !isImagePromptMode && activeActionChip !== 'deep-research' && (
               <ModelSelector
                 selectedModel={selectedModel}
-                models={availableModels}
+                models={availableModels.filter(m => m?.id !== DEEP_RESEARCH_MODEL_ID)}
                 onChange={handleModelChange}
                 key="model-selector"
                 theme={theme}

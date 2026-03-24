@@ -30,9 +30,13 @@ import {
   FileTypeIcon,
   OverflowChipButton,
   OverflowDropdown,
-  InputGreeting
+  InputGreeting,
+  ThinkingChipGroup,
+  ThinkingEffortButton
 } from './ChatWindow.styled';
 import { DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
+
+const REASONING_EFFORT_ORDER = ['low', 'medium', 'high', 'xhigh'];
 
 const ChatInputArea = forwardRef(({
   chatIsEmpty,
@@ -95,9 +99,14 @@ const ChatInputArea = forwardRef(({
   const [showOverflowDropdown, setShowOverflowDropdown] = useState(false);
   const [chipsExpanded, setChipsExpanded] = useState(chatIsEmpty);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [reasoningEffort, setReasoningEffort] = useState(() => {
+    const savedEffort = localStorage.getItem('reasoningEffort');
+    return savedEffort || 'medium';
+  });
   const dragCounterRef = useRef(0);
   const greetingEnabled = settings?.showGreeting !== false;
   const showGreetingMessage = greetingEnabled && chatIsEmpty && !animateDown;
+  const supportsReasoningEffort = modelCapabilities?.reasoning_effort === true;
 
   // Use image mode from prop (state managed by parent)
   const isImagePromptMode = isImagePromptModeProp || false;
@@ -198,6 +207,10 @@ const ChatInputArea = forwardRef(({
   }, [showToolbar, onToolbarToggle]);
 
   useEffect(() => {
+    localStorage.setItem('reasoningEffort', reasoningEffort);
+  }, [reasoningEffort]);
+
+  useEffect(() => {
     const wasEmpty = prevChatIsEmptyRef.current;
     prevChatIsEmptyRef.current = chatIsEmpty;
 
@@ -269,69 +282,13 @@ const ChatInputArea = forwardRef(({
     setShowOverflowDropdown(false);
   }, [isDeepResearchSelected]);
 
-  // Responsive chip management
+  // Keep visible/hidden chips in sync with the available chip list.
+  // No DOM measurement needed — all chips are always shown and the
+  // container handles overflow via flex-wrap + centering.
   useEffect(() => {
-    const handleResize = () => {
-      if (!chipsContainerRef.current) return;
-
-      const containerWidth = chipsContainerRef.current.offsetWidth;
-      const hammerButtonWidth = isDeepResearchSelected ? 0 : 44; // HammerButton width + gap
-      const overflowButtonWidth = 50; // Width for "..." button
-      let availableWidth = containerWidth - hammerButtonWidth;
-
-      // Define all chips
-      const allChips = allChipTypes;
-
-      let currentWidth = 0;
-      const visible = [];
-      const hidden = [];
-
-      for (let i = 0; i < allChips.length; i++) {
-        const chipRef = chipRefs.current[i];
-        if (chipRef) {
-          const chipWidth = chipRef.offsetWidth + 8; // Include gap
-
-          // Check if we need to show overflow button
-          const needsOverflow = i < allChips.length - 1 && currentWidth + chipWidth > availableWidth - overflowButtonWidth;
-          const isLastAndFits = i === allChips.length - 1 && currentWidth + chipWidth <= availableWidth;
-
-          if (needsOverflow) {
-            // This chip and remaining chips go to hidden
-            hidden.push(...allChips.slice(i));
-            break;
-          } else if (isLastAndFits || currentWidth + chipWidth <= availableWidth) {
-            // This chip fits
-            visible.push(allChips[i]);
-            currentWidth += chipWidth;
-          } else {
-            // This chip doesn't fit
-            hidden.push(...allChips.slice(i));
-            break;
-          }
-        } else {
-          // Fallback if ref not available - assume it fits
-          visible.push(allChips[i]);
-        }
-      }
-
-      // Only update state if there's actually a change
-      if (JSON.stringify(visible) !== JSON.stringify(visibleChips) ||
-        JSON.stringify(hidden) !== JSON.stringify(hiddenChips)) {
-        setVisibleChips(visible);
-        setHiddenChips(hidden);
-      }
-    };
-
-    // Use a timeout to ensure DOM is updated
-    const timeoutId = setTimeout(handleResize, 100);
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [allChipTypes, chatIsEmpty, chipsExpanded, isDeepResearchSelected, thinkingMode, selectedActionChip, createType, visibleChips, hiddenChips]);
+    setVisibleChips(allChipTypes);
+    setHiddenChips([]);
+  }, [allChipTypes]);
 
   const handleToggleChips = () => {
     if (chipsExpanded) {
@@ -423,10 +380,7 @@ const ChatInputArea = forwardRef(({
       actionChip: selectedActionChip,
       mode: thinkingMode,
       createType: createType,
-      reasoningEffort:
-        supportsNativeThinking && thinkingMode === 'thinking'
-          ? modelCapabilities?.reasoning_effort_default || reasoningEffortLevels[0] || 'medium'
-          : null
+      reasoningEffort: supportsReasoningEffort && thinkingMode === 'thinking' ? reasoningEffort : null
     });
     setInputMessage(''); // Clear input after submission attempt
     if (onMessageSent) {
@@ -606,6 +560,29 @@ const ChatInputArea = forwardRef(({
     setSelectedActionChip(null);
   };
 
+  const cycleReasoningEffort = useCallback(() => {
+    setReasoningEffort((previousEffort) => {
+      const currentIndex = REASONING_EFFORT_ORDER.indexOf(previousEffort);
+      const safeIndex = currentIndex >= 0 ? currentIndex : 1;
+      return REASONING_EFFORT_ORDER[(safeIndex + 1) % REASONING_EFFORT_ORDER.length];
+    });
+  }, []);
+
+  const getReasoningEffortLabel = useCallback((effort) => {
+    switch (effort) {
+      case 'low':
+        return t('composer.reasoningEffort.low', 'Low');
+      case 'medium':
+        return t('composer.reasoningEffort.medium', 'Medium');
+      case 'high':
+        return t('composer.reasoningEffort.high', 'High');
+      case 'xhigh':
+        return t('composer.reasoningEffort.xhigh', 'X-High');
+      default:
+        return t('composer.reasoningEffort.medium', 'Medium');
+    }
+  }, [t]);
+
   const handleCreateSelect = (type) => {
     // Clear all creation modes first
     setIsImagePromptMode(false);
@@ -665,41 +642,62 @@ const ChatInputArea = forwardRef(({
       }
 
       return (
-        <ActionChip
-          key="mode"
-          ref={isHidden ? null : (el) => {
-            if (el) {
-              modeAnchorRef.current = el;
-              if (!isHidden) chipRefs.current[index] = el;
-            }
-          }}
-          selected={thinkingMode === 'thinking'}
-          onClick={() => {
-            if (isHidden) setShowOverflowDropdown(false);
-            // Toggle thinking mode directly
-            setThinkingMode(prev => prev === 'thinking' ? null : 'thinking');
-          }}
-        >
-          {theme.name === 'retro' ? (
-            <RetroIconWrapper>
-              <img src="/images/retroTheme/brainIcon.png" alt={t('composer.chip.thinking')} style={{ width: '16px', height: '16px' }} />
-            </RetroIconWrapper>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-              <rect x="9" y="9" width="6" height="6"></rect>
-              <line x1="9" y1="2" x2="9" y2="4"></line>
-              <line x1="15" y1="2" x2="15" y2="4"></line>
-              <line x1="9" y1="20" x2="9" y2="22"></line>
-              <line x1="15" y1="20" x2="15" y2="22"></line>
-              <line x1="20" y1="9" x2="22" y2="9"></line>
-              <line x1="20" y1="14" x2="22" y2="14"></line>
-              <line x1="2" y1="9" x2="4" y2="9"></line>
-              <line x1="2" y1="14" x2="4" y2="14"></line>
-            </svg>
+        <ThinkingChipGroup key="mode">
+          <ActionChip
+            ref={isHidden ? null : (el) => {
+              if (el) {
+                modeAnchorRef.current = el;
+                if (!isHidden) chipRefs.current[index] = el;
+              }
+            }}
+            selected={thinkingMode === 'thinking'}
+            onClick={() => {
+              if (isHidden) setShowOverflowDropdown(false);
+              setThinkingMode(prev => prev === 'thinking' ? null : 'thinking');
+            }}
+          >
+            {theme.name === 'retro' ? (
+              <RetroIconWrapper>
+                <img src="/images/retroTheme/brainIcon.png" alt={t('composer.chip.thinking')} style={{ width: '16px', height: '16px' }} />
+              </RetroIconWrapper>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                <rect x="9" y="9" width="6" height="6"></rect>
+                <line x1="9" y1="2" x2="9" y2="4"></line>
+                <line x1="15" y1="2" x2="15" y2="4"></line>
+                <line x1="9" y1="20" x2="9" y2="22"></line>
+                <line x1="15" y1="20" x2="15" y2="22"></line>
+                <line x1="20" y1="9" x2="22" y2="9"></line>
+                <line x1="20" y1="14" x2="22" y2="14"></line>
+                <line x1="2" y1="9" x2="4" y2="9"></line>
+                <line x1="2" y1="14" x2="4" y2="14"></line>
+              </svg>
+            )}
+            {t('composer.chip.thinking')}
+          </ActionChip>
+          {supportsReasoningEffort && thinkingMode === 'thinking' && (
+            <ThinkingEffortButton
+              type="button"
+              onMouseDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (isHidden) setShowOverflowDropdown(false);
+                cycleReasoningEffort();
+              }}
+              disabled={isLoading || isProcessingFile}
+              title={`${t('composer.reasoningEffort.label', 'Reasoning effort')}: ${getReasoningEffortLabel(reasoningEffort)}`}
+              aria-label={`${t('composer.reasoningEffort.label', 'Reasoning effort')}: ${getReasoningEffortLabel(reasoningEffort)}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 0 1-15.5 6.36"></path>
+                <path d="M3 12A9 9 0 0 1 18.5 5.64"></path>
+                <polyline points="7 17 5.5 18.5 4 17"></polyline>
+              </svg>
+              {getReasoningEffortLabel(reasoningEffort)}
+            </ThinkingEffortButton>
           )}
-          {t('composer.chip.thinking')}
-        </ActionChip>
+        </ThinkingChipGroup>
       );
     } else if (type === 'search') {
       return (
@@ -902,62 +900,61 @@ const ChatInputArea = forwardRef(({
       <ChipsDock $visible={chatIsEmpty || chipsExpanded} $indent={chatIsEmpty || chipsExpanded}>
         <ActionChipsContainer ref={chipsContainerRef}>
           {!isDeepResearchSelected && (
-            <HammerButton
-              ref={toolbarRef}
-              $isOpen={showToolbar}
-              onClick={() => setShowToolbar(!showToolbar)}
-              type="button"
-              title={toolbarToggleLabel}
-              aria-label={toolbarToggleLabel}
-              aria-expanded={showToolbar}
-            >
-              <HammerIcon aria-hidden="true" $isOpen={showToolbar}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                </svg>
-              </HammerIcon>
-              <CloseIcon aria-hidden="true" $isOpen={showToolbar}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </CloseIcon>
-            </HammerButton>
-          )}
-
-          {!isDeepResearchSelected && (
-            <ToolbarContainer $isOpen={showToolbar} $isEmpty={chatIsEmpty} ref={toolbarContainerRef}>
-              <ToolbarItem title={t('composer.toolbar.equationEditor')} onClick={onToggleEquationEditor}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 4H6L12 12L6 20H18" />
-                </svg>
-              </ToolbarItem>
-              <ToolbarItem title={t('composer.toolbar.whiteboard')} onClick={onToggleWhiteboard}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"></path><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"></path></svg>
-              </ToolbarItem>
-              <ToolbarItem title={t('composer.toolbar.graphing')} onClick={onToggleGraphing}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                  <polyline points="17 6 23 6 23 12"></polyline>
-                </svg>
-              </ToolbarItem>
-              <ToolbarItem title={t('composer.toolbar.flowchart')} onClick={onToggleFlowchart}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="18" r="3"></circle>
-                  <circle cx="6" cy="6" r="3"></circle>
-                  <circle cx="18" cy="6" r="3"></circle>
-                  <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
-                  <path d="M12 12v3"></path>
-                </svg>
-              </ToolbarItem>
-              <ToolbarItem title={t('composer.toolbar.sandbox3d')} onClick={onToggleSandbox3D}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
-              </ToolbarItem>
-            </ToolbarContainer>
+            <div style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+              <HammerButton
+                ref={toolbarRef}
+                $isOpen={showToolbar}
+                onClick={() => setShowToolbar(!showToolbar)}
+                type="button"
+                title={toolbarToggleLabel}
+                aria-label={toolbarToggleLabel}
+                aria-expanded={showToolbar}
+              >
+                <HammerIcon aria-hidden="true" $isOpen={showToolbar}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                  </svg>
+                </HammerIcon>
+                <CloseIcon aria-hidden="true" $isOpen={showToolbar}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </CloseIcon>
+              </HammerButton>
+              <ToolbarContainer $isOpen={showToolbar} $isEmpty={chatIsEmpty} ref={toolbarContainerRef}>
+                <ToolbarItem title={t('composer.toolbar.equationEditor')} onClick={onToggleEquationEditor}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 4H6L12 12L6 20H18" />
+                  </svg>
+                </ToolbarItem>
+                <ToolbarItem title={t('composer.toolbar.whiteboard')} onClick={onToggleWhiteboard}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"></path><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"></path></svg>
+                </ToolbarItem>
+                <ToolbarItem title={t('composer.toolbar.graphing')} onClick={onToggleGraphing}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                    <polyline points="17 6 23 6 23 12"></polyline>
+                  </svg>
+                </ToolbarItem>
+                <ToolbarItem title={t('composer.toolbar.flowchart')} onClick={onToggleFlowchart}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="18" r="3"></circle>
+                    <circle cx="6" cy="6" r="3"></circle>
+                    <circle cx="18" cy="6" r="3"></circle>
+                    <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"></path>
+                    <path d="M12 12v3"></path>
+                  </svg>
+                </ToolbarItem>
+                <ToolbarItem title={t('composer.toolbar.sandbox3d')} onClick={onToggleSandbox3D}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                </ToolbarItem>
+              </ToolbarContainer>
+            </div>
           )}
 
           {/* Render visible chips */}

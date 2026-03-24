@@ -61,6 +61,7 @@ const AppContainer = styled.div`
   height: 100vh;
   overflow: hidden;
   position: relative;
+  background: ${props => props.theme.sidebar};
   color: ${props => props.theme.text};
   transition: background 0.3s ease;
 `;
@@ -106,98 +107,6 @@ const FloatingMenuButton = styled.button`
 `;
 
 // Main Greeting Component
-const MainGreeting = styled.div`
-  position: fixed;
-  top: ${props => props.$toolbarOpen ? '25%' : '28%'};
-  left: ${props => {
-    const sidebarOffset = props.$sidebarCollapsed ? 0 : DESKTOP_SIDEBAR_WIDTH / 2;
-    return `calc(50% + ${sidebarOffset}px)`;
-  }};
-  transform: translateX(-50%);
-  max-width: 800px;
-  width: 90%;
-  text-align: center;
-  z-index: 102;
-  pointer-events: none;
-  padding: 0 20px;
-  box-sizing: border-box;
-  transition: all 0.3s ease-out;
-  
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  
-  .logo {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    pointer-events: auto;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    
-    &:hover {
-      opacity: 0.9;
-      transform: scale(1.05);
-    }
-  }
-  
-  h1 {
-    font-size: min(2.4rem, 7vw);
-    font-weight: 550;
-    color: ${props => props.theme.text};
-    margin: 0;
-    padding: 0;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    pointer-events: auto;
-    cursor: pointer;
-    transition: opacity 0.2s ease;
-    opacity: 0.88;
-    
-    &:hover {
-      opacity: 1;
-    }
-  }
-
-  @media (max-width: 768px) {
-    left: 50% !important;
-    top: ${props => props.$toolbarOpen ? '22%' : '25%'};
-    max-width: 90%;
-    padding: 0 15px; 
-    gap: 10px;
-    
-    .logo {
-      width: 38px;
-      height: 38px;
-    }
-    
-    h1 {
-      font-size: min(2rem, 6vw);
-    }
-  }
-
-  @media (max-width: 480px) {
-    left: 50% !important;
-    top: ${props => props.$toolbarOpen ? '22%' : '25%'};
-    max-width: 95%;
-    padding: 0 10px; 
-    gap: 8px;
-    
-    .logo {
-      width: 34px;
-      height: 34px;
-    }
-    
-    h1 {
-      font-size: min(1.75rem, 5.5vw);
-    }
-  }
-`;
 
 // App wrapper with authentication context
 const AppWithAuth = () => {
@@ -923,10 +832,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     console.log('Chats reset to fresh state');
   };
 
-  // Double-click handler for the sculptor logo/text to activate the game
-  const handleSculptorDoubleClick = () => {
-    setShowDinosaurGame(true);
-  };
 
   // Function to exit the game
   const handleExitGame = () => {
@@ -1115,20 +1020,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               </FloatingMenuButton>
             )}
 
-            {/* Main greeting that appears at the top of the page */}
-            {getCurrentChat()?.messages.length === 0 && settings.showGreeting && !isMobile && location.pathname === '/' && !showDinosaurGame && (
-              <MainGreeting
-                $toolbarOpen={isToolbarOpen}
-                $equationEditorOpen={isEquationEditorOpen}
-                $graphingOpen={isGraphingOpen}
-                $flowchartOpen={isFlowchartOpen}
-                $sandbox3DOpen={isSandbox3DOpen}
-                $sidebarCollapsed={collapsed}
-              >
-                <img src="/sculptor.svg" alt="Sculptor Logo" className="logo" onDoubleClick={handleSculptorDoubleClick} />
-                <h1 onDoubleClick={handleSculptorDoubleClick}>Sculptor</h1>
-              </MainGreeting>
-            )}
+            {/* Main greeting that appears at the top of the page - logo/text removed */}
 
             <Sidebar
               chats={chats}
