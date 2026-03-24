@@ -153,6 +153,30 @@ The backend handles unified API requests, web search, and custom models.
 3.  Configure `.env` (see `backend/.env.example`)
 4.  Start server: `npm start`
 
+### Account Setup
+
+Newly registered users are assigned `pending` status and cannot log in until an administrator activates their account. On a local deployment, create the initial administrator directly in Workers KV.
+
+1.  Determine the KV namespace ID:
+    ```bash
+    cd backend
+    npx wrangler kv namespace list
+    ```
+2.  Create the initial admin account:
+    ```bash
+    cd backend
+    KV_NAMESPACE_ID=<kv-id> node scripts/create-admin.js admin admin@example.org "use-a-strong-password"
+    ```
+3.  Import the generated admin record into KV:
+    ```bash
+    npx wrangler kv key put --namespace-id=<kv-id> "user:<user-id>" --path "/absolute/path/to/admin-user-<id>.json"
+    npx wrangler kv key put --namespace-id=<kv-id> "username:admin" "<user-id>"
+    npx wrangler kv key put --namespace-id=<kv-id> "email:admin@example.org" "<user-id>"
+    ```
+    Add `--remote` if you are writing to the deployed worker.
+4.  Delete the temporary JSON file after the import completes.
+5.  Sign in through `POST /api/admin/auth/login`, then approve users by setting their status to `active`.
+
 ---
 
 ## 📚 Documentation
