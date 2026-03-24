@@ -121,6 +121,7 @@ const ChatWindow = forwardRef(({
   const prevIsEmptyRef = useRef(false);
   const previousNonDeepResearchModelRef = useRef(initialSelectedModel || DEFAULT_CHAT_MODEL_ID);
   const deepResearchChipLockRef = useRef(false);
+  const pendingMessageSentRef = useRef(null);
 
   const { t } = useTranslation();
   const toast = useToast();
@@ -480,10 +481,12 @@ const ChatWindow = forwardRef(({
     onAttachmentChange,
   });
 
-  // Handle pending message from project detail page (pre-fill input)
+  // Handle pending message from project detail page — send it immediately.
+  // Guard with a ref so React StrictMode's double-invocation doesn't send twice.
   useEffect(() => {
-    if (pendingMessage && chatInputAreaRef.current?.appendToInput) {
-      chatInputAreaRef.current.appendToInput(pendingMessage);
+    if (pendingMessage && pendingMessageSentRef.current !== pendingMessage) {
+      pendingMessageSentRef.current = pendingMessage;
+      sendChatMessage({ text: pendingMessage });
       onPendingMessageConsumed?.();
     }
   }, [pendingMessage]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -5,7 +5,7 @@ import { useTranslation } from '../contexts/TranslationContext';
 
 const SelectorContainer = styled.div`
   position: relative;
-  z-index: 105;
+  z-index: 1;
 `;
 
 const SelectorButton = styled.button`
@@ -100,7 +100,7 @@ const DropdownMenu = styled.div`
   border: ${props => props.theme.name === 'retro' ?
     `1px solid ${props.theme.buttonShadowDark}` :
     'none'};
-  z-index: 1000;
+  z-index: 2;
   backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
   -webkit-backdrop-filter: ${props => props.theme.name === 'retro' ? 'none' : props.theme.glassEffect};
 

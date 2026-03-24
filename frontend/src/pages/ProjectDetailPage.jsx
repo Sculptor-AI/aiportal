@@ -3,6 +3,7 @@ import styled, { useTheme } from 'styled-components';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import ModelSelector from '../components/ModelSelector';
+import { SendButton } from '../components/ChatWindow.styled';
 
 const PAGE_SIDEBAR_OFFSET = 280;
 const KNOWLEDGE_CAPACITY_BYTES = 10 * 1024 * 1024;
@@ -122,7 +123,8 @@ const ComposerCard = styled.div`
   background: ${props => props.theme.sidebar};
   border: 1px solid ${props => props.theme.border};
   border-radius: 14px;
-  overflow: hidden;
+  /* visible so ModelSelector dropdown is not clipped into the textarea area */
+  overflow: visible;
   margin-bottom: 4px;
 `;
 
@@ -152,7 +154,14 @@ const ComposerFooter = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 6px 12px 8px;
+`;
+
+const ComposerModelSelectorWrap = styled.div`
+  min-width: 0;
+  max-width: 240px;
+  flex: 0 1 auto;
 `;
 
 const ComposerLeft = styled.div`
@@ -183,21 +192,11 @@ const ComposerBtn = styled.button`
   svg { width: 18px; height: 18px; }
 `;
 
-const SendBtn = styled.button`
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 10px;
-  background: ${props => props.theme.text};
-  color: ${props => props.theme.background};
-  cursor: pointer;
-  opacity: ${props => (props.disabled ? 0.3 : 1)};
-  transition: opacity 0.15s;
-
-  svg { width: 16px; height: 16px; }
+/** SendButton is absolutely positioned for the main chat input; reset for this flex footer. */
+const ComposerSendButton = styled(SendButton)`
+  position: static;
+  transform: none;
+  flex-shrink: 0;
 `;
 
 /* ── Chat list ── */
@@ -590,7 +589,15 @@ const ProjectDetailPage = (props) => {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleSend();
+      return;
+    }
+    if (settings.sendWithEnter && e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    } else if (!settings.sendWithEnter && e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
@@ -689,17 +696,29 @@ const ProjectDetailPage = (props) => {
                     </svg>
                   </ComposerBtn>
                 </ComposerLeft>
-                <ModelSelector
-                  selectedModel={selectedModel}
-                  models={availableModels}
-                  onChange={onModelChange}
-                  theme={theme}
-                />
-                <SendBtn disabled={!draft.trim()} onClick={handleSend}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 19V5" /><path d="M5 12l7-7 7 7" />
-                  </svg>
-                </SendBtn>
+                <ComposerModelSelectorWrap>
+                  <ModelSelector
+                    selectedModel={selectedModel}
+                    models={availableModels}
+                    onChange={onModelChange}
+                    theme={theme}
+                  />
+                </ComposerModelSelectorWrap>
+                <ComposerSendButton
+                  type="button"
+                  title="Send"
+                  disabled={!draft.trim()}
+                  onClick={handleSend}
+                >
+                  {theme.name === 'retro' ? (
+                    <img src="/images/retroTheme/sendIcon.png" alt="Send" style={{ width: '16px', height: '16px' }} />
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 19V5" />
+                      <path d="M5 12l7-7 7 7" />
+                    </svg>
+                  )}
+                </ComposerSendButton>
               </ComposerFooter>
             </ComposerCard>
 
