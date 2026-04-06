@@ -133,6 +133,9 @@ export async function handleOpenRouterChat(c, body, apiKey) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('OpenRouter API Error:', response.status, errorText.slice(0, 500));
+      if (response.status === 401 || response.status === 403) {
+        return c.json({ error: 'OpenRouter API key is invalid or lacks permissions. Check OPENROUTER_API_KEY configuration.', upstream_status: response.status }, 502);
+      }
       return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 

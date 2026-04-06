@@ -199,10 +199,10 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
         errorData.message;
 
       let errorMessage = backendErrorMessage || 'Backend request failed';
-      if (response.status === 401 && modelId.includes('gemini')) {
-        errorMessage = 'Google API authentication failed on the backend. The Gemini models are currently unavailable.';
-      } else if (response.status === 401) {
-        errorMessage = 'API authentication failed. This model may not be properly configured on the backend.';
+      if (response.status === 401) {
+        errorMessage = backendErrorMessage || 'Your session has expired. Please log in again.';
+      } else if (response.status === 502) {
+        errorMessage = backendErrorMessage || 'Backend API key configuration error. The model provider rejected the request.';
       }
       
       throw new Error(errorMessage);

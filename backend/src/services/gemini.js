@@ -540,6 +540,9 @@ export async function handleGeminiChat(c, body, apiKey) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Gemini API Error:', response.status, errorText.slice(0, 500));
+      if (response.status === 401 || response.status === 403) {
+        return c.json({ error: 'Gemini API key is invalid or lacks permissions. Check GEMINI_API_KEY configuration.', upstream_status: response.status }, 502);
+      }
       return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 
@@ -581,6 +584,9 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Gemini non-stream API Error:', response.status, errorText.slice(0, 500));
+      if (response.status === 401 || response.status === 403) {
+        return c.json({ error: 'Gemini API key is invalid or lacks permissions. Check GEMINI_API_KEY configuration.', upstream_status: response.status }, 502);
+      }
       return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 

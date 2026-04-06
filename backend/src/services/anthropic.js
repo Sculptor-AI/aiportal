@@ -641,6 +641,9 @@ export async function handleAnthropicChat(c, body, apiKey) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Anthropic API Error:', response.status, errorText.slice(0, 500));
+      if (response.status === 401 || response.status === 403) {
+        return c.json({ error: 'Anthropic API key is invalid or lacks permissions. Check ANTHROPIC_API_KEY configuration.', upstream_status: response.status }, 502);
+      }
       return c.json({ error: 'Upstream AI provider request failed' }, response.status);
     }
 

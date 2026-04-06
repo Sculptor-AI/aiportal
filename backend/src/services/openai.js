@@ -507,6 +507,9 @@ export async function handleOpenAIChat(c, body, apiKey) {
     if (!response.ok) {
       const errorMessage = await extractOpenAIError(response);
       console.error('OpenAI API Error:', response.status, errorMessage);
+      if (response.status === 401 || response.status === 403) {
+        return c.json({ error: 'OpenAI API key is invalid or lacks permissions. Check OPENAI_API_KEY configuration.', upstream_status: response.status }, 502);
+      }
       return c.json({ error: errorMessage }, response.status);
     }
 
