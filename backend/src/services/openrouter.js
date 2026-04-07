@@ -100,9 +100,11 @@ function buildOpenRouterBody(body) {
     }
     const effort = body.reasoning_effort.toLowerCase();
     if (['low', 'medium', 'high'].includes(effort)) {
-      payload.reasoning = { effort };
+      payload.reasoning_effort = effort;
     } else if (effort === 'xhigh' || effort === 'max') {
-      payload.reasoning = { effort: 'high' };
+      payload.reasoning_effort = 'high';
+    } else if (effort === 'minimal') {
+      payload.reasoning_effort = 'low';
     }
   }
 

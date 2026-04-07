@@ -397,16 +397,21 @@ function buildAnthropicBody(body) {
         effort: anthropicEffort
       };
     } else {
+      const budgetTokens =
+        body.thinking_budget ||
+        body.reasoning_budget ||
+        mapReasoningEffortToBudget(normalizedReasoningEffort) ||
+        10000;
+      // Anthropic requires budget_tokens < max_tokens
+      anthropicBody.max_tokens = Math.max(anthropicBody.max_tokens, budgetTokens + 4096);
       anthropicBody.thinking = {
         type: 'enabled',
-        budget_tokens:
-          body.thinking_budget ||
-          body.reasoning_budget ||
-          mapReasoningEffortToBudget(normalizedReasoningEffort) ||
-          10000
+        budget_tokens: budgetTokens
       };
     }
     options.extended_thinking = true;
+    // Temperature must be 1 (or omitted) when thinking is enabled
+    delete anthropicBody.temperature;
   }
 
   return { anthropicBody, options };

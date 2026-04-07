@@ -36,7 +36,7 @@ import {
 } from './ChatWindow.styled';
 import { DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
 
-const REASONING_EFFORT_ORDER = ['low', 'medium', 'high', 'xhigh'];
+const REASONING_EFFORT_FALLBACK = ['low', 'medium', 'high'];
 
 const ChatInputArea = forwardRef(({
   chatIsEmpty,
@@ -233,6 +233,13 @@ const ChatInputArea = forwardRef(({
       setThinkingMode(null);
     }
   }, [supportsNativeThinking, thinkingMode]);
+
+  useEffect(() => {
+    if (reasoningEffortLevels.length > 0 && !reasoningEffortLevels.includes(reasoningEffort)) {
+      const defaultLevel = modelCapabilities?.reasoning_effort_default || 'medium';
+      setReasoningEffort(reasoningEffortLevels.includes(defaultLevel) ? defaultLevel : reasoningEffortLevels[0]);
+    }
+  }, [reasoningEffortLevels, reasoningEffort, modelCapabilities?.reasoning_effort_default]);
 
   useEffect(() => {
     if (!supportsCodeExecution && selectedActionChip === 'analysis-tool') {
@@ -562,14 +569,17 @@ const ChatInputArea = forwardRef(({
 
   const cycleReasoningEffort = useCallback(() => {
     setReasoningEffort((previousEffort) => {
-      const currentIndex = REASONING_EFFORT_ORDER.indexOf(previousEffort);
-      const safeIndex = currentIndex >= 0 ? currentIndex : 1;
-      return REASONING_EFFORT_ORDER[(safeIndex + 1) % REASONING_EFFORT_ORDER.length];
+      const levels = reasoningEffortLevels.length > 0 ? reasoningEffortLevels : REASONING_EFFORT_FALLBACK;
+      const currentIndex = levels.indexOf(previousEffort);
+      const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+      return levels[(safeIndex + 1) % levels.length];
     });
-  }, []);
+  }, [reasoningEffortLevels]);
 
   const getReasoningEffortLabel = useCallback((effort) => {
     switch (effort) {
+      case 'minimal':
+        return t('composer.reasoningEffort.minimal', 'Minimal');
       case 'low':
         return t('composer.reasoningEffort.low', 'Low');
       case 'medium':
@@ -578,6 +588,8 @@ const ChatInputArea = forwardRef(({
         return t('composer.reasoningEffort.high', 'High');
       case 'xhigh':
         return t('composer.reasoningEffort.xhigh', 'X-High');
+      case 'max':
+        return t('composer.reasoningEffort.max', 'Max');
       default:
         return t('composer.reasoningEffort.medium', 'Medium');
     }
