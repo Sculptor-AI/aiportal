@@ -182,6 +182,30 @@ export function listChatModels() {
 }
 
 /**
+ * Look up per-model thinking/reasoning config by either display name or API ID.
+ * Returns { thinking_style, reasoning_effort_levels, reasoning_effort_default } or null.
+ */
+export function getModelThinkingConfig(provider, modelNameOrApiId) {
+  const config = modelsConfig.chat?.[provider];
+  if (!config) return null;
+
+  const caps = config.modelCapabilities || {};
+  const models = config.models || {};
+
+  if (caps[modelNameOrApiId]) {
+    return caps[modelNameOrApiId];
+  }
+
+  for (const [displayName, apiId] of Object.entries(models)) {
+    if (apiId === modelNameOrApiId && caps[displayName]) {
+      return caps[displayName];
+    }
+  }
+
+  return null;
+}
+
+/**
  * Get capabilities for a specific provider
  */
 export function getProviderCapabilities(provider) {

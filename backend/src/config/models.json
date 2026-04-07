@@ -44,7 +44,8 @@
             "high",
             "max"
           ],
-          "reasoning_effort_default": "medium"
+          "reasoning_effort_default": "medium",
+          "thinking_style": "adaptive"
         },
         "claude-sonnet-4.6": {
           "reasoning_effort": true,
@@ -53,7 +54,8 @@
             "medium",
             "high"
           ],
-          "reasoning_effort_default": "medium"
+          "reasoning_effort_default": "medium",
+          "thinking_style": "budget"
         }
       },
       "capabilities": {
@@ -77,7 +79,8 @@
             "medium",
             "high"
           ],
-          "reasoning_effort_default": "high"
+          "reasoning_effort_default": "high",
+          "thinking_style": "level"
         },
         "gemini-3-flash": {
           "reasoning_effort": true,
@@ -87,7 +90,8 @@
             "medium",
             "high"
           ],
-          "reasoning_effort_default": "high"
+          "reasoning_effort_default": "high",
+          "thinking_style": "level"
         },
         "gemini-3.1-flash-lite": {
           "reasoning_effort": true,
@@ -97,7 +101,8 @@
             "medium",
             "high"
           ],
-          "reasoning_effort_default": "minimal"
+          "reasoning_effort_default": "minimal",
+          "thinking_style": "level"
         }
       },
       "capabilities": {

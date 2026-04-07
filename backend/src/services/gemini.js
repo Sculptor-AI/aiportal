@@ -15,25 +15,9 @@
  * - Legacy Google video generation
  */
 
-import { resolveModel, getImageModelFallbacks } from '../config/index.js';
+import { resolveModel, getImageModelFallbacks, getModelThinkingConfig } from '../config/index.js';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
-const GEMINI_THINKING_LEVELS_BY_MODEL = {
-  'gemini-3.1-pro': ['low', 'medium', 'high'],
-  'gemini-3.1-pro-preview': ['low', 'medium', 'high'],
-  'gemini-3-flash': ['minimal', 'low', 'medium', 'high'],
-  'gemini-3-flash-preview': ['minimal', 'low', 'medium', 'high'],
-  'gemini-3.1-flash-lite': ['minimal', 'low', 'medium', 'high'],
-  'gemini-3.1-flash-lite-preview': ['minimal', 'low', 'medium', 'high']
-};
-const GEMINI_DEFAULT_THINKING_LEVEL_BY_MODEL = {
-  'gemini-3.1-pro': 'high',
-  'gemini-3.1-pro-preview': 'high',
-  'gemini-3-flash': 'high',
-  'gemini-3-flash-preview': 'high',
-  'gemini-3.1-flash-lite': 'minimal',
-  'gemini-3.1-flash-lite-preview': 'minimal'
-};
 
 function normalizeReasoningEffort(reasoningEffort) {
   if (typeof reasoningEffort !== 'string') return null;
@@ -62,12 +46,14 @@ function mapReasoningEffortToGeminiThinkingLevel(reasoningEffort) {
 }
 
 function getSupportedGeminiThinkingLevels(modelId) {
-  return GEMINI_THINKING_LEVELS_BY_MODEL[modelId] || null;
+  const config = getModelThinkingConfig('gemini', modelId);
+  const levels = config?.reasoning_effort_levels;
+  return Array.isArray(levels) && levels.length > 0 ? levels : null;
 }
 
 function getDefaultGeminiThinkingLevel(modelId) {
-  const modelDefault = GEMINI_DEFAULT_THINKING_LEVEL_BY_MODEL[modelId];
-  if (modelDefault) return modelDefault;
+  const config = getModelThinkingConfig('gemini', modelId);
+  if (config?.reasoning_effort_default) return config.reasoning_effort_default;
 
   const supportedLevels = getSupportedGeminiThinkingLevels(modelId);
   if (!supportedLevels || supportedLevels.length === 0) return null;
@@ -198,7 +184,8 @@ function convertToolsToGemini(tools) {
 function buildGeminiBody(body, targetModel = '') {
   const modelId = targetModel || body.model?.replace('google/', '') || '';
   const normalizedReasoningEffort = normalizeReasoningEffort(body.reasoning_effort);
-  const supportsThinkingLevels = Boolean(getSupportedGeminiThinkingLevels(modelId));
+  const modelThinkingConfig = getModelThinkingConfig('gemini', modelId);
+  const supportsThinkingLevels = modelThinkingConfig?.thinking_style === 'level' || Boolean(getSupportedGeminiThinkingLevels(modelId));
 
   // Convert messages to Gemini format
   const contents = [];

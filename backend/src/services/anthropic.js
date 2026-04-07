@@ -15,19 +15,10 @@
  * - System prompts
  */
 
-import { resolveModel, getDefaultModel } from '../config/index.js';
+import { resolveModel, getDefaultModel, getModelThinkingConfig } from '../config/index.js';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_VERSION = '2023-06-01';
-const ANTHROPIC_MODELS_WITH_REASONING_EFFORT = new Set([
-  'claude-opus-4-1-20250805',
-  'claude-opus-4-20250514',
-  'claude-sonnet-4-20250514',
-  'claude-3-7-sonnet-20250219'
-]);
-const ANTHROPIC_MODELS_WITH_MAX_EFFORT = new Set([
-  'claude-opus-4-1-20250805'
-]);
 
 function normalizeReasoningEffort(reasoningEffort) {
   if (typeof reasoningEffort !== 'string') return null;
@@ -54,10 +45,11 @@ function mapReasoningEffortToBudget(reasoningEffort) {
   }
 }
 
-function mapReasoningEffortToAnthropicEffort(model, reasoningEffort) {
+function mapReasoningEffortToAnthropicEffort(thinkingConfig, reasoningEffort) {
   if (!reasoningEffort) return null;
+  const levels = thinkingConfig?.reasoning_effort_levels || [];
   if (reasoningEffort === 'xhigh' || reasoningEffort === 'max') {
-    return ANTHROPIC_MODELS_WITH_MAX_EFFORT.has(model) ? 'max' : 'high';
+    return levels.includes('max') ? 'max' : 'high';
   }
   return reasoningEffort;
 }
@@ -390,16 +382,15 @@ function buildAnthropicBody(body) {
     }
   }
 
-  // Extended/adaptive thinking
+  // Extended/adaptive thinking — driven by models.json config
   const normalizedReasoningEffort = normalizeReasoningEffort(body.reasoning_effort);
-  const supportsNativeReasoningEffort = ANTHROPIC_MODELS_WITH_REASONING_EFFORT.has(model);
-  const anthropicEffort = supportsNativeReasoningEffort
-    ? mapReasoningEffortToAnthropicEffort(model, normalizedReasoningEffort)
-    : null;
+  const thinkingConfig = getModelThinkingConfig('anthropic', model);
+  const thinkingStyle = thinkingConfig?.thinking_style || 'budget';
   const shouldEnableThinking = Boolean(body.thinking || body.extended_thinking || normalizedReasoningEffort);
 
   if (shouldEnableThinking) {
-    if (anthropicEffort) {
+    if (thinkingStyle === 'adaptive' && normalizedReasoningEffort) {
+      const anthropicEffort = mapReasoningEffortToAnthropicEffort(thinkingConfig, normalizedReasoningEffort);
       anthropicBody.thinking = { type: 'adaptive' };
       anthropicBody.output_config = {
         ...(anthropicBody.output_config || {}),
