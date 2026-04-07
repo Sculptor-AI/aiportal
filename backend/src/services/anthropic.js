@@ -73,7 +73,7 @@ function getAnthropicHeaders(apiKey, options = {}) {
   if (options.citations) {
     betas.push('citations-2024-11-04');
   }
-  if (options.extended_thinking) {
+  if (options.extended_thinking && !options.adaptive_thinking) {
     betas.push('interleaved-thinking-2025-05-14');
   }
   if (options.token_efficient_tools) {
@@ -389,20 +389,23 @@ function buildAnthropicBody(body) {
   const shouldEnableThinking = Boolean(body.thinking || body.extended_thinking || normalizedReasoningEffort);
 
   if (shouldEnableThinking) {
-    if (thinkingStyle === 'adaptive' && normalizedReasoningEffort) {
-      const anthropicEffort = mapReasoningEffortToAnthropicEffort(thinkingConfig, normalizedReasoningEffort);
+    if (thinkingStyle === 'adaptive') {
+      const anthropicEffort = normalizedReasoningEffort
+        ? mapReasoningEffortToAnthropicEffort(thinkingConfig, normalizedReasoningEffort)
+        : (thinkingConfig?.reasoning_effort_default || 'high');
       anthropicBody.thinking = { type: 'adaptive' };
       anthropicBody.output_config = {
         ...(anthropicBody.output_config || {}),
         effort: anthropicEffort
       };
+      anthropicBody.max_tokens = Math.max(anthropicBody.max_tokens, 16000);
+      options.adaptive_thinking = true;
     } else {
       const budgetTokens =
         body.thinking_budget ||
         body.reasoning_budget ||
         mapReasoningEffortToBudget(normalizedReasoningEffort) ||
         10000;
-      // Anthropic requires budget_tokens < max_tokens
       anthropicBody.max_tokens = Math.max(anthropicBody.max_tokens, budgetTokens + 4096);
       anthropicBody.thinking = {
         type: 'enabled',
@@ -410,7 +413,6 @@ function buildAnthropicBody(body) {
       };
     }
     options.extended_thinking = true;
-    // Temperature must be 1 (or omitted) when thinking is enabled
     delete anthropicBody.temperature;
   }
 

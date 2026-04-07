@@ -31,8 +31,8 @@
 
     "anthropic": {
       "models": {
-        "claude-opus-4.6": "claude-opus-4-1-20250805",
-        "claude-sonnet-4.6": "claude-sonnet-4-20250514",
+        "claude-opus-4.6": "claude-opus-4-6",
+        "claude-sonnet-4.6": "claude-sonnet-4-6",
         "claude-haiku-4.5": "claude-3-5-haiku-20241022"
       },
       "modelCapabilities": {
@@ -55,7 +55,7 @@
             "high"
           ],
           "reasoning_effort_default": "medium",
-          "thinking_style": "budget"
+          "thinking_style": "adaptive"
         }
       },
       "capabilities": {
