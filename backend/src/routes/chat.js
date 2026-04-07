@@ -225,7 +225,10 @@ chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
     }
   } catch (error) {
     console.error('Chat completion error:', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    const safeMessage = error?.message
+      ? `Internal server error: ${error.message.slice(0, 200)}`
+      : 'Internal server error';
+    return c.json({ error: safeMessage }, 500);
   }
 });
 

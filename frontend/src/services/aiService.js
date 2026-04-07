@@ -190,19 +190,21 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       try {
         errorData = await response.json();
       } catch (e) {
-        errorData = { error: { message: `HTTP ${response.status}: ${response.statusText}` } };
+        const statusLabel = response.statusText || `status ${response.status}`;
+        errorData = { error: { message: `Backend returned ${statusLabel}` } };
       }
       
-      // Provide specific error messages for common issues
       const backendErrorMessage =
         (typeof errorData.error === 'string' ? errorData.error : errorData.error?.message) ||
         errorData.message;
 
-      let errorMessage = backendErrorMessage || 'Backend request failed';
+      let errorMessage = backendErrorMessage || `Backend request failed (HTTP ${response.status})`;
       if (response.status === 401) {
         errorMessage = backendErrorMessage || 'Your session has expired. Please log in again.';
       } else if (response.status === 502) {
         errorMessage = backendErrorMessage || 'Backend API key configuration error. The model provider rejected the request.';
+      } else if (response.status === 500) {
+        errorMessage = backendErrorMessage || 'The server encountered an internal error. Please try again.';
       }
       
       throw new Error(errorMessage);
@@ -404,14 +406,18 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
         localStorage.removeItem('ai_portal_current_user');
       } catch (_) {}
       window.dispatchEvent(new CustomEvent('auth:session-expired'));
-      throw error;
     }
-    
-    if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
+
+    const isConnectionError =
+      error.message.includes('Failed to fetch') ||
+      error.message.includes('NetworkError') ||
+      error.message.includes('ERR_CONNECTION');
+
+    if (isConnectionError) {
       const backendDisplayUrl = getRemoteBackendHost() || 'https://api.sculptorai.org';
       yield `\n🔒 **Backend Connection Issue**\n\nYour backend server is running on HTTPS with a self-signed certificate.\n\n**To fix this:**\n1. Open [${backendDisplayUrl}](${backendDisplayUrl}) in a new browser tab\n2. Accept the security warning/certificate\n3. Return here and try again\n\nThis only needs to be done once per browser session.\n`;
     } else {
-      yield `\n[Error: ${error.message}]\n`;
+      throw error;
     }
   }
 }
