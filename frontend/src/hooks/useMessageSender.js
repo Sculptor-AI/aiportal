@@ -586,6 +586,7 @@ const useMessageSender = ({
     if (scrollToBottom) setTimeout(scrollToBottom, 100);
     let streamedContent = '';
     let finalAssistantContent = '';
+    let streamSucceeded = false;
 
     try {
         // Build the complete system prompt starting with SculptorAI base prompt
@@ -750,6 +751,7 @@ const useMessageSender = ({
           });
         }
         finalAssistantContent = streamedContent;
+        streamSucceeded = true;
         
         const messageUpdates = { content: streamedContent, isLoading: false };
 
@@ -775,22 +777,42 @@ const useMessageSender = ({
 
     } catch (error) {
       console.error('[useMessageSender] Error generating response:', error);
+
+      const isAuthError =
+        error.message.includes('Invalid or expired session') ||
+        error.message.includes('Authentication required') ||
+        error.message.includes('session has expired');
       
-      const errorMessage = currentModelObj?.isCustomModel 
-        ? `Error with custom model "${currentModelObj.name}": ${error.message || 'Failed to generate response'}. Make sure the base model (${currentModelObj.baseModel}) is properly configured.`
-        : `Error with ${currentModel}: ${error.message || 'Failed to generate response'}`;
-      
-      updateMessage(currentChatId, aiMessageId, {
-        content: errorMessage,
-        isLoading: false, isError: true
-      });
-      addAlert({
-        message: errorMessage,
-        type: 'error', autoHide: true
-      });
+      if (isAuthError) {
+        const authErrorMessage = 'Your session has expired. Please log in again to continue.';
+        updateMessage(currentChatId, aiMessageId, {
+          content: authErrorMessage,
+          isLoading: false, isError: true
+        });
+        addAlert({
+          message: authErrorMessage,
+          type: 'error',
+          autoHide: false,
+          actionText: 'Log In',
+          onAction: () => { window.location.href = '/login'; }
+        });
+      } else {
+        const errorMessage = currentModelObj?.isCustomModel 
+          ? `Error with custom model "${currentModelObj.name}": ${error.message || 'Failed to generate response'}. Make sure the base model (${currentModelObj.baseModel}) is properly configured.`
+          : `Error with ${currentModel}: ${error.message || 'Failed to generate response'}`;
+        
+        updateMessage(currentChatId, aiMessageId, {
+          content: errorMessage,
+          isLoading: false, isError: true
+        });
+        addAlert({
+          message: errorMessage,
+          type: 'error', autoHide: true
+        });
+      }
     } finally {
       setIsLoading(false);
-      if (currentHistory.length === 0 && messageToSend && finalAssistantContent) {
+      if (streamSucceeded && currentHistory.length === 0 && messageToSend && finalAssistantContent) {
         generateChatTitle(messageToSend, finalAssistantContent).then(title => {
           if (title && updateChatTitle) {
             updateChatTitle(currentChatId, title);

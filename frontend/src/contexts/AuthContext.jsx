@@ -35,6 +35,17 @@ export const AuthProvider = ({ children }) => {
     checkUser();
   }, []);
 
+  // Listen for session expiry events dispatched by API services
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      console.warn('[AuthContext] Session expired, clearing auth state');
+      setUser(null);
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+  }, []);
+
   // Login function
   const login = async (username, password) => {
     setLoading(true);

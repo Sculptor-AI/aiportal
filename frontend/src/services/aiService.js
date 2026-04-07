@@ -393,8 +393,20 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
 
   } catch (error) {
     console.error('Backend streaming error:', error);
+
+    const isAuthError =
+      error.message.includes('Invalid or expired session') ||
+      error.message.includes('Authentication required') ||
+      error.message.includes('session has expired');
+
+    if (isAuthError) {
+      try {
+        localStorage.removeItem('ai_portal_current_user');
+      } catch (_) {}
+      window.dispatchEvent(new CustomEvent('auth:session-expired'));
+      throw error;
+    }
     
-    // If it's a certificate/CORS issue, provide helpful guidance
     if (error.message.includes('Failed to fetch') || error.message.includes('fetch')) {
       const backendDisplayUrl = getRemoteBackendHost() || 'https://api.sculptorai.org';
       yield `\n🔒 **Backend Connection Issue**\n\nYour backend server is running on HTTPS with a self-signed certificate.\n\n**To fix this:**\n1. Open [${backendDisplayUrl}](${backendDisplayUrl}) in a new browser tab\n2. Accept the security warning/certificate\n3. Return here and try again\n\nThis only needs to be done once per browser session.\n`;
