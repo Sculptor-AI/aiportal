@@ -94,6 +94,18 @@ function buildOpenRouterBody(body) {
     payload.include_reasoning = body.include_reasoning;
   }
 
+  if (body.reasoning_effort) {
+    if (!payload.include_reasoning) {
+      payload.include_reasoning = true;
+    }
+    const effort = body.reasoning_effort.toLowerCase();
+    if (['low', 'medium', 'high'].includes(effort)) {
+      payload.reasoning = { effort };
+    } else if (effort === 'xhigh' || effort === 'max') {
+      payload.reasoning = { effort: 'high' };
+    }
+  }
+
   // Transforms (e.g., middle-out for long contexts)
   if (body.transforms) {
     payload.transforms = body.transforms;
@@ -136,7 +148,14 @@ export async function handleOpenRouterChat(c, body, apiKey) {
       if (response.status === 401 || response.status === 403) {
         return c.json({ error: 'OpenRouter API key is invalid or lacks permissions. Check OPENROUTER_API_KEY configuration.', upstream_status: response.status }, 502);
       }
-      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
+      let upstreamMessage = 'Upstream AI provider request failed';
+      try {
+        const parsed = JSON.parse(errorText);
+        upstreamMessage = parsed?.error?.message || parsed?.error || parsed?.message || upstreamMessage;
+      } catch (_) {
+        if (errorText) upstreamMessage = errorText.slice(0, 300);
+      }
+      return c.json({ error: upstreamMessage, provider: 'openrouter', upstream_status: response.status }, response.status);
     }
 
     // For non-streaming, return JSON directly

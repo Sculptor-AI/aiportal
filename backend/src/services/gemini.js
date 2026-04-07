@@ -543,7 +543,14 @@ export async function handleGeminiChat(c, body, apiKey) {
       if (response.status === 401 || response.status === 403) {
         return c.json({ error: 'Gemini API key is invalid or lacks permissions. Check GEMINI_API_KEY configuration.', upstream_status: response.status }, 502);
       }
-      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
+      let upstreamMessage = 'Upstream AI provider request failed';
+      try {
+        const parsed = JSON.parse(errorText);
+        upstreamMessage = parsed?.error?.message || parsed?.error || parsed?.message || upstreamMessage;
+      } catch (_) {
+        if (errorText) upstreamMessage = errorText.slice(0, 300);
+      }
+      return c.json({ error: upstreamMessage, provider: 'gemini', upstream_status: response.status }, response.status);
     }
 
     // Transform Gemini stream to OpenAI-compatible SSE
@@ -587,7 +594,14 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
       if (response.status === 401 || response.status === 403) {
         return c.json({ error: 'Gemini API key is invalid or lacks permissions. Check GEMINI_API_KEY configuration.', upstream_status: response.status }, 502);
       }
-      return c.json({ error: 'Upstream AI provider request failed' }, response.status);
+      let upstreamMessage = 'Upstream AI provider request failed';
+      try {
+        const parsed = JSON.parse(errorText);
+        upstreamMessage = parsed?.error?.message || parsed?.error || parsed?.message || upstreamMessage;
+      } catch (_) {
+        if (errorText) upstreamMessage = errorText.slice(0, 300);
+      }
+      return c.json({ error: upstreamMessage, provider: 'gemini', upstream_status: response.status }, response.status);
     }
 
     const result = await response.json();
