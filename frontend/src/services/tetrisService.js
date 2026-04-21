@@ -67,8 +67,12 @@ const readJson = async (response, fallbackMessage) => {
 };
 
 export const fetchTetrisLeaderboard = async (limit = 10) => {
+  // Send auth headers if available so the endpoint works against deployments
+  // that still require auth on the public leaderboard route.
+  const authHeaders = getAuthHeaders();
   const response = await fetchWithFallback(`/games/tetris/leaderboard?limit=${encodeURIComponent(limit)}`, {
-    method: 'GET'
+    method: 'GET',
+    headers: Object.keys(authHeaders).length > 0 ? authHeaders : undefined
   });
   const data = await readJson(response, 'Failed to load Tetris leaderboard');
   return data.data;

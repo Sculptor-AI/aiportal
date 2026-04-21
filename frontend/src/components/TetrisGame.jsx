@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes, createGlobalStyle } from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import {
   fetchTetrisLeaderboard,
@@ -9,266 +9,432 @@ import {
 
 const BOARD_WIDTH = 10;
 const BOARD_HEIGHT = 20;
-const CELL_SIZE = 30;
+const CELL_SIZE = 24;
 const PREVIEW_SIZE = 4;
 const LEADERBOARD_LIMIT = 10;
 
-const GameContainer = styled.div`
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(circle at top, rgba(42, 84, 160, 0.22), transparent 42%),
-    linear-gradient(180deg, #06070a 0%, #020304 100%);
-  z-index: 9999;
-  overflow: auto;
-  padding: 72px 28px 28px;
-`;
+// Classic NES Tetris color palette (cycles every 10 levels)
+const LEVEL_PALETTES = [
+  { primary: '#2038ec', secondary: '#00b0f0' }, // 0 - blue
+  { primary: '#1cd000', secondary: '#b0e000' }, // 1 - green
+  { primary: '#d82888', secondary: '#f888b0' }, // 2 - pink
+  { primary: '#009898', secondary: '#58d8d8' }, // 3 - teal
+  { primary: '#e02800', secondary: '#f87058' }, // 4 - red
+  { primary: '#58208c', secondary: '#a060e0' }, // 5 - purple
+  { primary: '#202020', secondary: '#808080' }, // 6 - black
+  { primary: '#b82800', secondary: '#f86830' }, // 7 - orange
+  { primary: '#2038ec', secondary: '#ec3880' }, // 8
+  { primary: '#b82800', secondary: '#58d8d8' }  // 9
+];
 
-const GameLayout = styled.div`
-  width: min(1240px, 100%);
-  min-height: calc(100vh - 100px);
-  margin: 0 auto;
-  padding-left: clamp(24px, 4vw, 72px);
-  display: grid;
-  grid-template-columns: minmax(240px, 280px) auto minmax(220px, 260px);
-  gap: clamp(24px, 4vw, 48px);
-  align-items: start;
-
-  @media (max-width: 1120px) {
-    padding-left: 0;
-    grid-template-columns: 1fr;
-    justify-items: center;
+const TetrisGlobalStyle = createGlobalStyle`
+  .tetris-retro, .tetris-retro * {
+    font-family: 'Press Start 2P', monospace !important;
   }
 `;
 
-const Panel = styled.section`
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  background: rgba(11, 14, 20, 0.88);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
-  color: #f5f7fb;
+const flash = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 `;
 
-const LeaderboardPanel = styled(Panel)`
-  padding: 20px 18px;
+const flicker = keyframes`
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 0.96; }
+  20%, 24%, 55% { opacity: 0.88; }
+`;
+
+const CrtScanlines = styled.div`
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10001;
+  mix-blend-mode: multiply;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.35) 3px,
+    rgba(0, 0, 0, 0.35) 4px
+  );
+  animation: ${flicker} 6s infinite steps(1);
+`;
+
+const CrtSubpixel = styled.div`
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10002;
+  mix-blend-mode: screen;
+  opacity: 0.08;
+  background: repeating-linear-gradient(
+    to right,
+    #ff0000 0px,
+    #ff0000 1px,
+    #00ff00 1px,
+    #00ff00 2px,
+    #0000ff 2px,
+    #0000ff 3px
+  );
+`;
+
+const CrtVignette = styled.div`
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10003;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  box-shadow: inset 0 0 180px rgba(0, 0, 0, 0.8);
+`;
+
+const CrtGlass = styled.div`
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10004;
+  background: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(255, 255, 255, 0.06) 0%,
+    transparent 40%
+  );
+`;
+
+// Elliptical black bezel + heavy inset shadow fakes the rounded glass of a CRT tube.
+const CrtBezel = styled.div`
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10005;
+  border-radius: 28px / 80px;
+  box-shadow:
+    inset 0 0 160px 30px rgba(0, 0, 0, 0.9),
+    inset 0 0 40px 4px rgba(0, 0, 0, 0.8);
+  border: 6px solid #000000;
+`;
+
+
+const GameContainer = styled.div.attrs({ className: 'tetris-retro' })`
+  position: fixed;
+  inset: 0;
+  background: #000000;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at center, #0a0a2e 0%, #000000 80%);
+  z-index: 9999;
+  overflow: hidden;
+  padding: 12px;
+  color: #ffffff;
+  image-rendering: pixelated;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const GameLayout = styled.div`
+  width: min(1040px, 100%);
+  max-height: 100%;
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) auto minmax(180px, 220px);
+  gap: 14px;
+  align-items: start;
+  justify-content: center;
+
+  @media (max-width: 820px) {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    overflow: auto;
+    max-height: 100vh;
+  }
+`;
+
+// Classic NES Tetris frame: double border (outer white, inner shadow)
+const RetroFrame = styled.section`
+  position: relative;
+  background: #000000;
+  border: 2px solid #ffffff;
+  box-shadow:
+    inset 0 0 0 2px #000000,
+    inset 0 0 0 4px #ffffff,
+    0 0 0 2px #000000,
+    0 0 20px rgba(0, 176, 240, 0.2);
+  padding: 10px 12px;
+  color: #ffffff;
+`;
+
+const RetroLabel = styled.div`
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #ff7777;
+  margin-bottom: 8px;
+  text-align: center;
+  text-shadow: 2px 2px 0 #000000;
 `;
 
 const BoardColumn = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
 `;
 
-const BoardTitle = styled.div`
-  color: #f5f7fb;
+const TitleBlock = styled.div`
   text-align: center;
-
-  h2 {
+  padding: 0 8px;
+  h1 {
     margin: 0;
-    font-size: 2rem;
+    font-size: clamp(14px, 1.8vw, 20px);
+    color: #ffffff;
     letter-spacing: 0.08em;
+    white-space: nowrap;
+    text-shadow:
+      2px 2px 0 #e02800,
+      4px 4px 0 #000000;
   }
+`;
 
-  p {
-    margin: 8px 0 0;
-    font-size: 0.95rem;
-    color: rgba(245, 247, 251, 0.72);
-  }
+const BoardFrame = styled.div`
+  background: #000000;
+  padding: 6px;
+  border: 2px solid #ffffff;
+  box-shadow:
+    inset 0 0 0 2px #000000,
+    inset 0 0 0 4px #ffffff,
+    0 0 0 2px #000000,
+    0 0 24px rgba(0, 176, 240, 0.3);
 `;
 
 const GameBoard = styled.div`
   display: grid;
   grid-template-columns: repeat(${BOARD_WIDTH}, ${CELL_SIZE}px);
   grid-template-rows: repeat(${BOARD_HEIGHT}, ${CELL_SIZE}px);
-  gap: 1px;
-  background: #141922;
-  border: 3px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  padding: 12px;
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  gap: 0;
+  background: #000000;
+  position: relative;
 `;
 
 const GameCell = styled.div`
   width: ${CELL_SIZE}px;
   height: ${CELL_SIZE}px;
-  background: ${(props) => (props.$empty ? '#050607' : '#2a3140')};
-  border: 1px solid ${(props) => (props.$ghost ? 'rgba(255, 255, 255, 0.28)' : '#3a4355')};
+  background: ${(props) => {
+    if (props.$empty) return '#000000';
+    if (props.$ghost) return 'transparent';
+    return props.$primary || '#2038ec';
+  }};
+  border: ${(props) => (props.$empty ? '1px solid #0a0a2e' : 'none')};
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  border-radius: 6px;
+  box-sizing: border-box;
+
+  ${(props) => !props.$empty && !props.$ghost && `
+    box-shadow:
+      inset 2px 2px 0 ${props.$secondary || '#ffffff'},
+      inset -2px -2px 0 rgba(0, 0, 0, 0.6);
+  `}
+
+  ${(props) => props.$ghost && `
+    border: 2px dashed rgba(255, 255, 255, 0.25);
+  `}
 
   img {
-    width: 24px;
-    height: 24px;
+    width: ${CELL_SIZE - 8}px;
+    height: ${CELL_SIZE - 8}px;
     object-fit: contain;
-    opacity: ${(props) => (props.$ghost ? 0.28 : 1)};
-    filter: ${(props) => (props.$ghost ? 'grayscale(0.2)' : 'none')};
+    opacity: ${(props) => (props.$ghost ? 0.2 : 1)};
     pointer-events: none;
+    filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.6));
   }
-`;
-
-const RightSidebar = styled(Panel)`
-  padding: 20px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
 `;
 
 const ExitButton = styled.button`
   position: fixed;
-  top: 20px;
-  right: 20px;
-  background: #ff4b55;
-  color: white;
-  border: none;
-  padding: 10px 18px;
+  top: 16px;
+  right: 16px;
+  background: #e02800;
+  color: #ffffff;
+  border: 3px solid #ffffff;
+  box-shadow: 4px 4px 0 #000000;
+  padding: 10px 14px;
   cursor: pointer;
-  font-size: 15px;
-  border-radius: 999px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  z-index: 10000;
 
   &:hover {
-    background: #ff6870;
+    background: #ff4020;
+    transform: translate(-1px, -1px);
+    box-shadow: 5px 5px 0 #000000;
+  }
+
+  &:active {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 #000000;
   }
 `;
 
-const SectionHeading = styled.h3`
-  margin: 0 0 12px;
-  font-size: 0.92rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(245, 247, 251, 0.7);
-`;
-
-const StatGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+const SideStack = styled.div`
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+  width: 100%;
+  max-height: 100%;
 `;
 
-const StatCard = styled.div`
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+const StatRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 2px 0;
 
   .label {
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: rgba(245, 247, 251, 0.55);
+    font-size: 8px;
+    color: #00b0f0;
+    letter-spacing: 0.08em;
   }
 
   .value {
-    margin-top: 8px;
-    font-size: 1.45rem;
-    font-weight: 700;
+    font-size: 13px;
+    color: #ffffff;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 2px 2px 0 #000000;
   }
-`;
-
-const PreviewCard = styled.div`
-  padding: 14px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
 `;
 
 const PreviewBoard = styled.div`
   display: grid;
-  grid-template-columns: repeat(${PREVIEW_SIZE}, 24px);
-  grid-template-rows: repeat(${PREVIEW_SIZE}, 24px);
-  gap: 4px;
+  grid-template-columns: repeat(${PREVIEW_SIZE}, 18px);
+  grid-template-rows: repeat(${PREVIEW_SIZE}, 18px);
+  gap: 0;
   justify-content: center;
+  margin: 0 auto;
+  background: #000000;
+  padding: 4px;
+  border: 2px solid #ffffff;
 `;
 
 const PreviewCell = styled.div`
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: ${(props) => (props.$empty ? '#0a0c10' : '#2a3140')};
-  border: 1px solid ${(props) => (props.$empty ? 'rgba(255, 255, 255, 0.04)' : '#3a4355')};
+  width: 18px;
+  height: 18px;
+  background: ${(props) => (props.$empty ? '#000000' : props.$primary || '#2038ec')};
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
+
+  ${(props) => !props.$empty && `
+    box-shadow:
+      inset 1px 1px 0 ${props.$secondary || '#ffffff'},
+      inset -1px -1px 0 rgba(0, 0, 0, 0.6);
+  `}
 
   img {
-    width: 18px;
-    height: 18px;
+    width: 12px;
+    height: 12px;
     object-fit: contain;
     pointer-events: none;
   }
 `;
 
-const StatusBadge = styled.div`
-  padding: 12px 14px;
-  border-radius: 14px;
-  font-weight: 700;
-  background: ${(props) => props.$background || 'rgba(255, 255, 255, 0.08)'};
-  color: ${(props) => props.$color || '#f5f7fb'};
+const StatusBanner = styled.div`
+  padding: 10px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  background: ${(props) => props.$background || '#000000'};
+  color: ${(props) => props.$color || '#ffffff'};
+  border: 2px solid ${(props) => props.$color || '#ffffff'};
+  animation: ${(props) => (props.$blink ? flash : 'none')} 0.8s infinite;
+  line-height: 1.5;
 `;
 
 const LeaderboardList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
+  max-height: 480px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background: #00b0f0; }
 `;
 
 const LeaderboardRow = styled.div`
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 6px;
   align-items: center;
-  padding: 12px;
-  border-radius: 14px;
-  background: ${(props) => (props.$highlight ? 'rgba(85, 168, 255, 0.18)' : 'rgba(255, 255, 255, 0.04)')};
-  border: 1px solid ${(props) => (props.$highlight ? 'rgba(85, 168, 255, 0.35)' : 'rgba(255, 255, 255, 0.08)')};
+  padding: 5px 4px;
+  background: ${(props) => (props.$highlight ? '#2038ec' : 'transparent')};
+  border-left: 3px solid ${(props) => {
+    if (props.$highlight) return '#ffff00';
+    if (props.$rank === 1) return '#ffff00';
+    if (props.$rank === 2) return '#c0c0c0';
+    if (props.$rank === 3) return '#e08040';
+    return 'transparent';
+  }};
+  font-size: 9px;
+  letter-spacing: 0.04em;
 
   .rank {
-    font-weight: 800;
-    color: rgba(245, 247, 251, 0.7);
+    color: ${(props) => {
+      if (props.$rank === 1) return '#ffff00';
+      if (props.$rank === 2) return '#c0c0c0';
+      if (props.$rank === 3) return '#e08040';
+      return '#00b0f0';
+    }};
   }
 
   .name {
     min-width: 0;
-    font-weight: 600;
+    color: #ffffff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .score {
+    color: #ffffff;
     font-variant-numeric: tabular-nums;
-    font-weight: 700;
   }
 `;
 
-const EmptyState = styled.div`
-  padding: 18px 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(245, 247, 251, 0.65);
-  line-height: 1.5;
+const EmptyMessage = styled.div`
+  padding: 14px 8px;
+  color: #888888;
+  font-size: 9px;
+  line-height: 1.7;
+  text-align: center;
 `;
 
-const ControlList = styled.div`
+const ControlGrid = styled.div`
   display: grid;
-  gap: 8px;
-  font-size: 0.95rem;
-  color: rgba(245, 247, 251, 0.74);
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  font-size: 7px;
+  color: #ffffff;
+  line-height: 1.3;
+
+  .key {
+    color: #ffff00;
+    text-align: right;
+  }
+
+  .action {
+    color: #ffffff;
+  }
 `;
 
-const SmallText = styled.div`
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: rgba(245, 247, 251, 0.7);
+const FooterNote = styled.div`
+  font-size: 8px;
+  color: #888888;
+  line-height: 1.6;
+  text-align: center;
+  padding: 4px;
 `;
 
 const BLOCK_LOGOS = {
@@ -279,6 +445,17 @@ const BLOCK_LOGOS = {
   Z: '/images/meta-logo.png',
   J: '/images/deepseek-logo.png',
   L: '/images/grok-logo.png'
+};
+
+// Brand colors keyed to each logo so blocks read like the AI they represent
+const BLOCK_COLORS = {
+  I: { primary: '#0d8f6e', secondary: '#4fd6ad' }, // OpenAI teal
+  O: { primary: '#f5b400', secondary: '#ffe066' }, // Google yellow
+  T: { primary: '#d97757', secondary: '#ffb38c' }, // Claude orange
+  S: { primary: '#8b5cf6', secondary: '#c4b5fd' }, // Gemini violet
+  Z: { primary: '#1877f2', secondary: '#6aa9ff' }, // Meta blue
+  J: { primary: '#0ea5e9', secondary: '#7dd3fc' }, // DeepSeek sky
+  L: { primary: '#3f3f46', secondary: '#71717a' }  // Grok slate
 };
 
 const TETRIS_SHAPES = {
@@ -426,6 +603,9 @@ const getPreviewMatrix = (shapeKey) => {
   return preview;
 };
 
+// NES-style line clear scoring
+const SCORE_TABLE = { 1: 40, 2: 100, 3: 300, 4: 1200 };
+
 const TetrisGame = ({ onExit }) => {
   const { user } = useAuth();
   const [board, setBoard] = useState(createEmptyBoard);
@@ -444,7 +624,6 @@ const TetrisGame = ({ onExit }) => {
 
   const loadLeaderboard = useCallback(async () => {
     try {
-      setLeaderboardLoading(true);
       setLeaderboardError('');
       const data = await fetchTetrisLeaderboard(LEADERBOARD_LIMIT);
       setLeaderboard(Array.isArray(data?.leaderboard) ? data.leaderboard : []);
@@ -465,23 +644,16 @@ const TetrisGame = ({ onExit }) => {
           user ? fetchTetrisProfile().catch(() => null) : Promise.resolve(null)
         ]);
 
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
 
         setLeaderboard(Array.isArray(leaderboardData?.leaderboard) ? leaderboardData.leaderboard : []);
         setPersonalBest(profileData?.highScore || 0);
         setLeaderboardError('');
       } catch (error) {
-        if (!isActive) {
-          return;
-        }
-
+        if (!isActive) return;
         setLeaderboardError(error.message || 'Failed to load leaderboard');
       } finally {
-        if (isActive) {
-          setLeaderboardLoading(false);
-        }
+        if (isActive) setLeaderboardLoading(false);
       }
     };
 
@@ -489,9 +661,7 @@ const TetrisGame = ({ onExit }) => {
     loadInitialData();
 
     const refreshInterval = window.setInterval(() => {
-      if (isActive) {
-        void loadLeaderboard();
-      }
+      if (isActive) void loadLeaderboard();
     }, 30000);
 
     return () => {
@@ -501,12 +671,10 @@ const TetrisGame = ({ onExit }) => {
   }, [loadLeaderboard, user]);
 
   const persistScore = useCallback(async (finalScore, finalLines, finalLevel) => {
-    if (finalScore <= 0) {
-      return;
-    }
+    if (finalScore <= 0) return;
 
     if (!user) {
-      setSubmissionStatus('Sign in with an account to save leaderboard scores.');
+      setSubmissionStatus('SIGN IN TO SAVE YOUR SCORE');
       return;
     }
 
@@ -518,10 +686,10 @@ const TetrisGame = ({ onExit }) => {
       });
 
       setPersonalBest(result.highScore || finalScore);
-      setSubmissionStatus(result.updated ? 'New personal best saved to the leaderboard.' : 'Score synced. Personal best unchanged.');
+      setSubmissionStatus(result.updated ? 'NEW HIGH SCORE!' : 'SCORE SAVED');
       await loadLeaderboard();
     } catch (error) {
-      setSubmissionStatus(error.message || 'Failed to sync score');
+      setSubmissionStatus((error.message || 'SYNC FAILED').toUpperCase());
     }
   }, [loadLeaderboard, user]);
 
@@ -535,7 +703,8 @@ const TetrisGame = ({ onExit }) => {
     const lockedBoard = placePieceOnBoard(board, pieceToLock);
     const { board: clearedBoard, linesCleared } = clearLines(lockedBoard);
     const nextLines = lines + linesCleared;
-    const nextScore = score + (linesCleared * 100 * level);
+    const lineScore = SCORE_TABLE[linesCleared] ? SCORE_TABLE[linesCleared] * level : 0;
+    const nextScore = score + lineScore;
 
     setBoard(clearedBoard);
     setLines(nextLines);
@@ -553,9 +722,7 @@ const TetrisGame = ({ onExit }) => {
   }, [board, handleGameOver, level, lines, nextPieceShape, score]);
 
   const dropPiece = useCallback(() => {
-    if (!currentPiece || gameOver || isPaused) {
-      return;
-    }
+    if (!currentPiece || gameOver || isPaused) return;
 
     if (canMoveOnBoard(board, currentPiece, 0, 1)) {
       setCurrentPiece((previous) => ({ ...previous, y: previous.y + 1 }));
@@ -566,9 +733,7 @@ const TetrisGame = ({ onExit }) => {
   }, [board, currentPiece, gameOver, isPaused, lockPiece]);
 
   const hardDrop = useCallback(() => {
-    if (!currentPiece || gameOver || isPaused) {
-      return;
-    }
+    if (!currentPiece || gameOver || isPaused) return;
 
     let dropDistance = 0;
     while (canMoveOnBoard(board, currentPiece, 0, dropDistance + 1)) {
@@ -582,9 +747,7 @@ const TetrisGame = ({ onExit }) => {
   }, [board, currentPiece, gameOver, isPaused, lockPiece]);
 
   const getGhostPosition = useCallback((piece) => {
-    if (!piece) {
-      return null;
-    }
+    if (!piece) return null;
 
     let dropDistance = 0;
     while (canMoveOnBoard(board, piece, 0, dropDistance + 1)) {
@@ -604,9 +767,7 @@ const TetrisGame = ({ onExit }) => {
       return;
     }
 
-    if (gameOver) {
-      return;
-    }
+    if (gameOver) return;
 
     if (event.key === 'p' || event.key === 'P') {
       event.preventDefault();
@@ -614,9 +775,7 @@ const TetrisGame = ({ onExit }) => {
       return;
     }
 
-    if (isPaused) {
-      return;
-    }
+    if (isPaused) return;
 
     switch (event.key) {
       case 'ArrowLeft':
@@ -660,9 +819,7 @@ const TetrisGame = ({ onExit }) => {
   }, [handleKeyPress]);
 
   useEffect(() => {
-    if (currentPiece || gameOver) {
-      return;
-    }
+    if (currentPiece || gameOver) return;
 
     const spawnedPiece = createPiece(nextPieceShape);
     if (canMoveOnBoard(board, spawnedPiece, 0, 0)) {
@@ -697,13 +854,9 @@ const TetrisGame = ({ onExit }) => {
         const ghostShape = TETRIS_SHAPES[ghostPiece.shape][ghostPiece.rotation];
         for (let row = 0; row < ghostShape.length; row += 1) {
           for (let col = 0; col < ghostShape[row].length; col += 1) {
-            if (!ghostShape[row][col]) {
-              continue;
-            }
-
+            if (!ghostShape[row][col]) continue;
             const x = ghostPiece.x + col;
             const y = ghostPiece.y + row;
-
             if (y >= 0 && y < BOARD_HEIGHT && x >= 0 && x < BOARD_WIDTH) {
               ghostBoard[y][x] = ghostPiece.shape;
             }
@@ -716,10 +869,7 @@ const TetrisGame = ({ onExit }) => {
       const shape = TETRIS_SHAPES[currentPiece.shape][currentPiece.rotation];
       for (let row = 0; row < shape.length; row += 1) {
         for (let col = 0; col < shape[row].length; col += 1) {
-          if (!shape[row][col]) {
-            continue;
-          }
-
+          if (!shape[row][col]) continue;
           const x = currentPiece.x + col;
           const y = currentPiece.y + row;
           if (y >= 0 && y < BOARD_HEIGHT && x >= 0 && x < BOARD_WIDTH) {
@@ -734,12 +884,15 @@ const TetrisGame = ({ onExit }) => {
         const ghostCell = ghostBoard[rowIndex][colIndex];
         const isGhost = !!ghostCell && !cell;
         const shapeKey = cell || ghostCell;
+        const colors = shapeKey ? BLOCK_COLORS[shapeKey] : null;
 
         return (
           <GameCell
             key={`${rowIndex}-${colIndex}`}
             $empty={!shapeKey}
             $ghost={isGhost}
+            $primary={colors?.primary}
+            $secondary={colors?.secondary}
           >
             {shapeKey && (
               <img
@@ -755,133 +908,139 @@ const TetrisGame = ({ onExit }) => {
   };
 
   const previewMatrix = getPreviewMatrix(nextPieceShape);
+  const palette = LEVEL_PALETTES[(level - 1) % LEVEL_PALETTES.length];
 
   return (
     <GameContainer>
-      <ExitButton onClick={onExit}>
-        ESC
-      </ExitButton>
+      <TetrisGlobalStyle />
+      <ExitButton onClick={onExit}>EXIT</ExitButton>
+      <CrtScanlines />
+      <CrtSubpixel />
+      <CrtVignette />
+      <CrtGlass />
+      <CrtBezel />
 
       <GameLayout>
-        <LeaderboardPanel>
-          <SectionHeading>Leaderboard</SectionHeading>
-
+        {/* LEFT: LEADERBOARD */}
+        <RetroFrame>
+          <RetroLabel>HIGH SCORES</RetroLabel>
           {leaderboardLoading ? (
-            <EmptyState>Loading account scores...</EmptyState>
+            <EmptyMessage>LOADING...</EmptyMessage>
           ) : leaderboardError ? (
-            <EmptyState>{leaderboardError}</EmptyState>
+            <EmptyMessage style={{ color: '#ff7777' }}>{leaderboardError.toUpperCase()}</EmptyMessage>
           ) : leaderboard.length === 0 ? (
-            <EmptyState>No scores yet. Finish a game to claim the first spot.</EmptyState>
+            <EmptyMessage>NO SCORES YET.<br />BE THE FIRST!</EmptyMessage>
           ) : (
             <LeaderboardList>
               {leaderboard.map((entry, index) => (
                 <LeaderboardRow
                   key={`${entry.username}-${entry.score}-${index}`}
                   $highlight={entry.username === user?.username}
+                  $rank={index + 1}
                 >
-                  <div className="rank">#{index + 1}</div>
+                  <div className="rank">#{String(index + 1).padStart(2, '0')}</div>
                   <div className="name">{entry.username}</div>
-                  <div className="score">{entry.score}</div>
+                  <div className="score">{entry.score.toLocaleString()}</div>
                 </LeaderboardRow>
               ))}
             </LeaderboardList>
           )}
-        </LeaderboardPanel>
+        </RetroFrame>
 
+        {/* CENTER: BOARD */}
         <BoardColumn>
-          <BoardTitle>
-            <h2>SCULPTOR TETRIS</h2>
-            <p>Account-linked scores, classic next-piece preview, same AI-logo blocks.</p>
-          </BoardTitle>
+          <TitleBlock>
+            <h1>SCULPTOR TETRIS</h1>
+          </TitleBlock>
 
-          <GameBoard>
-            {renderBoard()}
-          </GameBoard>
+          <BoardFrame style={{ boxShadow: `inset 0 0 0 2px #000, inset 0 0 0 4px #fff, 0 0 0 2px #000, 0 0 24px ${palette.secondary}66` }}>
+            <GameBoard>
+              {renderBoard()}
+            </GameBoard>
+          </BoardFrame>
         </BoardColumn>
 
-        <RightSidebar>
-          <div>
-            <SectionHeading>Next Block</SectionHeading>
-            <PreviewCard>
-              <PreviewBoard>
-                {previewMatrix.flatMap((row, rowIndex) => (
-                  row.map((cell, colIndex) => (
+        {/* RIGHT: STATS / NEXT / CONTROLS */}
+        <SideStack>
+          <RetroFrame>
+            <RetroLabel>NEXT</RetroLabel>
+            <PreviewBoard>
+              {previewMatrix.flatMap((row, rowIndex) => (
+                row.map((cell, colIndex) => {
+                  const colors = cell ? BLOCK_COLORS[cell] : null;
+                  return (
                     <PreviewCell
                       key={`${rowIndex}-${colIndex}`}
                       $empty={!cell}
+                      $primary={colors?.primary}
+                      $secondary={colors?.secondary}
                     >
                       {cell && (
-                        <img
-                          src={BLOCK_LOGOS[cell]}
-                          alt={cell}
-                          draggable={false}
-                        />
+                        <img src={BLOCK_LOGOS[cell]} alt={cell} draggable={false} />
                       )}
                     </PreviewCell>
-                  ))
-                ))}
-              </PreviewBoard>
-            </PreviewCard>
-          </div>
+                  );
+                })
+              ))}
+            </PreviewBoard>
+          </RetroFrame>
 
-          <div>
-            <SectionHeading>Stats</SectionHeading>
-            <StatGrid>
-              <StatCard>
-                <div className="label">Score</div>
-                <div className="value">{score}</div>
-              </StatCard>
-              <StatCard>
-                <div className="label">Level</div>
-                <div className="value">{level}</div>
-              </StatCard>
-              <StatCard>
-                <div className="label">Lines</div>
-                <div className="value">{lines}</div>
-              </StatCard>
-              <StatCard>
-                <div className="label">Best</div>
-                <div className="value">{personalBest}</div>
-              </StatCard>
-            </StatGrid>
-          </div>
-
-          {submissionStatus && (
-            <StatusBadge>
-              {submissionStatus}
-            </StatusBadge>
-          )}
+          <RetroFrame>
+            <RetroLabel>STATISTICS</RetroLabel>
+            <StatRow>
+              <span className="label">SCORE</span>
+              <span className="value">{score.toLocaleString()}</span>
+            </StatRow>
+            <StatRow>
+              <span className="label">LINES</span>
+              <span className="value">{lines}</span>
+            </StatRow>
+            <StatRow>
+              <span className="label">LEVEL</span>
+              <span className="value">{level}</span>
+            </StatRow>
+            <StatRow>
+              <span className="label">BEST</span>
+              <span className="value">{personalBest.toLocaleString()}</span>
+            </StatRow>
+          </RetroFrame>
 
           {gameOver && (
-            <StatusBadge $background="rgba(255, 75, 85, 0.18)" $color="#ff8a92">
-              Game Over
-            </StatusBadge>
+            <StatusBanner $background="#000000" $color="#ff4040" $blink>
+              GAME OVER
+            </StatusBanner>
           )}
 
-          {isPaused && (
-            <StatusBadge $background="rgba(255, 217, 90, 0.16)" $color="#ffe38b">
-              Paused
-            </StatusBadge>
+          {isPaused && !gameOver && (
+            <StatusBanner $background="#000000" $color="#ffff00" $blink>
+              PAUSED
+            </StatusBanner>
           )}
 
-          <div>
-            <SectionHeading>Controls</SectionHeading>
-            <ControlList>
-              <div>Left / Right: move</div>
-              <div>Up: rotate</div>
-              <div>Down: soft drop</div>
-              <div>Space: hard drop</div>
-              <div>P: pause</div>
-              <div>Esc: exit</div>
-            </ControlList>
-          </div>
+          {submissionStatus && (
+            <StatusBanner $background="#000000" $color="#00b0f0">
+              {submissionStatus}
+            </StatusBanner>
+          )}
 
-          <SmallText>
+          <RetroFrame>
+            <RetroLabel>CONTROLS</RetroLabel>
+            <ControlGrid>
+              <span className="key">←→</span><span className="action">MOVE</span>
+              <span className="key">↑</span><span className="action">ROTATE</span>
+              <span className="key">↓</span><span className="action">SOFT DROP</span>
+              <span className="key">SPC</span><span className="action">HARD DROP</span>
+              <span className="key">P</span><span className="action">PAUSE</span>
+              <span className="key">ESC</span><span className="action">EXIT</span>
+            </ControlGrid>
+          </RetroFrame>
+
+          <FooterNote>
             {user
-              ? `Signed in as ${user.username}. Your best score is saved automatically when a run ends.`
-              : 'You can still play, but scores only reach the leaderboard when you are signed in.'}
-          </SmallText>
-        </RightSidebar>
+              ? `PLAYER: ${user.username.toUpperCase()}`
+              : 'SIGN IN TO SAVE SCORES'}
+          </FooterNote>
+        </SideStack>
       </GameLayout>
     </GameContainer>
   );
