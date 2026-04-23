@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { accentOptions, getAccentSwatch } from '../styles/accentColors';
 import { useTranslation } from '../contexts/TranslationContext';
 import { setBackendMode } from '../services/backendConfig';
+import CustomThemeEditor from './CustomThemeEditor';
+import { hydrateFromPreset } from '../styles/customTheme';
 
 const SettingsOverlay = styled.div`
   position: fixed;
@@ -449,21 +451,39 @@ const ThemeOption = styled.label`
   }
   
   &.ocean-theme {
-    background: ${props => props.isSelected ? 
-      'linear-gradient(135deg, #0277bd, #039be5, #4fc3f7)' : 
-      'linear-gradient(135deg, #0277bd80, #039be580, #4fc3f780)'};
+    background-image: linear-gradient(180deg, rgba(3, 10, 26, 0.35) 0%, rgba(3, 10, 26, 0.55) 100%), url('/images/themes/ocean.jpg');
+    background-size: cover;
+    background-position: center;
     color: white;
     border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
   }
   
   &.forest-theme {
-    background: ${props => props.isSelected ? 
-      'linear-gradient(135deg, #2e7d32, #388e3c, #4caf50)' : 
-      'linear-gradient(135deg, #2e7d3280, #388e3c80, #4caf5080)'};
+    background-image: linear-gradient(180deg, rgba(8, 16, 12, 0.30) 0%, rgba(6, 12, 8, 0.65) 100%), url('/images/themes/forest.jpg');
+    background-size: cover;
+    background-position: center;
     color: white;
     border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  }
+
+  &.sunset-theme {
+    background-image: linear-gradient(180deg, rgba(44, 18, 42, 0.25) 0%, rgba(18, 8, 20, 0.55) 100%), url('/images/themes/sunset.jpg');
+    background-size: cover;
+    background-position: center;
+    color: white;
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+  }
+
+  &.sunrise-theme {
+    background-image: linear-gradient(180deg, rgba(255, 240, 220, 0.25) 0%, rgba(200, 158, 120, 0.30) 100%), url('/images/themes/sunrise.jpg');
+    background-size: cover;
+    background-position: center;
+    color: #2d1f14;
+    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
   }
   
   &.bisexual-theme {
@@ -494,11 +514,11 @@ const ThemeOption = styled.label`
   }
   
   &.lakeside-theme {
-    background: ${props => props.isSelected ? 
-      'linear-gradient(145deg, #121218, #1a1a22)' : 
-      'linear-gradient(145deg, #12121880, #1a1a2280)'};
-    color: white;
-    border-color: ${props => props.isSelected ? props.theme.accentColor : 'transparent'};
+    background: ${props => props.isSelected ?
+      'linear-gradient(145deg, #c84860, #7a2a36)' :
+      'linear-gradient(145deg, #c8486080, #7a2a3680)'};
+    color: #fff4e2;
+    border-color: ${props => props.isSelected ? '#e8c48a' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
 `;
@@ -553,39 +573,6 @@ const SelectBox = styled.select`
       font-size: 0.9rem;
     `}
   }
-`;
-
-const ColorInputs = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-  width: 100%;
-`;
-
-const ColorInputRow = styled.label`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.cardBackground || props.theme.sidebar};
-`;
-
-const ColorInputLabel = styled.span`
-  font-weight: 600;
-  color: ${props => props.theme.text};
-`;
-
-const ColorInputField = styled.input`
-  width: 64px;
-  height: 36px;
-  padding: 0;
-  border-radius: 8px;
-  border: 1px solid ${props => props.theme.border};
-  background: transparent;
-  cursor: pointer;
 `;
 
 const AccentDropdown = styled.div`
@@ -1196,11 +1183,12 @@ const SettingDescription = styled.p`
   
   // Add a helper function to determine if in dark mode
   const isDarkMode = () => {
-    return localSettings.theme === 'dark' || 
-           localSettings.theme === 'night' ||
-           localSettings.theme === 'oled' || 
+    return localSettings.theme === 'dark' ||
+           localSettings.theme === 'oled' ||
            localSettings.theme === 'bisexual' ||
-    localSettings.theme === 'ocean' ||
+           localSettings.theme === 'ocean' ||
+           localSettings.theme === 'forest' ||
+           localSettings.theme === 'sunset' ||
            localSettings.theme === 'lakeside';
   };
 
@@ -1216,11 +1204,7 @@ const SettingDescription = styled.p`
     };
   }, []);
 
-  const defaultCustomTheme = {
-    background: '#0f172a',
-    text: '#e2e8f0',
-    border: '#4f46e5'
-  };
+  const defaultCustomTheme = hydrateFromPreset('light');
 
   const accentValue = localSettings.accentColor || 'theme';
   const selectedAccentLabel = accentOptions.find(option => option.value === accentValue)?.label || 'Same as theme';
@@ -1250,8 +1234,7 @@ const SettingDescription = styled.p`
     setIsAccentMenuOpen(false);
   };
 
-  const handleCustomColorChange = (field, value) => {
-    const nextTheme = { ...customThemeValues, [field]: value };
+  const handleCustomThemeChange = (nextTheme) => {
     handleChange('customTheme', nextTheme);
     if (localSettings.theme !== 'custom') {
       handleChange('theme', 'custom');
@@ -1285,22 +1268,16 @@ const SettingDescription = styled.p`
   const themeOptionValues = [
     'light',
     'dark',
-    'night',
     'oled',
     'ocean',
     'forest',
-    'bisexual',
+    'sunset',
+    'sunrise',
+    'lakeside',
     'pride',
     'trans',
-    'lakeside',
+    'bisexual',
     'retro',
-    'galaxy',
-    'sunset',
-    'cyberpunk',
-    'bubblegum',
-    'desert',
-    'matrix',
-    'comic-book',
     'custom'
   ];
 
@@ -1468,36 +1445,11 @@ const SettingDescription = styled.p`
               </SettingsRow>
               {localSettings.theme === 'custom' && (
                 <SettingGroup>
-                  <SettingLabel>Custom Theme Colors</SettingLabel>
-                  <ColorInputs>
-                    <ColorInputRow>
-                      <ColorInputLabel>Background</ColorInputLabel>
-                      <ColorInputField
-                        type="color"
-                        value={customThemeValues.background}
-                        onChange={(e) => handleCustomColorChange('background', e.target.value)}
-                        title="Pick background color"
-                      />
-                    </ColorInputRow>
-                    <ColorInputRow>
-                      <ColorInputLabel>Text</ColorInputLabel>
-                      <ColorInputField
-                        type="color"
-                        value={customThemeValues.text}
-                        onChange={(e) => handleCustomColorChange('text', e.target.value)}
-                        title="Pick text color"
-                      />
-                    </ColorInputRow>
-                    <ColorInputRow>
-                      <ColorInputLabel>Border</ColorInputLabel>
-                      <ColorInputField
-                        type="color"
-                        value={customThemeValues.border}
-                        onChange={(e) => handleCustomColorChange('border', e.target.value)}
-                        title="Pick border color"
-                      />
-                    </ColorInputRow>
-                  </ColorInputs>
+                  <SettingLabel>Custom Theme Studio</SettingLabel>
+                  <CustomThemeEditor
+                    value={customThemeValues}
+                    onChange={handleCustomThemeChange}
+                  />
                 </SettingGroup>
               )}
               
@@ -1917,17 +1869,14 @@ const SettingDescription = styled.p`
               
               <LogoContainer>
                 <LogoIcon onClick={handleEasterEgg}>
-                  <img 
-                    src={localSettings.theme === 'lakeside' ? 'https://demo-andromeda.me/static/favicon.png' : '/sculptor.svg'} 
-                    alt={localSettings.theme === 'lakeside' ? t('settings.about.logoAlt.lakeside') : t('settings.about.logoAlt.default')} 
-                    style={localSettings.theme === 'lakeside' ? {
-                      filter: 'brightness(0) saturate(100%) invert(58%) sepia(53%) saturate(804%) hue-rotate(20deg) brightness(91%) contrast(85%)'
-                    } : {}}
+                  <img
+                    src={localSettings.theme === 'lakeside' ? '/images/themes/lakeside-flower.png' : '/sculptor.svg'}
+                    alt={localSettings.theme === 'lakeside' ? t('settings.about.logoAlt.lakeside') : t('settings.about.logoAlt.default')}
                   />
                 </LogoIcon>
-                <LogoTitle 
+                <LogoTitle
                   onClick={handleEasterEgg}
-                  style={localSettings.theme === 'lakeside' ? { color: 'rgb(198, 146, 20)' } : {}}
+                  style={localSettings.theme === 'lakeside' ? { color: 'rgb(232, 196, 138)' } : {}}
                 >
                   {localSettings.theme === 'lakeside' ? t('settings.about.logoTitle.lakeside') : t('settings.about.logoTitle.default')}
                 </LogoTitle>

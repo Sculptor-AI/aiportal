@@ -8,7 +8,7 @@ export const ChatWindowContainer = styled.div`
   width: 100%;
   margin-left: ${props => props.$sidebarCollapsed ? '0' : '280px'};
   transition: margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
-  background: ${props => props.theme.sidebar};
+  background: ${props => props.theme.appShell || props.theme.sidebar};
   font-size: ${props => {
     switch (props.fontSize) {
       case 'small': return '0.9rem';
@@ -31,8 +31,7 @@ export const ChatHeader = styled.div`
   display: flex;
   align-items: flex-start; // Change from center to flex-start for better alignment
   justify-content: flex-start;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: transparent;
   z-index: 101; // Changed from 10 to 101
   position: relative;
   transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
@@ -91,6 +90,10 @@ export const MessageList = styled.div`
   position: relative;
   background: ${props => {
     if (props.theme.name === 'dark' || props.theme.name === 'oled') {
+      return 'transparent';
+    }
+    if (props.theme.chat === 'transparent' || props.theme.appShell === 'transparent') {
+      // Pride-family themes rely on the body aurora showing through uninterrupted.
       return 'transparent';
     }
     return props.theme.name === 'retro' ? 'transparent' : 'rgba(255, 255, 255, 0.05)';

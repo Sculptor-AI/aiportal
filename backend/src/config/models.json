@@ -1,6 +1,6 @@
 {
   "_description": "Centralized model configuration. Update this file when models change.",
-  "_lastUpdated": "2026-03-18",
+  "_lastUpdated": "2026-04-22",
 
   "default": "chatgpt-5.3-instant",
 
@@ -31,21 +31,25 @@
 
     "anthropic": {
       "models": {
-        "claude-opus-4.6": "claude-opus-4-6",
+        "claude-opus-4.7": "claude-opus-4-7",
         "claude-sonnet-4.6": "claude-sonnet-4-6",
         "claude-haiku-4.5": "claude-3-5-haiku-20241022"
       },
       "modelCapabilities": {
-        "claude-opus-4.6": {
+        "claude-opus-4.7": {
           "reasoning_effort": true,
           "reasoning_effort_levels": [
             "low",
             "medium",
             "high",
+            "xhigh",
             "max"
           ],
           "reasoning_effort_default": "medium",
-          "thinking_style": "adaptive"
+          "thinking_style": "adaptive",
+          "adaptive_thinking_only": true,
+          "default_thinking_display": "summarized",
+          "supports_task_budgets": true
         },
         "claude-sonnet-4.6": {
           "reasoning_effort": true,
@@ -128,6 +132,7 @@
     },
     "openai": {
       "models": {
+        "gpt-image-2": "gpt-image-2",
         "gpt-image-1.5": "gpt-image-1.5",
         "chatgpt-image-latest": "chatgpt-image-latest",
         "gpt-image": "gpt-image-1"

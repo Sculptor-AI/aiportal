@@ -54,7 +54,7 @@
     <td width="50%" valign="top">
       <h3>🛠 Customization</h3>
       <ul>
-        <li><strong>15+ Beautiful Themes</strong>: Including Light, Dark, OLED, Ocean, Cyberpunk, and more.</li>
+        <li><strong>15+ Beautiful Themes</strong>: Including Light, Dark, OLED, Ocean, Sunset, Pride, and a fully-editable Custom theme with image backgrounds.</li>
         <li><strong>Chat Sharing</strong>: Share conversations via secure links.</li>
         <li><strong>Mobile Experience</strong>: Touch-optimized interface for iOS/Android.</li>
       </ul>

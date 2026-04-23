@@ -22,8 +22,12 @@ function buildOpenRouterMessages(body) {
     return messages;
   }
 
+  const systemContent = typeof body.system === 'string'
+    ? body.system.replace(/<<<PROJECT_KNOWLEDGE_CACHE_BOUNDARY>>>/g, '\n')
+    : body.system;
+
   return [
-    { role: 'system', content: body.system },
+    { role: 'system', content: systemContent },
     ...messages.filter((message) => message.role !== 'system')
   ];
 }

@@ -584,11 +584,11 @@ const processItalic = (text, theme = {}) => {
 };
 
 const CodeBlock = styled.div`
-  background: ${props => props.theme.name === 'light' ? '#f8f9fb' : 'rgba(24, 24, 27, 0.95)'};
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(24, 24, 27, 0.95)' : '#f8f9fb')};
   border-radius: 10px;
   margin: 14px 0;
   overflow: hidden;
-  border: 1px solid ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)'};
+  border: 1px solid ${props => props.theme.codeBlockBorder || (props.theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)')};
   max-width: 100%;
   width: 100%;
 `;
@@ -598,8 +598,8 @@ const CodeHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 14px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)'};
-  border-bottom: 1px solid ${props => props.theme.name === 'light' ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.05)'};
+  background: ${props => props.theme.codeBlockHeaderBg || (props.theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)')};
+  border-bottom: 1px solid ${props => props.theme.codeBlockBorder || (props.theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)')};
 `;
 
 const CodeLanguage = styled.div`
@@ -718,7 +718,7 @@ const getBubbleBackground = (role, theme) => {
   const customAccent = isCustomAccent(theme);
   if (role === 'user') {
     if (customAccent) return theme.accentBackground;
-    return theme.name === 'light' ? `${theme.text}08` : `${theme.text}0c`;
+    return theme.isDark ? `${theme.text}0c` : `${theme.text}08`;
   }
   return 'transparent';
 };
@@ -1461,7 +1461,7 @@ const MessageImage = styled.img`
   border-radius: 12px;
   margin-bottom: 12px;
   object-fit: contain;
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(246, 248, 250, 0.8)')};
 `;
 
 const MessageVideo = styled.video`
@@ -1470,14 +1470,14 @@ const MessageVideo = styled.video`
   border-radius: 12px;
   margin-bottom: 12px;
   object-fit: contain;
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(246, 248, 250, 0.8)')};
 `;
 
 // Flowchart components
 const FlowchartContainer = styled.div`
   margin: 12px 0;
   padding: 16px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(246, 248, 250, 0.8)')};
   border-radius: 12px;
   border: 1px solid ${props => props.theme.border};
 `;
@@ -1510,7 +1510,7 @@ const FlowchartButton = styled.button`
 const FlowchartPreview = styled.div`
   margin-top: 8px;
   padding: 8px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(45, 45, 45, 0.5)'};
+  background: ${props => props.theme.isDark ? 'rgba(45, 45, 45, 0.5)' : 'rgba(255, 255, 255, 0.5)'};
   border-radius: 6px;
   border: 1px dashed ${props => props.theme.border};
 `;
@@ -1522,7 +1522,7 @@ const FileAttachmentContainer = styled.div`
   margin-bottom: 12px;
   padding: 8px 12px;
   border-radius: 8px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(246, 248, 250, 0.8)')};
   border: 1px solid ${props => props.theme.border};
   max-width: fit-content;
 `;
@@ -1564,14 +1564,14 @@ const SourceButton = styled.button`
   padding: 4px 10px;
   border-radius: 16px;
   border: 1px solid ${props => props.theme.border};
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(246, 248, 250, 0.8)')};
   color: ${props => props.theme.text};
   font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
   
   &:hover {
-    background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.9)' : 'rgba(45, 45, 45, 0.9)'};
+    background: ${props => props.theme.codeBlockHeaderBg || (props.theme.isDark ? 'rgba(45, 45, 45, 0.9)' : 'rgba(240, 240, 240, 0.9)')};
     border-color: ${props => props.theme.primary.split(',')[0].replace('linear-gradient(145deg', '').trim()};
   }
 `;
@@ -1589,7 +1589,7 @@ const ThinkingDropdownContainer = styled.div`
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid ${props => props.theme.border || '#e1e5e9'};
-  background: ${props => props.theme.name === 'light' ? 'rgba(248, 249, 251, 0.8)' : 'rgba(24, 24, 27, 0.45)'};
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(24, 24, 27, 0.45)' : 'rgba(248, 249, 251, 0.8)')};
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 `;
@@ -1686,7 +1686,7 @@ const ToolActivityItemHeader = styled.div`
 `;
 
 const ToolActivityItem = styled.div`
-  background: ${props => props.theme.name === 'light' ? 'rgba(248, 249, 250, 0.8)' : 'rgba(32, 33, 36, 0.8)'};
+  background: ${props => props.theme.cardBackground || (props.theme.isDark ? 'rgba(32, 33, 36, 0.8)' : 'rgba(248, 249, 250, 0.8)')};
   border: 1px solid ${props => props.theme.border || '#e1e5e9'};
   border-radius: 8px;
   padding: 10px;
@@ -1779,7 +1779,7 @@ const ToolActivityLabel = styled.div`
 
 const ToolActivityValue = styled.div`
   font-size: 0.8em;
-  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(20, 21, 24, 0.7)'};
+  background: ${props => props.theme.isDark ? 'rgba(20, 21, 24, 0.7)' : 'rgba(255, 255, 255, 0.7)'};
   border: 1px solid ${props => props.theme.border}50;
   border-radius: 4px;
   padding: 6px 8px;

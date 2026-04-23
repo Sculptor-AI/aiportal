@@ -41,6 +41,28 @@ A custom model is a JSON object with the following structure:
 -   `baseModel` (string): The underlying base model to use for the custom model (e.g., `gpt-3.5-turbo`).
 -   `enabled` (boolean): Whether the model is currently enabled and should appear in the model selector.
 
+## Anthropic Claude Opus 4.7 (backend)
+
+`claude-opus-4.7` is available as a chat model and is configured in `backend/src/config/models.json`.
+
+- **API endpoint:** `https://api.anthropic.com/v1/messages`
+- **Anthropic version header:** `anthropic-version: 2023-06-01`
+- **Model ID on Anthropic API:** `claude-opus-4-7`
+- **Thinking mode:** adaptive only (no extended thinking budgets)
+- **Reasoning effort options:** `low`, `medium`, `high`, `xhigh`, `max`
+- **Default behavior when reasoning is enabled:** `type: "adaptive"` with `output_config.effort` mapped from UI effort setting
+- **Sampling parameters:** `temperature`, `top_p`, and `top_k` are intentionally omitted for Opus 4.7 requests because non-default values return 400 errors.
+
+The `backend/src/services/anthropic.js` implementation applies these rules by:
+- mapping Opus effort levels (`xhigh` supported),
+- using adaptive-only thinking mode when enabled,
+- adding `task-budgets-2026-03-13` beta + `output_config.task_budget` when requested,
+- and preserving model icon/theme metadata in the frontend.
+
+For full upstream API notes, see:
+- https://platform.claude.com/docs/en/about-claude/models/whats-new-claude-4-7
+- https://platform.claude.com/docs/en/about-claude/models/overview
+
 ### How to Add a New Custom Model
 
 While the application UI for managing custom models is not detailed in the codebase I have access to, you can manually add a new custom model by following these steps:

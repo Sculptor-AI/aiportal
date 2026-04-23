@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme } from '../../styles/themes';
+import { buildCustomTheme } from '../../styles/customTheme';
 import { AuthProvider, useAuth } from '../../contexts/AuthContext';
 import { ToastProvider } from '../../contexts/ToastContext';
 import { fetchModelsFromBackend } from '../../services/aiService';
@@ -678,19 +679,7 @@ const MobileAppContent = () => {
   const currentChat = getCurrentChat();
   const currentTheme = useMemo(() => {
     if (settings.theme === 'custom') {
-      const base = getTheme('light');
-      const overrides = settings.customTheme || {};
-      return {
-        ...base,
-        name: 'custom',
-        background: overrides.background || base.background,
-        sidebar: overrides.sidebar || base.sidebar,
-        chat: overrides.chat || base.chat,
-        text: overrides.text || base.text,
-        border: overrides.border || base.border,
-        primary: overrides.primary || overrides.border || base.primary,
-        inputBackground: overrides.inputBackground || base.inputBackground
-      };
+      return buildCustomTheme(settings.customTheme || {});
     }
     return getTheme(settings.theme);
   }, [settings.theme, settings.customTheme]);

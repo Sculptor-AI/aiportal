@@ -43,8 +43,10 @@ function getOpenAIChatModel(body) {
 }
 
 function getOpenAIInstructions(body) {
+  const strip = (s) => (typeof s === 'string' ? s.replace(/<<<PROJECT_KNOWLEDGE_CACHE_BOUNDARY>>>/g, '\n') : s);
+
   if (typeof body.system === 'string' && body.system.trim()) {
-    return body.system.trim();
+    return strip(body.system).trim();
   }
 
   const systemMessage = (body.messages || []).find((message) => message?.role === 'system');
@@ -53,15 +55,16 @@ function getOpenAIInstructions(body) {
   }
 
   if (typeof systemMessage.content === 'string') {
-    return systemMessage.content;
+    return strip(systemMessage.content);
   }
 
   if (Array.isArray(systemMessage.content)) {
-    return systemMessage.content
+    const joined = systemMessage.content
       .filter((item) => item?.type === 'text' && typeof item.text === 'string')
       .map((item) => item.text)
       .join('\n')
-      .trim() || null;
+      .trim();
+    return joined ? strip(joined) : null;
   }
 
   return null;
@@ -557,7 +560,7 @@ export async function generateImageWithDALLE(prompt, apiKey, options = {}) {
     requestBody.n = 1;
   }
 
-  if (model === 'gpt-image-1' || model === 'gpt-image-1.5' || model === 'chatgpt-image-latest') {
+  if (model === 'gpt-image-1' || model === 'gpt-image-1.5' || model === 'gpt-image-2' || model === 'chatgpt-image-latest') {
     if (options.background) requestBody.background = options.background;
     if (options.moderation) requestBody.moderation = options.moderation;
     if (options.output_compression) requestBody.output_compression = options.output_compression;

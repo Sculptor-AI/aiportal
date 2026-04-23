@@ -348,11 +348,11 @@ const ThemeOption = styled.label`
   }
   
   &.lakeside-theme {
-    background: ${props => props.isSelected ? 
-      'linear-gradient(135deg, #121218, #1a1a22)' : 
-      'linear-gradient(135deg, #12121880, #1a1a2280)'};
-    color: white;
-    border-color: ${props => props.isSelected ? '#DAA520' : 'transparent'};
+    background: ${props => props.isSelected ?
+      'linear-gradient(135deg, #c84860, #7a2a36)' :
+      'linear-gradient(135deg, #c8486080, #7a2a3680)'};
+    color: #fff4e2;
+    border-color: ${props => props.isSelected ? '#e8c48a' : 'transparent'};
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
   

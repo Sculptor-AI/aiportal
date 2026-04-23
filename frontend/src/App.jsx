@@ -9,6 +9,7 @@ import MobileApp from './components/mobile/MobileApp';
 import OnboardingFlow from './components/OnboardingFlow';
 import { v4 as uuidv4 } from 'uuid';
 import { getTheme, GlobalStyles } from './styles/themes';
+import { buildCustomTheme } from './styles/customTheme';
 import { getAccentStyles } from './styles/accentColors';
 import { getFontFamilyValue } from './styles/fontUtils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -46,6 +47,12 @@ import {
   removeLocalStorageItem,
   writeLocalStorageItem
 } from './utils/storage';
+import {
+  putKnowledge,
+  deleteKnowledge,
+  deleteKnowledgeForProject,
+  getKnowledgeForProject
+} from './services/knowledgeStore';
 
 const WhiteboardModal = React.lazy(() => import('./components/WhiteboardModal'));
 const EquationEditorModal = React.lazy(() => import('./components/EquationEditorModal'));
@@ -61,7 +68,7 @@ const AppContainer = styled.div`
   height: 100vh;
   overflow: hidden;
   position: relative;
-  background: ${props => props.theme.sidebar};
+  background: ${props => props.theme.appShell || props.theme.sidebar};
   color: ${props => props.theme.text};
   transition: background 0.3s ease;
 `;
@@ -507,6 +514,61 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   }, [projects]);
 
   useEffect(() => {
+    if (readLocalStorageItem('projectKnowledgeMigrated') === '1') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const stored = readLocalStorageJSON('projects', []);
+        if (!Array.isArray(stored) || stored.length === 0) {
+          writeLocalStorageItem('projectKnowledgeMigrated', '1');
+          return;
+        }
+        const migrated = await Promise.all(stored.map(async (p) => {
+          if (!Array.isArray(p.knowledge) || p.knowledge.length === 0) return p;
+          const existing = await getKnowledgeForProject(p.id).catch(() => []);
+          const existingIds = new Set(existing.map(e => e.id));
+          const newKnowledgeMeta = [];
+          for (const k of p.knowledge) {
+            if (!k) continue;
+            if (!existingIds.has(k.id) && typeof k.content === 'string') {
+              await putKnowledge({
+                id: k.id,
+                projectId: p.id,
+                createdAt: k.lastModified ? new Date(k.lastModified).toISOString() : new Date().toISOString(),
+                name: k.name,
+                type: k.type,
+                size: k.size,
+                kind: 'text',
+                content: k.content,
+                dataUrl: null,
+                tokens: Math.ceil((k.content?.length || 0) / 4),
+              }).catch(() => {});
+            }
+            newKnowledgeMeta.push({
+              id: k.id,
+              name: k.name,
+              type: k.type,
+              size: k.size,
+              kind: k.kind || 'text',
+              tokens: k.tokens || Math.ceil((k.content?.length || 0) / 4),
+              hasImage: false,
+            });
+          }
+          return { ...p, knowledge: newKnowledgeMeta };
+        }));
+        if (!cancelled) {
+          setProjects(migrated);
+          writeLocalStorageItem('projectKnowledgeMigrated', '1');
+        }
+      } catch (e) {
+        console.warn('[projects] knowledge migration failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     writeLocalStorageItem('activeProject', JSON.stringify(activeProject));
   }, [activeProject]);
 
@@ -578,21 +640,46 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     setActiveProject(newProject.id);
   };
 
-  const addKnowledgeToProject = (projectId, file) => {
+  const addKnowledgeToProject = async (projectId, file) => {
+    const id = uuidv4();
+    const now = new Date().toISOString();
+    const { content, dataUrl, ...rest } = file;
+
+    await putKnowledge({
+      id,
+      projectId,
+      createdAt: now,
+      content: content || null,
+      dataUrl: dataUrl || null,
+      ...rest,
+    });
+
+    const metadata = {
+      id,
+      name: rest.name,
+      type: rest.type,
+      size: rest.size,
+      kind: rest.kind,
+      tokens: rest.tokens || 0,
+      hasImage: !!dataUrl,
+    };
+
     setProjects(prevProjects => prevProjects.map(p => {
       if (p.id === projectId) {
-        const newKnowledge = { id: uuidv4(), ...file };
-        return { 
-          ...p, 
-          knowledge: [...(p.knowledge || []), newKnowledge],
-          updatedAt: new Date().toISOString()
+        return {
+          ...p,
+          knowledge: [...(p.knowledge || []), metadata],
+          updatedAt: now,
         };
       }
       return p;
     }));
+
+    return metadata;
   };
 
-  const removeKnowledgeFromProject = (projectId, knowledgeId) => {
+  const removeKnowledgeFromProject = async (projectId, knowledgeId) => {
+    await deleteKnowledge(knowledgeId).catch(() => {});
     setProjects(prevProjects => prevProjects.map(p => {
       if (p.id === projectId) {
         return {
@@ -669,6 +756,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   };
 
   const deleteProject = (projectId) => {
+    deleteKnowledgeForProject(projectId).catch(() => {});
     const updatedProjects = projects.filter(project => project.id !== projectId);
     setProjects(updatedProjects);
   };
@@ -920,24 +1008,9 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   // Render logic
   const currentChat = getCurrentChat();
   const currentTheme = useMemo(() => {
-    const buildCustomTheme = () => {
-      if (settings.theme !== 'custom') return null;
-      const base = getTheme('light');
-      const overrides = settings.customTheme || {};
-      return {
-        ...base,
-        name: 'custom',
-        background: overrides.background || base.background,
-        sidebar: overrides.sidebar || base.sidebar,
-        chat: overrides.chat || base.chat,
-        text: overrides.text || base.text,
-        border: overrides.border || base.border,
-        primary: overrides.primary || overrides.border || base.primary,
-        inputBackground: overrides.inputBackground || base.inputBackground
-      };
-    };
-
-    const baseTheme = buildCustomTheme() || getTheme(settings.theme);
+    const baseTheme = settings.theme === 'custom'
+      ? buildCustomTheme(settings.customTheme || {})
+      : getTheme(settings.theme);
     const resolvedFontFamily = baseTheme.name === 'retro'
       ? baseTheme.fontFamily
       : getFontFamilyValue(settings.fontFamily || 'system');
@@ -981,7 +1054,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   if (window.location.pathname === '/share-view') {
     return (
       <ThemeProvider theme={currentTheme}>
-        <GlobalStylesProvider settings={settings}>
+        <GlobalStylesProvider settings={settings} appTheme={currentTheme}>
           <SharedChatView />
         </GlobalStylesProvider>
       </ThemeProvider>
@@ -999,7 +1072,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   // Otherwise, render the desktop app layout
   return (
     <ThemeProvider theme={currentTheme}>
-      <GlobalStylesProvider settings={settings}>
+      <GlobalStylesProvider settings={settings} appTheme={currentTheme}>
         <GlobalStyles />
         <AppContainer className={`bubble-style-${settings.bubbleStyle || 'minimal'} message-spacing-${settings.messageSpacing || 'comfortable'} message-align-${settings.messageAlignment || 'default'}`}>
           <MainContentArea

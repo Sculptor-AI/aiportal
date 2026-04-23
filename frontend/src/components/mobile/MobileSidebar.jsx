@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled, { withTheme } from 'styled-components';
 import { useTranslation } from '../../contexts/TranslationContext';
 import ModelIcon from '../ModelIcon';
 
@@ -252,7 +252,8 @@ const MobileSidebar = ({
   toggleProfile,
   isLoggedIn,
   username,
-  onModelChange
+  onModelChange,
+  theme
 }) => {
   const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
@@ -339,7 +340,10 @@ const MobileSidebar = ({
       <SidebarContainer $isOpen={isOpen}>
         <SidebarHeader>
           <SidebarTitleContainer>
-            <SidebarLogo src="/images/sculptor.svg" alt="Sculptor Logo" />
+            <SidebarLogo
+              src={theme && theme.name === 'lakeside' ? '/images/themes/lakeside-flower.png' : '/images/sculptor.svg'}
+              alt={theme && theme.name === 'lakeside' ? 'Lakeside' : 'Sculptor Logo'}
+            />
           </SidebarTitleContainer>
           <CloseButton onClick={onClose}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -397,4 +401,4 @@ const MobileSidebar = ({
   );
 };
 
-export default MobileSidebar;
+export default withTheme(MobileSidebar);

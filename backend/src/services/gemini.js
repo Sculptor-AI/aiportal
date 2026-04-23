@@ -191,14 +191,16 @@ function buildGeminiBody(body, targetModel = '') {
   const contents = [];
   let systemInstruction = null;
 
-  // Handle system prompt
+  // Handle system prompt (strip project-knowledge cache sentinel used by Anthropic path)
+  const stripCacheMarker = (s) => (typeof s === 'string' ? s.replace(/<<<PROJECT_KNOWLEDGE_CACHE_BOUNDARY>>>/g, '\n') : s);
   if (body.system) {
-    systemInstruction = { parts: [{ text: body.system }] };
+    systemInstruction = { parts: [{ text: stripCacheMarker(body.system) }] };
   }
 
   for (const msg of body.messages || []) {
     if (msg.role === 'system') {
-      systemInstruction = { parts: [{ text: typeof msg.content === 'string' ? msg.content : msg.content[0]?.text || '' }] };
+      const raw = typeof msg.content === 'string' ? msg.content : msg.content[0]?.text || '';
+      systemInstruction = { parts: [{ text: stripCacheMarker(raw) }] };
       continue;
     }
 

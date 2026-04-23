@@ -226,6 +226,8 @@ const ColorOption = styled.button`
     : 'transparent'};
   border-radius: 10px;
   background: ${props => props.color};
+  background-size: cover;
+  background-position: center;
   cursor: pointer;
   touch-action: manipulation;
   position: relative;
@@ -271,10 +273,13 @@ const MobileSettingsPanel = ({ settings, updateSettings, closeModal }) => {
   const themeOptions = [
     { value: 'light', label: 'Light', color: '#ffffff' },
     { value: 'dark', label: 'Dark', color: '#1a1a1a' },
-    { value: 'night', label: 'Night', color: '#080808' },
     { value: 'oled', label: 'OLED', color: '#000000' },
+    { value: 'forest', label: 'Forest', color: "url('/images/themes/forest.jpg')" },
+    { value: 'ocean', label: 'Ocean', color: "url('/images/themes/ocean.jpg')" },
+    { value: 'sunset', label: 'Sunset', color: "url('/images/themes/sunset.jpg')" },
+    { value: 'sunrise', label: 'Sunrise', color: "url('/images/themes/sunrise.jpg')" },
     { value: 'bisexual', label: 'Bisexual', color: '#d60270' },
-    { value: 'lakeside', label: 'Lakeside', color: '#5b0019' },
+    { value: 'lakeside', label: 'Lakeside', color: 'linear-gradient(135deg, #c84860 0%, #7a2a36 100%)' },
     { value: 'pride', label: 'Pride', color: 'linear-gradient(135deg, #E40303 0%, #FF8C00 16.67%, #FFED00 33.33%, #008026 50%, #004DFF 66.67%, #750787 83.33%, #E40303 100%)' },
     { value: 'trans', label: 'Trans', color: 'linear-gradient(135deg, #5BCEFA 0%, #F5A9B8 50%, #FFFFFF 100%)' },
     { value: 'retro', label: 'Retro', color: '#008080' }

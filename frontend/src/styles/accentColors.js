@@ -64,15 +64,24 @@ const applyAlpha = (color, alpha) => {
 
 export const getAccentStyles = (theme = {}, accentChoice = 'theme') => {
   const fallbackColor = extractHex(theme.primary) || theme.primary || '#6366F1';
-  const background = theme.accentGradient || theme.buttonGradient || theme.primary || fallbackColor;
+  // Priority: an explicit theme.accentBackground (like a solid pink pride accent)
+  // wins over any decorative gradient. Themes that want a gradient on accent
+  // surfaces can set accentBackground to a gradient themselves. Only if the
+  // theme hasn't opinioned, fall back to theme gradients.
+  const background =
+    theme.accentBackground ||
+    theme.accentGradient ||
+    theme.buttonGradient ||
+    theme.primary ||
+    fallbackColor;
   const isDark = theme.isDark !== false; // Default to dark if not specified
 
   if (accentChoice === 'theme') {
     return {
-      accentColor: fallbackColor,
+      accentColor: theme.accentColor || fallbackColor,
       accentBackground: background,
-      accentText: isDark ? '#FFFFFF' : fallbackColor,
-      accentSurface: applyAlpha(fallbackColor, 0.14) || background,
+      accentText: theme.accentText || (isDark ? '#FFFFFF' : fallbackColor),
+      accentSurface: theme.accentSurface || applyAlpha(fallbackColor, 0.14) || background,
       accentChoice,
     };
   }
@@ -93,7 +102,13 @@ export const getAccentStyles = (theme = {}, accentChoice = 'theme') => {
 
 export const getAccentSwatch = (accentChoice, theme = {}) => {
   if (accentChoice === 'theme') {
-    return theme.accentGradient || theme.buttonGradient || theme.primary || '#6366F1';
+    return (
+      theme.accentBackground ||
+      theme.accentGradient ||
+      theme.buttonGradient ||
+      theme.primary ||
+      '#6366F1'
+    );
   }
   return accentColorMap[accentChoice] || '#6366F1';
 };

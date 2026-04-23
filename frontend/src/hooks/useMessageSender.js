@@ -7,6 +7,7 @@ import { useToast } from '../contexts/ToastContext'; // If addAlert is used dire
 import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
 import { hasIncompleteCodeBlock, validateCodeBlockSyntax } from '../utils/codeBlockProcessor';
 import { DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
+import { getKnowledgeContentsForProject } from '../services/knowledgeStore';
 
 // Helper function (can be outside or passed in if it uses external context like toast)
 const generateId = () => {
@@ -613,12 +614,19 @@ const useMessageSender = ({
             systemPromptToUse = `${systemPromptToUse}\n\n<project_instructions>\n${project.projectInstructions.trim()}\n</project_instructions>`;
           }
           if (project?.knowledge?.length > 0) {
-            const knowledgeContext = project.knowledge
-              .filter(k => k.content)
-              .map(k => `<file name="${k.name}">\n${k.content}\n</file>`)
-              .join('\n');
-            if (knowledgeContext) {
-              systemPromptToUse = `${systemPromptToUse}\n\n<project_knowledge>\n${knowledgeContext}\n</project_knowledge>`;
+            try {
+              const items = await getKnowledgeContentsForProject(project.id);
+              const knowledgeContext = items
+                .filter(k => k.content)
+                .map(k => `<file name="${k.name}">\n${k.content}\n</file>`)
+                .join('\n');
+              if (knowledgeContext) {
+                // Sentinel marker: the backend (Anthropic path) splits on this and
+                // marks the knowledge block with cache_control for prompt caching.
+                systemPromptToUse = `${systemPromptToUse}\n<<<PROJECT_KNOWLEDGE_CACHE_BOUNDARY>>>\n<project_knowledge>\n${knowledgeContext}\n</project_knowledge>`;
+              }
+            } catch (e) {
+              console.warn('[projects] failed to load knowledge contents', e);
             }
           }
         }

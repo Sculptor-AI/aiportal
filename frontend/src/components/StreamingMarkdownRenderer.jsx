@@ -202,13 +202,13 @@ const Table = styled.table`
   border: 1px solid ${props => props.theme.border};
   border-radius: 8px;
   overflow: hidden;
-  background: ${props => props.theme.name === 'light' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  background: ${props => props.theme.cardBackground || (props.theme.isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(255, 255, 255, 0.8)')};
   backdrop-filter: blur(5px);
   -webkit-backdrop-filter: blur(5px);
 `;
 
 const TableHeader = styled.th`
-  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
+  background: ${props => props.theme.codeBlockHeaderBg || (props.theme.isDark ? 'rgba(45, 45, 45, 0.8)' : 'rgba(240, 240, 240, 0.8)')};
   padding: 8px 10px;
   text-align: left;
   font-weight: 600;
@@ -232,13 +232,13 @@ const TableRow = styled.tr`
   }
   
   &:hover {
-    background: ${props => props.theme.name === 'light' ? 'rgba(0, 122, 255, 0.05)' : 'rgba(10, 132, 255, 0.1)'};
+    background: ${props => props.theme.accentSurface || (props.theme.isDark ? 'rgba(10, 132, 255, 0.1)' : 'rgba(0, 122, 255, 0.05)')};
   }
 `;
 
 const CodeBlock = styled.div`
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.9)' : 'rgba(30, 30, 30, 0.9)'};
-  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(30, 30, 30, 0.9)' : 'rgba(246, 248, 250, 0.9)')};
+  border: 1px solid ${props => props.theme.codeBlockBorder || props.theme.border};
   border-radius: 12px;
   overflow: hidden;
   margin: 0.5rem 0;
@@ -254,8 +254,8 @@ const CodeHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: ${props => props.theme.name === 'light' ? 'rgba(240, 240, 240, 0.8)' : 'rgba(45, 45, 45, 0.8)'};
-  border-bottom: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.codeBlockHeaderBg || (props.theme.isDark ? 'rgba(45, 45, 45, 0.8)' : 'rgba(240, 240, 240, 0.8)')};
+  border-bottom: 1px solid ${props => props.theme.codeBlockBorder || props.theme.border};
   font-size: 0.8em;
 `;
 
@@ -312,7 +312,7 @@ const Pre = styled.pre`
 `;
 
 const InlineCode = styled.code`
-  background: ${props => props.theme.name === 'light' ? 'rgba(246, 248, 250, 0.8)' : 'rgba(30, 30, 30, 0.8)'};
+  background: ${props => props.theme.inlineCodeBg || (props.theme.isDark ? 'rgba(30, 30, 30, 0.8)' : 'rgba(246, 248, 250, 0.8)')};
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;

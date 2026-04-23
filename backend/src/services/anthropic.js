@@ -48,10 +48,48 @@ function mapReasoningEffortToBudget(reasoningEffort) {
 function mapReasoningEffortToAnthropicEffort(thinkingConfig, reasoningEffort) {
   if (!reasoningEffort) return null;
   const levels = thinkingConfig?.reasoning_effort_levels || [];
-  if (reasoningEffort === 'xhigh' || reasoningEffort === 'max') {
+  if (reasoningEffort === 'xhigh') {
+    return levels.includes('xhigh') ? 'xhigh' : (levels.includes('max') ? 'max' : 'high');
+  }
+  if (reasoningEffort === 'max') {
     return levels.includes('max') ? 'max' : 'high';
   }
   return reasoningEffort;
+}
+
+function normalizeThinkingDisplay(displayMode) {
+  if (displayMode === 'summarized' || displayMode === 'omitted') return displayMode;
+  return null;
+}
+
+function normalizeTaskBudget(taskBudget) {
+  const parseCandidate = (candidate) => {
+    if (candidate === null || candidate === undefined) return null;
+
+    const parsedNumber = Number(candidate);
+    if (Number.isFinite(parsedNumber) && parsedNumber > 0) {
+      return parsedNumber;
+    }
+
+    return null;
+  };
+
+  let total = null;
+
+  if (typeof taskBudget === 'number' || typeof taskBudget === 'string') {
+    total = parseCandidate(taskBudget);
+  } else if (taskBudget && typeof taskBudget === 'object') {
+    if (taskBudget.total !== undefined) {
+      total = parseCandidate(taskBudget.total);
+    } else if (taskBudget?.tokens !== undefined) {
+      total = parseCandidate(taskBudget.tokens);
+    }
+  }
+
+  if (!Number.isFinite(total) || total <= 0) return null;
+
+  // Anthropic docs require minimum task budgets of 20k tokens.
+  return Math.max(Math.ceil(total), 20000);
 }
 
 /**
@@ -96,6 +134,9 @@ function getAnthropicHeaders(apiKey, options = {}) {
   }
   if (options.mcp) {
     betas.push('mcp-client-2025-04-04');
+  }
+  if (options.task_budgets) {
+    betas.push('task-budgets-2026-03-13');
   }
 
   if (betas.length > 0) {
@@ -306,9 +347,30 @@ function buildAnthropicBody(body) {
     max_tokens: body.max_tokens || 8192
   };
 
-  // System prompt
+  // System prompt. Supports a sentinel marker injected by the frontend
+  // (<<<PROJECT_KNOWLEDGE_CACHE_BOUNDARY>>>) to split the prompt into a small
+  // variable prefix + a large, stable knowledge block tagged with
+  // cache_control: ephemeral. This enables Anthropic prompt caching so repeat
+  // chats within the same project reuse the cached knowledge (~90% cheaper).
   if (system) {
-    anthropicBody.system = system;
+    const CACHE_MARKER = '<<<PROJECT_KNOWLEDGE_CACHE_BOUNDARY>>>';
+    if (typeof system === 'string' && system.includes(CACHE_MARKER)) {
+      const [base, knowledge] = system.split(CACHE_MARKER);
+      const blocks = [];
+      if (base && base.trim()) {
+        blocks.push({ type: 'text', text: base.replace(/\n+$/, '') });
+      }
+      if (knowledge && knowledge.trim()) {
+        blocks.push({
+          type: 'text',
+          text: knowledge.replace(/^\n+/, ''),
+          cache_control: { type: 'ephemeral' }
+        });
+      }
+      anthropicBody.system = blocks.length > 0 ? blocks : system.replace(CACHE_MARKER, '\n');
+    } else {
+      anthropicBody.system = system;
+    }
   }
 
   // Generation config
@@ -387,17 +449,42 @@ function buildAnthropicBody(body) {
   const thinkingConfig = getModelThinkingConfig('anthropic', model);
   const thinkingStyle = thinkingConfig?.thinking_style || 'budget';
   const shouldEnableThinking = Boolean(body.thinking || body.extended_thinking || normalizedReasoningEffort);
+  const supportsAdaptiveThinkingOnly = thinkingConfig?.adaptive_thinking_only === true;
+  const supportsTaskBudgets = thinkingConfig?.supports_task_budgets === true;
+  const defaultThinkingDisplay = normalizeThinkingDisplay(thinkingConfig?.default_thinking_display || body.thinking_display);
 
   if (shouldEnableThinking) {
     if (thinkingStyle === 'adaptive') {
       const anthropicEffort = normalizedReasoningEffort
         ? mapReasoningEffortToAnthropicEffort(thinkingConfig, normalizedReasoningEffort)
         : (thinkingConfig?.reasoning_effort_default || 'high');
-      anthropicBody.thinking = { type: 'adaptive' };
+      anthropicBody.thinking = {
+        type: 'adaptive',
+        ...(defaultThinkingDisplay ? { display: defaultThinkingDisplay } : {})
+      };
       anthropicBody.output_config = {
         ...(anthropicBody.output_config || {}),
         effort: anthropicEffort
       };
+
+      if (supportsTaskBudgets) {
+        const requestedTaskBudget = normalizeTaskBudget(
+          body.output_config?.task_budget ||
+          body.task_budget ||
+          body.taskBudget
+        );
+        if (requestedTaskBudget) {
+          anthropicBody.output_config = {
+            ...anthropicBody.output_config,
+            task_budget: {
+              type: 'tokens',
+              total: requestedTaskBudget
+            }
+          };
+          options.task_budgets = true;
+        }
+      }
+
       anthropicBody.max_tokens = Math.max(anthropicBody.max_tokens, 16000);
       options.adaptive_thinking = true;
     } else {
@@ -413,7 +500,13 @@ function buildAnthropicBody(body) {
       };
     }
     options.extended_thinking = true;
+  }
+
+  // Adaptive-only Claude models reject temperature/top_p/top_k when set to non-default values.
+  if (supportsAdaptiveThinkingOnly) {
     delete anthropicBody.temperature;
+    delete anthropicBody.top_p;
+    delete anthropicBody.top_k;
   }
 
   return { anthropicBody, options };

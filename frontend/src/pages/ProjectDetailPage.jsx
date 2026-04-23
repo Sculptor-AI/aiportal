@@ -3,6 +3,7 @@ import styled, { useTheme } from 'styled-components';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import ModelSelector from '../components/ModelSelector';
+import { parseFile } from '../services/fileParser';
 
 const PAGE_SIDEBAR_OFFSET = 280;
 const KNOWLEDGE_CAPACITY_BYTES = 10 * 1024 * 1024;
@@ -491,6 +492,38 @@ const HiddenInput = styled.input`
   display: none;
 `;
 
+const DropZone = styled.div`
+  margin-top: 6px;
+  border: 1px dashed ${props => (props.$active ? (props.theme.primary || '#007AFF') : props.theme.border)};
+  background: ${props => (props.$active ? 'rgba(0, 122, 255, 0.06)' : 'transparent')};
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 0.75rem;
+  text-align: center;
+  color: ${props => props.theme.text};
+  opacity: ${props => (props.$active ? 1 : 0.55)};
+  cursor: pointer;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+
+  &:hover {
+    opacity: 1;
+    border-color: ${props => props.theme.primary || '#007AFF'};
+  }
+`;
+
+const UploadStatus = styled.div`
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-top: 2px;
+  color: ${props => (props.$error ? '#e5484d' : 'inherit')};
+`;
+
+const TokenBadge = styled.span`
+  font-size: 0.65rem;
+  opacity: 0.55;
+  margin-left: 6px;
+`;
+
 /* ── Helpers ── */
 
 const relTime = (input) => {
@@ -562,6 +595,8 @@ const ProjectDetailPage = (props) => {
   const [instrDraft, setInstrDraft] = useState('');
   const [editingMemory, setEditingMemory] = useState(false);
   const [memoryDraft, setMemoryDraft] = useState('');
+  const [uploads, setUploads] = useState([]);
+  const [dragActive, setDragActive] = useState(false);
 
   const project = projects.find(p => p.id === projectId);
 
@@ -570,6 +605,10 @@ const ProjectDetailPage = (props) => {
       .filter(c => c.projectId === projectId)
       .sort((a, b) => chatTs(b) - chatTs(a));
   }, [chats, projectId]);
+
+  const totalKnowledgeTokens = useMemo(() => {
+    return (project?.knowledge || []).reduce((sum, k) => sum + (k.tokens || 0), 0);
+  }, [project?.knowledge]);
 
   useEffect(() => {
     setInstrDraft(project?.projectInstructions || '');
@@ -612,18 +651,55 @@ const ProjectDetailPage = (props) => {
     navigate('/');
   };
 
+  const handleFiles = useCallback(async (fileList) => {
+    if (!fileList || fileList.length === 0 || !addKnowledgeToProject) return;
+    const files = Array.from(fileList);
+    const pending = files.map((f, i) => ({
+      key: `${Date.now()}-${i}-${f.name}`,
+      name: f.name,
+      status: 'parsing',
+      error: null,
+    }));
+    setUploads(prev => [...prev, ...pending]);
+
+    await Promise.all(files.map(async (file, idx) => {
+      const key = pending[idx].key;
+      try {
+        const parsed = await parseFile(file);
+        await addKnowledgeToProject(projectId, parsed);
+        setUploads(prev => prev.filter(u => u.key !== key));
+      } catch (err) {
+        setUploads(prev => prev.map(u => u.key === key ? { ...u, status: 'error', error: err.message || 'Failed' } : u));
+      }
+    }));
+  }, [addKnowledgeToProject, projectId]);
+
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !addKnowledgeToProject) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      addKnowledgeToProject(projectId, {
-        name: file.name, type: file.type, size: file.size,
-        content: reader.result, lastModified: file.lastModified,
-      });
-    };
-    reader.readAsText(file);
+    handleFiles(e.target.files);
     e.target.value = '';
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dragActive) setDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const dismissUpload = (key) => {
+    setUploads(prev => prev.filter(u => u.key !== key));
   };
 
   const handleSaveInstructions = () => {
@@ -796,10 +872,19 @@ const ProjectDetailPage = (props) => {
             </PanelSection>
 
             {/* Files */}
-            <PanelSection>
+            <PanelSection
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
               <PanelHeadRow>
-                <PanelTitle>Files</PanelTitle>
-                <PanelEditBtn onClick={() => fileInputRef.current?.click()} title="Add file">
+                <PanelTitle>
+                  Files
+                  {totalKnowledgeTokens > 0 && (
+                    <TokenBadge>~{totalKnowledgeTokens.toLocaleString()} tokens</TokenBadge>
+                  )}
+                </PanelTitle>
+                <PanelEditBtn onClick={() => fileInputRef.current?.click()} title="Add files">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
@@ -807,32 +892,53 @@ const ProjectDetailPage = (props) => {
               </PanelHeadRow>
 
               <FilesArea>
-                {(project.knowledge || []).length > 0 ? (
-                  (project.knowledge || []).map(item => (
-                    <FileRow key={item.id}>
-                      <FileBadge>{fileTag(item.name, item.type)}</FileBadge>
-                      <FileDetails>
-                        <FileName>{item.name}</FileName>
-                        <FileSize>{fmtBytes(item.size)}</FileSize>
-                      </FileDetails>
-                      <RemoveBtn onClick={() => removeKnowledgeFromProject?.(projectId, item.id)} title="Remove">×</RemoveBtn>
-                    </FileRow>
-                  ))
-                ) : (
-                  <AddFileBtn onClick={() => fileInputRef.current?.click()}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Add files to this project
-                  </AddFileBtn>
-                )}
+                {(project.knowledge || []).map(item => (
+                  <FileRow key={item.id}>
+                    <FileBadge>{fileTag(item.name, item.type)}</FileBadge>
+                    <FileDetails>
+                      <FileName>{item.name}</FileName>
+                      <FileSize>
+                        {fmtBytes(item.size)}
+                        {item.tokens ? ` · ~${item.tokens.toLocaleString()} tokens` : ''}
+                      </FileSize>
+                    </FileDetails>
+                    <RemoveBtn onClick={() => removeKnowledgeFromProject?.(projectId, item.id)} title="Remove">×</RemoveBtn>
+                  </FileRow>
+                ))}
+
+                {uploads.map(u => (
+                  <FileRow key={u.key}>
+                    <FileBadge>{fileTag(u.name, '')}</FileBadge>
+                    <FileDetails>
+                      <FileName>{u.name}</FileName>
+                      <UploadStatus $error={u.status === 'error'}>
+                        {u.status === 'parsing' ? 'Parsing…' : u.error || 'Failed'}
+                      </UploadStatus>
+                    </FileDetails>
+                    {u.status === 'error' && (
+                      <RemoveBtn onClick={() => dismissUpload(u.key)} title="Dismiss">×</RemoveBtn>
+                    )}
+                  </FileRow>
+                ))}
               </FilesArea>
+
+              <DropZone
+                $active={dragActive}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {dragActive
+                  ? 'Drop to add files'
+                  : (project.knowledge || []).length > 0
+                    ? 'Add more files or drag & drop'
+                    : 'Drag & drop files here, or click to browse'}
+              </DropZone>
 
               <HiddenInput
                 type="file"
                 ref={fileInputRef}
+                multiple
                 onChange={handleFileChange}
-                accept=".txt,.md,.json,.js,.jsx,.ts,.tsx,.py,.html,.css,.csv,.pdf"
+                accept=".txt,.md,.markdown,.json,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.c,.cc,.cpp,.h,.hpp,.cs,.sh,.bash,.sql,.html,.htm,.css,.xml,.yaml,.yml,.toml,.ini,.conf,.env,.log,.csv,.tsv,.pdf,.docx,image/*"
               />
             </PanelSection>
           </SidePanel>

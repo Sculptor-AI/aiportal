@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { getTheme } from '../styles/themes';
+import { buildCustomTheme, hydrateFromPreset } from '../styles/customTheme';
 
 const OnboardingOverlay = styled.div`
   position: fixed;
@@ -228,71 +229,77 @@ const OptionCard = styled.div`
   }
   
   &.ocean-theme {
-    background: ${props => props.$selected ? '#0277bd' : 'linear-gradient(135deg, #0277bd, #039be5)'};
-    color: white;
-    border-color: ${props => props.$selected ? '#0277bd' : 'transparent'};
+    background-image: linear-gradient(180deg, rgba(3, 10, 26, 0.25) 0%, rgba(3, 10, 26, 0.55) 100%), url('/images/themes/ocean.jpg');
+    background-size: cover;
+    background-position: center;
+    color: #eaf4ff;
+    border-color: ${props => props.$selected ? '#38bdf8' : 'transparent'};
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
   }
-  
+
   &.forest-theme {
-    background: ${props => props.$selected ? '#2e7d32' : 'linear-gradient(135deg, #2e7d32, #4caf50)'};
-    color: white;
-    border-color: ${props => props.$selected ? '#2e7d32' : 'transparent'};
+    background-image: linear-gradient(180deg, rgba(8, 16, 12, 0.25) 0%, rgba(6, 12, 8, 0.60) 100%), url('/images/themes/forest.jpg');
+    background-size: cover;
+    background-position: center;
+    color: #f0f4e8;
+    border-color: ${props => props.$selected ? '#9ccc65' : 'transparent'};
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
   }
-  
+
   &.pride-theme {
-    background: ${props => props.$selected ? '#E40303' : 'linear-gradient(135deg, #E40303, #FF8C00, #FFED00, #008026, #004DFF, #750787)'};
-    color: white;
-    border-color: ${props => props.$selected ? '#E40303' : 'transparent'};
+    background: ${props =>
+      props.$selected
+        ? 'linear-gradient(135deg, #e40303 0%, #ff8c00 20%, #ffed00 40%, #008026 60%, #004dff 80%, #750787 100%)'
+        : 'radial-gradient(circle at 78% 20%, rgba(228, 3, 3, 0.5) 0%, transparent 55%), radial-gradient(circle at 80% 50%, rgba(255, 140, 0, 0.45) 0%, transparent 55%), radial-gradient(circle at 30% 75%, rgba(0, 128, 38, 0.4) 0%, transparent 55%), radial-gradient(circle at 15% 40%, rgba(0, 77, 255, 0.45) 0%, transparent 55%), radial-gradient(circle at 8% 15%, rgba(117, 7, 135, 0.4) 0%, transparent 55%), linear-gradient(160deg, #17171f 0%, #1a1320 100%)'};
+    color: #ffffff;
+    border-color: ${props => props.$selected ? '#ffffff' : 'transparent'};
   }
-  
+
   &.trans-theme {
-    background: ${props => props.$selected ? '#5BCEFA' : 'linear-gradient(135deg, #5BCEFA, #F5A9B8, #FFFFFF)'};
-    color: ${props => props.$selected ? '#ffffff' : '#000000'};
-    border-color: ${props => props.$selected ? '#5BCEFA' : 'transparent'};
+    background: ${props =>
+      props.$selected
+        ? 'linear-gradient(135deg, #5BCEFA 0%, #F5A9B8 50%, #ffffff 100%)'
+        : 'radial-gradient(circle at 20% 20%, rgba(91, 206, 250, 0.55) 0%, transparent 60%), radial-gradient(circle at 80% 30%, rgba(245, 169, 184, 0.55) 0%, transparent 60%), radial-gradient(circle at 50% 90%, rgba(91, 206, 250, 0.4) 0%, transparent 60%), linear-gradient(160deg, #fbfdff 0%, #fff5f7 100%)'};
+    color: ${props => props.$selected ? '#2a2430' : '#2a2430'};
+    border-color: ${props => props.$selected ? '#3ea8d4' : 'transparent'};
   }
-  
+
   &.bisexual-theme {
-    background: ${props => props.$selected ? '#D60270' : 'linear-gradient(135deg, #D60270, #9B4F96, #0038A8)'};
-    color: white;
+    background: ${props =>
+      props.$selected
+        ? 'linear-gradient(135deg, #D60270 0%, #9B4F96 50%, #0038A8 100%)'
+        : 'radial-gradient(circle at 15% 15%, rgba(214, 2, 112, 0.5) 0%, transparent 60%), radial-gradient(circle at 85% 85%, rgba(0, 56, 168, 0.55) 0%, transparent 60%), radial-gradient(circle at 55% 50%, rgba(155, 79, 150, 0.4) 0%, transparent 65%), linear-gradient(160deg, #120820 0%, #170b28 100%)'};
+    color: #ffffff;
     border-color: ${props => props.$selected ? '#D60270' : 'transparent'};
   }
-  
-  &.galaxy-theme {
-    background: ${props => props.$selected ? '#7b61ff' : 'linear-gradient(135deg, #0f052b, #12063b, #1b0a4a)'};
-    color: white;
-    border-color: ${props => props.$selected ? '#7b61ff' : 'transparent'};
-  }
-  
+
   &.sunset-theme {
-    background: ${props => props.$selected ? '#ff7e5f' : 'linear-gradient(135deg, #ff7e5f, #feb47b)'};
-    color: ${props => props.$selected ? '#ffffff' : '#2d0b00'};
-    border-color: ${props => props.$selected ? '#ff7e5f' : 'transparent'};
+    background-image: linear-gradient(180deg, rgba(44, 18, 42, 0.20) 0%, rgba(18, 8, 20, 0.50) 100%), url('/images/themes/sunset.jpg');
+    background-size: cover;
+    background-position: center;
+    color: #fff1e4;
+    border-color: ${props => props.$selected ? '#ff7a59' : 'transparent'};
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
   }
-  
-  &.cyberpunk-theme {
-    background: ${props => props.$selected ? '#ff00cc' : 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)'};
-    color: white;
-    border-color: ${props => props.$selected ? '#ff00cc' : 'transparent'};
+
+  &.sunrise-theme {
+    background-image: linear-gradient(180deg, rgba(255, 240, 220, 0.20) 0%, rgba(200, 158, 120, 0.25) 100%), url('/images/themes/sunrise.jpg');
+    background-size: cover;
+    background-position: center;
+    color: #2d1f14;
+    border-color: ${props => props.$selected ? '#d48940' : 'transparent'};
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
   }
-  
-  &.bubblegum-theme {
-    background: ${props => props.$selected ? '#ff69b4' : 'linear-gradient(135deg, #ff9a9e, #fad0c4)'};
-    color: ${props => props.$selected ? '#ffffff' : '#551133'};
-    border-color: ${props => props.$selected ? '#ff69b4' : 'transparent'};
-  }
-  
-  &.desert-theme {
-    background: ${props => props.$selected ? '#d86f45' : 'linear-gradient(135deg, #c79081, #dfa579)'};
-    color: ${props => props.$selected ? '#ffffff' : '#3e2b1f'};
-    border-color: ${props => props.$selected ? '#d86f45' : 'transparent'};
-  }
-  
+
   &.lakeside-theme {
-    background: ${props => props.$selected ? '#c69214' : 'linear-gradient(135deg, #783f40, #c69214)'};
-    color: white;
-    border-color: ${props => props.$selected ? '#c69214' : 'transparent'};
+    background: ${props =>
+      props.$selected
+        ? 'linear-gradient(135deg, #c84860 0%, #7a2a36 100%)'
+        : 'linear-gradient(135deg, #1a0a10 0%, #4a1620 100%)'};
+    color: ${props => props.$selected ? '#fff4e2' : '#f7ead6'};
+    border-color: ${props => props.$selected ? '#e8c48a' : 'transparent'};
   }
-  
+
   &.retro-theme {
     background: ${props => props.$selected ? '#000080' : '#C0C0C0'};
     color: ${props => props.$selected ? '#ffffff' : '#000000'};
@@ -576,19 +583,15 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
       options: [
         { id: 'light', label: 'Light', className: 'light-theme', icon: '☀️' },
         { id: 'dark', label: 'Dark', className: 'dark-theme', icon: '🌙' },
-        { id: 'night', label: 'Night', className: 'night-theme', icon: '🌃' },
         { id: 'oled', label: 'OLED', className: 'oled-theme', icon: '🖥️' },
         { id: 'ocean', label: 'Ocean', className: 'ocean-theme', icon: '🌊' },
         { id: 'forest', label: 'Forest', className: 'forest-theme', icon: '🌲' },
+        { id: 'sunset', label: 'Sunset', className: 'sunset-theme', icon: '🌇' },
+        { id: 'sunrise', label: 'Sunrise', className: 'sunrise-theme', icon: '🌅' },
         { id: 'pride', label: 'Pride', className: 'pride-theme', icon: '🏳️‍🌈' },
         { id: 'trans', label: 'Trans', className: 'trans-theme', icon: '🏳️‍⚧️' },
         { id: 'bisexual', label: 'Bisexual', className: 'bisexual-theme', icon: '💜' },
-        { id: 'galaxy', label: 'Galaxy', className: 'galaxy-theme', icon: '🌌' },
-        { id: 'sunset', label: 'Sunset', className: 'sunset-theme', icon: '🌅' },
-        { id: 'cyberpunk', label: 'Cyberpunk', className: 'cyberpunk-theme', icon: '🕹️' },
-        { id: 'bubblegum', label: 'Bubblegum', className: 'bubblegum-theme', icon: '🍬' },
-        { id: 'desert', label: 'Desert', className: 'desert-theme', icon: '🏜️' },
-        { id: 'lakeside', label: 'Lakeside', className: 'lakeside-theme', icon: '⛵' },
+        { id: 'lakeside', label: 'Lakeside', className: 'lakeside-theme', icon: '🌺' },
         { id: 'retro', label: 'Retro', className: 'retro-theme', icon: '💾' },
         { id: 'custom', label: 'Custom', className: 'custom-theme', icon: '🎛️'}
       ],
@@ -615,23 +618,26 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
     }
   ];
 
+  // The onboarding only exposes three quick-pick colours ("background",
+  // "text", "border"), but the rest of the app expects a fully-hydrated
+  // authoring state. Merge the three picks on top of the Light preset so
+  // saving this seed produces a valid full custom theme that the user can
+  // keep iterating on from Settings ▸ Custom Theme Studio.
+  const customThemeDraft = useMemo(() => ({
+    ...hydrateFromPreset('light'),
+    background: customColors.background,
+    sidebar: customColors.background,
+    chat: customColors.background,
+    text: customColors.text,
+    border: customColors.border,
+    primary: customColors.border,
+    accentColor: customColors.border,
+  }), [customColors]);
+
   const customTheme = useMemo(() => {
     if (selections.theme !== 'custom') return null;
-    const base = getTheme('light');
-    return {
-      ...base,
-      name: 'custom',
-      background: customColors.background,
-      sidebar: customColors.background,
-      chat: customColors.background,
-      text: customColors.text,
-      border: customColors.border,
-      primary: customColors.border,
-      messageAi: base.messageAi,
-      messageUser: base.messageUser,
-      inputBackground: base.inputBackground
-    };
-  }, [selections.theme, customColors]);
+    return buildCustomTheme(customThemeDraft);
+  }, [selections.theme, customThemeDraft]);
 
   const currentTheme = useMemo(() => {
     if (customTheme) return customTheme;
@@ -642,7 +648,7 @@ const OnboardingFlow = ({ onComplete, initialStep = 0 }) => {
 
   const payloadWithCustomTheme = () => {
     if (selections.theme !== 'custom') return selections;
-    return { ...selections, customTheme: customColors };
+    return { ...selections, customTheme: customThemeDraft };
   };
 
   const handleOptionSelect = (optionId) => {

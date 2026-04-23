@@ -1,49 +1,45 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styled, { css, keyframes } from 'styled-components';
-import ModelIcon from './ModelIcon';
-import AudioVisualizer from './AudioVisualizer';
 import useGeminiLive from '../hooks/useGeminiLive';
 import { useTranslation } from '../contexts/TranslationContext';
 import { GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID } from '../config/modelConfig';
 import kokoroTTSService, { DEFAULT_KOKORO_VOICE } from '../services/kokoroTTSService';
 
 const fadeIn = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 `;
 
-const pulseGlow = keyframes`
-  0% {
-    opacity: 0.28;
-    transform: scale(0.92);
-  }
+const orbBreathe = keyframes`
+  0%   { transform: scale(1);     filter: blur(0px) saturate(1);   }
+  50%  { transform: scale(1.045); filter: blur(0.4px) saturate(1.08); }
+  100% { transform: scale(1);     filter: blur(0px) saturate(1);   }
+`;
 
-  50% {
-    opacity: 0.68;
-    transform: scale(1.04);
-  }
+const orbSpin = keyframes`
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+`;
 
-  100% {
-    opacity: 0.28;
-    transform: scale(0.92);
-  }
+const orbSpinReverse = keyframes`
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+`;
+
+const ringPulse = keyframes`
+  0%   { transform: scale(0.96); opacity: 0.0; }
+  30%  { opacity: 0.22; }
+  100% { transform: scale(1.45); opacity: 0; }
+`;
+
+const dotFlash = keyframes`
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40%           { opacity: 1;    transform: translateY(-2px); }
 `;
 
 const shimmer = keyframes`
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 `;
 
 const Container = styled.div`
@@ -52,504 +48,364 @@ const Container = styled.div`
   z-index: 220;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
   padding:
-    max(24px, env(safe-area-inset-top))
-    max(24px, env(safe-area-inset-right))
-    max(24px, env(safe-area-inset-bottom))
-    max(24px, env(safe-area-inset-left));
+    max(20px, env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
   color: ${props => props.theme.text};
-  background:
-    radial-gradient(circle at top left, ${props => `${props.theme.text}0f`} 0%, transparent 42%),
-    radial-gradient(circle at bottom right, ${props => `${props.theme.border}66`} 0%, transparent 34%),
-    linear-gradient(180deg, ${props => props.theme.background} 0%, ${props => props.theme.inputBackground} 100%);
+  background: ${props => props.theme.chat || props.theme.background};
   overflow: hidden;
   animation: ${fadeIn} 0.32s ease-out;
   font-family: ${props => props.theme.fontFamily || 'var(--font-family)'};
-
-  @media (max-width: 980px) {
-    gap: 18px;
-    padding:
-      max(18px, env(safe-area-inset-top))
-      max(18px, env(safe-area-inset-right))
-      max(18px, env(safe-area-inset-bottom))
-      max(18px, env(safe-area-inset-left));
-  }
 `;
 
 const TopBar = styled.div`
+  width: 100%;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-`;
-
-const TopBarGroup = styled.div`
-  display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 2;
 `;
 
-const Chip = styled.div`
+const StatusPill = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-height: 42px;
-  padding: 10px 16px;
+  padding: 8px 16px 8px 14px;
   border-radius: 999px;
+  background: ${props => props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
-  background: ${props => `${props.theme.inputBackground}dd`};
-  color: ${props => props.theme.text};
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  font-size: 0.86rem;
+  color: ${props => props.theme.textSecondary || props.theme.text};
+  font-size: 0.82rem;
   letter-spacing: 0.01em;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-
-  ${props => props.$tone === 'recording' && css`
-    border-color: rgba(234, 67, 53, 0.36);
-
-    &::before {
-      background: #ea4335;
-      box-shadow: 0 0 0 6px rgba(234, 67, 53, 0.14);
-    }
-  `}
-
-  ${props => props.$tone === 'processing' && css`
-    border-color: rgba(251, 188, 4, 0.38);
-
-    &::before {
-      background: #fbbc04;
-      box-shadow: 0 0 0 6px rgba(251, 188, 4, 0.12);
-    }
-  `}
-
-  ${props => props.$tone === 'connected' && css`
-    border-color: rgba(52, 168, 83, 0.3);
-
-    &::before {
-      background: #34a853;
-      box-shadow: 0 0 0 6px rgba(52, 168, 83, 0.12);
-    }
-  `}
-
-  ${props => props.$withDot && css`
-    &::before {
-      content: '';
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      flex: 0 0 auto;
-    }
-  `}
-`;
-
-const CloseButton = styled.button`
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  border: 1px solid ${props => props.theme.border};
-  background: ${props => `${props.theme.inputBackground}dd`};
-  color: ${props => props.theme.text};
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-
-  &:hover {
-    transform: translateY(-1px);
-    background: ${props => props.theme.inputBackground};
-    border-color: ${props => `${props.theme.text}33`};
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const ContentGrid = styled.div`
-  flex: 1;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.95fr);
-  gap: 24px;
-
-  @media (max-width: 980px) {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(320px, 0.95fr) minmax(0, 1fr);
-    gap: 18px;
-  }
-`;
-
-const Panel = styled.section`
-  position: relative;
-  min-height: 0;
-  border-radius: 32px;
-  border: 1px solid ${props => `${props.theme.border}cc`};
-  background: linear-gradient(180deg, ${props => `${props.theme.inputBackground}f7`} 0%, ${props => `${props.theme.background}f5`} 100%);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
-  overflow: hidden;
-`;
-
-const StagePanel = styled(Panel)`
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 28px;
-  gap: 24px;
+  backdrop-filter: blur(${props => props.theme.glassBlur || '10px'});
+  -webkit-backdrop-filter: blur(${props => props.theme.glassBlur || '10px'});
 
   &::before {
     content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(circle at 18% 12%, ${props => `${props.theme.text}10`} 0%, transparent 32%),
-      radial-gradient(circle at 85% 78%, ${props => `${props.theme.border}4d`} 0%, transparent 24%);
-    pointer-events: none;
-  }
-
-  @media (max-width: 980px) {
-    padding: 22px;
-    gap: 18px;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: ${props => props.theme.accentColor || props.theme.primary};
+    opacity: ${props => props.$tone === 'connected' ? 1 : 0.65};
+    box-shadow: 0 0 0 4px ${props => props.theme.accentSurface || 'rgba(0,0,0,0.06)'};
   }
 `;
 
-const StageMeta = styled.div`
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-`;
-
-const StageTitle = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-const Eyebrow = styled.span`
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: ${props => `${props.theme.text}88`};
-`;
-
-const StageHeading = styled.h2`
-  margin: 0;
-  font-size: clamp(1.7rem, 2.8vw, 2.6rem);
-  line-height: 1.05;
-  letter-spacing: -0.03em;
-`;
-
-const StageSubcopy = styled.p`
-  margin: 0;
-  font-size: 0.96rem;
-  color: ${props => `${props.theme.text}a0`};
-  max-width: 42rem;
-`;
-
-const ModeChips = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-`;
-
-const StageBody = styled.div`
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const MediaFrame = styled.div`
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 360px;
-  border-radius: 28px;
-  overflow: hidden;
-  border: 1px solid ${props => `${props.theme.border}cc`};
-  background: rgba(15, 23, 42, 0.88);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-
-  @media (max-width: 980px) {
-    min-height: 300px;
-  }
-`;
-
-const VideoSurface = styled.video`
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #020617;
-`;
-
-const OrbStage = styled.div`
-  position: relative;
-  width: min(100%, 520px);
-  aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const OrbGlow = styled.div`
-  position: absolute;
-  inset: 8%;
+const IconButton = styled.button`
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
-  background:
-    radial-gradient(circle, ${props => `${props.theme.text}18`} 0%, ${props => `${props.theme.border}10`} 48%, transparent 74%);
-  filter: blur(24px);
-  animation: ${pulseGlow} 4.4s ease-in-out infinite;
-`;
-
-const OrbShell = styled.div`
-  position: relative;
-  width: min(100%, 310px);
-  aspect-ratio: 1 / 1;
-  overflow: hidden;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid ${props => `${props.theme.border}cc`};
-  background:
-    linear-gradient(145deg, ${props => `${props.theme.inputBackground}ff`} 0%, ${props => `${props.theme.background}fb`} 100%);
-  box-shadow:
-    0 24px 50px rgba(15, 23, 42, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-`;
-
-const OrbLabel = styled.div`
-  position: absolute;
-  bottom: 24px;
-  left: 24px;
-  right: 24px;
-  display: flex;
-  justify-content: center;
-  text-align: center;
-  color: ${props => `${props.theme.text}92`};
-  font-size: 0.94rem;
-`;
-
-const StageFooter = styled.div`
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-
-  @media (max-width: 760px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const DetailCard = styled.div`
-  padding: 16px 18px;
-  border-radius: 22px;
-  border: 1px solid ${props => `${props.theme.border}b3`};
-  background: ${props => `${props.theme.background}b8`};
-`;
-
-const DetailLabel = styled.div`
-  font-size: 0.76rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: ${props => `${props.theme.text}75`};
-  margin-bottom: 8px;
-`;
-
-const DetailValue = styled.div`
-  font-size: 0.95rem;
-  color: ${props => `${props.theme.text}d8`};
-`;
-
-const TranscriptPanel = styled(Panel)`
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-`;
-
-const TranscriptHeader = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 24px 24px 18px;
-  border-bottom: 1px solid ${props => `${props.theme.border}a6`};
-`;
-
-const TranscriptHeading = styled.h3`
-  margin: 0;
-  font-size: 1.1rem;
-`;
-
-const TranscriptSubcopy = styled.p`
-  margin: 6px 0 0;
-  color: ${props => `${props.theme.text}8f`};
-  font-size: 0.92rem;
-`;
-
-const TranscriptBody = styled.div`
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 18px 24px 24px;
-  overflow-y: auto;
-`;
-
-const TranscriptCard = styled.article`
-  padding: 16px 18px;
-  border-radius: 22px;
-  border: 1px solid ${props => props.$role === 'user' ? `${props.theme.border}dd` : `${props.theme.text}22`};
-  background: ${props => props.$role === 'user' ? `${props.theme.background}c4` : `${props.theme.text}0a`};
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground};
   color: ${props => props.theme.text};
-  animation: ${fadeIn} 0.22s ease-out;
-`;
-
-const TranscriptLabel = styled.div`
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: ${props => `${props.theme.text}72`};
-  margin-bottom: 10px;
-`;
-
-const TranscriptText = styled.p`
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.55;
-  font-size: 0.98rem;
-`;
-
-const PlaceholderState = styled.div`
-  flex: 1;
-  min-height: 220px;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  color: ${props => `${props.theme.text}72`};
-  padding: 28px;
-`;
-
-const ControlsBar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 18px 22px;
-  margin: 0 auto;
-  width: fit-content;
-  max-width: 100%;
-  border-radius: 999px;
-  border: 1px solid ${props => `${props.theme.border}cc`};
-  background: ${props => `${props.theme.inputBackground}e6`};
-  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.16);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-
-  @media (max-width: 640px) {
-    width: 100%;
-    justify-content: space-between;
-    padding: 14px 16px;
-  }
-`;
-
-const ControlButton = styled.button`
-  width: 58px;
-  height: 58px;
-  border-radius: 999px;
-  border: 1px solid ${props => props.$isActive ? 'transparent' : `${props.theme.border}cc`};
-  background: ${props => {
-    if (props.$variant === 'danger' && props.$isActive) {
-      return '#ea4335';
-    }
-
-    if (props.$isActive) {
-      return props.theme.text;
-    }
-
-    return props.theme.background;
-  }};
-  color: ${props => {
-    if (props.$variant === 'danger' && props.$isActive) {
-      return '#ffffff';
-    }
-
-    return props.$isActive ? props.theme.background : props.theme.text;
-  }};
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.18s ease, opacity 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
-  box-shadow: ${props => props.$isActive ? '0 12px 30px rgba(15, 23, 42, 0.18)' : 'none'};
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+  backdrop-filter: blur(${props => props.theme.glassBlur || '10px'});
+  -webkit-backdrop-filter: blur(${props => props.theme.glassBlur || '10px'});
 
   &:hover {
-    transform: translateY(-1px);
-    opacity: 0.96;
+    background: ${props => props.theme.hover || props.theme.inputBackground};
   }
 
-  &:active {
-    transform: translateY(0);
-  }
+  &:active { transform: scale(0.96); }
 
-  svg {
-    width: 24px;
-    height: 24px;
-  }
+  svg { width: 18px; height: 18px; }
 `;
 
-const ErrorBanner = styled.div`
-  padding: 12px 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(234, 67, 53, 0.22);
-  background: rgba(234, 67, 53, 0.12);
-  color: #ea4335;
-  font-size: 0.92rem;
-`;
-
-const ProgressTrack = styled.div`
+const Stage = styled.div`
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
   position: relative;
-  width: 180px;
-  height: 8px;
+`;
+
+const OrbWrap = styled.div`
+  position: relative;
+  width: min(68vw, 340px);
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const OrbRing = styled.div`
+  position: absolute;
+  inset: -8%;
+  border-radius: 999px;
+  border: 1px solid ${props => props.theme.border};
+  opacity: 0;
+  animation: ${ringPulse} 2.8s ease-out infinite;
+  ${props => props.$delay && css`animation-delay: ${props.$delay};`}
+  ${props => !props.$active && css`animation-play-state: paused; opacity: 0;`}
+`;
+
+const OrbHalo = styled.div`
+  position: absolute;
+  inset: -14%;
+  border-radius: 999px;
+  background: ${props => {
+    const accent = props.theme.accentSurface || 'rgba(127,127,127,0.12)';
+    return `radial-gradient(circle at 50% 50%, ${accent} 0%, transparent 62%)`;
+  }};
+  filter: blur(28px);
+  opacity: ${props => (props.$active ? 0.95 : 0.5)};
+  transition: opacity 600ms ease;
+`;
+
+const Orb = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
   border-radius: 999px;
   overflow: hidden;
-  background: ${props => `${props.theme.text}12`};
+  box-shadow:
+    0 30px 80px ${props => props.theme.shadow || 'rgba(0,0,0,0.25)'},
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -20px 60px rgba(0, 0, 0, 0.18);
+  animation: ${orbBreathe} ${props => (props.$active ? '2.6s' : '5.2s')} ease-in-out infinite;
+  background: ${props => {
+    const primary = props.theme.primary || '#7a7a7a';
+    const accent = props.theme.accentColor || props.theme.primary || '#7a7a7a';
+    const surface = props.theme.cardBackground || props.theme.inputBackground || '#2a2a2a';
+    return `
+      radial-gradient(circle at 32% 28%, ${accent}33 0%, transparent 48%),
+      radial-gradient(circle at 70% 75%, ${primary}2e 0%, transparent 52%),
+      linear-gradient(145deg, ${surface} 0%, ${surface} 60%, ${primary}1f 100%)
+    `;
+  }};
 `;
 
-const ProgressFill = styled.div`
+const OrbLayerA = styled.div`
+  position: absolute;
+  inset: -20%;
+  border-radius: 999px;
+  background: ${props => {
+    const accent = props.theme.accentColor || props.theme.primary || '#7a7a7a';
+    const primary = props.theme.primary || '#7a7a7a';
+    return `
+      radial-gradient(circle at 30% 30%, ${accent}40 0%, transparent 36%),
+      radial-gradient(circle at 72% 68%, ${primary}3a 0%, transparent 42%)
+    `;
+  }};
+  mix-blend-mode: ${props => (props.theme.isDark ? 'screen' : 'multiply')};
+  opacity: ${props => (props.theme.isDark ? 0.85 : 0.45)};
+  animation: ${orbSpin} ${props => (props.$active ? '16s' : '40s')} linear infinite;
+`;
+
+const OrbLayerB = styled.div`
+  position: absolute;
+  inset: -10%;
+  border-radius: 999px;
+  background: ${props => {
+    const accent = props.theme.accentColor || props.theme.primary || '#7a7a7a';
+    const secondary = props.theme.secondary || props.theme.accentColor || '#7a7a7a';
+    return `
+      radial-gradient(circle at 25% 70%, ${accent}30 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, ${secondary}33 0%, transparent 42%)
+    `;
+  }};
+  mix-blend-mode: ${props => (props.theme.isDark ? 'screen' : 'multiply')};
+  opacity: ${props => (props.theme.isDark ? 0.7 : 0.35)};
+  animation: ${orbSpinReverse} ${props => (props.$active ? '22s' : '60s')} linear infinite;
+`;
+
+const OrbGloss = styled.div`
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: ${props =>
+    props.theme.isDark
+      ? 'radial-gradient(ellipse at 35% 18%, rgba(255,255,255,0.14) 0%, transparent 48%)'
+      : 'radial-gradient(ellipse at 35% 18%, rgba(255,255,255,0.55) 0%, transparent 48%)'};
+  pointer-events: none;
+`;
+
+const StatusStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  text-align: center;
+  padding: 0 20px;
+`;
+
+const StatusText = styled.div`
+  font-size: 1.12rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: ${props => props.theme.text};
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+`;
+
+const Dots = styled.span`
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 6px;
+
+  span {
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: currentColor;
+    animation: ${dotFlash} 1.2s ease-in-out infinite;
+  }
+
+  span:nth-child(2) { animation-delay: 0.15s; }
+  span:nth-child(3) { animation-delay: 0.3s; }
+`;
+
+const Transcript = styled.div`
+  max-width: 560px;
+  width: 100%;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: ${props => props.theme.textSecondary || props.theme.text};
+  text-align: center;
+  min-height: 1.5em;
+  animation: ${fadeIn} 0.4s ease-out;
+`;
+
+const LoadingBar = styled.div`
+  position: relative;
+  width: 200px;
+  height: 3px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: ${props => props.theme.border};
+`;
+
+const LoadingFill = styled.div`
   position: absolute;
   inset: 0;
   width: ${props => `${Math.max(6, Math.round(props.$value * 100))}%`};
   border-radius: inherit;
-  background: linear-gradient(90deg, #34a853 0%, #4285f4 100%);
+  background: ${props => props.theme.accentColor || props.theme.primary};
   transition: width 0.2s ease;
 
   &::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%);
     animation: ${shimmer} 1.8s linear infinite;
   }
+`;
+
+const ControlsRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 8px 0;
+  z-index: 2;
+`;
+
+const ControlButton = styled.button`
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.16s ease, background-color 0.18s ease, border-color 0.18s ease;
+  backdrop-filter: blur(${props => props.theme.glassBlur || '10px'});
+  -webkit-backdrop-filter: blur(${props => props.theme.glassBlur || '10px'});
+
+  background: ${props => {
+    if (props.$variant === 'end') return props.theme.accentColor || props.theme.primary;
+    if (props.$isActive) return props.theme.accentSurface || props.theme.hover;
+    return props.theme.inputBackground;
+  }};
+  color: ${props => {
+    if (props.$variant === 'end') return props.theme.accentText || props.theme.primaryForeground || '#ffffff';
+    if (props.$isActive) return props.theme.accentColor || props.theme.primary;
+    return props.theme.text;
+  }};
+  border: 1px solid ${props => {
+    if (props.$variant === 'end') return 'transparent';
+    if (props.$isActive) return props.theme.accentColor || props.theme.primary;
+    return props.theme.border;
+  }};
+
+  &:hover {
+    transform: translateY(-1px);
+    background: ${props => {
+      if (props.$variant === 'end') return props.theme.accentColor || props.theme.primary;
+      return props.theme.hover || props.theme.inputBackground;
+    }};
+  }
+
+  &:active { transform: scale(0.96); }
+
+  svg { width: 24px; height: 24px; }
+`;
+
+const ControlLabel = styled.span`
+  display: block;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  color: ${props => props.theme.textSecondary || props.theme.text};
+  opacity: 0.7;
+  text-align: center;
+`;
+
+const ControlGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const VideoSurface = styled.video`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+`;
+
+const VideoFrame = styled.div`
+  position: relative;
+  width: min(78vw, 420px);
+  aspect-ratio: 3 / 4;
+  border-radius: 36px;
+  overflow: hidden;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  box-shadow: 0 30px 80px ${props => props.theme.shadow || 'rgba(0,0,0,0.2)'};
+
+  @media (max-height: 720px) {
+    width: min(70vw, 360px);
+  }
+`;
+
+const ErrorBanner = styled.div`
+  max-width: 560px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground};
+  color: ${props => props.theme.textSecondary || props.theme.text};
+  font-size: 0.86rem;
+  text-align: center;
 `;
 
 const MAX_TRANSCRIPT_TURNS = 10;
@@ -558,7 +414,6 @@ const createTurnId = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID();
   }
-
   return `turn-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
@@ -566,18 +421,10 @@ const normalizeText = (value = '') => value.replace(/\s+/g, ' ').trim();
 
 const appendTurn = (turns, role, text) => {
   const normalizedText = normalizeText(text);
-
-  if (!normalizedText) {
-    return turns;
-  }
-
+  if (!normalizedText) return turns;
   return [
     ...turns,
-    {
-      id: createTurnId(),
-      role,
-      text: normalizedText,
-    },
+    { id: createTurnId(), role, text: normalizedText },
   ].slice(-MAX_TRANSCRIPT_TURNS);
 };
 
@@ -585,24 +432,16 @@ const getProgressValue = (payload) => {
   if (typeof payload?.progress === 'number') {
     return payload.progress > 1 ? payload.progress / 100 : payload.progress;
   }
-
   if (typeof payload?.loaded === 'number' && typeof payload?.total === 'number' && payload.total > 0) {
     return payload.loaded / payload.total;
   }
-
   return null;
 };
 
 const getProgressLabel = (payload) => {
-  if (typeof payload?.file === 'string') {
-    return payload.file.split('/').pop();
-  }
-
-  if (typeof payload?.status === 'string') {
-    return payload.status.replace(/_/g, ' ');
-  }
-
-  return 'Preparing Kokoro voice engine';
+  if (typeof payload?.file === 'string') return payload.file.split('/').pop();
+  if (typeof payload?.status === 'string') return payload.status.replace(/_/g, ' ');
+  return 'Preparing voice';
 };
 
 const LiveModeUI = ({ selectedModel, onClose }) => {
@@ -615,14 +454,14 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   const [screenError, setScreenError] = useState('');
   const [ttsStatus, setTtsStatus] = useState('loading');
   const [ttsProgress, setTtsProgress] = useState(0);
-  const [ttsProgressLabel, setTtsProgressLabel] = useState('Preparing Kokoro voice engine');
+  const [ttsProgressLabel, setTtsProgressLabel] = useState('Preparing voice');
   const [ttsError, setTtsError] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [transcriptTurns, setTranscriptTurns] = useState([]);
+  const [isMuted, setIsMuted] = useState(false);
 
   const cameraVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
-  const transcriptBodyRef = useRef(null);
   const previousStatusRef = useRef('disconnected');
   const assistantTurnCommittedRef = useRef(false);
   const latestAssistantResponseRef = useRef('');
@@ -636,7 +475,6 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
     error: geminiError,
     status,
     inputTranscription,
-    inputModeLabel,
     connect,
     disconnect,
     startSession,
@@ -671,23 +509,18 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
 
   const speakAssistantText = useCallback(async (text) => {
     const nextText = normalizeText(text);
-
-    if (!nextText || ttsStatus !== 'ready') {
-      return;
-    }
+    if (!nextText || ttsStatus !== 'ready') return;
 
     pendingSpeechTextRef.current = '';
     setIsSpeaking(true);
 
     try {
-      await kokoroTTSService.speak(nextText, {
-        voice: DEFAULT_KOKORO_VOICE,
-      });
+      await kokoroTTSService.speak(nextText, { voice: DEFAULT_KOKORO_VOICE });
       setTtsError('');
     } catch (error) {
       console.error('Kokoro playback failed:', error);
       setTtsStatus('error');
-      setTtsError('Kokoro playback failed. Responses will stay on screen, but voice playback is unavailable for now.');
+      setTtsError('Voice playback failed. Responses will stay on screen.');
     } finally {
       setIsSpeaking(false);
     }
@@ -701,15 +534,11 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         setTtsStatus('loading');
         await kokoroTTSService.preload({
           progressCallback: (payload) => {
-            if (cancelled) {
-              return;
-            }
-
+            if (cancelled) return;
             const nextProgress = getProgressValue(payload);
             if (typeof nextProgress === 'number') {
               setTtsProgress(Math.max(0, Math.min(1, nextProgress)));
             }
-
             setTtsProgressLabel(getProgressLabel(payload));
           },
         });
@@ -717,14 +546,13 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
         if (!cancelled) {
           setTtsStatus('ready');
           setTtsProgress(1);
-          setTtsProgressLabel('Kokoro voice engine ready');
+          setTtsProgressLabel('Voice ready');
         }
       } catch (error) {
         console.error('Failed to preload Kokoro:', error);
-
         if (!cancelled) {
           setTtsStatus('error');
-          setTtsError('Kokoro voice engine could not load. Live mode will continue with text responses only.');
+          setTtsError('Voice engine could not load. Live mode will continue with text responses only.');
         }
       }
     };
@@ -738,9 +566,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   }, []);
 
   useEffect(() => {
-    if (!isConnected) {
-      connect();
-    }
+    if (!isConnected) connect();
   }, [connect, isConnected]);
 
   useEffect(() => {
@@ -752,10 +578,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   }, [disconnect, stopCameraStream, stopScreenStream]);
 
   useEffect(() => {
-    if (!isConnected || sessionActive || status !== 'connected') {
-      return;
-    }
-
+    if (!isConnected || sessionActive || status !== 'connected') return;
     startSession({
       responseModality: 'text',
       outputAudioMode: 'none',
@@ -783,26 +606,19 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   useEffect(() => {
     if (status === 'processing' && previousStatusRef.current !== 'processing') {
       const transcriptText = normalizeText(inputTranscription);
-
       if (transcriptText) {
         assistantTurnCommittedRef.current = false;
         setTranscriptTurns((currentTurns) => appendTurn(currentTurns, 'user', transcriptText));
       }
     }
-
     previousStatusRef.current = status;
   }, [inputTranscription, status]);
 
   useEffect(() => {
-    if (status !== 'turn_complete' || assistantTurnCommittedRef.current) {
-      return;
-    }
+    if (status !== 'turn_complete' || assistantTurnCommittedRef.current) return;
 
     const finalAssistantText = latestAssistantResponseRef.current;
-
-    if (!finalAssistantText) {
-      return;
-    }
+    if (!finalAssistantText) return;
 
     assistantTurnCommittedRef.current = true;
     setTranscriptTurns((currentTurns) => appendTurn(currentTurns, 'assistant', finalAssistantText));
@@ -815,19 +631,9 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
   }, [speakAssistantText, status, ttsStatus]);
 
   useEffect(() => {
-    if (ttsStatus !== 'ready' || !pendingSpeechTextRef.current || isSpeaking) {
-      return;
-    }
-
+    if (ttsStatus !== 'ready' || !pendingSpeechTextRef.current || isSpeaking) return;
     speakAssistantText(pendingSpeechTextRef.current);
   }, [isSpeaking, speakAssistantText, ttsStatus]);
-
-  useEffect(() => {
-    transcriptBodyRef.current?.scrollTo({
-      top: transcriptBodyRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
-  }, [inputTranscription, response, transcriptTurns]);
 
   const handleMicrophoneToggle = useCallback(async () => {
     if (isSpeaking) {
@@ -837,12 +643,13 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
 
     if (isRecording) {
       stopRecording();
+      setIsMuted(true);
       return;
     }
 
-    if (!isConnected) {
-      await connect();
-    }
+    setIsMuted(false);
+
+    if (!isConnected) await connect();
 
     if (!sessionActive) {
       await startSession({
@@ -862,9 +669,7 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
       return;
     }
 
-    if (screenShareActive) {
-      stopScreenStream();
-    }
+    if (screenShareActive) stopScreenStream();
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -874,7 +679,6 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
           facingMode: 'user',
         },
       });
-
       setCameraStream(stream);
       setCameraActive(true);
       setCameraError('');
@@ -884,282 +688,172 @@ const LiveModeUI = ({ selectedModel, onClose }) => {
     }
   }, [cameraActive, screenShareActive, stopCameraStream, stopScreenStream, t]);
 
-  const handleScreenShareToggle = useCallback(async () => {
-    if (screenShareActive) {
-      stopScreenStream();
-      return;
+  const handleEndCall = useCallback(() => {
+    if (isSpeaking) {
+      kokoroTTSService.stop();
+      setIsSpeaking(false);
     }
-
-    if (cameraActive) {
-      stopCameraStream();
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: 'always' },
-        audio: false,
-      });
-
-      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
-        stopScreenStream();
-      });
-
-      setScreenStream(stream);
-      setScreenShareActive(true);
-      setScreenError('');
-    } catch (error) {
-      console.error(error);
-      setScreenError(t('liveMode.errors.screenDenied', 'Screen share denied'));
-    }
-  }, [cameraActive, screenShareActive, stopCameraStream, stopScreenStream, t]);
+    if (isRecording) stopRecording();
+    stopCameraStream();
+    stopScreenStream();
+    onClose?.();
+  }, [isRecording, isSpeaking, onClose, stopCameraStream, stopRecording, stopScreenStream]);
 
   const activeError = cameraError || screenError || ttsError || (typeof geminiError === 'string' ? geminiError : '');
   const hasVideo = cameraActive || screenShareActive;
   const liveDraft = normalizeText(inputTranscription);
   const liveResponse = normalizeText(response);
 
-  const stageCopy = useMemo(() => {
-    if (isRecording) {
-      return t('liveMode.status.listening', 'Listening');
-    }
+  const orbActive = isRecording || isSpeaking || status === 'processing' || status === 'responding';
 
-    if (isSpeaking) {
-      return 'Speaking';
-    }
-
+  const statusInfo = useMemo(() => {
+    if (!isConnected) return { text: t('liveMode.status.connecting', 'Connecting'), showDots: true, tone: 'processing' };
+    if (!sessionActive) return { text: t('liveMode.status.starting', 'Starting'), showDots: true, tone: 'processing' };
+    if (isSpeaking) return { text: 'Speaking', showDots: false, tone: 'connected' };
     if (status === 'processing' || status === 'responding') {
-      return t('liveMode.status.thinking', 'Thinking');
+      return { text: t('liveMode.status.thinking', 'Thinking'), showDots: true, tone: 'processing' };
     }
+    if (isRecording) return { text: t('liveMode.status.listening', 'Listening'), showDots: true, tone: 'recording' };
+    if (ttsStatus === 'loading') return { text: ttsProgressLabel, showDots: true, tone: 'processing' };
+    return { text: isMuted ? 'Muted' : t('liveMode.status.ready', 'Tap the mic to start'), showDots: false, tone: 'connected' };
+  }, [isConnected, isMuted, isRecording, isSpeaking, sessionActive, status, t, ttsProgressLabel, ttsStatus]);
 
-    if (ttsStatus === 'loading') {
-      return 'Preparing voice';
-    }
-
-    return t('liveMode.status.ready', 'Ready');
-  }, [isRecording, isSpeaking, status, t, ttsStatus]);
-
-  const topStatusTone = useMemo(() => {
-    if (!isConnected || !sessionActive) {
-      return 'processing';
-    }
-
-    if (isRecording) {
-      return 'recording';
-    }
-
-    if (isSpeaking || status === 'processing' || status === 'responding' || ttsStatus === 'loading') {
-      return 'processing';
-    }
-
-    return 'connected';
-  }, [isConnected, isRecording, isSpeaking, sessionActive, status, ttsStatus]);
-
-  const topStatusText = useMemo(() => {
-    if (!isConnected) {
-      return t('liveMode.status.connecting', 'Connecting...');
-    }
-
-    if (!sessionActive) {
-      return t('liveMode.status.starting', 'Starting...');
-    }
-
-    return stageCopy;
-  }, [isConnected, sessionActive, stageCopy, t]);
-
-  const transcriptItems = useMemo(() => {
-    const items = [...transcriptTurns];
-
-    if (isRecording && liveDraft) {
-      items.push({
-        id: 'draft-user',
-        role: 'user',
-        text: liveDraft,
-        isDraft: true,
-      });
-    }
-
-    if (status === 'responding' && liveResponse) {
-      items.push({
-        id: 'draft-assistant',
-        role: 'assistant',
-        text: liveResponse,
-        isDraft: true,
-      });
-    }
-
-    return items;
-  }, [isRecording, liveDraft, liveResponse, status, transcriptTurns]);
+  const transcriptText = useMemo(() => {
+    if (isRecording && liveDraft) return liveDraft;
+    if ((status === 'responding' || isSpeaking) && liveResponse) return liveResponse;
+    const lastAssistant = [...transcriptTurns].reverse().find((turn) => turn.role === 'assistant');
+    if (lastAssistant) return lastAssistant.text;
+    return '';
+  }, [isRecording, isSpeaking, liveDraft, liveResponse, status, transcriptTurns]);
 
   return (
     <Container>
       <TopBar>
-        <TopBarGroup>
-          <Chip $tone={topStatusTone} $withDot>
-            {topStatusText}
-          </Chip>
-          <Chip>{inputModeLabel}</Chip>
-          <Chip>
-            {ttsStatus === 'ready' ? 'Kokoro voice' : ttsStatus === 'loading' ? 'Loading Kokoro' : 'Text only'}
-          </Chip>
-        </TopBarGroup>
-
-        <CloseButton onClick={onClose} aria-label={t('liveMode.controls.close', 'Close Live Mode')}>
+        <StatusPill $tone={statusInfo.tone}>
+          {selectedModel?.includes('gemini') ? selectedModel : 'Live Voice'}
+        </StatusPill>
+        <IconButton onClick={onClose} aria-label={t('liveMode.controls.close', 'Close Live Mode')}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
+            <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
-        </CloseButton>
+        </IconButton>
       </TopBar>
 
-      {activeError && (
-        <ErrorBanner>
-          {activeError}
-        </ErrorBanner>
-      )}
+      <Stage>
+        {hasVideo ? (
+          <VideoFrame>
+            <VideoSurface
+              ref={cameraActive ? cameraVideoRef : screenVideoRef}
+              autoPlay
+              muted
+              playsInline
+            />
+          </VideoFrame>
+        ) : (
+          <OrbWrap>
+            <OrbHalo $active={orbActive} />
+            <OrbRing $active={orbActive} />
+            <OrbRing $active={orbActive} $delay="0.9s" />
+            <OrbRing $active={orbActive} $delay="1.8s" />
+            <Orb $active={orbActive}>
+              <OrbLayerA $active={orbActive} />
+              <OrbLayerB $active={orbActive} />
+              <OrbGloss />
+            </Orb>
+          </OrbWrap>
+        )}
 
-      <ContentGrid>
-        <StagePanel>
-          <StageMeta>
-            <StageTitle>
-              <Eyebrow>Live conversation</Eyebrow>
-              <StageHeading>{stageCopy}</StageHeading>
-              <StageSubcopy>
-                Voice replies come from Kokoro in the browser. Speech input prefers native browser speech recognition when the platform exposes it.
-              </StageSubcopy>
-            </StageTitle>
-
-            <ModeChips>
-              <Chip>{cameraActive ? 'Camera on' : screenShareActive ? 'Screen sharing' : 'Audio focus'}</Chip>
-              <Chip>{selectedModel || GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID}</Chip>
-            </ModeChips>
-          </StageMeta>
-
-          <StageBody>
-            {hasVideo ? (
-              <MediaFrame>
-                <VideoSurface
-                  ref={cameraActive ? cameraVideoRef : screenVideoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                />
-              </MediaFrame>
-            ) : (
-              <OrbStage>
-                <OrbGlow />
-                <OrbShell>
-                  <AudioVisualizer isActive={isRecording || isSpeaking || status === 'processing' || status === 'responding'} />
-                  <ModelIcon modelId={selectedModel} size="large" />
-                  <OrbLabel>
-                    {isRecording ? 'Speak naturally, then pause.' : isSpeaking ? 'Kokoro is reading the reply.' : 'Tap the mic to start the next turn.'}
-                  </OrbLabel>
-                </OrbShell>
-              </OrbStage>
+        <StatusStack>
+          <StatusText>
+            {statusInfo.text}
+            {statusInfo.showDots && (
+              <Dots aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </Dots>
             )}
-          </StageBody>
+          </StatusText>
 
-          <StageFooter>
-            <DetailCard>
-              <DetailLabel>Speech input</DetailLabel>
-              <DetailValue>{inputModeLabel}</DetailValue>
-            </DetailCard>
-            <DetailCard>
-              <DetailLabel>Speech output</DetailLabel>
-              <DetailValue>{ttsStatus === 'ready' ? 'Kokoro local browser TTS' : ttsStatus === 'loading' ? ttsProgressLabel : 'Text responses only'}</DetailValue>
-            </DetailCard>
-            <DetailCard>
-              <DetailLabel>Current model</DetailLabel>
-              <DetailValue>{selectedModel?.includes('gemini') ? selectedModel : GEMINI_LIVE_NATIVE_AUDIO_MODEL_ID}</DetailValue>
-            </DetailCard>
-          </StageFooter>
-        </StagePanel>
-
-        <TranscriptPanel>
-          <TranscriptHeader>
-            <div>
-              <TranscriptHeading>Conversation</TranscriptHeading>
-              <TranscriptSubcopy>
-                The right panel keeps the last turns readable instead of layering them over the stage.
-              </TranscriptSubcopy>
-            </div>
-
-            {ttsStatus === 'loading' && (
-              <div>
-                <TranscriptLabel>{ttsProgressLabel}</TranscriptLabel>
-                <ProgressTrack>
-                  <ProgressFill $value={ttsProgress} />
-                </ProgressTrack>
-              </div>
-            )}
-          </TranscriptHeader>
-
-          <TranscriptBody ref={transcriptBodyRef}>
-            {transcriptItems.length === 0 ? (
-              <PlaceholderState>
-                Tap the microphone to start the first turn. Transcripts and model replies will stack here as a readable live feed.
-              </PlaceholderState>
-            ) : (
-              transcriptItems.map((item) => (
-                <TranscriptCard key={item.id} $role={item.role}>
-                  <TranscriptLabel>
-                    {item.role === 'user' ? 'You' : 'Assistant'}
-                    {item.isDraft ? ' • live' : ''}
-                  </TranscriptLabel>
-                  <TranscriptText>{item.text}</TranscriptText>
-                </TranscriptCard>
-              ))
-            )}
-          </TranscriptBody>
-        </TranscriptPanel>
-      </ContentGrid>
-
-      <ControlsBar>
-        <ControlButton
-          $isActive={isRecording}
-          $variant="danger"
-          onClick={handleMicrophoneToggle}
-          title={isRecording ? t('liveMode.controls.mic.mute', 'Mute Microphone') : t('liveMode.controls.mic.unmute', 'Unmute Microphone')}
-        >
-          {isRecording ? (
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-              <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-              <line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" strokeWidth="2" />
-            </svg>
+          {ttsStatus === 'loading' && (
+            <LoadingBar>
+              <LoadingFill $value={ttsProgress} />
+            </LoadingBar>
           )}
-        </ControlButton>
 
-        <ControlButton
-          $isActive={cameraActive}
-          onClick={handleCameraToggle}
-          title={cameraActive ? t('liveMode.controls.camera.off', 'Turn Off Camera') : t('liveMode.controls.camera.on', 'Turn On Camera')}
-        >
-          {cameraActive ? (
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82l-1-1H16c.55 0 1 .45 1 1v3.5l4-4v11l-1.43-1.43L21 6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.55-.18L19.73 21 21 19.73 3.27 2z" />
-            </svg>
+          {transcriptText && (
+            <Transcript>{transcriptText}</Transcript>
           )}
-        </ControlButton>
 
-        <ControlButton
-          $isActive={screenShareActive}
-          onClick={handleScreenShareToggle}
-          title={screenShareActive ? t('liveMode.controls.screen.stop', 'Stop Sharing') : t('liveMode.controls.screen.start', 'Share Screen')}
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />
-          </svg>
-        </ControlButton>
-      </ControlsBar>
+          {activeError && <ErrorBanner>{activeError}</ErrorBanner>}
+        </StatusStack>
+      </Stage>
+
+      <ControlsRow>
+        <ControlGroup>
+          <ControlButton
+            $isActive={cameraActive}
+            onClick={handleCameraToggle}
+            title={cameraActive ? t('liveMode.controls.camera.off', 'Turn Off Camera') : t('liveMode.controls.camera.on', 'Turn On Camera')}
+            aria-label={cameraActive ? 'Turn off camera' : 'Turn on camera'}
+          >
+            {cameraActive ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="23 7 16 12 23 17 23 7" />
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2" />
+                <path d="M22 8.5l-6 4.5 6 4.5v-9z" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            )}
+          </ControlButton>
+          <ControlLabel>Video</ControlLabel>
+        </ControlGroup>
+
+        <ControlGroup>
+          <ControlButton
+            $isActive={!isRecording}
+            onClick={handleMicrophoneToggle}
+            title={isRecording ? t('liveMode.controls.mic.mute', 'Mute Microphone') : t('liveMode.controls.mic.unmute', 'Unmute Microphone')}
+            aria-label={isRecording ? 'Mute microphone' : 'Unmute microphone'}
+          >
+            {isRecording ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="1" y1="1" x2="23" y2="23" />
+                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+            )}
+          </ControlButton>
+          <ControlLabel>{isRecording ? 'Mute' : 'Unmute'}</ControlLabel>
+        </ControlGroup>
+
+        <ControlGroup>
+          <ControlButton
+            $variant="end"
+            onClick={handleEndCall}
+            title="End call"
+            aria-label="End call"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" transform="rotate(135 12 12)" />
+            </svg>
+          </ControlButton>
+          <ControlLabel>End</ControlLabel>
+        </ControlGroup>
+      </ControlsRow>
     </Container>
   );
 };

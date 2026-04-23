@@ -11,6 +11,8 @@ const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
   width: 280px;
   height: ${props => props.$sidebarStyle === 'traditional' ? '100vh' : 'calc(100vh - 40px)'};
   background: ${props => props.theme.sidebar};
+  backdrop-filter: ${props => props.theme.glassEffect || `blur(${props.theme.glassBlur || '0px'})`};
+  -webkit-backdrop-filter: ${props => props.theme.glassEffect || `blur(${props.theme.glassBlur || '0px'})`};
   color: ${props => props.theme.text};
   border: ${props => props.$sidebarStyle === 'traditional' ? 'none' : `1px solid ${props.theme.border}`};
   border-right: ${props => props.$sidebarStyle === 'traditional' ? `1px solid ${props.theme.border}` : 'none'};
@@ -75,7 +77,7 @@ const LogoText = styled.span`
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-weight: 400;
   font-size: calc(var(--font-size, 1rem) * 1.125);
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
 `;
 
 const CollapseButton = styled.button`
@@ -83,7 +85,7 @@ const CollapseButton = styled.button`
   height: 28px;
   background: transparent;
   border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   display: ${props => props.theme.name === 'retro' ? 'none' : 'flex'};
   align-items: center;
   justify-content: center;
@@ -150,18 +152,18 @@ const MobileLogoText = styled.span`
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-weight: 400;
   font-size: var(--font-size, 1rem);
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
 `;
 
 const NewChatButton = styled.button`
   background: ${props => {
     if (props.theme.name === 'retro') return props.theme.buttonFace;
-    if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.1)';
+    if (props.theme.name === 'lakeside') return 'rgba(232, 196, 138, 0.1)';
     if (props.theme.name === 'dark') return 'rgba(255,255,255,0.06)';
     return 'rgba(0,0,0,0.03)';
   }};
   color: ${props => {
-    if (props.theme.name === 'lakeside') return 'rgb(198, 146, 20)';
+    if (props.theme.name === 'lakeside') return 'rgb(232, 196, 138)';
     return props.theme.text;
   }};
   border: ${props => {
@@ -188,7 +190,7 @@ const NewChatButton = styled.button`
   &:hover {
     background: ${props => {
     if (props.theme.name === 'retro') return props.theme.buttonFace;
-    if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
+    if (props.theme.name === 'lakeside') return 'rgba(232, 196, 138, 0.15)';
     if (props.theme.name === 'dark') return 'rgba(255,255,255,0.1)';
     return 'rgba(0,0,0,0.06)';
   }};
@@ -280,7 +282,7 @@ const ChatItem = styled.div`
   justify-content: space-between;
   background: ${props => {
     if (!props.$active) return 'transparent';
-    if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.1)';
+    if (props.theme.name === 'lakeside') return 'rgba(232, 196, 138, 0.1)';
     if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.08)';
     return 'rgba(0, 0, 0, 0.04)';
   }};
@@ -291,11 +293,11 @@ const ChatItem = styled.div`
   &:hover {
     background: ${props => {
     if (props.$active) {
-      if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.15)';
+      if (props.theme.name === 'lakeside') return 'rgba(232, 196, 138, 0.15)';
       if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.12)';
       return 'rgba(0, 0, 0, 0.06)';
     } else {
-      if (props.theme.name === 'lakeside') return 'rgba(198, 146, 20, 0.05)';
+      if (props.theme.name === 'lakeside') return 'rgba(232, 196, 138, 0.05)';
       if (props.theme.name === 'dark') return 'rgba(255, 255, 255, 0.04)';
       return 'rgba(0, 0, 0, 0.02)';
     }
@@ -316,7 +318,7 @@ const ChatTitle = styled.div`
   opacity: ${props => props.$collapsed ? '0' : '1'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.15s ease;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'inherit'};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : 'inherit'};
   font-size: calc(var(--font-size, 1rem) * 0.8125);
   font-weight: 400;
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
@@ -331,7 +333,7 @@ const ChatTitle = styled.div`
 const ShareButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -362,7 +364,7 @@ const ShareButton = styled.button`
 const DeleteButton = styled.button`
   background: none;
   border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -428,7 +430,7 @@ const SectionHeader = styled.div`
   text-transform: uppercase;
   font-weight: 400;
   letter-spacing: 0.04em;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   opacity: ${props => props.$collapsed ? '0' : '0.5'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.15s ease;
@@ -452,7 +454,7 @@ const ModelDropdownContainer = styled.div`
 
 const ModelDropdownButton = styled.button`
   width: 100%;
-  background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : props.theme.inputBackground};
+  background: ${props => props.theme.name === 'lakeside' ? 'rgba(40, 14, 22, 0.92)' : props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
   border-radius: 6px;
   padding: ${props => props.$collapsed ? '6px' : '6px 10px'};
@@ -462,12 +464,12 @@ const ModelDropdownButton = styled.button`
   cursor: pointer;
   transition: all 0.15s ease;
   min-height: 32px;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
   font-size: calc(var(--font-size, 1rem) * 0.8125);
 
   &:hover {
-    border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+    border-color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
     background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)'};
   }
 
@@ -500,7 +502,7 @@ const ModelDropdownText = styled.span`
   opacity: ${props => props.$collapsed ? '0' : '1'};
   visibility: ${props => props.$collapsed ? 'hidden' : 'visible'};
   transition: opacity 0.2s ease;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
@@ -517,7 +519,7 @@ const ModelDropdownContent = styled.div`
   bottom: calc(100% + 8px);
   left: 16px;
   right: 16px;
-  background: ${props => props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' : props.theme.inputBackground};
+  background: ${props => props.theme.name === 'lakeside' ? 'rgba(40, 14, 22, 0.92)' : props.theme.inputBackground};
   border-radius: 6px;
   border: 1px solid ${props => props.theme.border};
   z-index: 30;
@@ -548,16 +550,16 @@ const ModelOption = styled.div`
   transition: background 0.15s ease;
   background: ${props => {
     if (props.$isSelected) {
-      return props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.1)' : 'rgba(0,0,0,0.06)';
+      return props.theme.name === 'lakeside' ? 'rgba(232, 196, 138, 0.1)' : 'rgba(0,0,0,0.06)';
     }
     return 'transparent';
   }};
   border-radius: 4px;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   font-size: calc(var(--font-size, 1rem) * 0.8125);
 
   &:hover {
-    background: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.08)' : 'rgba(0,0,0,0.04)'};
+    background: ${props => props.theme.name === 'lakeside' ? 'rgba(232, 196, 138, 0.08)' : 'rgba(0,0,0,0.04)'};
   }
 `;
 
@@ -577,7 +579,7 @@ const ModelInfo = styled.div`
 
 const ModelName = styled.span`
   font-weight: 400;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   font-size: calc(var(--font-size, 1rem) * 0.8125);
   white-space: nowrap;
   overflow: hidden;
@@ -587,7 +589,7 @@ const ModelName = styled.span`
 
 const ModelDescription = styled.span`
   font-size: calc(var(--font-size, 1rem) * 0.75);
-  color: ${props => props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' : `${props.theme.text}80`};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgba(232, 196, 138, 0.7)' : `${props.theme.text}80`};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -602,7 +604,7 @@ const SidebarButton = styled.button`
   background: transparent;
   border: none;
   border-radius: 8px;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   font-size: calc(var(--font-size, 1rem) * 0.875);
   font-weight: 400;
   cursor: pointer;
@@ -620,7 +622,7 @@ const SidebarButton = styled.button`
     width: 16px;
     height: 16px;
     opacity: 0.6;
-    color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : 'currentColor'};
   }
 `;
 
@@ -632,7 +634,7 @@ const MobileToggleButton = styled.button`
   display: none;
   background: transparent;
   border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   border-radius: 4px;
   width: 32px;
   height: 32px;
@@ -672,7 +674,7 @@ const SidebarNavLink = styled(RouterNavLink)`
   background: transparent;
   border: none;
   border-radius: 8px;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   font-size: calc(var(--font-size, 1rem) * 0.875);
   font-weight: 400;
   cursor: pointer;
@@ -691,7 +693,7 @@ const SidebarNavLink = styled(RouterNavLink)`
     width: 16px;
     height: 16px;
     opacity: 0.6;
-    color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : 'currentColor'};
   }
   
   &.active {
@@ -715,7 +717,7 @@ const SearchInputWrapper = styled.div`
   display: flex;
   align-items: center;
   background: ${props =>
-    props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' :
+    props.theme.name === 'lakeside' ? 'rgba(40, 14, 22, 0.92)' :
       props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
   border-radius: 18px;
@@ -725,7 +727,7 @@ const SearchInputWrapper = styled.div`
 
   &:focus-within {
     border-color: ${props =>
-    props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
+    props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' :
       props.theme.text};
   }
 `;
@@ -737,14 +739,14 @@ const SearchInput = styled.input`
   border: none;
   outline: none;
   color: ${props =>
-    props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
+    props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' :
       props.theme.text};
   font-size: calc(var(--font-size, 1rem) * 0.8125);
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
 
   &::placeholder {
     color: ${props =>
-    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.5)' :
+    props.theme.name === 'lakeside' ? 'rgba(232, 196, 138, 0.5)' :
       `${props.theme.text}50`};
   }
 `;
@@ -755,7 +757,7 @@ const SearchCloseButton = styled.button`
   padding: 8px;
   cursor: pointer;
   color: ${props =>
-    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' :
+    props.theme.name === 'lakeside' ? 'rgba(232, 196, 138, 0.7)' :
       `${props.theme.text}60`};
   transition: color 0.2s ease;
   display: flex;
@@ -764,7 +766,7 @@ const SearchCloseButton = styled.button`
 
   &:hover {
     color: ${props =>
-    props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' :
+    props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' :
       props.theme.text};
   }
 
@@ -778,7 +780,7 @@ const NoResultsMessage = styled.div`
   text-align: center;
   padding: 16px;
   color: ${props =>
-    props.theme.name === 'lakeside' ? 'rgba(198, 146, 20, 0.7)' :
+    props.theme.name === 'lakeside' ? 'rgba(232, 196, 138, 0.7)' :
       `${props.theme.text}60`};
   font-size: var(--font-size, 1rem);
   font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
@@ -794,7 +796,7 @@ const ProfileDropdown = styled.div`
   left: 0;
   right: 0;
   background: ${props =>
-    props.theme.name === 'lakeside' ? 'rgba(91, 0, 25, 1)' :
+    props.theme.name === 'lakeside' ? 'rgba(40, 14, 22, 0.92)' :
       props.theme.inputBackground};
   border: 1px solid ${props => props.theme.border};
   border-radius: 6px;
@@ -817,7 +819,7 @@ const ProfileDropdownItem = styled.button`
   padding: 10px 12px;
   background: transparent;
   border: none;
-  color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : props.theme.text};
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
   font-size: var(--font-size, 1rem);
   font-weight: 400;
   cursor: pointer;
@@ -834,7 +836,7 @@ const ProfileDropdownItem = styled.button`
     width: 16px;
     height: 16px;
     opacity: 0.7;
-    color: ${props => props.theme.name === 'lakeside' ? 'rgb(198, 146, 20)' : 'currentColor'};
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : 'currentColor'};
   }
 `;
 
@@ -1035,12 +1037,28 @@ const Sidebar = ({
     return chatTitle.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
+  const isRetro = theme && theme.name === 'retro';
+  const retroIcon = (src, alt) => (
+    <img
+      src={src}
+      alt={alt}
+      style={{
+        width: '16px',
+        height: '16px',
+        imageRendering: 'pixelated',
+        flexShrink: 0,
+      }}
+    />
+  );
+
   const navLinks = [
     {
       key: 'media',
       to: '/media',
       translationKey: 'sidebar.nav.media',
-      icon: (
+      icon: isRetro ? (
+        retroIcon('/images/retroTheme/modeIcon.png', 'Media')
+      ) : (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polygon points="5 3 19 12 5 21 5 3"></polygon>
         </svg>
@@ -1050,7 +1068,9 @@ const Sidebar = ({
       key: 'news',
       to: '/news',
       translationKey: 'sidebar.nav.news',
-      icon: (
+      icon: isRetro ? (
+        retroIcon('/images/retroTheme/deepResearch.png', 'News')
+      ) : (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
@@ -1061,7 +1081,9 @@ const Sidebar = ({
       key: 'projects',
       to: '/projects',
       translationKey: 'sidebar.nav.projects',
-      icon: (
+      icon: isRetro ? (
+        retroIcon('/images/retroTheme/fileUpload.png', 'Projects')
+      ) : (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="7" height="7" rx="1"></rect>
           <rect x="14" y="3" width="7" height="7" rx="1"></rect>
@@ -1074,7 +1096,9 @@ const Sidebar = ({
       key: 'workspace',
       to: '/workspace',
       translationKey: 'sidebar.nav.workspace',
-      icon: (
+      icon: isRetro ? (
+        retroIcon('/images/retroTheme/settingsIcon.png', 'Workspace')
+      ) : (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
         </svg>
@@ -1084,7 +1108,9 @@ const Sidebar = ({
       key: 'admin',
       to: '/admin',
       translationKey: 'sidebar.nav.admin',
-      icon: (
+      icon: isRetro ? (
+        retroIcon('/images/retroTheme/signinIcon.png', 'Admin')
+      ) : (
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
         </svg>
@@ -1106,8 +1132,8 @@ const Sidebar = ({
         <TopBarContainer className="desktop-top-bar" style={{ padding: '20px 15px 10px 15px', alignItems: 'center' }}>
           <LogoContainer>
             <img
-              src={'/images/sculptor.svg'}
-              alt={'Sculptor AI'}
+              src={theme && theme.name === 'lakeside' ? '/images/themes/lakeside-flower.png' : '/images/sculptor.svg'}
+              alt={theme && theme.name === 'lakeside' ? 'Lakeside' : 'Sculptor AI'}
             />
           </LogoContainer>
 
@@ -1129,10 +1155,14 @@ const Sidebar = ({
         {(!$collapsed || (theme && theme.name === 'retro')) && (
                 <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
                   <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9"></path>
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-              </svg>
+              {isRetro ? (
+                retroIcon('/images/retroTheme/createIcon.png', 'New Chat')
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+              )}
               <span>{t('sidebar.newChat')}</span>
             </SidebarButton>
           </SidebarSection>
@@ -1142,10 +1172,16 @@ const Sidebar = ({
         {(!$collapsed || (theme && theme.name === 'retro')) && (
           <SearchInputContainer>
             <SearchInputWrapper>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '10px', opacity: 0.5, color: 'currentColor' }}>
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.35-4.35"></path>
-              </svg>
+              {isRetro ? (
+                <span style={{ marginLeft: '8px', display: 'inline-flex', alignItems: 'center' }}>
+                  {retroIcon('/images/retroTheme/searchIcon.png', 'Search')}
+                </span>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '10px', opacity: 0.5, color: 'currentColor' }}>
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+              )}
               <SearchInput
                 type="text"
                 placeholder={t('sidebar.searchPlaceholder')}
@@ -1185,8 +1221,8 @@ const Sidebar = ({
         <TopBarContainer className="mobile-top-bar" style={{ display: 'none' }}> {/* Managed by CSS */}
           <MobileLogoContainer>
             <img
-              src={'/images/sculptor.svg'}
-              alt={'Sculptor AI'}
+              src={theme && theme.name === 'lakeside' ? '/images/themes/lakeside-flower.png' : '/images/sculptor.svg'}
+              alt={theme && theme.name === 'lakeside' ? 'Lakeside' : 'Sculptor AI'}
             />
           </MobileLogoContainer>
           {/* Toggle Button */}
@@ -1328,9 +1364,15 @@ const Sidebar = ({
                   title={isLoggedIn ? t('sidebar.profile.viewProfile', null, { username }) : t('sidebar.profile.signIn')}
                 >
                   {isLoggedIn ? (
-                    <ProfileAvatar $profilePicture={profilePicture}>
-                      {!profilePicture && username.charAt(0).toUpperCase()}
-                    </ProfileAvatar>
+                    isRetro ? (
+                      retroIcon('/images/retroTheme/signinIcon.png', username)
+                    ) : (
+                      <ProfileAvatar $profilePicture={profilePicture}>
+                        {!profilePicture && username.charAt(0).toUpperCase()}
+                      </ProfileAvatar>
+                    )
+                  ) : isRetro ? (
+                    retroIcon('/images/retroTheme/signinIcon.png', 'Sign in')
                   ) : (
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>
@@ -1342,19 +1384,27 @@ const Sidebar = ({
                 {/* Profile Dropdown Menu */}
                 <ProfileDropdown $isOpen={isProfileDropdownOpen}>
                   <ProfileDropdownItem onClick={handleSettingsClick}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="3"></circle>
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                    </svg>
+                    {isRetro ? (
+                      retroIcon('/images/retroTheme/settingsIcon.png', 'Settings')
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                      </svg>
+                    )}
                     <span>{t('sidebar.profile.settings')}</span>
                   </ProfileDropdownItem>
 
                   <ProfileDropdownItem onClick={handleInfoClick}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <path d="M12 16v-4"></path>
-                      <path d="M12 8h.01"></path>
-                    </svg>
+                    {isRetro ? (
+                      retroIcon('/images/retroTheme/modeIcon.png', 'Info')
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                      </svg>
+                    )}
                     <span>{t('sidebar.profile.info')}</span>
                   </ProfileDropdownItem>
 
