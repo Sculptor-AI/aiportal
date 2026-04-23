@@ -10,6 +10,7 @@ import {
   listImageModels
 } from '../config/index.js';
 import getDeepResearchConfig from '../config/deepResearch.js';
+import { getDeepResearchSettings } from '../utils/deepResearchSettings.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 
 const health = new Hono();
@@ -53,8 +54,20 @@ health.get('/models/config', requireAuth, requireAdmin, (c) => {
 /**
  * List all supported capabilities
  */
-health.get('/capabilities', (c) => {
-  const deepResearch = getDeepResearchConfig(c.env || {});
+health.get('/capabilities', async (c) => {
+  let storedDeepResearchConfig = {};
+  try {
+    storedDeepResearchConfig = await getDeepResearchSettings(c.env?.KV);
+  } catch (error) {
+    console.error('Failed to load deep research settings for capabilities:', error);
+    storedDeepResearchConfig = {};
+  }
+
+  const deepResearch = getDeepResearchConfig(
+    c.env || {},
+    {},
+    storedDeepResearchConfig
+  );
   const chatModels = listChatModels();
   const getModelsByCapability = (provider, capability) =>
     chatModels
@@ -143,6 +156,8 @@ health.get('/capabilities', (c) => {
         planner_model: deepResearch.plannerModel,
         researcher_model: deepResearch.researcherModel,
         writer_model: deepResearch.writerModel,
+        report_length: deepResearch.reportLength,
+        report_depth: deepResearch.reportDepth,
         default_agents: deepResearch.defaultMaxAgents,
         max_agents: deepResearch.maxAgents
       }

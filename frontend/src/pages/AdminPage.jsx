@@ -8,6 +8,9 @@ import {
   getUsageLimits,
   resetUserUsage as resetAdminUserUsage,
   updateUsageLimits,
+  getDeepResearchConfig,
+  getChatModels,
+  updateDeepResearchConfig,
   updateUserDetails,
   updateUserStatus
 } from '../services/authService';
@@ -16,6 +19,46 @@ import AdminLoginModal from '../components/AdminLoginModal';
 const STATUS_LABELS = { active: 'Active', pending: 'Pending', suspended: 'Suspended', banned: 'Banned' };
 const ROLE_LABELS = { admin: 'Admin', user: 'User' };
 const DEFAULT_LIMITS = { turns: null, images: null, videos: null };
+const DEFAULT_DEEP_RESEARCH_CONFIG = {
+  plannerModel: 'gemini-3.1-pro',
+  researcherModel: 'gemini-3-flash',
+  writerModel: 'claude-sonnet-4.6',
+  reportLength: 'standard',
+  reportDepth: 'standard',
+  minAgents: 2,
+  maxAgents: 12,
+  defaultMaxAgents: 8,
+  maxParallelAgents: 4,
+  plannerMaxTokens: 2048,
+  agentMaxTokens: 3072,
+  writerMaxTokens: 8192,
+  plannerTemperature: 0.2,
+  agentTemperature: 0.2,
+  writerTemperature: 0.2,
+  requestTimeoutMs: 180000,
+  allowWriterModelOverride: false
+};
+const REPORT_LENGTH_OPTIONS = ['short', 'standard', 'long'];
+const REPORT_DEPTH_OPTIONS = ['surface', 'standard', 'deep'];
+const DEEP_RESEARCH_FORM_FIELD_KEYS = {
+  plannerModel: 'plannerModel',
+  researcherModel: 'researcherModel',
+  writerModel: 'writerModel',
+  reportLength: 'reportLength',
+  reportDepth: 'reportDepth',
+  minAgents: 'minAgents',
+  maxAgents: 'maxAgents',
+  defaultMaxAgents: 'defaultMaxAgents',
+  maxParallelAgents: 'maxParallelAgents',
+  plannerMaxTokens: 'plannerMaxTokens',
+  agentMaxTokens: 'agentMaxTokens',
+  writerMaxTokens: 'writerMaxTokens',
+  plannerTemperature: 'plannerTemperature',
+  agentTemperature: 'agentTemperature',
+  writerTemperature: 'writerTemperature',
+  requestTimeoutMs: 'requestTimeoutMs',
+  allowWriterModelOverride: 'allowWriterModelOverride'
+};
 const EMPTY_LIMIT_FORM = { turns: '', images: '', videos: '' };
 
 const Page = styled.div`
@@ -150,6 +193,72 @@ const Field = styled.div`display:flex; flex-direction:column; gap:7px;`;
 const FieldLabel = styled.label`font-size:0.78rem; letter-spacing:0.04em; text-transform:uppercase; opacity:0.75;`;
 const Full = styled.div`grid-column:1 / -1;`;
 const InfoText = styled.p`margin:0; font-size:0.84rem; opacity:0.76;`;
+const DeepResearchGrid = styled.div`
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px 16px;
+  @media (max-width: 880px) { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 520px) { grid-template-columns:1fr; }
+`;
+const DeepResearchGridWide = styled.div`
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:14px 16px;
+  @media (max-width: 980px) { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 560px) { grid-template-columns:1fr; }
+`;
+const DRSection = styled.div`
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:16px;
+  border:1px solid ${p => p.theme.border};
+  border-radius:12px;
+  background:${p => p.theme.inputBackground || p.theme.background};
+`;
+const DRSectionHead = styled.div`display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap;`;
+const DRSectionTitle = styled.h3`
+  margin:0;
+  font-size:0.78rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:${p => p.theme.accentColor || p.theme.primary || '#2563eb'};
+  font-weight:700;
+`;
+const DRSectionHint = styled.span`font-size:0.8rem; opacity:0.68;`;
+const DRSummaryRow = styled.div`
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:4px;
+`;
+const DRSummaryPill = styled.span`
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid ${p => p.theme.border};
+  background:${p => p.theme.sidebar};
+  font-size:0.78rem;
+  line-height:1.2;
+  strong { font-weight:600; text-transform:capitalize; }
+  span { opacity:0.65; }
+`;
+const CheckboxGroup = styled.label`
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:4px;
+  font-size:0.86rem;
+  opacity:0.9;
+  cursor:pointer;
+`;
+const CheckboxInput = styled.input`
+  width:16px;
+  height:16px;
+  accent-color: ${p => p.theme.accentColor || p.theme.primary || '#6366f1'};
+`;
 const ModalFoot = styled.div`
   display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 18px; border-top:1px solid ${p => p.theme.border}; background:${p => p.theme.inputBackground || p.theme.background};
   @media (max-width: 640px) { flex-direction:column; align-items:stretch; }
@@ -175,6 +284,9 @@ const AdminPage = ({ collapsed }) => {
   const [stats, setStats] = useState({ totalUsers: 0, pendingUsers: 0, activeUsers: 0, adminUsers: 0, suspendedUsers: 0, totalTurnsUsed: 0, totalImagesUsed: 0, totalVideosUsed: 0 });
   const [limits, setLimits] = useState(DEFAULT_LIMITS);
   const [limitForm, setLimitForm] = useState(EMPTY_LIMIT_FORM);
+  const [deepResearchConfig, setDeepResearchConfig] = useState(DEFAULT_DEEP_RESEARCH_CONFIG);
+  const [deepResearchConfigForm, setDeepResearchConfigForm] = useState(DEFAULT_DEEP_RESEARCH_CONFIG);
+  const [chatModels, setChatModels] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -184,6 +296,7 @@ const AdminPage = ({ collapsed }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingLimits, setSavingLimits] = useState(false);
+  const [savingDeepResearchConfig, setSavingDeepResearchConfig] = useState(false);
   const [workingUserId, setWorkingUserId] = useState(null);
   const [resettingUsageUserId, setResettingUsageUserId] = useState(null);
   const [error, setError] = useState('');
@@ -196,13 +309,26 @@ const AdminPage = ({ collapsed }) => {
     setError('');
 
     try {
-      const [usersData, statsData, limitsData] = await Promise.all([getAllUsers(), getDashboardStats(), getUsageLimits()]);
+      const [usersData, statsData, limitsData, deepResearchConfigData, chatModelData] = await Promise.all([
+        getAllUsers(),
+        getDashboardStats(),
+        getUsageLimits(),
+        getDeepResearchConfig(),
+        getChatModels().catch(() => [])
+      ]);
       const nextUsers = (usersData || []).map(normalizeUser);
       const nextLimits = limitsData || statsData?.usageLimits || DEFAULT_LIMITS;
+      const nextDeepResearchConfig = deepResearchConfigData || DEFAULT_DEEP_RESEARCH_CONFIG;
       setUsers(nextUsers);
       setStats({ totalUsers: 0, pendingUsers: 0, activeUsers: 0, adminUsers: 0, suspendedUsers: 0, totalTurnsUsed: 0, totalImagesUsed: 0, totalVideosUsed: 0, ...(statsData || {}) });
       setLimits(nextLimits);
       setLimitForm(syncLimitForm(nextLimits));
+      setDeepResearchConfig(nextDeepResearchConfig);
+      setDeepResearchConfigForm({
+        ...DEFAULT_DEEP_RESEARCH_CONFIG,
+        ...nextDeepResearchConfig
+      });
+      setChatModels(Array.isArray(chatModelData) ? chatModelData : []);
       return nextUsers;
     } catch (err) {
       setError(err.message || 'Failed to load admin data.');
@@ -313,6 +439,43 @@ const AdminPage = ({ collapsed }) => {
     } finally {
       setSavingLimits(false);
     }
+  };
+
+  const handleSaveDeepResearchConfig = async () => {
+    setSavingDeepResearchConfig(true);
+    setError('');
+    setSuccess('');
+    try {
+      const nextConfig = await updateDeepResearchConfig(deepResearchConfigForm);
+      setDeepResearchConfig(nextConfig || {});
+      setDeepResearchConfigForm(nextConfig || DEFAULT_DEEP_RESEARCH_CONFIG);
+      setSuccess('Deep research configuration updated.');
+    } catch (err) {
+      setError(err.message || 'Failed to update deep research configuration.');
+    } finally {
+      setSavingDeepResearchConfig(false);
+    }
+  };
+
+  const handleDeepResearchConfigFieldChange = (field, value) => {
+    setDeepResearchConfigForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const formatOptionValue = (value) => value === undefined || value === null ? '' : String(value);
+  const deepResearchModelsByProvider = useMemo(
+    () => ({
+      gemini: (Array.isArray(chatModels) ? chatModels : []).filter((model) => model?.provider === 'gemini'),
+      anthropic: (Array.isArray(chatModels) ? chatModels : []).filter((model) => model?.provider === 'anthropic')
+    }),
+    [chatModels]
+  );
+  const getProviderModelOptions = (provider, fallbackValue) => {
+    const options = provider === 'gemini'
+      ? deepResearchModelsByProvider.gemini
+      : deepResearchModelsByProvider.anthropic;
+    if (options.length > 0) return options;
+    const fallbackId = formatOptionValue(fallbackValue);
+    return fallbackId ? [{ id: fallbackId }] : [];
   };
 
   const quickStatusChange = async (user, nextStatus) => {
@@ -492,6 +655,248 @@ const AdminPage = ({ collapsed }) => {
             </SnapshotGrid>
           </Panel>
         </TwoCol>
+
+        <Panel>
+          <PanelHeader>
+            <div>
+              <PanelTitle>Deep research configuration</PanelTitle>
+              <PanelText>Pick the models and quality knobs used by the multi-agent deep research pipeline. Changes save to KV and apply instantly to the next run.</PanelText>
+            </div>
+            <Button $primary onClick={handleSaveDeepResearchConfig} disabled={savingDeepResearchConfig}>{savingDeepResearchConfig ? 'Saving...' : 'Save configuration'}</Button>
+          </PanelHeader>
+
+          <DRSummaryRow>
+            <DRSummaryPill><span>Planner</span><strong>{deepResearchConfig.plannerModel || '—'}</strong></DRSummaryPill>
+            <DRSummaryPill><span>Researcher</span><strong>{deepResearchConfig.researcherModel || '—'}</strong></DRSummaryPill>
+            <DRSummaryPill><span>Writer</span><strong>{deepResearchConfig.writerModel || '—'}</strong></DRSummaryPill>
+            <DRSummaryPill><span>Report</span><strong>{deepResearchConfig.reportLength || 'standard'} · {deepResearchConfig.reportDepth || 'standard'}</strong></DRSummaryPill>
+            <DRSummaryPill><span>Agents</span><strong>{deepResearchConfig.defaultMaxAgents ?? '—'} default / {deepResearchConfig.maxAgents ?? '—'} max</strong></DRSummaryPill>
+          </DRSummaryRow>
+
+          <DRSection>
+            <DRSectionHead>
+              <DRSectionTitle>Pipeline models</DRSectionTitle>
+              <DRSectionHint>Only models defined in models.json are selectable.</DRSectionHint>
+            </DRSectionHead>
+            <DeepResearchGrid>
+              <Field>
+                <FieldLabel>Planner model</FieldLabel>
+                <Select
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.plannerModel])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.plannerModel, e.target.value)}
+                >
+                  {getProviderModelOptions('gemini', deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.plannerModel]).map((model) => (
+                    <option key={`planner-${model.id}`} value={model.id}>{model.id}</option>
+                  ))}
+                </Select>
+                <Helper>Decomposes the query into sub-questions.</Helper>
+              </Field>
+
+              <Field>
+                <FieldLabel>Researcher model</FieldLabel>
+                <Select
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.researcherModel])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.researcherModel, e.target.value)}
+                >
+                  {getProviderModelOptions('gemini', deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.researcherModel]).map((model) => (
+                    <option key={`researcher-${model.id}`} value={model.id}>{model.id}</option>
+                  ))}
+                </Select>
+                <Helper>Runs per sub-question agent in parallel.</Helper>
+              </Field>
+
+              <Field>
+                <FieldLabel>Writer model</FieldLabel>
+                <Select
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.writerModel])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.writerModel, e.target.value)}
+                >
+                  {getProviderModelOptions('anthropic', deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.writerModel]).map((model) => (
+                    <option key={`writer-${model.id}`} value={model.id}>{model.id}</option>
+                  ))}
+                </Select>
+                <Helper>Synthesises the final report with citations.</Helper>
+              </Field>
+            </DeepResearchGrid>
+
+            <CheckboxGroup>
+              <CheckboxInput
+                type="checkbox"
+                checked={!!deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.allowWriterModelOverride]}
+                onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.allowWriterModelOverride, e.target.checked)}
+              />
+              Allow API clients to override the writer model per request
+            </CheckboxGroup>
+          </DRSection>
+
+          <DRSection>
+            <DRSectionHead>
+              <DRSectionTitle>Report shape</DRSectionTitle>
+              <DRSectionHint>Defaults for output scope. Requests can override per-run.</DRSectionHint>
+            </DRSectionHead>
+            <DeepResearchGrid>
+              <Field>
+                <FieldLabel>Report length</FieldLabel>
+                <Select
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.reportLength])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.reportLength, e.target.value)}
+                >
+                  {REPORT_LENGTH_OPTIONS.map((value) => (
+                    <option key={`report-length-${value}`} value={value}>{value}</option>
+                  ))}
+                </Select>
+                <Helper>Target output volume and token budget.</Helper>
+              </Field>
+
+              <Field>
+                <FieldLabel>Report depth</FieldLabel>
+                <Select
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.reportDepth])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.reportDepth, e.target.value)}
+                >
+                  {REPORT_DEPTH_OPTIONS.map((value) => (
+                    <option key={`report-depth-${value}`} value={value}>{value}</option>
+                  ))}
+                </Select>
+                <Helper>Research breadth and verification rigor.</Helper>
+              </Field>
+            </DeepResearchGrid>
+          </DRSection>
+
+          <DRSection>
+            <DRSectionHead>
+              <DRSectionTitle>Concurrency</DRSectionTitle>
+              <DRSectionHint>Throughput vs. cost. Higher = more citations, more spend.</DRSectionHint>
+            </DRSectionHead>
+            <DeepResearchGridWide>
+              <Field>
+                <FieldLabel>Minimum agents</FieldLabel>
+                <Input
+                  type="number" min={1} max={24}
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.minAgents])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.minAgents, e.target.value)}
+                />
+                <Helper>Soft lower bound for the planner.</Helper>
+              </Field>
+              <Field>
+                <FieldLabel>Default agents</FieldLabel>
+                <Input
+                  type="number" min={1} max={24}
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.defaultMaxAgents])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.defaultMaxAgents, e.target.value)}
+                />
+                <Helper>Used when a request omits the field.</Helper>
+              </Field>
+              <Field>
+                <FieldLabel>Max agents</FieldLabel>
+                <Input
+                  type="number" min={1} max={24}
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.maxAgents])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.maxAgents, e.target.value)}
+                />
+                <Helper>Absolute cap per run.</Helper>
+              </Field>
+              <Field>
+                <FieldLabel>Parallel agents</FieldLabel>
+                <Input
+                  type="number" min={1} max={24}
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.maxParallelAgents])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.maxParallelAgents, e.target.value)}
+                />
+                <Helper>Concurrent researcher tasks.</Helper>
+              </Field>
+              <Field>
+                <FieldLabel>Request timeout (ms)</FieldLabel>
+                <Input
+                  type="number" min={5000} max={300000}
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.requestTimeoutMs])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.requestTimeoutMs, e.target.value)}
+                />
+                <Helper>Upstream model timeout.</Helper>
+              </Field>
+            </DeepResearchGridWide>
+          </DRSection>
+
+          <DRSection>
+            <DRSectionHead>
+              <DRSectionTitle>Token budgets</DRSectionTitle>
+              <DRSectionHint>Maximum generated tokens per stage.</DRSectionHint>
+            </DRSectionHead>
+            <DeepResearchGridWide>
+              <Field>
+                <FieldLabel>Planner tokens</FieldLabel>
+                <Input
+                  type="number" min={256} max={8192}
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.plannerMaxTokens])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.plannerMaxTokens, e.target.value)}
+                />
+                <Helper>Plan output budget.</Helper>
+              </Field>
+              <Field>
+                <FieldLabel>Researcher tokens</FieldLabel>
+                <Input
+                  type="number" min={256} max={8192}
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.agentMaxTokens])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.agentMaxTokens, e.target.value)}
+                />
+                <Helper>Per-agent evidence budget.</Helper>
+              </Field>
+              <Field>
+                <FieldLabel>Writer tokens</FieldLabel>
+                <Input
+                  type="number" min={512} max={16384}
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.writerMaxTokens])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.writerMaxTokens, e.target.value)}
+                />
+                <Helper>Final report budget.</Helper>
+              </Field>
+            </DeepResearchGridWide>
+          </DRSection>
+
+          <DRSection>
+            <DRSectionHead>
+              <DRSectionTitle>Temperatures</DRSectionTitle>
+              <DRSectionHint>Keep low (≤0.3) for factual, high-reliability output.</DRSectionHint>
+            </DRSectionHead>
+            <DeepResearchGridWide>
+              <Field>
+                <FieldLabel>Planner</FieldLabel>
+                <Input
+                  type="number" min={0} max={1} step="0.1"
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.plannerTemperature])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.plannerTemperature, e.target.value)}
+                />
+                <Helper>Planning creativity.</Helper>
+              </Field>
+              <Field>
+                <FieldLabel>Researcher</FieldLabel>
+                <Input
+                  type="number" min={0} max={1} step="0.1"
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.agentTemperature])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.agentTemperature, e.target.value)}
+                />
+                <Helper>Research diversity.</Helper>
+              </Field>
+              <Field>
+                <FieldLabel>Writer</FieldLabel>
+                <Input
+                  type="number" min={0} max={1} step="0.1"
+                  value={formatOptionValue(deepResearchConfigForm[DEEP_RESEARCH_FORM_FIELD_KEYS.writerTemperature])}
+                  onChange={(e) => handleDeepResearchConfigFieldChange(DEEP_RESEARCH_FORM_FIELD_KEYS.writerTemperature, e.target.value)}
+                />
+                <Helper>Report narrative style.</Helper>
+              </Field>
+            </DeepResearchGridWide>
+          </DRSection>
+
+          <Actions style={{ justifyContent: 'space-between' }}>
+            <InfoText>Current defaults apply to the next deep research run. Requests can override length/depth per-call.</InfoText>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <Button onClick={() => setDeepResearchConfigForm(deepResearchConfig)} disabled={savingDeepResearchConfig}>Revert unsaved</Button>
+              <Button onClick={() => setDeepResearchConfigForm(DEFAULT_DEEP_RESEARCH_CONFIG)} disabled={savingDeepResearchConfig}>Restore defaults</Button>
+            </div>
+          </Actions>
+        </Panel>
 
         <Controls>
           <SearchWrap>

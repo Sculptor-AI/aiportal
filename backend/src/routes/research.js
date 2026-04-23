@@ -6,6 +6,7 @@ import { Hono } from 'hono';
 import { requireAuthAndApproved } from '../middleware/auth.js';
 import { deepResearchRateLimit } from '../middleware/rateLimit.js';
 import { performDeepResearch } from '../services/deepResearch.js';
+import { getDeepResearchSettings } from '../utils/deepResearchSettings.js';
 
 const research = new Hono();
 const encoder = new TextEncoder();
@@ -40,10 +41,14 @@ const handleDeepResearchRequest = async (c) => {
   const query = typeof body.query === 'string' ? body.query : '';
   const maxAgents = body.maxAgents;
   const model = typeof body.model === 'string' ? body.model : null;
+  const reportLength = typeof body.reportLength === 'string' ? body.reportLength : null;
+  const reportDepth = typeof body.reportDepth === 'string' ? body.reportDepth : null;
 
   if (!query || query.trim() === '') {
     return c.json({ error: 'query is required' }, 400);
   }
+
+  const storedDeepResearchConfig = await getDeepResearchSettings(c.env?.KV);
 
   let streamCancelled = false;
   const stream = new ReadableStream({
@@ -105,6 +110,9 @@ const handleDeepResearchRequest = async (c) => {
           query,
           maxAgents,
           modelOverride: model,
+          reportLength,
+          reportDepth,
+          storedConfig: storedDeepResearchConfig,
           onProgress: (update) => {
             const emitted = safeEmitEvent({
               type: 'progress',

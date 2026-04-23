@@ -445,6 +445,13 @@ const MobileChatWindow = ({
           2,
           Math.min(12, Number.parseInt(settings?.deepResearchMaxAgents, 10) || 8)
         );
+        const deepResearchOptions = {};
+        if (typeof settings?.deepResearchReportLength === 'string') {
+          deepResearchOptions.reportLength = settings.deepResearchReportLength;
+        }
+        if (typeof settings?.deepResearchReportDepth === 'string') {
+          deepResearchOptions.reportDepth = settings.deepResearchReportDepth;
+        }
 
         await performDeepResearch(
           messageToSend,
@@ -484,7 +491,8 @@ const MobileChatWindow = ({
               isError: true,
               isLoading: false
             });
-          }
+          },
+          deepResearchOptions
         );
       } catch (error) {
         console.error('[Mobile] Deep research failed:', error);

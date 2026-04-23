@@ -21,8 +21,38 @@ const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
 
 const MAX_QUERY_LENGTH = 4000;
+const REPORT_LENGTH_SETTINGS = {
+  short: { writerMaxTokens: 4096, sourceSectionMaxChars: 1400 },
+  standard: { writerMaxTokens: 8192, sourceSectionMaxChars: 2600 },
+  long: { writerMaxTokens: 13000, sourceSectionMaxChars: 3400 }
+};
+const REPORT_DEPTH_SETTINGS = {
+  surface: {
+    plannerSubQuestionGuidance: 'focus on high-level facts and direct answers',
+    writerInstruction: 'prioritize key conclusions, keep coverage broad, and avoid deep historical context.'
+  },
+  standard: {
+    plannerSubQuestionGuidance: 'balance breadth and depth with concrete evidence needs',
+    writerInstruction: 'build structured conclusions and explicitly call out uncertainty where needed.'
+  },
+  deep: {
+    plannerSubQuestionGuidance: 'prioritize contradiction checks, primary-source verification, and edge-case assumptions',
+    writerInstruction: 'include nuanced caveats, competing viewpoints, and confidence notes tied to evidence.'
+  }
+};
+const RELIABILITY_ORDER = {
+  high: 3,
+  medium: 2,
+  low: 1
+};
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+const clampInteger = (value, min, max) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return clamp(min, min, max);
+  return clamp(parsed, min, max);
+};
 
 const normalizeWhitespace = (value) =>
   String(value || '')
@@ -364,48 +394,90 @@ const normalizeAgentResult = ({ subQuestion, rawJson, rawText, sources }) => {
   };
 };
 
-const buildSourceCatalog = (agentResults) => {
-  const catalog = [];
-  const sourceMap = new Map();
+const extractDomainFromUrl = (url) => {
+  try {
+    return new URL(url).hostname.replace('www.', '').toLowerCase();
+  } catch {
+    return '';
+  }
+};
 
-  const addSource = (title, rawUrl) => {
-    const url = sanitizeSourceUrl(rawUrl);
-    if (!url) return null;
+const addSourceEvidence = (sourceMap, title, rawUrl, reliability = 'medium') => {
+  const url = sanitizeSourceUrl(rawUrl);
+  if (!url) return;
 
-    if (sourceMap.has(url)) {
-      return sourceMap.get(url);
-    }
-
-    const tag = `S${catalog.length + 1}`;
-    const source = {
-      tag,
+  const existing = sourceMap.get(url);
+  if (!existing) {
+    sourceMap.set(url, {
+      url,
       title: normalizeWhitespace(title || url).slice(0, 240),
-      url
-    };
-    catalog.push(source);
-    sourceMap.set(url, source);
-    return source;
-  };
+      domain: extractDomainFromUrl(url),
+      mentions: 1,
+      reliability: confidenceLabel(reliability)
+    });
+    return;
+  }
+
+  existing.mentions = (existing.mentions || 0) + 1;
+  if (reliabilityLabelValue(reliability) > reliabilityLabelValue(existing.reliability)) {
+    existing.reliability = confidenceLabel(reliability);
+  }
+};
+
+const reliabilityLabelValue = (value) => RELIABILITY_ORDER[confidenceLabel(value)] || 0;
+
+const buildSourceCatalog = (agentResults) => {
+  const sourceMap = new Map();
 
   for (const result of agentResults) {
     for (const source of result.sources || []) {
-      addSource(source.title, source.url);
+      addSourceEvidence(sourceMap, source.title, source.url, 'medium');
     }
     for (const evidence of result.evidence || []) {
-      addSource(evidence.source_title, evidence.source_url);
+      addSourceEvidence(sourceMap, evidence.source_title, evidence.source_url, evidence.reliability);
     }
   }
 
-  return { catalog, sourceMap };
+  const catalog = Array.from(sourceMap.values())
+    .sort((left, right) => {
+      if (right.mentions !== left.mentions) {
+        return right.mentions - left.mentions;
+      }
+      const rightReliability = reliabilityLabelValue(right.reliability);
+      const leftReliability = reliabilityLabelValue(left.reliability);
+      if (rightReliability !== leftReliability) {
+        return rightReliability - leftReliability;
+      }
+      return left.title.localeCompare(right.title);
+    })
+    .map((source, index) => ({
+      ...source,
+      tag: `S${index + 1}`
+    }));
+
+  const sortedSourceMap = new Map();
+  for (const source of catalog) {
+    sortedSourceMap.set(source.url, source);
+  }
+
+  return { catalog, sourceMap: sortedSourceMap };
 };
 
-const buildPlannerPrompt = (query, maxAgents) => {
+const buildPlannerPrompt = (query, maxAgents, reportDepth) => {
   const todayIso = new Date().toISOString();
+  const depthAdvice = REPORT_DEPTH_SETTINGS[reportDepth]?.plannerSubQuestionGuidance
+    || REPORT_DEPTH_SETTINGS.standard.plannerSubQuestionGuidance;
   return `Research question:
 ${query}
 
 Current timestamp:
 ${todayIso}
+
+Research depth:
+${reportDepth}
+
+Depth guidance:
+${depthAdvice}
 
 Create a research plan as JSON with this exact shape:
 {
@@ -422,12 +494,20 @@ Requirements:
 - include at least one subQuestion for recency checks when the topic may change over time`;
 };
 
-const buildAgentPrompt = (query, subQuestion, index, total) => {
+const buildAgentPrompt = (query, subQuestion, index, total, reportDepth) => {
+  const depthAdvice = REPORT_DEPTH_SETTINGS[reportDepth]?.plannerSubQuestionGuidance
+    || REPORT_DEPTH_SETTINGS.standard.plannerSubQuestionGuidance;
   return `Main question:
 ${query}
 
 Assigned sub-question (${index + 1}/${total}):
 ${subQuestion}
+
+Research depth:
+${reportDepth}
+
+Depth guidance:
+${depthAdvice}
 
 Return JSON with this exact shape:
 {
@@ -461,7 +541,7 @@ const mapEvidenceToSourceTags = (agentResults, sourceMap) =>
     gaps: result.gaps,
     confidence: result.confidence,
     evidence: (result.evidence || []).map((item) => {
-      const source = item.source_url ? sourceMap.get(item.source_url) : null;
+      const source = item.source_url ? sourceMap.get(sanitizeSourceUrl(item.source_url)) : null;
       return {
         claim: item.claim,
         quote: item.quote,
@@ -474,7 +554,15 @@ const mapEvidenceToSourceTags = (agentResults, sourceMap) =>
     })
   }));
 
-const buildWriterPrompt = ({ query, plan, agentResults, sourceCatalog, sourceMap }) => {
+const buildWriterPrompt = ({
+  query,
+  plan,
+  agentResults,
+  sourceCatalog,
+  sourceMap,
+  reportLength,
+  reportDepth
+}) => {
   const evidencePackage = {
     question: query,
     plan: {
@@ -486,6 +574,15 @@ const buildWriterPrompt = ({ query, plan, agentResults, sourceCatalog, sourceMap
     sources: sourceCatalog
   };
 
+  const lengthSettings = REPORT_LENGTH_SETTINGS[reportLength] || REPORT_LENGTH_SETTINGS.standard;
+  const depthInstruction = REPORT_DEPTH_SETTINGS[reportDepth]?.writerInstruction || REPORT_DEPTH_SETTINGS.standard.writerInstruction;
+  const sourceSectionChars = lengthSettings.sourceSectionMaxChars;
+  const sourceCatalogText = sourceCatalog
+    .map((source) => `${source.tag} ${source.title} (${source.url})`)
+    .slice(0, 20)
+    .join('\n')
+    .slice(0, sourceSectionChars);
+
   return `Write the final report for this research request.
 
 Output requirements:
@@ -496,15 +593,36 @@ Output requirements:
 - include inline source tags like [S1] when stating facts
 - if evidence is weak or conflicting, say that directly
 - do not cite a source tag that does not exist
+- length target: ${reportLength}
+- depth instruction: ${depthInstruction}
+- keep the total report concise and source-grounded for factual accuracy
+- include a short source list at the end in the format "Sources: S1, S2, ..."
+- end with a source list section like:
+  Sources:
+  S1 Title - URL
+  S2 Title - URL
 
 Evidence package (JSON):
-${JSON.stringify(evidencePackage, null, 2)}`;
+${JSON.stringify(evidencePackage, null, 2)}
+
+Source catalog preview:
+${sourceCatalogText}
+`;
 };
 
-const assessWriterOutput = (text, sourceCount) => {
+const extractSourceTags = (text) => {
+  const matches = text.match(/\[(S\d+)\]/g);
+  if (!matches) return [];
+  return [...new Set(matches)];
+};
+
+const assessWriterOutput = (text, sourceCatalog = []) => {
   const issues = [];
   const normalized = text || '';
   const lowered = normalized.toLowerCase();
+  const sourceCount = sourceCatalog.length;
+  const sourceTags = extractSourceTags(normalized);
+  const sourceTagSet = new Set(sourceCatalog.map((source) => source.tag));
 
   for (const word of BANNED_WORDS) {
     const pattern = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
@@ -531,6 +649,21 @@ const assessWriterOutput = (text, sourceCount) => {
 
   if (sourceCount > 0 && !/\[S\d+\]/.test(normalized)) {
     issues.push('missing inline source tags like [S1]');
+  }
+
+  if (sourceCount > 0) {
+    const outOfRangeTags = sourceTags.filter((tag) => !sourceTagSet.has(tag));
+    if (outOfRangeTags.length > 0) {
+      issues.push(`references unsupported source tags: ${[...new Set(outOfRangeTags)].join(', ')}`);
+    }
+  }
+
+  if (sourceCount > 0 && sourceTags.length === 0) {
+    issues.push('no inline source tags were included for grounded claims');
+  }
+
+  if (sourceCount > 0 && !/\bSources:\b/i.test(normalized)) {
+    issues.push('missing explicit "Sources:" section for source listing');
   }
 
   if (/\b(let me know if you need anything else|hope this helps)\b/i.test(lowered)) {
@@ -600,14 +733,35 @@ const runWithConcurrency = async (items, concurrency, worker) => {
   return results;
 };
 
+const applyReportProfile = (config) => {
+  const lengthProfile = REPORT_LENGTH_SETTINGS[config.reportLength] || REPORT_LENGTH_SETTINGS.standard;
+  return {
+    ...config,
+    writerMaxTokens: clampInteger(lengthProfile.writerMaxTokens, 512, 16384)
+  };
+};
+
 export const performDeepResearch = async ({
   env,
   query,
   maxAgents,
   modelOverride,
+  reportLength,
+  reportDepth,
+  storedConfig,
   onProgress
 }) => {
-  const config = getDeepResearchConfig(env, { model: modelOverride });
+  const config = applyReportProfile(
+    getDeepResearchConfig(
+      env,
+      {
+        model: modelOverride,
+        reportLength,
+        reportDepth
+      },
+      storedConfig || {}
+    )
+  );
   if (!config.enabled) {
     throw new Error('Deep research is disabled.');
   }
@@ -648,7 +802,7 @@ export const performDeepResearch = async ({
         apiKey: env.GEMINI_API_KEY,
         model: config.plannerApiModel,
         systemPrompt: PLANNER_SYSTEM_PROMPT,
-        userPrompt: buildPlannerPrompt(normalizedQuery, boundedAgents),
+        userPrompt: buildPlannerPrompt(normalizedQuery, boundedAgents, config.reportDepth),
         maxTokens: config.plannerMaxTokens,
         temperature: config.plannerTemperature,
         useSearch: false,
@@ -689,7 +843,13 @@ export const performDeepResearch = async ({
           apiKey: env.GEMINI_API_KEY,
           model: config.researcherApiModel,
           systemPrompt: AGENT_SYSTEM_PROMPT,
-          userPrompt: buildAgentPrompt(normalizedQuery, subQuestion, index, subQuestions.length),
+          userPrompt: buildAgentPrompt(
+            normalizedQuery,
+            subQuestion,
+            index,
+            subQuestions.length,
+            config.reportDepth
+          ),
           maxTokens: config.agentMaxTokens,
           temperature: config.agentTemperature,
           useSearch: true,
@@ -758,7 +918,9 @@ export const performDeepResearch = async ({
     plan,
     agentResults,
     sourceCatalog,
-    sourceMap
+    sourceMap,
+    reportLength: config.reportLength,
+    reportDepth: config.reportDepth
   });
 
   const writer = await withRetry(
@@ -776,7 +938,7 @@ export const performDeepResearch = async ({
   );
 
   let finalReport = normalizeWhitespace(writer.text);
-  let qualityIssues = assessWriterOutput(finalReport, sourceCatalog.length);
+  let qualityIssues = assessWriterOutput(finalReport, sourceCatalog);
 
   if (qualityIssues.length > 0) {
     if (onProgress) {
@@ -804,7 +966,7 @@ export const performDeepResearch = async ({
     );
 
     finalReport = normalizeWhitespace(revisedText);
-    qualityIssues = assessWriterOutput(finalReport, sourceCatalog.length);
+    qualityIssues = assessWriterOutput(finalReport, sourceCatalog);
   }
 
   if (onProgress) {
@@ -830,7 +992,9 @@ export const performDeepResearch = async ({
         researcher: config.researcherModel,
         writer: config.writerModel
       },
-      agentCount: subQuestions.length
+      agentCount: subQuestions.length,
+      reportLength: config.reportLength,
+      reportDepth: config.reportDepth
     }
   };
 };

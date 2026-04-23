@@ -552,6 +552,67 @@ export const updateUsageLimits = async (limits) => {
   }
 };
 
+export const getDeepResearchConfig = async () => {
+  try {
+    const response = await fetchWithFallback('/admin/deep-research/config', {
+      method: 'GET',
+      headers: getAdminAuthHeaders()
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch deep research config');
+    }
+
+    return data.data.config;
+  } catch (error) {
+    console.error('Get deep research config error:', error);
+    throw error;
+  }
+};
+
+export const getChatModels = async () => {
+  try {
+    const response = await fetchWithFallback('/models', {
+      method: 'GET'
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch available models');
+    }
+    if (Array.isArray(data.models)) {
+      return data.models;
+    }
+    return [];
+  } catch (error) {
+    console.error('Get chat models error:', error);
+    throw error;
+  }
+};
+
+export const updateDeepResearchConfig = async (config) => {
+  try {
+    const response = await fetchWithFallback('/admin/deep-research/config', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAdminAuthHeaders()
+      },
+      body: JSON.stringify(config)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update deep research config');
+    }
+
+    return data.data.config;
+  } catch (error) {
+    console.error('Update deep research config error:', error);
+    throw error;
+  }
+};
+
 export const resetUserUsage = async (userId) => {
   try {
     const response = await fetchWithFallback(`/admin/users/${userId}/usage/reset`, {

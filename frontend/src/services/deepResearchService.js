@@ -56,7 +56,15 @@ const getAuthHeaders = () => {
  * @param {function} onError - Callback for errors
  * @returns {Promise<void>}
  */
-export const performDeepResearch = async (query, model, maxAgents = 8, onProgress, onComplete, onError) => {
+export const performDeepResearch = async (
+  query,
+  model,
+  maxAgents = 8,
+  onProgress,
+  onComplete,
+  onError,
+  options = {}
+) => {
   if (!query || !model) {
     throw new Error('Query and model are required');
   }
@@ -68,11 +76,16 @@ export const performDeepResearch = async (query, model, maxAgents = 8, onProgres
   const url = `${getApiBaseUrl()}/deep-research`;
   const headers = getAuthHeaders();
 
+  const reportLength = typeof options.reportLength === 'string' ? options.reportLength : null;
+  const reportDepth = typeof options.reportDepth === 'string' ? options.reportDepth : null;
+
   const requestBody = {
     query,
     model,
     maxAgents
   };
+  if (reportLength) requestBody.reportLength = reportLength;
+  if (reportDepth) requestBody.reportDepth = reportDepth;
 
   try {
     const response = await fetch(url, {
@@ -182,7 +195,7 @@ export const useDeepResearch = () => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const performResearch = async (query, model, maxAgents = 8) => {
+  const performResearch = async (query, model, maxAgents = 8, options = {}) => {
     setIsLoading(true);
     setError(null);
     setProgress(0);
@@ -210,7 +223,8 @@ export const useDeepResearch = () => {
         (errorMessage) => {
           setError(errorMessage);
           setIsLoading(false);
-        }
+        },
+        options
       );
     } catch (err) {
       setError(err.message);
