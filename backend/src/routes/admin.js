@@ -10,6 +10,7 @@ import { hashPassword, verifyPassword, generateSessionToken, hashToken } from '.
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { adminLoginRateLimit } from '../middleware/rateLimit.js';
 import { getGlobalUsageLimits, resetUserUsage, summarizeUsageTotals, updateGlobalUsageLimits } from '../utils/usageLimits.js';
+import { getDeepResearchSettings, updateDeepResearchSettings } from '../utils/deepResearchSettings.js';
 
 const admin = new Hono();
 const MAX_PASSWORD_LENGTH = 128;
@@ -168,6 +169,37 @@ admin.put('/usage/limits', requireAuth, requireAdmin, async (c) => {
     return c.json({ success: true, data: { limits } });
   } catch (error) {
     return c.json({ error: error.message || 'Failed to update usage limits' }, 400);
+  }
+});
+
+/**
+ * Get deep research settings
+ */
+admin.get('/deep-research/config', requireAuth, requireAdmin, async (c) => {
+  const kv = c.env.KV;
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  const settings = await getDeepResearchSettings(kv);
+  return c.json({ success: true, data: { config: settings } });
+});
+
+/**
+ * Update deep research settings
+ */
+admin.put('/deep-research/config', requireAuth, requireAdmin, async (c) => {
+  const kv = c.env.KV;
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const settings = await updateDeepResearchSettings(kv, body);
+    return c.json({ success: true, data: { config: settings } });
+  } catch (error) {
+    return c.json({ error: error.message || 'Failed to update deep research settings' }, 400);
   }
 });
 

@@ -5,26 +5,12 @@
  * planner -> researcher agents -> final writer pipeline.
  */
 
-import { resolveModel } from './index.js';
+import { listChatModels, resolveModel } from './index.js';
+import { DEEP_RESEARCH_SETTINGS_DEFAULTS } from '../utils/deepResearchSettings.js';
 
 const DEFAULTS = {
   enabled: true,
-  plannerModel: 'gemini-3.1-pro',
-  researcherModel: 'gemini-3-flash',
-  writerModel: 'claude-sonnet-4.6',
-  defaultMaxAgents: 8,
-  minAgents: 2,
-  maxAgents: 12,
-  maxParallelAgents: 4,
-  plannerMaxTokens: 2048,
-  agentMaxTokens: 3072,
-  writerMaxTokens: 8192,
-  plannerTemperature: 0.2,
-  agentTemperature: 0.2,
-  writerTemperature: 0.2,
-  // Deep research calls can be long (search-grounded agents + long-form writer output).
-  requestTimeoutMs: 180000,
-  allowWriterModelOverride: false
+  ...DEEP_RESEARCH_SETTINGS_DEFAULTS
 };
 
 const parseBoolean = (value, fallback) => {
@@ -49,87 +35,175 @@ const parseFloatNumber = (value, fallback) => {
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+const clampInteger = (value, min, max) => clamp(Math.round(value), min, max);
+
+const normalizeReportLength = (value, fallback) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value !== 'string') return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (['short', 'standard', 'long'].includes(normalized)) return normalized;
+  return fallback;
+};
+
+const normalizeReportDepth = (value, fallback) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value !== 'string') return fallback;
+  const normalized = value.trim().toLowerCase();
+  if (['surface', 'standard', 'deep'].includes(normalized)) return normalized;
+  return fallback;
+};
+
+const sanitizeModelName = (model) => {
+  if (!model || typeof model !== 'string') return '';
+  return model.trim();
+};
+
+const getAllowedModelsForProvider = (provider) => {
+  return listChatModels()
+    .filter((model) => model?.provider === provider)
+    .map((model) => model.id);
+};
+
+const sanitizeAllowedModel = (value, provider, fallback) => {
+  const normalized = sanitizeModelName(value);
+  if (!normalized) return fallback;
+  const allowedModels = getAllowedModelsForProvider(provider);
+  if (allowedModels.includes(normalized)) return normalized;
+  return fallback;
+};
+
 const isAllowedWriterModelOverride = (model) => {
   if (!model || typeof model !== 'string') return false;
   const normalized = model.trim().toLowerCase();
   return normalized.startsWith('claude') || normalized.startsWith('anthropic/');
 };
 
-export const getDeepResearchConfig = (env = {}, requestBody = {}) => {
+const sanitizeAgentCountOverride = (value, min, max, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return clampInteger(parsed, min, max);
+};
+
+export const getDeepResearchConfig = (env = {}, requestBody = {}, storedConfig = {}) => {
   const enabled = parseBoolean(env.DEEP_RESEARCH_ENABLED, DEFAULTS.enabled);
 
-  const plannerModel = env.DEEP_RESEARCH_PLANNER_MODEL || DEFAULTS.plannerModel;
-  const researcherModel = env.DEEP_RESEARCH_RESEARCHER_MODEL || DEFAULTS.researcherModel;
-  const defaultWriterModel = env.DEEP_RESEARCH_WRITER_MODEL || DEFAULTS.writerModel;
+  const plannerModel = sanitizeAllowedModel(
+    sanitizeModelName(storedConfig.plannerModel) || env.DEEP_RESEARCH_PLANNER_MODEL || DEFAULTS.plannerModel,
+    'gemini',
+    DEFAULTS.plannerModel
+  );
+  const researcherModel = sanitizeAllowedModel(
+    sanitizeModelName(storedConfig.researcherModel) || env.DEEP_RESEARCH_RESEARCHER_MODEL || DEFAULTS.researcherModel,
+    'gemini',
+    DEFAULTS.researcherModel
+  );
+  const defaultWriterModel = sanitizeAllowedModel(
+    sanitizeModelName(storedConfig.writerModel) || env.DEEP_RESEARCH_WRITER_MODEL || DEFAULTS.writerModel,
+    'anthropic',
+    DEFAULTS.writerModel
+  );
+  const reportLength = normalizeReportLength(
+    requestBody.reportLength || storedConfig.reportLength || env.DEEP_RESEARCH_REPORT_LENGTH,
+    DEFAULTS.reportLength
+  );
+  const reportDepth = normalizeReportDepth(
+    requestBody.reportDepth || storedConfig.reportDepth || env.DEEP_RESEARCH_REPORT_DEPTH,
+    DEFAULTS.reportDepth
+  );
 
-  const minAgents = clamp(
-    parseInteger(env.DEEP_RESEARCH_MIN_AGENTS, DEFAULTS.minAgents),
+  const minAgents = sanitizeAgentCountOverride(
+    requestBody.minAgents ?? storedConfig.minAgents ?? env.DEEP_RESEARCH_MIN_AGENTS,
     1,
-    24
+    24,
+    DEFAULTS.minAgents
   );
-  const maxAgents = clamp(
-    parseInteger(env.DEEP_RESEARCH_MAX_AGENTS, DEFAULTS.maxAgents),
+  const maxAgents = sanitizeAgentCountOverride(
+    requestBody.maxAgents ?? storedConfig.maxAgents ?? env.DEEP_RESEARCH_MAX_AGENTS,
     minAgents,
-    24
+    24,
+    DEFAULTS.maxAgents
   );
-  const defaultMaxAgents = clamp(
-    parseInteger(env.DEEP_RESEARCH_DEFAULT_MAX_AGENTS, DEFAULTS.defaultMaxAgents),
+  const defaultMaxAgents = sanitizeAgentCountOverride(
+    requestBody.defaultMaxAgents ?? storedConfig.defaultMaxAgents ?? env.DEEP_RESEARCH_DEFAULT_MAX_AGENTS,
     minAgents,
-    maxAgents
+    maxAgents,
+    DEFAULTS.defaultMaxAgents
   );
 
-  const maxParallelAgents = clamp(
-    parseInteger(env.DEEP_RESEARCH_MAX_PARALLEL_AGENTS, DEFAULTS.maxParallelAgents),
+  const maxParallelAgents = sanitizeAgentCountOverride(
+    requestBody.maxParallelAgents ?? storedConfig.maxParallelAgents ?? env.DEEP_RESEARCH_MAX_PARALLEL_AGENTS,
     1,
-    maxAgents
+    maxAgents,
+    DEFAULTS.maxParallelAgents
   );
 
-  const plannerMaxTokens = clamp(
-    parseInteger(env.DEEP_RESEARCH_PLANNER_MAX_TOKENS, DEFAULTS.plannerMaxTokens),
+  const plannerMaxTokens = clampInteger(
+    parseInteger(
+      requestBody.plannerMaxTokens ?? storedConfig.plannerMaxTokens ?? env.DEEP_RESEARCH_PLANNER_MAX_TOKENS,
+      DEFAULTS.plannerMaxTokens
+    ),
     256,
     8192
   );
-  const agentMaxTokens = clamp(
-    parseInteger(env.DEEP_RESEARCH_AGENT_MAX_TOKENS, DEFAULTS.agentMaxTokens),
+  const agentMaxTokens = clampInteger(
+    parseInteger(
+      requestBody.agentMaxTokens ?? storedConfig.agentMaxTokens ?? env.DEEP_RESEARCH_AGENT_MAX_TOKENS,
+      DEFAULTS.agentMaxTokens
+    ),
     256,
     8192
   );
-  const writerMaxTokens = clamp(
-    parseInteger(env.DEEP_RESEARCH_WRITER_MAX_TOKENS, DEFAULTS.writerMaxTokens),
+  const writerMaxTokens = clampInteger(
+    parseInteger(
+      requestBody.writerMaxTokens ?? storedConfig.writerMaxTokens ?? env.DEEP_RESEARCH_WRITER_MAX_TOKENS,
+      DEFAULTS.writerMaxTokens
+    ),
     512,
     16384
   );
 
   const plannerTemperature = clamp(
-    parseFloatNumber(env.DEEP_RESEARCH_PLANNER_TEMPERATURE, DEFAULTS.plannerTemperature),
+    parseFloatNumber(
+      requestBody.plannerTemperature ?? storedConfig.plannerTemperature ?? env.DEEP_RESEARCH_PLANNER_TEMPERATURE,
+      DEFAULTS.plannerTemperature
+    ),
     0,
     1
   );
   const agentTemperature = clamp(
-    parseFloatNumber(env.DEEP_RESEARCH_AGENT_TEMPERATURE, DEFAULTS.agentTemperature),
+    parseFloatNumber(
+      requestBody.agentTemperature ?? storedConfig.agentTemperature ?? env.DEEP_RESEARCH_AGENT_TEMPERATURE,
+      DEFAULTS.agentTemperature
+    ),
     0,
     1
   );
   const writerTemperature = clamp(
-    parseFloatNumber(env.DEEP_RESEARCH_WRITER_TEMPERATURE, DEFAULTS.writerTemperature),
+    parseFloatNumber(
+      requestBody.writerTemperature ?? storedConfig.writerTemperature ?? env.DEEP_RESEARCH_WRITER_TEMPERATURE,
+      DEFAULTS.writerTemperature
+    ),
     0,
     1
   );
 
-  const requestTimeoutMs = clamp(
-    parseInteger(env.DEEP_RESEARCH_TIMEOUT_MS, DEFAULTS.requestTimeoutMs),
+  const requestTimeoutMs = clampInteger(
+    parseInteger(
+      requestBody.requestTimeoutMs ?? storedConfig.requestTimeoutMs ?? env.DEEP_RESEARCH_TIMEOUT_MS,
+      DEFAULTS.requestTimeoutMs
+    ),
     5000,
     300000
   );
 
   const allowWriterModelOverride = parseBoolean(
-    env.DEEP_RESEARCH_ALLOW_WRITER_MODEL_OVERRIDE,
+    requestBody.allowWriterModelOverride ?? storedConfig.allowWriterModelOverride ?? env.DEEP_RESEARCH_ALLOW_WRITER_MODEL_OVERRIDE,
     DEFAULTS.allowWriterModelOverride
   );
 
   let writerModel = defaultWriterModel;
   if (allowWriterModelOverride && isAllowedWriterModelOverride(requestBody.model)) {
-    writerModel = requestBody.model.trim();
+    writerModel = sanitizeAllowedModel(requestBody.model, 'anthropic', defaultWriterModel);
   }
 
   return {
@@ -137,6 +211,8 @@ export const getDeepResearchConfig = (env = {}, requestBody = {}) => {
     plannerModel,
     researcherModel,
     writerModel,
+    reportLength,
+    reportDepth,
     plannerApiModel: resolveModel('gemini', plannerModel.replace('google/', '')),
     researcherApiModel: resolveModel('gemini', researcherModel.replace('google/', '')),
     writerApiModel: resolveModel('anthropic', writerModel.replace('anthropic/', '')),

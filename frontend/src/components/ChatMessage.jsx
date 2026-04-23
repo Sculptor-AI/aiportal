@@ -2,6 +2,8 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import styled, { keyframes, css } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
+import { toPng } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
 import { openExternalUrl } from '../utils/urlSecurity';
@@ -846,9 +848,250 @@ const ActionButton = styled.button`
     color: ${props => `${props.theme.text}90`};
   }
   
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
   svg {
     width: 15px;
     height: 15px;
+  }
+`;
+
+const DeepResearchExportTemplate = styled.div`
+  position: fixed;
+  left: -12000px;
+  top: 0;
+  width: 840px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 44px 48px 48px;
+  box-sizing: border-box;
+  font-family: ${props => props.theme?.fontFamily || 'Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif'};
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+`;
+
+const DRExportAccentBar = styled.div`
+  height: 4px;
+  width: 64px;
+  background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #60a5fa 100%);
+  border-radius: 2px;
+  margin-bottom: 22px;
+`;
+
+const DRExportHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+`;
+
+const DRExportLogo = styled.img`
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+`;
+
+const DRExportTitle = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+`;
+
+const DRExportEyebrow = styled.div`
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #2563eb;
+  font-weight: 600;
+`;
+
+const DRExportTitleMain = styled.div`
+  font-size: 1.58rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.25;
+`;
+
+const DRExportTitleSub = styled.div`
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.5;
+`;
+
+const DRExportMetadata = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+`;
+
+const DRExportMetadataItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+`;
+
+const DRExportMetadataLabel = styled.div`
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  font-weight: 600;
+`;
+
+const DRExportMetadataValue = styled.div`
+  font-size: 0.9rem;
+  color: #0f172a;
+  font-weight: 500;
+  word-break: break-word;
+`;
+
+const DRExportSection = styled.div`
+  margin-bottom: 22px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const DRExportSectionTitle = styled.div`
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e2e8f0;
+  }
+`;
+
+const DRExportBody = styled.div`
+  font-size: 13.5px;
+  line-height: 1.72;
+  color: #1e293b;
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #0f172a;
+    margin-top: 1.2em;
+    margin-bottom: 0.5em;
+    line-height: 1.3;
+  }
+
+  p {
+    margin: 0 0 0.75em;
+  }
+
+  ul, ol {
+    padding-left: 22px;
+    margin: 0 0 0.75em;
+  }
+
+  li {
+    margin-bottom: 4px;
+  }
+
+  a {
+    color: #1d4ed8;
+    text-decoration: none;
+    word-break: break-word;
+  }
+
+  blockquote {
+    border-left: 3px solid #cbd5e1;
+    margin: 0 0 0.75em;
+    padding: 2px 0 2px 12px;
+    color: #475569;
+  }
+
+  code {
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.86em;
+  }
+
+  pre {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.82em;
+  }
+`;
+
+const DRExportQuestionList = styled.ol`
+  margin: 0;
+  padding-left: 22px;
+  color: #1e293b;
+
+  li {
+    margin-bottom: 4px;
+    font-size: 0.88rem;
+  }
+`;
+
+const DRExportQualityBox = styled.div`
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+`;
+
+const DRExportSources = styled.ol`
+  margin: 0;
+  padding-left: 22px;
+  counter-reset: dr-source;
+  list-style: decimal;
+`;
+
+const DRExportSourceItem = styled.li`
+  margin-bottom: 8px;
+  font-size: 0.84rem;
+  color: #334155;
+  line-height: 1.5;
+
+  strong {
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  a {
+    color: #1d4ed8;
+    word-break: break-word;
+  }
+
+  .dr-source-domain {
+    color: #64748b;
+    font-size: 0.78rem;
+    margin-left: 6px;
   }
 `;
 
@@ -1207,6 +1450,47 @@ const formatTimestamp = (timestamp) => {
   const date = new Date(timestamp);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
+
+const formatReportTimestamp = (timestamp) => {
+  if (!timestamp) return '';
+
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return date.toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+};
+
+const sanitizeFileName = (input = '') => {
+  const cleanInput = String(input || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+  return cleanInput.slice(0, 70) || 'deep-research-report';
+};
+
+const buildPrintTheme = (theme = {}) => ({
+  ...theme,
+  name: 'light',
+  text: '#0f172a',
+  textSecondary: '#334155',
+  border: '#e5e7eb',
+  inputBackground: '#ffffff',
+  primary: '#2563eb',
+  secondary: '#1d4ed8',
+  accentColor: '#2563eb',
+  background: '#ffffff'
+});
 
 // New styled components for sources display
 const SourcesContainer = styled.div`
@@ -1716,6 +2000,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   const { t } = useTranslation();
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
+  const deepResearchExportRef = useRef(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const printableTheme = useMemo(() => buildPrintTheme(theme), [theme]);
 
   // Debug logging
   if (role === 'assistant' && sources) {
@@ -1751,6 +2038,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Use cleaned content if available, otherwise use original content
   const contentToProcess = cleanedContent || normalizedContent;
+
+  const safeQueryForExport = useMemo(() => {
+    const query = message?.query || message?.content || message?.prompt || 'deep research report';
+    return sanitizeFileName(query);
+  }, [message?.query, message?.content, message?.prompt]);
+
+  const generatedReportAt = useMemo(() => formatReportTimestamp(timestamp) || new Date().toLocaleString(), [timestamp]);
 
   const is3DScene = useMemo(() => {
     if (role !== 'assistant' || isLoading || !content) return false;
@@ -1856,6 +2150,156 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       setIsSpeaking(false);
     };
   }, [content, cleanedContent]);
+
+  const exportImageSliceToPdf = useCallback(async (image, doc, sourceY, sourceHeight, targetWidthMM, targetHeightMM, topMarginMM, footerYMM, pageIndex, totalPages, footerMeta) => {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const leftMarginMM = 14;
+    const rightTextX = pageWidth - leftMarginMM;
+
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = image.width;
+    cropCanvas.height = sourceHeight;
+    const cropContext = cropCanvas.getContext('2d');
+
+    if (!cropContext) {
+      throw new Error('Unable to create canvas context for PDF export');
+    }
+
+    cropContext.fillStyle = '#ffffff';
+    cropContext.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+    cropContext.drawImage(
+      image,
+      0,
+      sourceY,
+      image.width,
+      sourceHeight,
+      0,
+      0,
+      image.width,
+      sourceHeight
+    );
+
+    const sliceDataUrl = cropCanvas.toDataURL('image/png');
+
+    if (pageIndex > 0) {
+      doc.addPage();
+    }
+
+    doc.addImage(
+      sliceDataUrl,
+      'PNG',
+      leftMarginMM,
+      topMarginMM,
+      targetWidthMM,
+      targetHeightMM
+    );
+
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.2);
+    doc.line(leftMarginMM, footerYMM - 4, rightTextX, footerYMM - 4);
+
+    doc.setFontSize(8);
+    doc.setTextColor(29, 78, 216);
+    doc.text('Sculptor AI', leftMarginMM, footerYMM);
+
+    doc.setTextColor(100, 116, 139);
+    const centerMeta = footerMeta?.generatedAt ? `Generated ${footerMeta.generatedAt}` : 'Deep Research Report';
+    doc.text(centerMeta, pageWidth / 2, footerYMM, { align: 'center' });
+
+    doc.text(`Page ${pageIndex + 1} of ${totalPages}`, rightTextX, footerYMM, { align: 'right' });
+  }, []);
+
+  const handleExportDeepResearchPdf = useCallback(async () => {
+    if (!deepResearchExportRef.current || !contentToProcess || status !== 'completed' || isExportingPdf) {
+      return;
+    }
+
+    setIsExportingPdf(true);
+
+    try {
+      const imageDataUrl = await toPng(deepResearchExportRef.current, {
+        cacheBust: true,
+        backgroundColor: '#ffffff',
+        pixelRatio: 2
+      });
+      const image = new Image();
+      image.src = imageDataUrl;
+
+      await new Promise((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = (error) => reject(error);
+      });
+
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const reportFileDate = timestamp ? new Date(timestamp) : new Date();
+      const reportDate = Number.isNaN(reportFileDate.getTime()) ? new Date() : reportFileDate;
+      const humanGeneratedAt = generatedReportAt || reportDate.toLocaleString();
+      const queryTitle = (message.query || content || 'Deep Research Report').toString().slice(0, 120);
+
+      try {
+        doc.setProperties({
+          title: `Sculptor AI Deep Research — ${queryTitle}`,
+          subject: queryTitle,
+          author: 'Sculptor AI',
+          creator: 'Sculptor AI Deep Research',
+          keywords: [
+            'sculptor',
+            'deep research',
+            message.metadata?.reportLength || 'standard',
+            message.metadata?.reportDepth || 'standard'
+          ].join(', ')
+        });
+      } catch (metadataError) {
+        console.warn('Failed to set PDF metadata:', metadataError);
+      }
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const topMarginMM = 14;
+      const bottomMarginMM = 16;
+      const sideMarginMM = 14;
+      const contentWidthMM = pageWidth - sideMarginMM * 2;
+      const contentHeightMM = pageHeight - topMarginMM - bottomMarginMM;
+      const footerYMM = pageHeight - 8;
+      const scaleMmPerPx = contentWidthMM / image.width;
+      const sliceHeightPx = Math.max(1, Math.floor(contentHeightMM / scaleMmPerPx));
+      const totalPages = Math.max(1, Math.ceil(image.height / sliceHeightPx));
+
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex += 1) {
+        const sourceY = pageIndex * sliceHeightPx;
+        const sourceHeight = Math.min(sliceHeightPx, image.height - sourceY);
+        const sliceHeightMM = sourceHeight * scaleMmPerPx;
+        await exportImageSliceToPdf(
+          image,
+          doc,
+          sourceY,
+          sourceHeight,
+          contentWidthMM,
+          sliceHeightMM,
+          topMarginMM,
+          footerYMM,
+          pageIndex,
+          totalPages,
+          { generatedAt: humanGeneratedAt }
+        );
+      }
+
+      const reportTime = reportDate.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const fileName = `${safeQueryForExport}-${reportTime}.pdf`;
+
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Failed to export deep research report as PDF:', error);
+      window.alert('Unable to generate PDF right now. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [contentToProcess, isExportingPdf, safeQueryForExport, status, timestamp, exportImageSliceToPdf, generatedReportAt, message?.query, message?.metadata?.reportLength, message?.metadata?.reportDepth, content]);
 
   // Determine if the message has sources to display
   const displaySources = extractedSources.length > 0 ? extractedSources : (Array.isArray(sources) ? sources : []);
@@ -2065,6 +2509,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 <div>Planner: {message.metadata.models.planner || 'N/A'}</div>
                 <div>Research agents: {message.metadata.models.researcher || 'N/A'}</div>
                 <div>Writer: {message.metadata.models.writer || 'N/A'}</div>
+                {message.metadata.reportLength && (
+                  <div>Report length: {message.metadata.reportLength}</div>
+                )}
+                {message.metadata.reportDepth && (
+                  <div>Report depth: {message.metadata.reportDepth}</div>
+                )}
                 {message.metadata.agentCount && (
                   <div>Agents used: {message.metadata.agentCount}</div>
                 )}
@@ -2101,6 +2551,111 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       );
     }
 
+    const exportQueryText = (message.query || content || '').toString().trim();
+    const deepResearchExportTemplate = status === 'completed' && content ? (
+      <DeepResearchExportTemplate ref={deepResearchExportRef}>
+        <DRExportAccentBar />
+        <DRExportHeader>
+          <DRExportLogo src="/images/sculptor.svg" alt="Sculptor AI" />
+          <DRExportTitle>
+            <DRExportEyebrow>Sculptor AI · Deep Research</DRExportEyebrow>
+            <DRExportTitleMain>
+              {exportQueryText
+                ? exportQueryText.length > 140
+                  ? `${exportQueryText.slice(0, 140)}…`
+                  : exportQueryText
+                : 'Deep Research Report'}
+            </DRExportTitleMain>
+            <DRExportTitleSub>
+              Synthesized multi-agent investigation with verified citations.
+            </DRExportTitleSub>
+          </DRExportTitle>
+        </DRExportHeader>
+
+        <DRExportMetadata>
+          <DRExportMetadataItem>
+            <DRExportMetadataLabel>Generated</DRExportMetadataLabel>
+            <DRExportMetadataValue>{generatedReportAt || 'Just now'}</DRExportMetadataValue>
+          </DRExportMetadataItem>
+          <DRExportMetadataItem>
+            <DRExportMetadataLabel>Length · Depth</DRExportMetadataLabel>
+            <DRExportMetadataValue style={{ textTransform: 'capitalize' }}>
+              {(message.metadata?.reportLength || 'standard')} · {(message.metadata?.reportDepth || 'standard')}
+            </DRExportMetadataValue>
+          </DRExportMetadataItem>
+          <DRExportMetadataItem>
+            <DRExportMetadataLabel>Planner</DRExportMetadataLabel>
+            <DRExportMetadataValue>{message.metadata?.models?.planner || 'Auto'}</DRExportMetadataValue>
+          </DRExportMetadataItem>
+          <DRExportMetadataItem>
+            <DRExportMetadataLabel>Researcher</DRExportMetadataLabel>
+            <DRExportMetadataValue>{message.metadata?.models?.researcher || 'Auto'}</DRExportMetadataValue>
+          </DRExportMetadataItem>
+          <DRExportMetadataItem>
+            <DRExportMetadataLabel>Writer</DRExportMetadataLabel>
+            <DRExportMetadataValue>{message.metadata?.models?.writer || 'Auto'}</DRExportMetadataValue>
+          </DRExportMetadataItem>
+          <DRExportMetadataItem>
+            <DRExportMetadataLabel>Agents</DRExportMetadataLabel>
+            <DRExportMetadataValue>
+              {message.metadata?.agentCount ?? (Array.isArray(message.agentResults) ? message.agentResults.length : 'N/A')}
+              {displaySources.length > 0 ? ` · ${displaySources.length} sources` : ''}
+            </DRExportMetadataValue>
+          </DRExportMetadataItem>
+        </DRExportMetadata>
+
+        {message.subQuestions && message.subQuestions.length > 0 && (
+          <DRExportSection>
+            <DRExportSectionTitle>Research plan</DRExportSectionTitle>
+            <DRExportQuestionList>
+              {message.subQuestions.map((question, index) => (
+                <li key={`export-question-${index}`}>{question}</li>
+              ))}
+            </DRExportQuestionList>
+          </DRExportSection>
+        )}
+
+        {Array.isArray(message.qualityIssues) && message.qualityIssues.length > 0 && (
+          <DRExportSection>
+            <DRExportSectionTitle>Quality notes</DRExportSectionTitle>
+            <DRExportQualityBox>
+              {message.qualityIssues.join(' · ')}
+            </DRExportQualityBox>
+          </DRExportSection>
+        )}
+
+        <DRExportSection>
+          <DRExportSectionTitle>Report</DRExportSectionTitle>
+          <DRExportBody>
+            {robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, printableTheme)}
+          </DRExportBody>
+        </DRExportSection>
+
+        {displaySources.length > 0 && (
+          <DRExportSection>
+            <DRExportSectionTitle>Sources ({displaySources.length})</DRExportSectionTitle>
+            <DRExportSources>
+              {displaySources.map((source, index) => {
+                const domain = (() => {
+                  try { return new URL(source.url).hostname.replace(/^www\./, ''); }
+                  catch { return ''; }
+                })();
+                return (
+                  <DRExportSourceItem key={`export-source-${index}`}>
+                    <strong>{source.title || domain || 'Untitled source'}</strong>
+                    {domain ? <span className="dr-source-domain">{domain}</span> : null}
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', wordBreak: 'break-all', marginTop: '2px' }}>
+                      {source.url}
+                    </div>
+                  </DRExportSourceItem>
+                );
+              })}
+            </DRExportSources>
+          </DRExportSection>
+        )}
+      </DeepResearchExportTemplate>
+    ) : null;
+
     return (
       <Message $alignment={messageAlignment}>
         {role !== 'user' && (
@@ -2116,6 +2671,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content role={role} $alignment={messageAlignment} className={`chat-message chat-message--${role}`}>
             {deepResearchContent}
+            {deepResearchExportTemplate}
             {/* Show sources if available */}
             {hasSources && status === 'completed' && (
               <SourcesContainer>
@@ -2145,6 +2701,18 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 {status === 'completed' && content && (
                   <>
                     <div style={{ flexGrow: 1 }}></div>
+                    <ActionButton onClick={handleExportDeepResearchPdf} disabled={isExportingPdf} title="Export this deep research report as PDF">
+                      {isExportingPdf ? (
+                        <LoadingDots />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="7 10 12 15 17 10"></polyline>
+                          <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                      )}
+                      {isExportingPdf ? 'Exporting…' : 'Export PDF'}
+                    </ActionButton>
                     <ActionButton onClick={() => navigator.clipboard.writeText(content).then(() => console.log('Research results copied'))}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>

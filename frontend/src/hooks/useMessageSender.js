@@ -487,6 +487,14 @@ const useMessageSender = ({
             2,
             Math.min(12, Number.parseInt(settings?.deepResearchMaxAgents, 10) || 8)
           );
+          const deepResearchOptions = {};
+          if (typeof settings?.deepResearchReportLength === 'string') {
+            deepResearchOptions.reportLength = settings.deepResearchReportLength;
+          }
+          if (typeof settings?.deepResearchReportDepth === 'string') {
+            deepResearchOptions.reportDepth = settings.deepResearchReportDepth;
+          }
+
           const researchModel =
             currentActionChip === 'deep-research' || currentModel === DEEP_RESEARCH_MODEL_ID
               ? DEEP_RESEARCH_MODEL_ID
@@ -496,7 +504,7 @@ const useMessageSender = ({
             messageToSend,
             researchModel,
             maxAgents,
-          (progress, statusMessage) => {
+            (progress, statusMessage) => {
             updateMessage(currentChatId, deepResearchMessageId, {
               status: 'loading',
               progress,
@@ -527,7 +535,8 @@ const useMessageSender = ({
               isError: true,
               isLoading: false
             });
-          }
+          },
+            deepResearchOptions
         );
       } catch (error) {
         console.error('[useMessageSender] Deep research failed:', error);
