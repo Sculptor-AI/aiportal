@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import styled, { keyframes, css } from 'styled-components';
 import ModelIcon from './ModelIcon';
 import TextDiffusionAnimation from './TextDiffusionAnimation';
-import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
+import exportDeepResearchPdf from '../utils/deepResearchPdfExport';
 import StreamingMarkdownRenderer from './StreamingMarkdownRenderer';
 import { extractSourcesFromResponse } from '../utils/sourceExtractor';
 import { openExternalUrl } from '../utils/urlSecurity';
@@ -859,240 +858,339 @@ const ActionButton = styled.button`
   }
 `;
 
-const DeepResearchExportTemplate = styled.div`
-  position: fixed;
-  left: -12000px;
-  top: 0;
-  width: 840px;
-  background: #ffffff;
-  color: #0f172a;
-  padding: 44px 48px 48px;
-  box-sizing: border-box;
-  font-family: ${props => props.theme?.fontFamily || 'Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif'};
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+/* ---------------- Deep Research in-chat UI ---------------- */
+
+const drOrbit = keyframes`
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+`;
+const drOrbitReverse = keyframes`
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+`;
+const drPulseCore = keyframes`
+  0%, 100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(37,99,235,0.45); }
+  50%      { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(37,99,235,0); }
+`;
+const drShimmerMove = keyframes`
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+`;
+const drFadeIn = keyframes`
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 `;
 
-const DRExportAccentBar = styled.div`
-  height: 4px;
-  width: 64px;
-  background: linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #60a5fa 100%);
-  border-radius: 2px;
-  margin-bottom: 22px;
+const DRCard = styled.div`
+  border: 1px solid ${props => props.theme.border || 'rgba(148,163,184,0.25)'};
+  background: ${props => props.theme.inputBackground || 'rgba(148,163,184,0.04)'};
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-top: 4px;
+  animation: ${drFadeIn} 260ms ease;
 `;
 
-const DRExportHeader = styled.div`
+const DRLoadingBody = styled.div`
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #e2e8f0;
-`;
+  gap: 18px;
+  align-items: center;
 
-const DRExportLogo = styled.img`
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
-  flex-shrink: 0;
-`;
-
-const DRExportTitle = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-`;
-
-const DRExportEyebrow = styled.div`
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #2563eb;
-  font-weight: 600;
-`;
-
-const DRExportTitleMain = styled.div`
-  font-size: 1.58rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: #0f172a;
-  line-height: 1.25;
-`;
-
-const DRExportTitleSub = styled.div`
-  font-size: 0.88rem;
-  color: #475569;
-  line-height: 1.5;
-`;
-
-const DRExportMetadata = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 24px;
-  padding: 18px 20px;
-  margin-bottom: 24px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-`;
-
-const DRExportMetadataItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-`;
-
-const DRExportMetadataLabel = styled.div`
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64748b;
-  font-weight: 600;
-`;
-
-const DRExportMetadataValue = styled.div`
-  font-size: 0.9rem;
-  color: #0f172a;
-  font-weight: 500;
-  word-break: break-word;
-`;
-
-const DRExportSection = styled.div`
-  margin-bottom: 22px;
-
-  &:last-child {
-    margin-bottom: 0;
+  @media (max-width: 520px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
   }
 `;
 
-const DRExportSectionTitle = styled.div`
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  color: #1d4ed8;
+const DROrbit = styled.div`
+  position: relative;
+  width: 78px;
+  height: 78px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px dashed rgba(37,99,235,0.22);
+  }
+  .ring.inner { inset: 14px; border-style: solid; border-color: rgba(37,99,235,0.14); }
+
+  .track {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    animation: ${drOrbit} 4.8s linear infinite;
+  }
+  .track.reverse {
+    animation: ${drOrbitReverse} 6.4s linear infinite;
+    inset: 10px;
+  }
+  .track.slow {
+    animation: ${drOrbit} 9s linear infinite;
+    inset: 18px;
+  }
+
+  .orb {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #60a5fa;
+    box-shadow: 0 0 10px rgba(96,165,250,0.75);
+  }
+  .track.reverse .orb { background: #2563eb; box-shadow: 0 0 10px rgba(37,99,235,0.75); }
+  .track.slow    .orb { background: #93c5fd; box-shadow: 0 0 10px rgba(147,197,253,0.6); width: 6px; height: 6px; }
+
+  .core {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    animation: ${drPulseCore} 2.2s ease-in-out infinite;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+  }
+  .core svg { width: 14px; height: 14px; }
+`;
+
+const DRLoadingText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+
+  .title {
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: ${props => props.theme.text};
+    letter-spacing: -0.005em;
+  }
+  .step {
+    font-size: 0.82rem;
+    color: ${props => `${props.theme.text}90`};
+    opacity: 0.85;
+  }
+  .query {
+    font-size: 0.78rem;
+    color: ${props => `${props.theme.text}70`};
+    font-style: italic;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 2px;
+  }
+`;
+
+const DRShimmerBar = styled.div`
+  position: relative;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: ${props => `${props.theme.text}10`};
+  overflow: hidden;
+  margin-top: 4px;
+
+  .fill {
+    height: 100%;
+    border-radius: 999px;
+    width: ${props => Math.max(4, Math.min(100, props.$progress || 0))}%;
+    background: linear-gradient(
+      90deg,
+      rgba(29,78,216,0.9) 0%,
+      rgba(96,165,250,1) 45%,
+      rgba(147,197,253,1) 55%,
+      rgba(29,78,216,0.9) 100%
+    );
+    background-size: 200% 100%;
+    animation: ${drShimmerMove} 2.2s linear infinite;
+    transition: width 0.4s ease;
+  }
+`;
+
+const DRResultBadgeRow = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+`;
 
-  &::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: #e2e8f0;
+const DRBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(37,99,235,0.12) 0%, rgba(96,165,250,0.08) 100%);
+  border: 1px solid rgba(37,99,235,0.18);
+  color: ${props => props.theme.text};
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+
+  svg { width: 12px; height: 12px; color: #2563eb; }
+`;
+
+const DRMetaInline = styled.span`
+  font-size: 0.78rem;
+  color: ${props => `${props.theme.text}88`};
+  opacity: 0.85;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const DRDetailsToggle = styled.button`
+  background: none;
+  border: 1px solid ${props => props.theme.border || 'rgba(148,163,184,0.3)'};
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: ${props => `${props.theme.text}aa`};
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+
+  &:hover {
+    border-color: rgba(37,99,235,0.4);
+    color: ${props => props.theme.text};
+    background: rgba(37,99,235,0.06);
+  }
+
+  svg {
+    width: 11px;
+    height: 11px;
+    transition: transform 0.2s ease;
+    transform: rotate(${props => props.$open ? '180deg' : '0deg'});
   }
 `;
 
-const DRExportBody = styled.div`
-  font-size: 13.5px;
-  line-height: 1.72;
-  color: #1e293b;
+const DRDetailsPanel = styled.div`
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: ${props => `${props.theme.text}06`};
+  border: 1px solid ${props => props.theme.border || 'rgba(148,163,184,0.18)'};
+  font-size: 0.82rem;
+  animation: ${drFadeIn} 180ms ease;
 
-  h1, h2, h3, h4, h5, h6 {
-    color: #0f172a;
-    margin-top: 1.2em;
-    margin-bottom: 0.5em;
-    line-height: 1.3;
+  .dr-details-section {
+    & + .dr-details-section { margin-top: 10px; }
   }
-
-  p {
-    margin: 0 0 0.75em;
-  }
-
-  ul, ol {
-    padding-left: 22px;
-    margin: 0 0 0.75em;
-  }
-
-  li {
+  .dr-details-label {
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: ${props => `${props.theme.text}88`};
     margin-bottom: 4px;
-  }
-
-  a {
-    color: #1d4ed8;
-    text-decoration: none;
-    word-break: break-word;
-  }
-
-  blockquote {
-    border-left: 3px solid #cbd5e1;
-    margin: 0 0 0.75em;
-    padding: 2px 0 2px 12px;
-    color: #475569;
-  }
-
-  code {
-    background: #f1f5f9;
-    color: #0f172a;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-size: 0.86em;
-  }
-
-  pre {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 10px 12px;
-    overflow-x: hidden;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-size: 0.82em;
-  }
-`;
-
-const DRExportQuestionList = styled.ol`
-  margin: 0;
-  padding-left: 22px;
-  color: #1e293b;
-
-  li {
-    margin-bottom: 4px;
-    font-size: 0.88rem;
-  }
-`;
-
-const DRExportQualityBox = styled.div`
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 0.85rem;
-  line-height: 1.5;
-`;
-
-const DRExportSources = styled.ol`
-  margin: 0;
-  padding-left: 22px;
-  counter-reset: dr-source;
-  list-style: decimal;
-`;
-
-const DRExportSourceItem = styled.li`
-  margin-bottom: 8px;
-  font-size: 0.84rem;
-  color: #334155;
-  line-height: 1.5;
-
-  strong {
-    color: #0f172a;
     font-weight: 600;
   }
-
-  a {
-    color: #1d4ed8;
-    word-break: break-word;
-  }
-
-  .dr-source-domain {
-    color: #64748b;
+  .dr-details-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 6px 14px;
+    color: ${props => props.theme.text};
+    opacity: 0.9;
     font-size: 0.78rem;
-    margin-left: 6px;
+    @media (max-width: 560px) { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .dr-kv {
+      display: flex; flex-direction: column; gap: 2px; min-width: 0;
+      .k { font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: ${props => `${props.theme.text}88`}; }
+      .v { font-size: 0.82rem; word-break: break-word; }
+    }
   }
+  ul.dr-sub-list {
+    margin: 0; padding-left: 18px; line-height: 1.5; color: ${props => props.theme.text}; opacity: 0.9;
+    li { margin-bottom: 3px; }
+  }
+  .dr-quality {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.25);
+    color: #b91c1c;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+`;
+
+const DRBody = styled.div`
+  font-size: 0.95rem;
+  line-height: 1.68;
+  color: ${props => props.theme.text};
+
+  /* Headings from robustFormatContent keep their own sizing, just tighten spacing */
+  h1, h2, h3, h4, h5, h6 { margin-top: 1em; margin-bottom: 0.35em; }
+  p { margin: 0 0 0.7em; }
+  ul, ol { margin: 0.2em 0 0.8em; padding-left: 22px; }
+  li { margin-bottom: 4px; }
+  blockquote { border-left: 3px solid rgba(37,99,235,0.4); }
+`;
+
+const DRActionBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid ${props => `${props.theme.text}12`};
+  flex-wrap: wrap;
+`;
+
+const DRSpinIcon = styled.svg`
+  animation: ${drOrbit} 1s linear infinite;
+`;
+
+const DRActionPill = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid ${props => props.theme.border || 'rgba(148,163,184,0.3)'};
+  background: ${props => props.$primary ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)' : 'transparent'};
+  color: ${props => props.$primary ? '#fff' : props.theme.text};
+  font-size: 0.78rem;
+  font-weight: ${props => props.$primary ? '600' : '500'};
+  cursor: pointer;
+  transition: all 0.15s ease;
+  ${props => props.$primary && `box-shadow: 0 2px 6px rgba(37,99,235,0.25); border-color: transparent;`}
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    ${props => props.$primary
+      ? `box-shadow: 0 4px 12px rgba(37,99,235,0.35);`
+      : `background: rgba(37,99,235,0.08); border-color: rgba(37,99,235,0.4);`
+    }
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  svg { width: 14px; height: 14px; }
 `;
 
 const ErrorMessage = styled(Content)`
@@ -1450,47 +1548,6 @@ const formatTimestamp = (timestamp) => {
   const date = new Date(timestamp);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
-
-const formatReportTimestamp = (timestamp) => {
-  if (!timestamp) return '';
-
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  return date.toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-};
-
-const sanitizeFileName = (input = '') => {
-  const cleanInput = String(input || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
-
-  return cleanInput.slice(0, 70) || 'deep-research-report';
-};
-
-const buildPrintTheme = (theme = {}) => ({
-  ...theme,
-  name: 'light',
-  text: '#0f172a',
-  textSecondary: '#334155',
-  border: '#e5e7eb',
-  inputBackground: '#ffffff',
-  primary: '#2563eb',
-  secondary: '#1d4ed8',
-  accentColor: '#2563eb',
-  background: '#ffffff'
-});
 
 // New styled components for sources display
 const SourcesContainer = styled.div`
@@ -2000,9 +2057,8 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
   const { t } = useTranslation();
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
-  const deepResearchExportRef = useRef(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
-  const printableTheme = useMemo(() => buildPrintTheme(theme), [theme]);
+  const [deepResearchDetailsOpen, setDeepResearchDetailsOpen] = useState(false);
 
   // Debug logging
   if (role === 'assistant' && sources) {
@@ -2038,13 +2094,6 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Use cleaned content if available, otherwise use original content
   const contentToProcess = cleanedContent || normalizedContent;
-
-  const safeQueryForExport = useMemo(() => {
-    const query = message?.query || message?.content || message?.prompt || 'deep research report';
-    return sanitizeFileName(query);
-  }, [message?.query, message?.content, message?.prompt]);
-
-  const generatedReportAt = useMemo(() => formatReportTimestamp(timestamp) || new Date().toLocaleString(), [timestamp]);
 
   const is3DScene = useMemo(() => {
     if (role !== 'assistant' || isLoading || !content) return false;
@@ -2151,155 +2200,27 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
     };
   }, [content, cleanedContent]);
 
-  const exportImageSliceToPdf = useCallback(async (image, doc, sourceY, sourceHeight, targetWidthMM, targetHeightMM, topMarginMM, footerYMM, pageIndex, totalPages, footerMeta) => {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const leftMarginMM = 14;
-    const rightTextX = pageWidth - leftMarginMM;
-
-    const cropCanvas = document.createElement('canvas');
-    cropCanvas.width = image.width;
-    cropCanvas.height = sourceHeight;
-    const cropContext = cropCanvas.getContext('2d');
-
-    if (!cropContext) {
-      throw new Error('Unable to create canvas context for PDF export');
-    }
-
-    cropContext.fillStyle = '#ffffff';
-    cropContext.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
-    cropContext.drawImage(
-      image,
-      0,
-      sourceY,
-      image.width,
-      sourceHeight,
-      0,
-      0,
-      image.width,
-      sourceHeight
-    );
-
-    const sliceDataUrl = cropCanvas.toDataURL('image/png');
-
-    if (pageIndex > 0) {
-      doc.addPage();
-    }
-
-    doc.addImage(
-      sliceDataUrl,
-      'PNG',
-      leftMarginMM,
-      topMarginMM,
-      targetWidthMM,
-      targetHeightMM
-    );
-
-    doc.setDrawColor(226, 232, 240);
-    doc.setLineWidth(0.2);
-    doc.line(leftMarginMM, footerYMM - 4, rightTextX, footerYMM - 4);
-
-    doc.setFontSize(8);
-    doc.setTextColor(29, 78, 216);
-    doc.text('Sculptor AI', leftMarginMM, footerYMM);
-
-    doc.setTextColor(100, 116, 139);
-    const centerMeta = footerMeta?.generatedAt ? `Generated ${footerMeta.generatedAt}` : 'Deep Research Report';
-    doc.text(centerMeta, pageWidth / 2, footerYMM, { align: 'center' });
-
-    doc.text(`Page ${pageIndex + 1} of ${totalPages}`, rightTextX, footerYMM, { align: 'right' });
-  }, []);
-
   const handleExportDeepResearchPdf = useCallback(async () => {
-    if (!deepResearchExportRef.current || !contentToProcess || status !== 'completed' || isExportingPdf) {
-      return;
-    }
-
+    if (!contentToProcess || status !== 'completed' || isExportingPdf) return;
     setIsExportingPdf(true);
-
     try {
-      const imageDataUrl = await toPng(deepResearchExportRef.current, {
-        cacheBust: true,
-        backgroundColor: '#ffffff',
-        pixelRatio: 2
+      await exportDeepResearchPdf({
+        query: message?.query || content || 'Deep Research Report',
+        content: contentToProcess,
+        metadata: message?.metadata || {},
+        sources: Array.isArray(extractedSources) && extractedSources.length > 0
+          ? extractedSources
+          : (Array.isArray(sources) ? sources : []),
+        subQuestions: Array.isArray(message?.subQuestions) ? message.subQuestions : [],
+        timestamp
       });
-      const image = new Image();
-      image.src = imageDataUrl;
-
-      await new Promise((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = (error) => reject(error);
-      });
-
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const reportFileDate = timestamp ? new Date(timestamp) : new Date();
-      const reportDate = Number.isNaN(reportFileDate.getTime()) ? new Date() : reportFileDate;
-      const humanGeneratedAt = generatedReportAt || reportDate.toLocaleString();
-      const queryTitle = (message.query || content || 'Deep Research Report').toString().slice(0, 120);
-
-      try {
-        doc.setProperties({
-          title: `Sculptor AI Deep Research — ${queryTitle}`,
-          subject: queryTitle,
-          author: 'Sculptor AI',
-          creator: 'Sculptor AI Deep Research',
-          keywords: [
-            'sculptor',
-            'deep research',
-            message.metadata?.reportLength || 'standard',
-            message.metadata?.reportDepth || 'standard'
-          ].join(', ')
-        });
-      } catch (metadataError) {
-        console.warn('Failed to set PDF metadata:', metadataError);
-      }
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const topMarginMM = 14;
-      const bottomMarginMM = 16;
-      const sideMarginMM = 14;
-      const contentWidthMM = pageWidth - sideMarginMM * 2;
-      const contentHeightMM = pageHeight - topMarginMM - bottomMarginMM;
-      const footerYMM = pageHeight - 8;
-      const scaleMmPerPx = contentWidthMM / image.width;
-      const sliceHeightPx = Math.max(1, Math.floor(contentHeightMM / scaleMmPerPx));
-      const totalPages = Math.max(1, Math.ceil(image.height / sliceHeightPx));
-
-      for (let pageIndex = 0; pageIndex < totalPages; pageIndex += 1) {
-        const sourceY = pageIndex * sliceHeightPx;
-        const sourceHeight = Math.min(sliceHeightPx, image.height - sourceY);
-        const sliceHeightMM = sourceHeight * scaleMmPerPx;
-        await exportImageSliceToPdf(
-          image,
-          doc,
-          sourceY,
-          sourceHeight,
-          contentWidthMM,
-          sliceHeightMM,
-          topMarginMM,
-          footerYMM,
-          pageIndex,
-          totalPages,
-          { generatedAt: humanGeneratedAt }
-        );
-      }
-
-      const reportTime = reportDate.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const fileName = `${safeQueryForExport}-${reportTime}.pdf`;
-
-      doc.save(fileName);
     } catch (error) {
-      console.error('Failed to export deep research report as PDF:', error);
+      console.error('Failed to export deep research PDF:', error);
       window.alert('Unable to generate PDF right now. Please try again.');
     } finally {
       setIsExportingPdf(false);
     }
-  }, [contentToProcess, isExportingPdf, safeQueryForExport, status, timestamp, exportImageSliceToPdf, generatedReportAt, message?.query, message?.metadata?.reportLength, message?.metadata?.reportDepth, content]);
+  }, [contentToProcess, status, isExportingPdf, message, content, extractedSources, sources, timestamp]);
 
   // Determine if the message has sources to display
   const displaySources = extractedSources.length > 0 ? extractedSources : (Array.isArray(sources) ? sources : []);
@@ -2422,239 +2343,189 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
   // Handle deep research message type
   if (type === 'deep-research') {
+    const queryLabel = message.query || content || t('chat.labels.yourQuery');
+    const progressPercent = typeof message.progress === 'number' ? message.progress : null;
+    const agentCount = message.metadata?.agentCount
+      ?? (Array.isArray(message.agentResults) ? message.agentResults.length : null)
+      ?? (Array.isArray(message.subQuestions) ? message.subQuestions.length : null);
+    const reportLength = message.metadata?.reportLength || 'standard';
+    const reportDepth = message.metadata?.reportDepth || 'standard';
+
     let deepResearchContent;
     if (status === 'loading') {
+      const step = message.statusMessage || t('chat.research.initializing');
       deepResearchContent = (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <SpinnerIcon />
-            <span>{t('chat.research.performing')}</span>
-          </div>
-          <div style={{ fontSize: '0.9em', opacity: 0.7 }}>
-            {t('chat.labels.query')}: "{message.query || content || t('chat.labels.yourQuery')}"
-          </div>
-          {message.progress !== undefined && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85em', opacity: 0.8 }}>
-                  {message.statusMessage || t('chat.research.initializing')}
-                </span>
-                <span style={{ fontSize: '0.8em', opacity: 0.6 }}>
-                  {message.progress}%
-                </span>
+        <DRCard>
+          <DRLoadingBody>
+            <DROrbit>
+              <span className="ring" />
+              <span className="ring inner" />
+              <span className="track"><span className="orb" /></span>
+              <span className="track reverse"><span className="orb" /></span>
+              <span className="track slow"><span className="orb" /></span>
+              <div className="core">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-3.5-3.5" />
+                </svg>
               </div>
-              <div style={{
-                width: '100%',
-                height: '4px',
-                backgroundColor: theme.border || '#e0e0e0',
-                borderRadius: '2px',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  width: `${message.progress || 0}%`,
-                  height: '100%',
-                  backgroundColor: theme.primary || '#007bff',
-                  transition: 'width 0.3s ease',
-                  borderRadius: '2px'
-                }} />
+            </DROrbit>
+            <DRLoadingText>
+              <div className="title">
+                {progressPercent !== null && progressPercent > 0
+                  ? `Researching · ${Math.min(99, Math.round(progressPercent))}%`
+                  : t('chat.research.performing')}
               </div>
-            </div>
-          )}
-        </div>
+              <div className="step">{step}</div>
+              <DRShimmerBar $progress={progressPercent || 12}>
+                <div className="fill" />
+              </DRShimmerBar>
+              <div className="query">"{queryLabel}"</div>
+            </DRLoadingText>
+          </DRLoadingBody>
+        </DRCard>
       );
     } else if (status === 'completed' && content) {
+      const metaLine = [
+        agentCount ? `${agentCount} agent${agentCount === 1 ? '' : 's'}` : null,
+        `${reportLength} · ${reportDepth}`,
+        displaySources.length > 0 ? `${displaySources.length} source${displaySources.length === 1 ? '' : 's'}` : null
+      ].filter(Boolean).join(' · ');
+
+      const hasQualityIssues = Array.isArray(message.qualityIssues) && message.qualityIssues.length > 0;
+      const hasSubQuestions = Array.isArray(message.subQuestions) && message.subQuestions.length > 0;
+      const hasModels = !!message.metadata?.models;
+
       deepResearchContent = (
-        <>
-          <div style={{ marginBottom: '16px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path>
+        <DRCard>
+          <DRResultBadgeRow>
+            <DRBadge>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2l2.5 6.5L21 11l-5 3.5L17.5 21 12 17l-5.5 4L8 14.5 3 11l6.5-2.5z" />
               </svg>
-              {t('chat.research.results')}
-            </div>
-            {message.subQuestions && message.subQuestions.length > 0 && (
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{ fontSize: '0.9em', fontWeight: '500', marginBottom: '6px', opacity: 0.8 }}>
-                  {t('chat.research.questionsLabel', { count: message.subQuestions.length })}
+              Deep Research
+            </DRBadge>
+            {metaLine && <DRMetaInline>{metaLine}</DRMetaInline>}
+            {(hasSubQuestions || hasModels || hasQualityIssues) && (
+              <DRDetailsToggle
+                $open={deepResearchDetailsOpen}
+                onClick={() => setDeepResearchDetailsOpen((v) => !v)}
+                aria-expanded={deepResearchDetailsOpen}
+              >
+                {deepResearchDetailsOpen ? 'Hide details' : 'Research details'}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </DRDetailsToggle>
+            )}
+          </DRResultBadgeRow>
+
+          {deepResearchDetailsOpen && (
+            <DRDetailsPanel>
+              {hasModels && (
+                <div className="dr-details-section">
+                  <div className="dr-details-label">Pipeline</div>
+                  <div className="dr-details-row">
+                    <div className="dr-kv"><span className="k">Planner</span><span className="v">{message.metadata.models.planner || '—'}</span></div>
+                    <div className="dr-kv"><span className="k">Researcher</span><span className="v">{message.metadata.models.researcher || '—'}</span></div>
+                    <div className="dr-kv"><span className="k">Writer</span><span className="v">{message.metadata.models.writer || '—'}</span></div>
+                    <div className="dr-kv"><span className="k">Length</span><span className="v" style={{ textTransform: 'capitalize' }}>{reportLength}</span></div>
+                    <div className="dr-kv"><span className="k">Depth</span><span className="v" style={{ textTransform: 'capitalize' }}>{reportDepth}</span></div>
+                    <div className="dr-kv"><span className="k">Agents</span><span className="v">{agentCount ?? '—'}</span></div>
+                  </div>
                 </div>
-                <ul style={{
-                  margin: '0',
-                  paddingLeft: '20px',
-                  fontSize: '0.85em',
-                  opacity: 0.7,
-                  lineHeight: '1.4'
-                }}>
-                  {message.subQuestions.map((question, index) => (
-                    <li key={index} style={{ marginBottom: '4px' }}>{question}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {message.agentResults && message.agentResults.length > 0 && (
-              <div style={{ fontSize: '0.85em', opacity: 0.7, marginBottom: '12px' }}>
-                {t('chat.research.analyzedBy', { count: message.agentResults.length })}
-              </div>
-            )}
-            {message.metadata?.models && (
-              <div style={{
-                marginBottom: '12px',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                background: theme.inputBackground || 'rgba(0,0,0,0.04)',
-                border: `1px solid ${theme.border || 'rgba(0,0,0,0.1)'}`,
-                fontSize: '0.82em',
-                lineHeight: '1.5',
-                opacity: 0.86
-              }}>
-                <div>Planner: {message.metadata.models.planner || 'N/A'}</div>
-                <div>Research agents: {message.metadata.models.researcher || 'N/A'}</div>
-                <div>Writer: {message.metadata.models.writer || 'N/A'}</div>
-                {message.metadata.reportLength && (
-                  <div>Report length: {message.metadata.reportLength}</div>
-                )}
-                {message.metadata.reportDepth && (
-                  <div>Report depth: {message.metadata.reportDepth}</div>
-                )}
-                {message.metadata.agentCount && (
-                  <div>Agents used: {message.metadata.agentCount}</div>
-                )}
-              </div>
-            )}
-            {Array.isArray(message.qualityIssues) && message.qualityIssues.length > 0 && (
-              <div style={{
-                marginBottom: '12px',
-                padding: '10px 12px',
-                borderRadius: '8px',
-                background: '#7f1d1d1f',
-                border: '1px solid #ef444466',
-                fontSize: '0.82em',
-                lineHeight: '1.4'
-              }}>
-                Quality notes: {message.qualityIssues.join(' | ')}
-              </div>
-            )}
-          </div>
-          <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+              )}
+              {hasSubQuestions && (
+                <div className="dr-details-section">
+                  <div className="dr-details-label">Research plan ({message.subQuestions.length})</div>
+                  <ul className="dr-sub-list">
+                    {message.subQuestions.map((question, index) => (
+                      <li key={`sq-${index}`}>{question}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {hasQualityIssues && (
+                <div className="dr-details-section">
+                  <div className="dr-details-label">Quality notes</div>
+                  <div className="dr-quality">{message.qualityIssues.join(' · ')}</div>
+                </div>
+              )}
+            </DRDetailsPanel>
+          )}
+
+          <DRBody>
             {robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, theme)}
-          </div>
-        </>
+          </DRBody>
+
+          {status === 'completed' && content && (
+            <DRActionBar>
+              <DRActionPill
+                $primary
+                onClick={handleExportDeepResearchPdf}
+                disabled={isExportingPdf}
+                title="Export this deep research report as a branded PDF"
+              >
+                {isExportingPdf ? (
+                  <DRSpinIcon xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 12a9 9 0 1 1-6.2-8.5" />
+                  </DRSpinIcon>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <path d="M9 15v-3" />
+                    <path d="M12 15v-4" />
+                    <path d="M15 15v-2" />
+                  </svg>
+                )}
+                {isExportingPdf ? 'Exporting…' : 'Export PDF'}
+              </DRActionPill>
+              <DRActionPill
+                onClick={() => navigator.clipboard.writeText(content).then(() => console.log('Research results copied'))}
+                title="Copy the report text"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                Copy
+              </DRActionPill>
+              {displaySources.length > 0 && (
+                <DRActionPill
+                  onClick={() => {
+                    if (!deepResearchDetailsOpen) setDeepResearchDetailsOpen(true);
+                    const first = displaySources[0];
+                    if (first?.url) openExternalUrl(first.url);
+                  }}
+                  title={`View top source (${displaySources.length} total)`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                  {displaySources.length} sources
+                </DRActionPill>
+              )}
+            </DRActionBar>
+          )}
+        </DRCard>
       );
     } else if (status === 'error') {
       deepResearchContent = (
-        <div>
-          <p style={{ fontWeight: 'bold', color: '#dc3545', marginBottom: '4px' }}>
+        <DRCard>
+          <p style={{ fontWeight: 600, color: '#dc2626', margin: '0 0 6px', fontSize: '0.92rem' }}>
             {t('chat.research.failed')}
           </p>
-          <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.query')}: "{message.query || content || t('chat.labels.yourQuery')}"</p>
-          {(message.errorMessage || message.content) && <p style={{ margin: '4px 0', opacity: 0.85 }}>{t('chat.labels.error')}: {message.errorMessage || message.content}</p>}
-        </div>
+          <p style={{ margin: '4px 0', opacity: 0.85, fontSize: '0.85rem' }}>{t('chat.labels.query')}: "{queryLabel}"</p>
+          {(message.errorMessage || message.content) && (
+            <p style={{ margin: '4px 0', opacity: 0.85, fontSize: '0.85rem' }}>
+              {t('chat.labels.error')}: {message.errorMessage || message.content}
+            </p>
+          )}
+        </DRCard>
       );
     }
-
-    const exportQueryText = (message.query || content || '').toString().trim();
-    const deepResearchExportTemplate = status === 'completed' && content ? (
-      <DeepResearchExportTemplate ref={deepResearchExportRef}>
-        <DRExportAccentBar />
-        <DRExportHeader>
-          <DRExportLogo src="/images/sculptor.svg" alt="Sculptor AI" />
-          <DRExportTitle>
-            <DRExportEyebrow>Sculptor AI · Deep Research</DRExportEyebrow>
-            <DRExportTitleMain>
-              {exportQueryText
-                ? exportQueryText.length > 140
-                  ? `${exportQueryText.slice(0, 140)}…`
-                  : exportQueryText
-                : 'Deep Research Report'}
-            </DRExportTitleMain>
-            <DRExportTitleSub>
-              Synthesized multi-agent investigation with verified citations.
-            </DRExportTitleSub>
-          </DRExportTitle>
-        </DRExportHeader>
-
-        <DRExportMetadata>
-          <DRExportMetadataItem>
-            <DRExportMetadataLabel>Generated</DRExportMetadataLabel>
-            <DRExportMetadataValue>{generatedReportAt || 'Just now'}</DRExportMetadataValue>
-          </DRExportMetadataItem>
-          <DRExportMetadataItem>
-            <DRExportMetadataLabel>Length · Depth</DRExportMetadataLabel>
-            <DRExportMetadataValue style={{ textTransform: 'capitalize' }}>
-              {(message.metadata?.reportLength || 'standard')} · {(message.metadata?.reportDepth || 'standard')}
-            </DRExportMetadataValue>
-          </DRExportMetadataItem>
-          <DRExportMetadataItem>
-            <DRExportMetadataLabel>Planner</DRExportMetadataLabel>
-            <DRExportMetadataValue>{message.metadata?.models?.planner || 'Auto'}</DRExportMetadataValue>
-          </DRExportMetadataItem>
-          <DRExportMetadataItem>
-            <DRExportMetadataLabel>Researcher</DRExportMetadataLabel>
-            <DRExportMetadataValue>{message.metadata?.models?.researcher || 'Auto'}</DRExportMetadataValue>
-          </DRExportMetadataItem>
-          <DRExportMetadataItem>
-            <DRExportMetadataLabel>Writer</DRExportMetadataLabel>
-            <DRExportMetadataValue>{message.metadata?.models?.writer || 'Auto'}</DRExportMetadataValue>
-          </DRExportMetadataItem>
-          <DRExportMetadataItem>
-            <DRExportMetadataLabel>Agents</DRExportMetadataLabel>
-            <DRExportMetadataValue>
-              {message.metadata?.agentCount ?? (Array.isArray(message.agentResults) ? message.agentResults.length : 'N/A')}
-              {displaySources.length > 0 ? ` · ${displaySources.length} sources` : ''}
-            </DRExportMetadataValue>
-          </DRExportMetadataItem>
-        </DRExportMetadata>
-
-        {message.subQuestions && message.subQuestions.length > 0 && (
-          <DRExportSection>
-            <DRExportSectionTitle>Research plan</DRExportSectionTitle>
-            <DRExportQuestionList>
-              {message.subQuestions.map((question, index) => (
-                <li key={`export-question-${index}`}>{question}</li>
-              ))}
-            </DRExportQuestionList>
-          </DRExportSection>
-        )}
-
-        {Array.isArray(message.qualityIssues) && message.qualityIssues.length > 0 && (
-          <DRExportSection>
-            <DRExportSectionTitle>Quality notes</DRExportSectionTitle>
-            <DRExportQualityBox>
-              {message.qualityIssues.join(' · ')}
-            </DRExportQualityBox>
-          </DRExportSection>
-        )}
-
-        <DRExportSection>
-          <DRExportSectionTitle>Report</DRExportSectionTitle>
-          <DRExportBody>
-            {robustFormatContent(contentToProcess, isLanguageExecutable, supportedLanguages, printableTheme)}
-          </DRExportBody>
-        </DRExportSection>
-
-        {displaySources.length > 0 && (
-          <DRExportSection>
-            <DRExportSectionTitle>Sources ({displaySources.length})</DRExportSectionTitle>
-            <DRExportSources>
-              {displaySources.map((source, index) => {
-                const domain = (() => {
-                  try { return new URL(source.url).hostname.replace(/^www\./, ''); }
-                  catch { return ''; }
-                })();
-                return (
-                  <DRExportSourceItem key={`export-source-${index}`}>
-                    <strong>{source.title || domain || 'Untitled source'}</strong>
-                    {domain ? <span className="dr-source-domain">{domain}</span> : null}
-                    <div style={{ fontSize: '0.78rem', color: '#64748b', wordBreak: 'break-all', marginTop: '2px' }}>
-                      {source.url}
-                    </div>
-                  </DRExportSourceItem>
-                );
-              })}
-            </DRExportSources>
-          </DRExportSection>
-        )}
-      </DeepResearchExportTemplate>
-    ) : null;
 
     return (
       <Message $alignment={messageAlignment}>
@@ -2671,14 +2542,13 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
         <MessageWrapper role={role} $alignment={messageAlignment}>
           <Content role={role} $alignment={messageAlignment} className={`chat-message chat-message--${role}`}>
             {deepResearchContent}
-            {deepResearchExportTemplate}
-            {/* Show sources if available */}
+            {/* Show sources chips below the card (unchanged behavior) */}
             {hasSources && status === 'completed' && (
               <SourcesContainer>
                 {displaySources.map((source, index) => (
                   <SourceButton
                     key={index}
-                  onClick={() => openExternalUrl(source.url)}
+                    onClick={() => openExternalUrl(source.url)}
                     title={source.title}
                   >
                     <SourceFavicon
@@ -2698,30 +2568,6 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
             {timestamp && settings.showTimestamps && (status === 'completed' || status === 'error') && (
               <MessageActions role={role} $alignment={messageAlignment}>
                 <Timestamp>{formatTimestamp(timestamp)}</Timestamp>
-                {status === 'completed' && content && (
-                  <>
-                    <div style={{ flexGrow: 1 }}></div>
-                    <ActionButton onClick={handleExportDeepResearchPdf} disabled={isExportingPdf} title="Export this deep research report as PDF">
-                      {isExportingPdf ? (
-                        <LoadingDots />
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                          <polyline points="7 10 12 15 17 10"></polyline>
-                          <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                      )}
-                      {isExportingPdf ? 'Exporting…' : 'Export PDF'}
-                    </ActionButton>
-                    <ActionButton onClick={() => navigator.clipboard.writeText(content).then(() => console.log('Research results copied'))}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                      </svg>
-                      {t('chat.actions.copyResults')}
-                    </ActionButton>
-                  </>
-                )}
               </MessageActions>
             )}
           </Content>
