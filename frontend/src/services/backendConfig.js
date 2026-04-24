@@ -104,31 +104,3 @@ export const getBackendApiBase = () => {
 };
 
 export const getRemoteBackendHost = () => getRemoteRoot();
-
-const toWebSocketUrl = (httpBase) => {
-  if (httpBase.startsWith('https://')) {
-    return httpBase.replace('https://', 'wss://');
-  }
-
-  if (httpBase.startsWith('http://')) {
-    return httpBase.replace('http://', 'ws://');
-  }
-
-  return httpBase;
-};
-
-const getCurrentOriginBase = () => {
-  if (typeof window === 'undefined' || !window.location) {
-    return 'http://localhost:3000';
-  }
-
-  return `${window.location.protocol}//${window.location.host}`;
-};
-
-export const getBackendLiveSocketUrl = () => {
-  const base = shouldUseRealBackend()
-    ? (getRemoteRoot() || getCurrentOriginBase())
-    : getCurrentOriginBase();
-
-  return `${toWebSocketUrl(base)}/api/v1/live`;
-};

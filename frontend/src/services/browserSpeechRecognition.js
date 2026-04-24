@@ -19,7 +19,7 @@ export const getSpeechInputLabel = (mode) => {
     case 'browser':
       return 'Browser speech';
     default:
-      return 'Gemini audio';
+      return 'Speech input unavailable';
   }
 };
 
@@ -29,8 +29,8 @@ export const detectSpeechRecognitionSupport = async (language = 'en-US') => {
   if (!SpeechRecognition) {
     return {
       supported: false,
-      mode: 'gemini',
-      label: getSpeechInputLabel('gemini'),
+      mode: 'unsupported',
+      label: getSpeechInputLabel('unsupported'),
       onDeviceAvailability: 'unsupported',
       canInstall: false,
       canProcessLocally: false

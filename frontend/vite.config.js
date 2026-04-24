@@ -60,6 +60,7 @@ export default defineConfig(({ mode }) => {
     'https://api.allorigins.win',
     'https://huggingface.co',
     'https://cdn-lfs.huggingface.co',
+    'https://*.xethub.hf.co',
     'https://cdn.jsdelivr.net',
   ]);
 

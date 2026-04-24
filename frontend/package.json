@@ -17,6 +17,7 @@
     "jspdf": "^2.5.2",
     "katex": "^0.16.22",
     "kokoro-js": "^1.2.1",
+    "lucide-react": "^1.11.0",
     "mammoth": "^1.12.0",
     "mathlive": "^0.108.3",
     "pdfjs-dist": "^4.8.69",

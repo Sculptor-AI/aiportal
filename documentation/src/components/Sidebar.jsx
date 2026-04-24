@@ -33,12 +33,6 @@ const NAV_STRUCTURE = [
             { path: '/docs/API_DOCUMENTATION.md', label: 'API Reference', icon: Code },
             { path: '/docs/MODEL_CONFIG.md', label: 'Model Configuration', icon: Settings },
         ]
-    },
-    {
-        title: 'Gemini Live',
-        items: [
-            { path: '/docs/GEMINI_LIVE_API_README.md', label: 'Gemini Live API', icon: Code },
-        ]
     }
 
 ];

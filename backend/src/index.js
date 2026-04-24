@@ -18,7 +18,6 @@ import videoRoutes from './routes/video.js';
 import researchRoutes from './routes/research.js';
 import gamesRoutes from './routes/games.js';
 import staticRoutes from './routes/static.js';
-// Note: Gemini Live WebSocket is handled directly in worker.js
 
 // State module (user data now in KV)
 import './state.js';
@@ -62,8 +61,6 @@ app.route('/api', researchRoutes);
 
 // Game leaderboards and stats
 app.route('/api/games', gamesRoutes);
-
-// Note: Gemini Live WebSocket (/api/v1/live) is handled in worker.js
 
 // Static Assets & SPA Fallback (must be last)
 app.route('', staticRoutes);

@@ -752,6 +752,8 @@ const ChatWindow = forwardRef(({
       {isLiveModeOpen && (
         <LiveModeUI
           selectedModel={selectedModel}
+          availableModels={availableModels}
+          onModelChange={handleModelChange}
           onClose={handleCloseLiveMode}
         />
       )}
