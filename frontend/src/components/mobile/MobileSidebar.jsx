@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled, { withTheme } from 'styled-components';
 import { useTranslation } from '../../contexts/TranslationContext';
 import ModelIcon from '../ModelIcon';
+import { createSharedChat, getSharedChatUrl } from '../../services/shareService';
 
 const SidebarOverlay = styled.div`
   position: fixed;
@@ -257,8 +258,6 @@ const MobileSidebar = ({
 }) => {
   const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
-  const [showShareModal, setShowShareModal] = useState(null);
-  const [shareLink, setShareLink] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -282,10 +281,16 @@ const MobileSidebar = ({
     deleteChat(chatId);
   };
 
-  const handleShareChat = async (e, chatId) => {
+  const handleShareChat = async (e, chat) => {
     e.stopPropagation();
-    const shareUrl = `${window.location.origin}/share-view?id=${chatId}`;
+
+    if (!chat) {
+      return;
+    }
+
     try {
+      const result = await createSharedChat(chat);
+      const shareUrl = getSharedChatUrl(result);
       await navigator.clipboard.writeText(shareUrl);
       alert(t('sidebar.copySuccess'));
     } catch (err) {
@@ -367,7 +372,7 @@ const MobileSidebar = ({
                   <ChatPreview>{getLastMessage(chat)}</ChatPreview>
                 </ChatItemContent>
                 <ChatActions>
-                  <ActionButton onClick={(e) => handleShareChat(e, chat.id)}>
+                  <ActionButton onClick={(e) => handleShareChat(e, chat)}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                   </ActionButton>
                   <ActionButton onClick={(e) => handleDeleteChat(e, chat.id)}>

@@ -56,6 +56,35 @@ export const buildAuthHeaders = () => {
   return { Authorization: `Bearer ${token}` };
 };
 
+const normalizePublicShareUrl = (rawUrl, fallbackPath) => {
+  const path = fallbackPath || '/';
+
+  if (typeof window === 'undefined') {
+    return rawUrl || path;
+  }
+
+  try {
+    if (rawUrl) {
+      const parsed = new URL(rawUrl, window.location.origin);
+      return `${window.location.origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+    }
+  } catch (error) {
+    console.warn('Could not normalize share URL:', error);
+  }
+
+  return `${window.location.origin}${path}`;
+};
+
+export const getSharedChatUrl = (shareResult) => normalizePublicShareUrl(
+  shareResult?.url,
+  shareResult?.id ? `/share/${encodeURIComponent(shareResult.id)}` : '/share'
+);
+
+export const getSharedArtifactUrl = (shareResult) => normalizePublicShareUrl(
+  shareResult?.url,
+  shareResult?.id ? `/artifact/${encodeURIComponent(shareResult.id)}` : '/artifact'
+);
+
 const parseJsonResponse = async (response) => {
   const data = await response.json().catch(() => ({}));
 

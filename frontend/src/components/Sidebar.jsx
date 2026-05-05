@@ -3,7 +3,7 @@ import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
-import { createSharedChat } from '../services/shareService';
+import { createSharedChat, getSharedChatUrl } from '../services/shareService';
 
 // Styled Components - Updated for Grok.com-inspired design
 const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
@@ -984,7 +984,7 @@ const Sidebar = ({
   const handleShareChat = async (chat) => {
     try {
       const result = await createSharedChat(chat);
-      const shareUrl = `${window.location.origin}/share/${result.id}`;
+      const shareUrl = getSharedChatUrl(result);
       await navigator.clipboard.writeText(shareUrl);
       setCopyStatus(t('sidebar.copySuccess'));
       setTimeout(() => setCopyStatus(''), 3000);

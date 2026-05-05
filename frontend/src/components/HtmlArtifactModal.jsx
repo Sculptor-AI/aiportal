@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { buildArtifactDocument, postArtifactChatResult } from '../utils/artifactBridge';
-import { createSharedArtifact, sendArtifactChat } from '../services/shareService';
+import { createSharedArtifact, getSharedArtifactUrl, sendArtifactChat } from '../services/shareService';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -196,7 +196,7 @@ const HtmlArtifactModal = ({
         sourceChatId,
         sourceMessageId
       });
-      const shareUrl = `${window.location.origin}/artifact/${result.id}`;
+      const shareUrl = getSharedArtifactUrl(result);
       await navigator.clipboard.writeText(shareUrl);
       setShareStatus('Link copied');
     } catch (error) {
