@@ -68,7 +68,7 @@ const useEasterEggs = () => {
 
             // For typed phrases (only when not in an input that matters)
             if (!isTyping || activeEl?.dataset?.allowEasterEggs) {
-                const key = e.key.toLowerCase();
+                const key = typeof e.key === 'string' ? e.key.toLowerCase() : '';
                 if (key.length === 1) {
                     typedKeysRef.current += key;
 
