@@ -31,7 +31,7 @@ health.get('/models', (c) => {
   
   // Format for API response - include capabilities for frontend
   const models = chatModels
-    .filter(m => m.provider === 'openai' && publicChatModelIds.has(m.id))
+    .filter(m => m.provider !== 'openai' || publicChatModelIds.has(m.id))
     .map(m => ({
       id: m.id,
       apiId: m.apiId,
@@ -42,7 +42,7 @@ health.get('/models', (c) => {
 
   return c.json({ 
     models,
-    _note: 'Public chat model list is intentionally limited to the latest GPT thinking and instant models.'
+    _note: 'OpenAI chat models are intentionally limited to the latest GPT thinking and instant models.'
   });
 });
 
