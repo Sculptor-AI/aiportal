@@ -518,6 +518,12 @@ export const fetchModelsFromBackend = async () => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         console.error('Error response from models endpoint:', errorData);
+        if (response.status === 401 || response.status === 403) {
+          try {
+            localStorage.removeItem('ai_portal_current_user');
+          } catch (_) {}
+          window.dispatchEvent(new CustomEvent('auth:session-expired'));
+        }
         throw new Error(errorData.error || 'Failed to fetch models from backend');
       }
       

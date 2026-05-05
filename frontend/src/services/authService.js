@@ -54,6 +54,17 @@ const fetchWithFallback = async (endpoint, options) => {
   }
 };
 
+const parseJsonResponse = async (response) => {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`Expected JSON response from backend but received ${response.status} ${response.statusText || ''}`.trim());
+  }
+};
+
 const persistCurrentUser = (sessionData) => {
   const user = {
     ...sessionData.user,
@@ -93,7 +104,7 @@ export const registerUser = async (username, password, email) => {
       })
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
 
     if (!response.ok) {
       throw new Error(data.error || 'Registration failed');
@@ -124,7 +135,7 @@ export const loginUser = async (username, password) => {
       })
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
 
     if (!response.ok) {
       throw new Error(data.error || 'Login failed');
@@ -171,7 +182,19 @@ export const logoutUser = async () => {
 // Check if user is logged in
 export const getCurrentUser = () => {
   const userJSON = localStorage.getItem('ai_portal_current_user');
-  return userJSON ? JSON.parse(userJSON) : null;
+  if (!userJSON) return null;
+
+  try {
+    const user = JSON.parse(userJSON);
+    if (!user?.accessToken) {
+      localStorage.removeItem('ai_portal_current_user');
+      return null;
+    }
+    return user;
+  } catch (error) {
+    localStorage.removeItem('ai_portal_current_user');
+    return null;
+  }
 };
 
 export const completeOAuthLogin = async (resultToken) => {
@@ -595,7 +618,7 @@ export const getImageModels = async () => {
     const response = await fetchWithFallback('/image/models', {
       method: 'GET'
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(data.error || 'Failed to fetch available image models');
     }
@@ -620,7 +643,7 @@ export const updateDeepResearchConfig = async (config) => {
       body: JSON.stringify(config)
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(data.error || 'Failed to update deep research config');
     }

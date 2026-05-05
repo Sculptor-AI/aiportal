@@ -311,6 +311,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   useEffect(() => {
     removeLocalStorageItem('cachedModels');
 
+    if (loading || !user?.accessToken) {
+      return undefined;
+    }
+
     const getBackendModels = async () => {
       const enabledCustomModels = getEnabledCustomModels();
 
@@ -319,10 +323,13 @@ const AppContent = ({ onSettingsLanguageChange }) => {
         const backendModels = await fetchModelsFromBackend();
 
         // Combine backend models with enabled custom models
-        const allModels = appendDeepResearchModel([
-          ...(backendModels || []),
-          ...enabledCustomModels
-        ]);
+        const backendModelList = Array.isArray(backendModels) ? backendModels : [];
+        const allModels = backendModelList.length > 0 || enabledCustomModels.length > 0
+          ? appendDeepResearchModel([
+            ...backendModelList,
+            ...enabledCustomModels
+          ])
+          : [];
 
         if (allModels.length > 0) {
           setAvailableModels(allModels);
@@ -336,15 +343,16 @@ const AppContent = ({ onSettingsLanguageChange }) => {
             console.log(`Set default model to: ${defaultModel}`);
           }
         } else {
-          // If no models available
-          console.warn('No models available');
+          console.warn('No backend models available for authenticated session');
           setAvailableModels([]);
           setSelectedModel(null);
         }
       } catch (error) {
         console.error('Failed to fetch models from backend:', error);
 
-        const allModels = appendDeepResearchModel(enabledCustomModels);
+        const allModels = enabledCustomModels.length > 0
+          ? appendDeepResearchModel(enabledCustomModels)
+          : [];
         setAvailableModels(allModels);
         if (allModels.length > 0 && !allModels.some(m => m.id === selectedModel)) {
           const defaultModel = getPreferredModelId(allModels);
@@ -371,7 +379,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       clearInterval(refreshInterval);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [loading, user?.accessToken, selectedModel]);
 
   // Settings - from user account or localStorage
   const [settings, setSettings] = useState(() => {
