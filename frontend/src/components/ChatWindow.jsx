@@ -6,7 +6,6 @@ import { useTranslation } from '../contexts/TranslationContext';
 import ChatMessage from './ChatMessage';
 import ModelSelector from './ModelSelector';
 import ImageModelSelector from './ImageModelSelector';
-import HtmlArtifactModal from './HtmlArtifactModal';
 import FileViewerModal from './FileViewerModal';
 import { useToast } from '../contexts/ToastContext';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -96,9 +95,6 @@ const ChatWindow = forwardRef(({
   const [editedTitle, setEditedTitle] = useState(chat?.title || 'New Conversation');
   const [uploadedFileData, setUploadedFileData] = useState(null);
   const [resetFileUpload, setResetFileUpload] = useState(false);
-  const [artifactHTML, setArtifactHTML] = useState(null);
-  const [artifactSourceMessageId, setArtifactSourceMessageId] = useState(null);
-  const [isArtifactModalOpen, setIsArtifactModalOpen] = useState(false);
   const [isFileViewerOpen, setIsFileViewerOpen] = useState(false);
   const [fileToView, setFileToView] = useState(null);
   const [animateDown, setAnimateDown] = useState(false);
@@ -602,29 +598,6 @@ const ChatWindow = forwardRef(({
   }, [chat?.id, initialSelectedModel, $sidebarCollapsed]);
 
   useEffect(() => {
-    if (chat && chat.messages && chat.messages.length > 0) {
-      const lastMsg = chat.messages[chat.messages.length - 1];
-      if (lastMsg.role === 'assistant' && lastMsg.content && !lastMsg.isLoading) {
-        const htmlMatch = lastMsg.content.match(/```html\r?\n([\s\S]*?)\r?\n```/);
-        if (htmlMatch && htmlMatch[1]) {
-          setArtifactHTML(htmlMatch[1]);
-          setArtifactSourceMessageId(lastMsg.id || null);
-          setIsArtifactModalOpen(true);
-        } else {
-          setArtifactHTML(null);
-          setArtifactSourceMessageId(null);
-        }
-      } else {
-        setArtifactHTML(null);
-        setArtifactSourceMessageId(null);
-      }
-    } else {
-      setArtifactHTML(null);
-      setArtifactSourceMessageId(null);
-    }
-  }, [chat?.messages]);
-
-  useEffect(() => {
     if (onAttachmentChange) {
       onAttachmentChange(!!uploadedFileData);
     }
@@ -808,14 +781,6 @@ const ChatWindow = forwardRef(({
         />
       )}
 
-      <HtmlArtifactModal
-        isOpen={isArtifactModalOpen}
-        onClose={() => setIsArtifactModalOpen(false)}
-        htmlContent={artifactHTML}
-        title={chat?.title || 'Sculptor artifact'}
-        sourceChatId={chat?.id}
-        sourceMessageId={artifactSourceMessageId}
-      />
       <FileViewerModal
         isOpen={isFileViewerOpen}
         onClose={() => {

@@ -165,7 +165,8 @@ const SharedArtifactView = () => {
       <ArtifactFrame
         ref={iframeRef}
         srcDoc={artifactDocument}
-        sandbox="allow-scripts allow-forms allow-popups"
+        sandbox="allow-scripts allow-forms"
+        referrerPolicy="no-referrer"
         title={artifact.title || 'Sculptor artifact'}
       />
     </Page>

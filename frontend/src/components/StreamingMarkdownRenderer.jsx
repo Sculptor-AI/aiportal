@@ -6,10 +6,16 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { processCodeBlocks } from '../utils/codeBlockProcessor';
 import CodeBlockWithExecution from './CodeBlockWithExecution';
 import useSupportedLanguages from '../hooks/useSupportedLanguages';
 import mermaid from 'mermaid';
+import { InlineHtmlArtifact, SideArtifactChip } from './ArtifactRenderer';
+import {
+  createArtifact,
+  extractArtifactSegments,
+  isInlineArtifactLanguage,
+  isSideArtifactLanguage
+} from '../utils/artifactParser';
 
 // Helper for generating IDs from header text
 const slugify = (text) => {
@@ -570,6 +576,15 @@ const MermaidArtifact = ({ chart, theme = {}, isStreaming = false }) => {
   );
 };
 
+const createArtifactFromCodeBlock = (language, codeContent, placement) => createArtifact({
+  rawContent: codeContent,
+  attributes: {
+    language: 'html'
+  },
+  fallbackPlacement: placement,
+  fallbackTitle: placement === 'inline' ? 'Inline artifact' : 'Artifact'
+});
+
 const StreamingMarkdownRenderer = ({ 
   text = '', 
   isStreaming = false,
@@ -578,6 +593,7 @@ const StreamingMarkdownRenderer = ({
   enableCodeExecution = true
 }) => {
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
+  const artifactSegments = useMemo(() => extractArtifactSegments(text), [text]);
 
   if (!text) {
     return isStreaming && showCursor ? <Cursor $show={true} theme={theme}>|</Cursor> : null;
@@ -611,18 +627,29 @@ const StreamingMarkdownRenderer = ({
     td: props => <TableCell {...props} theme={theme} />,
     del: props => <Strikethrough {...props} theme={theme} />,
     code({node, inline, className, children, ...props}) {
-      const match = /language-(\w+)/.exec(className || '');
+      const match = /language-([^\s]+)/.exec(className || '');
       const language = match ? match[1] : '';
       if (!inline) {
         if (isMermaidLanguage(language)) {
           return <MermaidArtifact chart={children} theme={theme} isStreaming={isStreaming} />;
         }
 
+        const codeContent = String(children).replace(/\n$/, '');
+        if (isInlineArtifactLanguage(language)) {
+          const artifact = createArtifactFromCodeBlock(language, codeContent, 'inline');
+          return <InlineHtmlArtifact code={artifact.code} title={artifact.title} theme={theme} />;
+        }
+
+        if (isSideArtifactLanguage(language)) {
+          const artifact = createArtifactFromCodeBlock(language, codeContent, 'side');
+          return <SideArtifactChip code={artifact.code} title={artifact.title} theme={theme} />;
+        }
+
         if (enableCodeExecution && isLanguageExecutable && isLanguageExecutable(language)) {
           return (
             <CodeBlockWithExecution
               language={language}
-              content={String(children).replace(/\n$/, '')}
+              content={codeContent}
               theme={theme}
               supportedLanguages={supportedLanguages}
             />
@@ -632,7 +659,7 @@ const StreamingMarkdownRenderer = ({
           <CodeBlock key={`code-block-${Math.random()}`} theme={theme}>
             <CodeHeader theme={theme}>
               <CodeLanguage theme={theme}>{language}</CodeLanguage>
-              <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}>
+              <CopyButton theme={theme} onClick={() => navigator.clipboard.writeText(codeContent)}>
                 Copy
               </CopyButton>
             </CodeHeader>
@@ -654,12 +681,43 @@ const StreamingMarkdownRenderer = ({
       whiteSpace: 'normal',
       color: theme.text || '#000'
     }}>
-      <ReactMarkdown
-        children={text}
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
-        components={components}
-      />
+      {artifactSegments.map((segment, index) => {
+        if (segment.type === 'artifact') {
+          if (segment.placement === 'inline') {
+            return (
+              <InlineHtmlArtifact
+                key={segment.key || `inline-artifact-${index}`}
+                code={segment.code}
+                title={segment.title}
+                theme={theme}
+              />
+            );
+          }
+
+          return (
+            <SideArtifactChip
+              key={segment.key || `side-artifact-${index}`}
+              code={segment.code}
+              title={segment.title}
+              theme={theme}
+            />
+          );
+        }
+
+        if (!String(segment.content || '').trim()) {
+          return null;
+        }
+
+        return (
+          <ReactMarkdown
+            key={`markdown-${index}`}
+            children={segment.content}
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeKatex]}
+            components={components}
+          />
+        );
+      })}
       {isStreaming && showCursor && (
         <Cursor $show={true} theme={theme}>|</Cursor>
       )}
