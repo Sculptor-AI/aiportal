@@ -17,6 +17,7 @@ import imageRoutes from './routes/image.js';
 import videoRoutes from './routes/video.js';
 import researchRoutes from './routes/research.js';
 import gamesRoutes from './routes/games.js';
+import shareRoutes from './routes/shares.js';
 import staticRoutes from './routes/static.js';
 
 // State module (user data now in KV)
@@ -61,6 +62,9 @@ app.route('/api', researchRoutes);
 
 // Game leaderboards and stats
 app.route('/api/games', gamesRoutes);
+
+// Shareable chats and artifacts
+app.route('/api/shares', shareRoutes);
 
 // Static Assets & SPA Fallback (must be last)
 app.route('', staticRoutes);

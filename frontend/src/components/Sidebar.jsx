@@ -3,6 +3,7 @@ import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
+import { createSharedChat } from '../services/shareService';
 
 // Styled Components - Updated for Grok.com-inspired design
 const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
@@ -980,10 +981,10 @@ const Sidebar = ({
   const currentModel = availableModels.find(m => m.id === selectedModel);
 
   // Handle sharing a chat
-  const handleShareChat = async (chatId) => {
-    // Updated share functionality: copy a static link to the clipboard
-    const shareUrl = `${window.location.origin}/share-view?id=${chatId}`; // Use query param for ID
+  const handleShareChat = async (chat) => {
     try {
+      const result = await createSharedChat(chat);
+      const shareUrl = `${window.location.origin}/share/${result.id}`;
       await navigator.clipboard.writeText(shareUrl);
       setCopyStatus(t('sidebar.copySuccess'));
       setTimeout(() => setCopyStatus(''), 3000);
@@ -1318,7 +1319,7 @@ const Sidebar = ({
                         title={t('sidebar.button.share')}
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent chat selection
-                          handleShareChat(chat.id);
+                          handleShareChat(chat);
                         }}
                         $collapsed={$collapsed}
                       >

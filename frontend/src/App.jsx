@@ -15,6 +15,7 @@ import { getFontFamilyValue } from './styles/fontUtils';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import GlobalStylesProvider from './styles/GlobalStylesProvider';
 import SharedChatView from './components/SharedChatView';
+import SharedArtifactView from './components/SharedArtifactView';
 import { keyframes } from 'styled-components';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { TranslationProvider } from './contexts/TranslationContext';
@@ -1018,6 +1019,26 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     return { ...baseTheme, ...accentStyles, fontFamily: resolvedFontFamily };
   }, [settings.theme, settings.customTheme, settings.fontFamily, settings.accentColor]);
 
+  const isPublicSharedRoute =
+    location.pathname === '/share-view' ||
+    location.pathname.startsWith('/share/') ||
+    location.pathname.startsWith('/artifact/');
+
+  if (isPublicSharedRoute) {
+    return (
+      <ThemeProvider theme={currentTheme}>
+        <GlobalStylesProvider settings={settings} appTheme={currentTheme}>
+          <GlobalStyles />
+          <Routes>
+            <Route path="/share/:shareId" element={<SharedChatView />} />
+            <Route path="/share-view" element={<SharedChatView />} />
+            <Route path="/artifact/:artifactId" element={<SharedArtifactView />} />
+          </Routes>
+        </GlobalStylesProvider>
+      </ThemeProvider>
+    );
+  }
+
   // AUTHENTICATION CHECKS - After all hooks are declared
   // Show loading spinner while checking authentication
   if (loading) {
@@ -1048,17 +1069,6 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     }
 
     return isMobile ? <MobileForcedLoginScreen /> : <ForcedLoginScreen />;
-  }
-
-  // Check if we should render the shared view
-  if (window.location.pathname === '/share-view') {
-    return (
-      <ThemeProvider theme={currentTheme}>
-        <GlobalStylesProvider settings={settings} appTheme={currentTheme}>
-          <SharedChatView />
-        </GlobalStylesProvider>
-      </ThemeProvider>
-    );
   }
 
   // Debug info
