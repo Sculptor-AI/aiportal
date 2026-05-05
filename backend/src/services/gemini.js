@@ -285,6 +285,15 @@ function buildGeminiBody(body, targetModel = '') {
     tools.push({ codeExecution: {} });
   }
 
+  // Computer use is only enabled by the analysis tool pill.
+  if (body.computer_use) {
+    tools.push({
+      computerUse: {
+        environment: body.computer_environment || 'ENVIRONMENT_BROWSER'
+      }
+    });
+  }
+
   // URL context (fetch and include web page content)
   if (body.url_context) {
     tools.push({ urlContext: {} });

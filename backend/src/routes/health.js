@@ -83,6 +83,9 @@ health.get('/capabilities', async (c) => {
   const openAICodeExecutionModels = getModelsByCapability('openai', 'code_execution');
   const anthropicCodeExecutionModels = getModelsByCapability('anthropic', 'code_execution');
   const geminiCodeExecutionModels = getModelsByCapability('gemini', 'code_execution');
+  const openAIComputerUseModels = getModelsByCapability('openai', 'computer_use');
+  const anthropicComputerUseModels = getModelsByCapability('anthropic', 'computer_use');
+  const geminiComputerUseModels = getModelsByCapability('gemini', 'computer_use');
   const urlContextModels = chatModels
     .filter((model) => model.capabilities?.url_context)
     .map((model) => model.id);
@@ -149,7 +152,11 @@ health.get('/capabilities', async (c) => {
       },
 
       // Provider-specific features
-      computer_use: ['anthropic'],
+      computer_use: {
+        anthropic: anthropicComputerUseModels,
+        openai: openAIComputerUseModels,
+        gemini: geminiComputerUseModels
+      },
       citations: ['anthropic'],
       url_context: urlContextModels,
 

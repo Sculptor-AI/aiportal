@@ -128,7 +128,7 @@ const ChatInputArea = forwardRef(({
   const supportsNativeThinking =
     modelCapabilities?.reasoning_effort === true &&
     reasoningEffortLevels.length > 0;
-  const supportsCodeExecution = modelCapabilities?.code_execution === true;
+  const supportsComputerUse = modelCapabilities?.computer_use === true;
   const isDeepResearchSelected = selectedActionChip === 'deep-research';
   const isSearchSelected = selectedActionChip === 'search';
   const isAnalysisSelected = selectedActionChip === 'analysis-tool';
@@ -153,7 +153,7 @@ const ChatInputArea = forwardRef(({
       return [
         ...(supportsNativeThinking ? ['mode'] : []),
         'search',
-        ...(supportsCodeExecution ? ['analysis-tool'] : [])
+        ...(supportsComputerUse ? ['analysis-tool'] : [])
       ];
     }
 
@@ -161,14 +161,14 @@ const ChatInputArea = forwardRef(({
       ...(supportsNativeThinking ? ['mode'] : []),
       'search',
       'deep-research',
-      ...(supportsCodeExecution ? ['analysis-tool'] : []),
+      ...(supportsComputerUse ? ['analysis-tool'] : []),
       'create'
     ];
   }, [
     isCreateSelectionActive,
     isDeepResearchSelected,
     isFocusedToolMode,
-    supportsCodeExecution,
+    supportsComputerUse,
     supportsNativeThinking
   ]);
 
@@ -242,10 +242,10 @@ const ChatInputArea = forwardRef(({
   }, [reasoningEffortLevels, reasoningEffort, modelCapabilities?.reasoning_effort_default]);
 
   useEffect(() => {
-    if (!supportsCodeExecution && selectedActionChip === 'analysis-tool') {
+    if (!supportsComputerUse && selectedActionChip === 'analysis-tool') {
       setSelectedActionChip(null);
     }
-  }, [supportsCodeExecution, selectedActionChip]);
+  }, [supportsComputerUse, selectedActionChip]);
 
   useEffect(() => {
     if (selectedActionChip !== 'deep-research') {
@@ -779,7 +779,7 @@ const ChatInputArea = forwardRef(({
         </ActionChip>
       );
     } else if (type === 'analysis-tool') {
-      if (!supportsCodeExecution) {
+      if (!supportsComputerUse) {
         return null;
       }
 

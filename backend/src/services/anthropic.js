@@ -233,10 +233,10 @@ function convertToolsToAnthropic(tools, options = {}) {
         description: tool.function.description,
         input_schema: tool.function.parameters || { type: 'object', properties: {} }
       });
-    } else if (tool.type === 'computer_20241022' || tool.type === 'computer') {
+    } else if (tool.type === 'computer_20250124' || tool.type === 'computer_20241022' || tool.type === 'computer') {
       // Computer use tool
       anthropicTools.push({
-        type: 'computer_20241022',
+        type: 'computer_20250124',
         name: 'computer',
         display_width_px: tool.display_width_px || 1024,
         display_height_px: tool.display_height_px || 768,
@@ -420,6 +420,16 @@ function buildAnthropicBody(body) {
   if (body.code_execution && !tools.some(t => t.type === 'code_execution' || t.name === 'code_execution')) {
     tools.push({
       type: 'code_execution'
+    });
+  }
+
+  // Add computer use only when explicitly requested by the analysis tool pill.
+  if (body.computer_use && !tools.some(t => t.type === 'computer' || t.type === 'computer_20250124' || t.name === 'computer')) {
+    tools.push({
+      type: 'computer',
+      display_width_px: Math.min(Math.max(Number(body.computer_display_width) || 1024, 640), 1920),
+      display_height_px: Math.min(Math.max(Number(body.computer_display_height) || 768, 480), 1080),
+      display_number: 1
     });
   }
 
@@ -720,7 +730,7 @@ function createAnthropicStreamTransformer(encoder) {
 export async function handleAnthropicChat(c, body, apiKey) {
   const { anthropicBody, options } = buildAnthropicBody(body);
 
-  console.log(`Anthropic request for model: ${anthropicBody.model}, web_search: ${options.web_search}, code_execution: ${options.code_execution}, url_context: ${options.url_context}`);
+  console.log(`Anthropic request for model: ${anthropicBody.model}, web_search: ${options.web_search}, code_execution: ${options.code_execution}, computer_use: ${options.computer_use}, url_context: ${options.url_context}`);
 
   try {
     const response = await fetch(`${ANTHROPIC_BASE_URL}/messages`, {

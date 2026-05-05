@@ -186,6 +186,15 @@ function buildOpenAIResponsesBody(body) {
     });
   }
 
+  if (body.computer_use) {
+    tools.push({
+      type: 'computer_use_preview',
+      display_width: Math.min(Math.max(Number(body.computer_display_width) || 1024, 640), 1920),
+      display_height: Math.min(Math.max(Number(body.computer_display_height) || 768, 480), 1080),
+      environment: body.computer_environment || 'browser'
+    });
+  }
+
   const requestBody = {
     model,
     input,
@@ -498,7 +507,7 @@ export async function handleOpenAIChat(c, body, apiKey) {
   const openAIBody = buildOpenAIResponsesBody(body);
 
   console.log(
-    `OpenAI Responses request for model: ${openAIBody.model}, web_search=${body.web_search === true}, code_execution=${body.code_execution === true}`
+    `OpenAI Responses request for model: ${openAIBody.model}, web_search=${body.web_search === true}, code_execution=${body.code_execution === true}, computer_use=${body.computer_use === true}`
   );
 
   try {

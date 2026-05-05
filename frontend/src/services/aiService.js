@@ -173,6 +173,11 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       requestPayload.code_execution = true;
     }
 
+    // The analysis tool pill maps to native computer use.
+    if (requestOptions?.computerUse === true) {
+      requestPayload.computer_use = true;
+    }
+
     // Log the model and system prompt for debugging custom models
     if (systemPrompt) {
       console.log('[sendMessageToBackendStream] Using custom model with system prompt');

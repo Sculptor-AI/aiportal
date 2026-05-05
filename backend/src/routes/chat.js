@@ -62,6 +62,7 @@ function validateToolRequest(provider, body, c) {
   const requestedTools = {
     web_search: body.web_search === true,
     code_execution: body.code_execution === true,
+    computer_use: body.computer_use === true,
     url_context: body.url_context === true
   };
   
@@ -71,7 +72,7 @@ function validateToolRequest(provider, body, c) {
     return null; // No tools requested, valid
   }
   
-  const validation = validateToolsForProvider(provider, requestedTools);
+  const validation = validateToolsForProvider(provider, requestedTools, body.model);
   
   if (!validation.valid) {
     return c.json({
@@ -119,7 +120,7 @@ chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
       requested: { turns: 1 }
     });
 
-    console.log(`Chat request: model=${modelId}, provider=${provider}, web_search=${body.web_search}, code_execution=${body.code_execution}`);
+    console.log(`Chat request: model=${modelId}, provider=${provider}, web_search=${body.web_search}, code_execution=${body.code_execution}, computer_use=${body.computer_use}`);
 
     if (!usageEvaluation.allowed) {
       return c.json({

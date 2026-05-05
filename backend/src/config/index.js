@@ -214,6 +214,23 @@ export function getProviderCapabilities(provider) {
   return config.capabilities || {};
 }
 
+export function getCapabilitiesForModel(provider, modelNameOrApiId) {
+  const providerConfig = modelsConfig.chat?.[provider];
+  if (!providerConfig) return {};
+
+  const baseCapabilities = providerConfig.capabilities || {};
+  const modelCapabilities = providerConfig.modelCapabilities || {};
+  const modelMap = providerConfig.models || {};
+  const displayName = modelMap[modelNameOrApiId]
+    ? modelNameOrApiId
+    : Object.keys(modelMap).find((name) => modelMap[name] === modelNameOrApiId);
+
+  return {
+    ...baseCapabilities,
+    ...(displayName ? (modelCapabilities[displayName] || {}) : {})
+  };
+}
+
 /**
  * Check if a provider supports a specific capability
  */
@@ -226,8 +243,10 @@ export function providerSupports(provider, capability) {
  * Validate requested tools against provider capabilities
  * Returns { valid: boolean, errors: string[], supported: string[] }
  */
-export function validateToolsForProvider(provider, requestedTools) {
-  const capabilities = getProviderCapabilities(provider);
+export function validateToolsForProvider(provider, requestedTools, modelNameOrApiId = null) {
+  const capabilities = modelNameOrApiId
+    ? getCapabilitiesForModel(provider, modelNameOrApiId)
+    : getProviderCapabilities(provider);
   const errors = [];
   const supported = [];
   const requested = [];
@@ -247,6 +266,15 @@ export function validateToolsForProvider(provider, requestedTools) {
       supported.push('code_execution');
     } else {
       errors.push(`Code execution is not supported by ${provider} models. This feature is available only on providers configured with code execution support.`);
+    }
+  }
+
+  if (requestedTools.computer_use) {
+    requested.push('computer_use');
+    if (capabilities.computer_use) {
+      supported.push('computer_use');
+    } else {
+      errors.push(`Computer use is not supported by ${provider} models.`);
     }
   }
   

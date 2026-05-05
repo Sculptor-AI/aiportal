@@ -405,9 +405,9 @@ const useMessageSender = ({
     const supportsReasoningEffort =
       currentModelObj?.capabilities?.reasoning_effort === true &&
       reasoningEffortLevels.length > 1;
-    const supportsCodeExecution = currentModelObj?.capabilities?.code_execution === true;
+    const supportsComputerUse = currentModelObj?.capabilities?.computer_use === true;
     const normalizedActionChip =
-      actionChip === 'analysis-tool' && !supportsCodeExecution
+      actionChip === 'analysis-tool' && !supportsComputerUse
         ? null
         : actionChip;
     const thinkingEnabled = thinkingMode === 'thinking' && supportsReasoningEffort;
@@ -427,7 +427,8 @@ const useMessageSender = ({
     const providerHint = resolveProviderHint(currentModelObj, availableModels || []);
     const requestOptions = {
       ...(providerHint ? { provider: providerHint } : {}),
-      ...(selectedReasoningEffort ? { reasoningEffort: selectedReasoningEffort } : {})
+      ...(selectedReasoningEffort ? { reasoningEffort: selectedReasoningEffort } : {}),
+      ...(normalizedActionChip === 'analysis-tool' ? { computerUse: true } : {})
     };
 
     // All models now go through backend API - no local API key validation needed
@@ -689,10 +690,10 @@ const useMessageSender = ({
 
         // UNIFIED LOGIC: All models are sent through the sendMessage generator,
         // which handles routing to the backend. The isBackendModel check is removed.
-        // Action chips: 'search' = web_search, 'analysis-tool' = code_execution
+        // Action chips: 'search' = web_search, 'analysis-tool' = computer_use
         const messageGenerator = sendMessage(
           messageToSend, modelIdForApi, formattedHistory, imageDataToSend, fileTextToSend,
-          normalizedActionChip === 'search', normalizedActionChip === 'analysis-tool', normalizedActionChip === 'create-image',
+          normalizedActionChip === 'search', false, normalizedActionChip === 'create-image',
           systemPromptToUse,
           requestOptions
         );

@@ -37,6 +37,7 @@
       "capabilities": {
         "web_search": true,
         "code_execution": true,
+        "computer_use": false,
         "url_context": false
       }
     },
@@ -77,6 +78,7 @@
       "capabilities": {
         "web_search": true,
         "code_execution": true,
+        "computer_use": true,
         "url_context": true
       }
     },
@@ -107,7 +109,8 @@
             "high"
           ],
           "reasoning_effort_default": "high",
-          "thinking_style": "level"
+          "thinking_style": "level",
+          "computer_use": true
         },
         "gemini-3.1-flash-lite": {
           "reasoning_effort": true,
@@ -124,6 +127,7 @@
       "capabilities": {
         "web_search": true,
         "code_execution": true,
+        "computer_use": false,
         "url_context": true
       }
     }

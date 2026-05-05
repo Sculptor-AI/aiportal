@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
@@ -9,6 +9,7 @@ import rehypeKatex from 'rehype-katex';
 import { processCodeBlocks } from '../utils/codeBlockProcessor';
 import CodeBlockWithExecution from './CodeBlockWithExecution';
 import useSupportedLanguages from '../hooks/useSupportedLanguages';
+import mermaid from 'mermaid';
 
 // Helper for generating IDs from header text
 const slugify = (text) => {
@@ -329,6 +330,18 @@ const HorizontalRule = styled.hr`
   border-radius: 1px;
 `;
 
+const InlineArtifact = styled.div`
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  color: ${props => props.theme.text};
+
+  svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+`;
+
 const Cursor = styled.span`
   opacity: ${props => props.$show ? 1 : 0};
   transition: opacity 0.1s ease-in-out;
@@ -345,6 +358,75 @@ const Strikethrough = styled.del`
   text-decoration: line-through;
   color: ${props => props.theme.text};
 `;
+
+const isMermaidLanguage = (language) => (
+  ['mermaid', 'mmd'].includes(String(language || '').toLowerCase())
+);
+
+const MermaidArtifact = ({ chart, theme = {} }) => {
+  const [svg, setSvg] = useState('');
+  const [error, setError] = useState('');
+  const id = useMemo(() => `mermaid-${Math.random().toString(36).slice(2)}`, [chart]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const source = String(chart || '').trim();
+
+    if (!source) {
+      setSvg('');
+      setError('');
+      return;
+    }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: theme?.isDark ? 'dark' : 'default'
+    });
+
+    mermaid.render(id, source)
+      .then(({ svg: renderedSvg }) => {
+        if (!cancelled) {
+          setSvg(renderedSvg);
+          setError('');
+        }
+      })
+      .catch((renderError) => {
+        if (!cancelled) {
+          setSvg('');
+          setError(renderError?.message || 'Unable to render diagram');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chart, id, theme?.isDark]);
+
+  if (error) {
+    return (
+      <CodeBlock theme={theme}>
+        <CodeHeader theme={theme}>
+          <CodeLanguage theme={theme}>mermaid</CodeLanguage>
+        </CodeHeader>
+        <Pre theme={theme}>
+          <code style={{ color: theme.text }}>{chart}</code>
+        </Pre>
+      </CodeBlock>
+    );
+  }
+
+  if (!svg) {
+    return <InlineArtifact theme={theme} aria-label="Rendering diagram" />;
+  }
+
+  return (
+    <InlineArtifact
+      theme={theme}
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+};
 
 const StreamingMarkdownRenderer = ({ 
   text = '', 
@@ -390,6 +472,10 @@ const StreamingMarkdownRenderer = ({
       const match = /language-(\w+)/.exec(className || '');
       const language = match ? match[1] : '';
       if (!inline) {
+        if (isMermaidLanguage(language)) {
+          return <MermaidArtifact chart={children} theme={theme} />;
+        }
+
         if (enableCodeExecution && isLanguageExecutable && isLanguageExecutable(language)) {
           return (
             <CodeBlockWithExecution
