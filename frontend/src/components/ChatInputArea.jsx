@@ -564,7 +564,7 @@ const ChatInputArea = forwardRef(({
 
   const handleModeSelect = (mode) => {
     setThinkingMode(mode);
-    setSelectedActionChip(null);
+    setSelectedActionChip((currentChip) => (currentChip === 'search' ? currentChip : null));
   };
 
   const cycleReasoningEffort = useCallback(() => {
@@ -723,7 +723,6 @@ const ChatInputArea = forwardRef(({
               setSelectedActionChip(null);
             } else {
               setSelectedActionChip('search');
-              setThinkingMode(null);
             }
           }}
         >
