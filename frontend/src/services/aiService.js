@@ -207,8 +207,16 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
       try {
         errorData = await response.json();
       } catch (e) {
+        const bodyText = await response.text().catch(() => '');
         const statusLabel = response.statusText || `status ${response.status}`;
-        errorData = { error: { message: `Backend returned ${statusLabel}` } };
+        const cleanedBody = bodyText
+          ? bodyText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300)
+          : '';
+        errorData = {
+          error: {
+            message: cleanedBody || `Backend returned ${statusLabel}`
+          }
+        };
       }
       
       const backendErrorMessage =
@@ -289,115 +297,117 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
             return;
           }
           
+          let parsed;
           try {
-            const parsed = JSON.parse(data);
-            
-            // Handle sources for web search (old format)
-            if (parsed.type === 'sources' && parsed.sources) {
-              sourcesReceived = true;
-              
-              // Yield sources as a special object
-              yield { type: 'sources', sources: parsed.sources };
-              continue;
-            }
-            
-            // Handle tool call events
-            if (parsed.type === 'tool_call_start') {
-              yield { type: 'tool_event', tool_data: parsed };
-              continue;
-            }
-            
-            if (parsed.type === 'tool_call_completed') {
-              yield { type: 'tool_event', tool_data: parsed };
-              continue;
-            }
-            
-            if (parsed.type === 'tool_call_error') {
-              yield { type: 'tool_event', tool_data: parsed };
-              continue;
-            }
-            
-            // Handle tool calls summary
-            if (parsed.type === 'tool_calls_summary') {
-              yield { type: 'tool_calls_summary', summary: parsed };
-              continue;
-            }
-            
-            // Handle tools available event
-            if (parsed.type === 'tools_available') {
-              yield { type: 'tools_available', tools: parsed.tools };
-              continue;
-            }
-            
-            // Handle tool system errors
-            if (parsed.type === 'tool_system_error') {
-              yield { type: 'tool_system_error', error: parsed.error };
-              continue;
-            }
-            
-            // Handle code execution events (from Gemini)
-            if (parsed.type === 'code_execution') {
-              yield { 
-                type: 'code_execution', 
-                language: parsed.language,
-                code: parsed.code 
-              };
-              continue;
-            }
-            
-            if (parsed.type === 'code_execution_result') {
-              yield { 
-                type: 'code_execution_result', 
-                outcome: parsed.outcome,
-                output: parsed.output 
-              };
-              continue;
-            }
-
-            // Handle provider-native reasoning/thinking deltas
-            const reasoningDelta = getReasoningDelta(parsed);
-            if (reasoningDelta) {
-              hasReceivedReasoning = true;
-              yield {
-                type: 'reasoning',
-                content: reasoningDelta
-              };
-              continue;
-            }
-            
-            // Handle content chunks
-            if (parsed.choices?.[0]?.delta?.content) {
-              hasReceivedContent = true;
-              const chunk = parsed.choices[0].delta.content;
-              
-              // Check if this entire chunk is just the links section
-              // According to docs, links come as a single chunk at the end
-              if (chunk.trim().startsWith('<links>') && chunk.trim().endsWith('</links>')) {
-                // Parse and format the links
-                const { parseLinksFromResponse } = await import('../utils/sourceExtractor.js');
-                const { sources } = parseLinksFromResponse(chunk);
-                
-                if (sources.length > 0) {
-                  sourcesReceived = true;
-                  collectedSources = sources;
-                  // Don't yield the links as content - they'll be sent as sources at the end
-                }
-              } else {
-                // Normal content chunk - yield it
-                fullContent += chunk;
-                yield chunk; // Yield just the content chunk
-              }
-            } else if (parsed.error) {
-              // Handle error in the stream
-              console.error('[sendMessageToBackendStream] Error in stream:', parsed.error);
-              throw new Error(parsed.error.message || parsed.error);
-            } else if (parsed.choices?.[0]?.finish_reason === 'error') {
-              // Handle finish reason error
-              console.error('[sendMessageToBackendStream] Finish reason error');
-              throw new Error('Model returned an error finish reason');
-            }
+            parsed = JSON.parse(data);
           } catch (e) {
             console.error('Failed to parse SSE chunk:', e, 'Raw data:', data);
+            continue;
+          }
+
+          // Handle sources for web search (old format)
+          if (parsed.type === 'sources' && parsed.sources) {
+            sourcesReceived = true;
+
+            // Yield sources as a special object
+            yield { type: 'sources', sources: parsed.sources };
+            continue;
+          }
+
+          // Handle tool call events
+          if (parsed.type === 'tool_call_start') {
+            yield { type: 'tool_event', tool_data: parsed };
+            continue;
+          }
+
+          if (parsed.type === 'tool_call_completed') {
+            yield { type: 'tool_event', tool_data: parsed };
+            continue;
+          }
+
+          if (parsed.type === 'tool_call_error') {
+            yield { type: 'tool_event', tool_data: parsed };
+            continue;
+          }
+
+          // Handle tool calls summary
+          if (parsed.type === 'tool_calls_summary') {
+            yield { type: 'tool_calls_summary', summary: parsed };
+            continue;
+          }
+
+          // Handle tools available event
+          if (parsed.type === 'tools_available') {
+            yield { type: 'tools_available', tools: parsed.tools };
+            continue;
+          }
+
+          // Handle tool system errors
+          if (parsed.type === 'tool_system_error') {
+            yield { type: 'tool_system_error', error: parsed.error };
+            continue;
+          }
+
+          // Handle code execution events (from Gemini)
+          if (parsed.type === 'code_execution') {
+            yield {
+              type: 'code_execution',
+              language: parsed.language,
+              code: parsed.code
+            };
+            continue;
+          }
+
+          if (parsed.type === 'code_execution_result') {
+            yield {
+              type: 'code_execution_result',
+              outcome: parsed.outcome,
+              output: parsed.output
+            };
+            continue;
+          }
+
+          // Handle provider-native reasoning/thinking deltas
+          const reasoningDelta = getReasoningDelta(parsed);
+          if (reasoningDelta) {
+            hasReceivedReasoning = true;
+            yield {
+              type: 'reasoning',
+              content: reasoningDelta
+            };
+            continue;
+          }
+
+          // Handle content chunks
+          if (parsed.choices?.[0]?.delta?.content) {
+            hasReceivedContent = true;
+            const chunk = parsed.choices[0].delta.content;
+
+            // Check if this entire chunk is just the links section
+            // According to docs, links come as a single chunk at the end
+            if (chunk.trim().startsWith('<links>') && chunk.trim().endsWith('</links>')) {
+              // Parse and format the links
+              const { parseLinksFromResponse } = await import('../utils/sourceExtractor.js');
+              const { sources } = parseLinksFromResponse(chunk);
+
+              if (sources.length > 0) {
+                sourcesReceived = true;
+                collectedSources = sources;
+                // Don't yield the links as content - they'll be sent as sources at the end
+              }
+            } else {
+              // Normal content chunk - yield it
+              fullContent += chunk;
+              yield chunk; // Yield just the content chunk
+            }
+          } else if (parsed.error) {
+            // Handle error in the stream
+            console.error('[sendMessageToBackendStream] Error in stream:', parsed.error);
+            throw new Error(parsed.error.message || parsed.error);
+          } else if (parsed.choices?.[0]?.finish_reason === 'error') {
+            // Handle finish reason error
+            console.error('[sendMessageToBackendStream] Finish reason error');
+            throw new Error('Model returned an error finish reason');
           }
         }
       }

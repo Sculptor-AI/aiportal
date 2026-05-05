@@ -13,6 +13,8 @@
  * - Model-specific parameters
  */
 
+import { providerInternalError } from '../utils/providerErrors.js';
+
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 function buildOpenRouterMessages(body) {
@@ -179,8 +181,7 @@ export async function handleOpenRouterChat(c, body, apiKey) {
       }
     });
   } catch (error) {
-    console.error('OpenRouter handler error:', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return providerInternalError(c, 'OpenRouter', error);
   }
 }
 

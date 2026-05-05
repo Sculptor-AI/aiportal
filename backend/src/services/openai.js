@@ -7,6 +7,7 @@
  */
 
 import { resolveModel, getDefaultImageModel } from '../config/index.js';
+import { providerInternalError } from '../utils/providerErrors.js';
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const OPENAI_DEFAULT_CHAT_MODEL = 'gpt-5.5';
@@ -768,8 +769,7 @@ export async function handleOpenAIChat(c, body, apiKey) {
     const parsed = parseOpenAIResponse(result);
     return c.json(formatOpenAINonStreamingResponse(openAIBody.model, parsed, getOpenAIUsage(result)));
   } catch (error) {
-    console.error('OpenAI handler error:', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return providerInternalError(c, 'OpenAI', error);
   }
 }
 

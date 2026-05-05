@@ -16,6 +16,7 @@
  */
 
 import { resolveModel, getDefaultModel, getModelThinkingConfig } from '../config/index.js';
+import { providerInternalError } from '../utils/providerErrors.js';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -810,8 +811,7 @@ export async function handleAnthropicChat(c, body, apiKey) {
     });
 
   } catch (error) {
-    console.error('Anthropic handler error:', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return providerInternalError(c, 'Anthropic', error);
   }
 }
 

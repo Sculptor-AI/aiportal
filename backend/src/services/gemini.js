@@ -16,6 +16,7 @@
  */
 
 import { resolveModel, getImageModelFallbacks, getModelThinkingConfig } from '../config/index.js';
+import { providerInternalError } from '../utils/providerErrors.js';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 
@@ -567,8 +568,7 @@ export async function handleGeminiChat(c, body, apiKey) {
     });
 
   } catch (error) {
-    console.error('Gemini handler error:', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return providerInternalError(c, 'Gemini', error);
   }
 }
 
@@ -631,8 +631,7 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
     });
 
   } catch (error) {
-    console.error('Gemini handler error:', error);
-    return c.json({ error: 'Internal server error' }, 500);
+    return providerInternalError(c, 'Gemini', error);
   }
 }
 
