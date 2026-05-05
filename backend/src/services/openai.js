@@ -9,7 +9,7 @@
 import { resolveModel, getDefaultImageModel } from '../config/index.js';
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
-const OPENAI_DEFAULT_CHAT_MODEL = 'gpt-5.1';
+const OPENAI_DEFAULT_CHAT_MODEL = 'gpt-5.5';
 const OPENAI_VIDEO_DEFAULT_MODEL = 'sora-2';
 const OPENAI_RESPONSE_INCLUDE = [
   'web_search_call.action.sources',
@@ -38,7 +38,7 @@ function getOpenAIHeaders(apiKey, options = {}) {
 }
 
 function getOpenAIChatModel(body) {
-  const modelId = body.model?.replace('openai/', '') || 'chatgpt-5.4-thinking';
+  const modelId = body.model?.replace('openai/', '') || OPENAI_DEFAULT_CHAT_MODEL;
   return resolveModel('openai', modelId) || OPENAI_DEFAULT_CHAT_MODEL;
 }
 
@@ -135,9 +135,10 @@ function normalizeReasoningEffort(reasoningEffort) {
     case 'medium':
       return 'medium';
     case 'high':
-    case 'xhigh':
     case 'max':
       return 'high';
+    case 'xhigh':
+      return 'xhigh';
     default:
       return null;
   }

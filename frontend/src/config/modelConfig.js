@@ -1,5 +1,5 @@
 export const DEFAULT_CHAT_MODEL_ID = 'gemini-3-flash';
-export const DEFAULT_CUSTOM_BASE_MODEL_ID = 'chatgpt-5.4-thinking';
+export const DEFAULT_CUSTOM_BASE_MODEL_ID = 'gpt-5.5';
 export const TITLE_GENERATION_MODEL_ID = DEFAULT_CHAT_MODEL_ID;
 export const NEWS_ASSIST_MODEL_ID = DEFAULT_CHAT_MODEL_ID;
 export const DEEP_RESEARCH_MODEL_ID = 'deep-research';
