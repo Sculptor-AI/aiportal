@@ -11,6 +11,7 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import { adminLoginRateLimit } from '../middleware/rateLimit.js';
 import { getGlobalUsageLimits, resetUserUsage, summarizeUsageTotals, updateGlobalUsageLimits } from '../utils/usageLimits.js';
 import { getDeepResearchSettings, updateDeepResearchSettings } from '../utils/deepResearchSettings.js';
+import { getArtifactChatSettings, updateArtifactChatSettings } from '../utils/artifactChatSettings.js';
 
 const admin = new Hono();
 const MAX_PASSWORD_LENGTH = 128;
@@ -200,6 +201,37 @@ admin.put('/deep-research/config', requireAuth, requireAdmin, async (c) => {
     return c.json({ success: true, data: { config: settings } });
   } catch (error) {
     return c.json({ error: error.message || 'Failed to update deep research settings' }, 400);
+  }
+});
+
+/**
+ * Get shared artifact AI settings
+ */
+admin.get('/artifacts/chat-config', requireAuth, requireAdmin, async (c) => {
+  const kv = c.env.KV;
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  const settings = await getArtifactChatSettings(kv);
+  return c.json({ success: true, data: { config: settings } });
+});
+
+/**
+ * Update shared artifact AI settings
+ */
+admin.put('/artifacts/chat-config', requireAuth, requireAdmin, async (c) => {
+  const kv = c.env.KV;
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const settings = await updateArtifactChatSettings(kv, body);
+    return c.json({ success: true, data: { config: settings } });
+  } catch (error) {
+    return c.json({ error: error.message || 'Failed to update artifact AI settings' }, 400);
   }
 });
 

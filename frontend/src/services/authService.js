@@ -594,6 +594,48 @@ export const getDeepResearchConfig = async () => {
   }
 };
 
+export const getArtifactChatConfig = async () => {
+  try {
+    const response = await fetchWithFallback('/admin/artifacts/chat-config', {
+      method: 'GET',
+      headers: getAdminAuthHeaders()
+    });
+
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch artifact AI config');
+    }
+
+    return data.data.config;
+  } catch (error) {
+    console.error('Get artifact AI config error:', error);
+    throw error;
+  }
+};
+
+export const updateArtifactChatConfig = async (config) => {
+  try {
+    const response = await fetchWithFallback('/admin/artifacts/chat-config', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAdminAuthHeaders()
+      },
+      body: JSON.stringify(config)
+    });
+
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to update artifact AI config');
+    }
+
+    return data.data.config;
+  } catch (error) {
+    console.error('Update artifact AI config error:', error);
+    throw error;
+  }
+};
+
 export const getChatModels = async () => {
   try {
     const response = await fetchWithFallback('/models', {

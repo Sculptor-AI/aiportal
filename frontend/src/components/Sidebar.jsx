@@ -982,6 +982,9 @@ const Sidebar = ({
 
   // Handle sharing a chat
   const handleShareChat = async (chat) => {
+    const confirmed = window.confirm('Share this chat? The public page will include text only. Uploaded files, images, and hidden file context are removed.');
+    if (!confirmed) return;
+
     try {
       const result = await createSharedChat(chat);
       const shareUrl = getSharedChatUrl(result);

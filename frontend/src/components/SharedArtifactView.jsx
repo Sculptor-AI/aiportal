@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 import { buildArtifactDocument, postArtifactChatResult } from '../utils/artifactBridge';
-import { fetchSharedArtifact, sendArtifactChat } from '../services/shareService';
+import { AuthRequiredError, fetchSharedArtifact, sendArtifactChat } from '../services/shareService';
+import LoginModal from './LoginModal';
 
 const Page = styled.main`
   min-height: 100vh;
@@ -61,12 +62,63 @@ const CenterState = styled.div`
   opacity: 0.72;
 `;
 
+const DialogOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(4px);
+`;
+
+const Dialog = styled.div`
+  width: min(420px, 100%);
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 14px;
+  background: ${props => props.theme.sidebar || props.theme.background};
+  color: ${props => props.theme.text};
+  padding: 20px;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.22);
+`;
+
+const DialogTitle = styled.h2`
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+`;
+
+const DialogText = styled.p`
+  margin: 0 0 18px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  opacity: 0.76;
+`;
+
+const DialogActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+`;
+
+const DialogButton = styled.button`
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: ${props => props.$primary ? (props.theme.primary || '#111') : 'transparent'};
+  color: ${props => props.$primary ? '#fff' : props.theme.text};
+  cursor: pointer;
+`;
+
 const SharedArtifactView = () => {
   const { artifactId } = useParams();
   const iframeRef = useRef(null);
   const [artifact, setArtifact] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const artifactDocument = useMemo(() => buildArtifactDocument(artifact?.html || ''), [artifact?.html]);
 
@@ -133,10 +185,20 @@ const SharedArtifactView = () => {
           artifactTitle: artifact.title,
           artifactId: artifact.id,
           html: artifact.html,
-          prompt
+          prompt,
+          shared: true
         });
         postArtifactChatResult(iframeWindow, data.requestId, { ok: true, content });
       } catch (chatError) {
+        if (chatError instanceof AuthRequiredError || chatError.code === 'auth_required') {
+          setShowAuthDialog(true);
+          postArtifactChatResult(iframeWindow, data.requestId, {
+            ok: false,
+            error: 'Sign in to use AI inside this artifact.'
+          });
+          return;
+        }
+
         postArtifactChatResult(iframeWindow, data.requestId, {
           ok: false,
           error: chatError.message || 'Artifact chat failed'
@@ -169,6 +231,30 @@ const SharedArtifactView = () => {
         referrerPolicy="no-referrer"
         title={artifact.title || 'Sculptor artifact'}
       />
+      {showAuthDialog && (
+        <DialogOverlay>
+          <Dialog>
+            <DialogTitle>Sign in to use artifact AI</DialogTitle>
+            <DialogText>
+              This artifact is public, but AI interaction requires an authenticated Sculptor account.
+            </DialogText>
+            <DialogActions>
+              <DialogButton type="button" onClick={() => setShowAuthDialog(false)}>Cancel</DialogButton>
+              <DialogButton
+                type="button"
+                $primary
+                onClick={() => {
+                  setShowAuthDialog(false);
+                  setShowLoginModal(true);
+                }}
+              >
+                Sign in
+              </DialogButton>
+            </DialogActions>
+          </Dialog>
+        </DialogOverlay>
+      )}
+      {showLoginModal && <LoginModal closeModal={() => setShowLoginModal(false)} />}
     </Page>
   );
 };

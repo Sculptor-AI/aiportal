@@ -1,5 +1,10 @@
 import { Hono } from 'hono';
 import { requireAuthAndApproved } from '../middleware/auth.js';
+import { handleAnthropicChat } from '../services/anthropic.js';
+import { handleGeminiChatNonStreaming } from '../services/gemini.js';
+import { handleOpenAIChat } from '../services/openai.js';
+import { handleOpenRouterChat } from '../services/openrouter.js';
+import { getArtifactChatSettings } from '../utils/artifactChatSettings.js';
 
 const shares = new Hono();
 
@@ -8,6 +13,8 @@ const MAX_TITLE_LENGTH = 120;
 const MAX_CHAT_MESSAGES = 400;
 const MAX_MESSAGE_LENGTH = 20000;
 const MAX_ARTIFACT_HTML_LENGTH = 350000;
+const MAX_ARTIFACT_CHAT_PROMPT_LENGTH = 8000;
+const MAX_ARTIFACT_CHAT_HTML_CONTEXT = 50000;
 
 const CHAT_SHARE_PREFIX = 'share:chat:';
 const ARTIFACT_SHARE_PREFIX = 'share:artifact:';
@@ -95,6 +102,69 @@ const sanitizeSharedMessages = (messages) => {
 const getShareUrl = (c, path) => {
   const origin = new URL(c.req.url).origin;
   return `${origin}${path}`;
+};
+
+const getProviderForModel = (modelId, providerHint) => {
+  if (providerHint === 'gemini' || providerHint === 'anthropic' || providerHint === 'openai' || providerHint === 'openrouter') {
+    return providerHint;
+  }
+
+  if (modelId?.startsWith('gemini') || modelId?.startsWith('google/')) return 'gemini';
+  if (modelId?.startsWith('claude') || modelId?.startsWith('anthropic/')) return 'anthropic';
+  if (modelId?.startsWith('gpt') || modelId?.startsWith('chatgpt') || modelId?.startsWith('o1') || modelId?.startsWith('o3') || modelId?.startsWith('o4') || modelId?.startsWith('openai/')) return 'openai';
+  return 'openrouter';
+};
+
+const getArtifactChatContent = async (c, body, artifact, settings) => {
+  const model = settings.model;
+  const provider = getProviderForModel(model, settings.provider);
+  const clippedHtml = typeof artifact.html === 'string'
+    ? artifact.html.slice(0, MAX_ARTIFACT_CHAT_HTML_CONTEXT)
+    : '';
+  const requestBody = {
+    model,
+    provider,
+    stream: false,
+    messages: [{
+      role: 'user',
+      content:
+        `You are helping inside a Sculptor interactive artifact.\n` +
+        `Artifact title: ${artifact.title || 'Untitled artifact'}\n` +
+        `Artifact id: ${artifact.id || 'local'}\n\n` +
+        `Artifact HTML, clipped for context:\n${clippedHtml}\n\n` +
+        `User request:\n${body.prompt}`
+    }]
+  };
+
+  let response;
+  if (provider === 'gemini') {
+    if (!c.env.GEMINI_API_KEY) return textResponse(c, 'GEMINI_API_KEY is not configured.', 500);
+    response = await handleGeminiChatNonStreaming(c, requestBody, c.env.GEMINI_API_KEY);
+  } else if (provider === 'anthropic') {
+    if (!c.env.ANTHROPIC_API_KEY) return textResponse(c, 'ANTHROPIC_API_KEY is not configured.', 500);
+    response = await handleAnthropicChat(c, requestBody, c.env.ANTHROPIC_API_KEY);
+  } else if (provider === 'openai') {
+    if (!c.env.OPENAI_API_KEY) return textResponse(c, 'OPENAI_API_KEY is not configured.', 500);
+    response = await handleOpenAIChat(c, requestBody, c.env.OPENAI_API_KEY);
+  } else {
+    if (!c.env.OPENROUTER_API_KEY) return textResponse(c, 'OPENROUTER_API_KEY is not configured.', 500);
+    response = await handleOpenRouterChat(c, requestBody, c.env.OPENROUTER_API_KEY);
+  }
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    return c.json({
+      error: payload?.error || payload?.message || 'Artifact AI request failed',
+      provider,
+      upstream_status: response.status
+    }, response.status);
+  }
+
+  return c.json({
+    content: payload?.choices?.[0]?.message?.content || payload?.response || '',
+    model,
+    provider
+  });
 };
 
 shares.post('/chats', requireAuthAndApproved, async (c) => {
@@ -207,7 +277,37 @@ shares.get('/artifacts/:id', async (c) => {
   }
 
   const { ownerUserId, ...publicRecord } = record;
-  return c.json(publicRecord);
+  return c.json({
+    ...publicRecord,
+    allowModelChat: record.allowModelChat !== false
+  });
+});
+
+shares.post('/artifacts/:id/chat', requireAuthAndApproved, async (c) => {
+  const kv = c.env.KV;
+  const id = c.req.param('id');
+
+  if (!kv) {
+    return textResponse(c, 'Storage not configured', 500);
+  }
+
+  const artifact = await kv.get(`${ARTIFACT_SHARE_PREFIX}${id}`, 'json');
+  if (!artifact) {
+    return textResponse(c, 'Shared artifact not found', 404);
+  }
+
+  if (artifact.allowModelChat === false) {
+    return textResponse(c, 'Model chat is disabled for this artifact.', 403);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';
+  if (!prompt || prompt.length > MAX_ARTIFACT_CHAT_PROMPT_LENGTH) {
+    return textResponse(c, `Artifact chat prompts must be between 1 and ${MAX_ARTIFACT_CHAT_PROMPT_LENGTH} characters.`);
+  }
+
+  const settings = await getArtifactChatSettings(kv);
+  return getArtifactChatContent(c, { prompt }, artifact, settings);
 });
 
 export default shares;

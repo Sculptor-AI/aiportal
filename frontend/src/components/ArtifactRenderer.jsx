@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
-import { Code2, Copy, Download, Eye, FileCode2, PanelRightOpen, X } from 'lucide-react';
+import { Code2, Copy, Download, Eye, FileCode2, PanelRightOpen, Share2, X } from 'lucide-react';
 import { buildArtifactDocument, postArtifactChatResult } from '../utils/artifactBridge';
-import { sendArtifactChat } from '../services/shareService';
+import { createSharedArtifact, getSharedArtifactUrl, sendArtifactChat } from '../services/shareService';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -203,9 +203,14 @@ const IconButton = styled.button`
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${props => props.theme.inputBackground || (props.theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)')};
     border-color: ${props => props.theme.text || 'rgba(0,0,0,0.35)'};
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 
   svg {
@@ -237,6 +242,19 @@ const CodeView = styled.pre`
 const StatusText = styled.span`
   font-size: 0.75rem;
   opacity: 0.62;
+`;
+
+const ToggleLabel = styled.label`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  opacity: 0.72;
+  white-space: nowrap;
+
+  input {
+    margin: 0;
+  }
 `;
 
 const ArtifactFrame = ({ code, title, theme = {}, variant = 'side' }) => {
@@ -317,6 +335,8 @@ export const InlineHtmlArtifact = ({ code, title = 'Inline artifact', theme = {}
 const ArtifactPanel = ({ open, onClose, code, title, theme = {} }) => {
   const [view, setView] = useState('preview');
   const [status, setStatus] = useState('');
+  const [allowModelChat, setAllowModelChat] = useState(true);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -344,6 +364,32 @@ const ArtifactPanel = ({ open, onClose, code, title, theme = {} }) => {
     showStatus('Downloaded');
   };
 
+  const handleShare = async () => {
+    if (isSharing) return;
+    const confirmed = window.confirm(
+      allowModelChat
+        ? 'Share this artifact? Anyone with the link can view it. Signed-in users will be able to use AI inside it.'
+        : 'Share this artifact? Anyone with the link can view it. AI interaction will be disabled.'
+    );
+    if (!confirmed) return;
+
+    setIsSharing(true);
+    try {
+      const result = await createSharedArtifact({
+        title,
+        html: code,
+        allowModelChat
+      });
+      const shareUrl = getSharedArtifactUrl(result);
+      await copyText(shareUrl);
+      showStatus('Share link copied');
+    } catch (error) {
+      showStatus(error.message || 'Share failed');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   if (typeof document === 'undefined') {
     return null;
   }
@@ -360,6 +406,14 @@ const ArtifactPanel = ({ open, onClose, code, title, theme = {} }) => {
           </TitleGroup>
           <HeaderActions>
             {status && <StatusText>{status}</StatusText>}
+            <ToggleLabel title="Allow signed-in viewers to use AI inside the shared artifact">
+              <input
+                type="checkbox"
+                checked={allowModelChat}
+                onChange={(event) => setAllowModelChat(event.target.checked)}
+              />
+              AI
+            </ToggleLabel>
             <Segmented theme={theme} role="tablist" aria-label="Artifact view">
               <SegmentButton
                 type="button"
@@ -385,6 +439,9 @@ const ArtifactPanel = ({ open, onClose, code, title, theme = {} }) => {
             </IconButton>
             <IconButton type="button" theme={theme} onClick={handleDownload} aria-label="Download artifact" title="Download HTML">
               <Download />
+            </IconButton>
+            <IconButton type="button" theme={theme} onClick={handleShare} aria-label="Share artifact" title="Share artifact" disabled={isSharing}>
+              <Share2 />
             </IconButton>
             <IconButton type="button" theme={theme} onClick={onClose} aria-label="Close artifact">
               <X />

@@ -9,8 +9,10 @@ import {
   resetUserUsage as resetAdminUserUsage,
   updateUsageLimits,
   getDeepResearchConfig,
+  getArtifactChatConfig,
   getChatModels,
   getImageModels,
+  updateArtifactChatConfig,
   updateDeepResearchConfig,
   updateUserDetails,
   updateUserStatus
@@ -322,6 +324,10 @@ const normalizeModelRateLimits = (rules = []) => {
     return items;
   }, []);
 };
+const DEFAULT_ARTIFACT_CHAT_CONFIG = {
+  model: 'gpt-5.4-mini',
+  provider: 'openai'
+};
 const normalizeLimits = (limits = {}) => ({ ...DEFAULT_LIMITS, ...limits, modelRateLimits: normalizeModelRateLimits(limits.modelRateLimits) });
 const syncLimitForm = (limits) => {
   const normalizedLimits = normalizeLimits(limits);
@@ -360,6 +366,8 @@ const AdminPage = ({ collapsed }) => {
   const [limitForm, setLimitForm] = useState(EMPTY_LIMIT_FORM);
   const [deepResearchConfig, setDeepResearchConfig] = useState(DEFAULT_DEEP_RESEARCH_CONFIG);
   const [deepResearchConfigForm, setDeepResearchConfigForm] = useState(DEFAULT_DEEP_RESEARCH_CONFIG);
+  const [artifactChatConfig, setArtifactChatConfig] = useState(DEFAULT_ARTIFACT_CHAT_CONFIG);
+  const [artifactChatConfigForm, setArtifactChatConfigForm] = useState(DEFAULT_ARTIFACT_CHAT_CONFIG);
   const [chatModels, setChatModels] = useState([]);
   const [imageModels, setImageModels] = useState([]);
   const [modelRateDraft, setModelRateDraft] = useState(EMPTY_MODEL_RATE_DRAFT);
@@ -373,6 +381,7 @@ const AdminPage = ({ collapsed }) => {
   const [saving, setSaving] = useState(false);
   const [savingLimits, setSavingLimits] = useState(false);
   const [savingDeepResearchConfig, setSavingDeepResearchConfig] = useState(false);
+  const [savingArtifactChatConfig, setSavingArtifactChatConfig] = useState(false);
   const [workingUserId, setWorkingUserId] = useState(null);
   const [resettingUsageUserId, setResettingUsageUserId] = useState(null);
   const [error, setError] = useState('');
@@ -385,17 +394,19 @@ const AdminPage = ({ collapsed }) => {
     setError('');
 
     try {
-      const [usersData, statsData, limitsData, deepResearchConfigData, chatModelData, imageModelData] = await Promise.all([
+      const [usersData, statsData, limitsData, deepResearchConfigData, artifactChatConfigData, chatModelData, imageModelData] = await Promise.all([
         getAllUsers(),
         getDashboardStats(),
         getUsageLimits(),
         getDeepResearchConfig(),
+        getArtifactChatConfig(),
         getChatModels().catch(() => []),
         getImageModels().catch(() => [])
       ]);
       const nextUsers = (usersData || []).map(normalizeUser);
       const nextLimits = normalizeLimits(limitsData || statsData?.usageLimits || DEFAULT_LIMITS);
       const nextDeepResearchConfig = deepResearchConfigData || DEFAULT_DEEP_RESEARCH_CONFIG;
+      const nextArtifactChatConfig = artifactChatConfigData || DEFAULT_ARTIFACT_CHAT_CONFIG;
       setUsers(nextUsers);
       setStats({ totalUsers: 0, pendingUsers: 0, activeUsers: 0, adminUsers: 0, suspendedUsers: 0, totalTurnsUsed: 0, totalImagesUsed: 0, totalVideosUsed: 0, ...(statsData || {}) });
       setLimits(nextLimits);
@@ -404,6 +415,14 @@ const AdminPage = ({ collapsed }) => {
       setDeepResearchConfigForm({
         ...DEFAULT_DEEP_RESEARCH_CONFIG,
         ...nextDeepResearchConfig
+      });
+      setArtifactChatConfig({
+        ...DEFAULT_ARTIFACT_CHAT_CONFIG,
+        ...nextArtifactChatConfig
+      });
+      setArtifactChatConfigForm({
+        ...DEFAULT_ARTIFACT_CHAT_CONFIG,
+        ...nextArtifactChatConfig
       });
       setChatModels(Array.isArray(chatModelData) ? chatModelData : []);
       setImageModels(Array.isArray(imageModelData) ? imageModelData : []);
@@ -629,6 +648,14 @@ const AdminPage = ({ collapsed }) => {
     const fallbackId = formatOptionValue(fallbackValue);
     return fallbackId ? [{ id: fallbackId }] : [];
   };
+  const artifactChatModelOptions = useMemo(() => {
+    const options = Array.isArray(chatModels) ? [...chatModels] : [];
+    const selectedModel = formatOptionValue(artifactChatConfigForm.model);
+    if (selectedModel && !options.some((model) => model?.id === selectedModel)) {
+      options.unshift({ id: selectedModel, provider: artifactChatConfigForm.provider });
+    }
+    return options;
+  }, [artifactChatConfigForm.model, artifactChatConfigForm.provider, chatModels]);
 
   const quickStatusChange = async (user, nextStatus) => {
     if (!user || user.status === nextStatus) return;
@@ -691,6 +718,30 @@ const AdminPage = ({ collapsed }) => {
     } finally {
       setWorkingUserId(null);
     }
+  };
+
+  const handleSaveArtifactChatConfig = async () => {
+    setSavingArtifactChatConfig(true);
+    setError('');
+    setSuccess('');
+    try {
+      const nextConfig = await updateArtifactChatConfig(artifactChatConfigForm);
+      const normalized = {
+        ...DEFAULT_ARTIFACT_CHAT_CONFIG,
+        ...(nextConfig || {})
+      };
+      setArtifactChatConfig(normalized);
+      setArtifactChatConfigForm(normalized);
+      setSuccess('Artifact AI configuration updated.');
+    } catch (err) {
+      setError(err.message || 'Failed to update artifact AI configuration.');
+    } finally {
+      setSavingArtifactChatConfig(false);
+    }
+  };
+
+  const handleArtifactChatConfigFieldChange = (field, value) => {
+    setArtifactChatConfigForm((current) => ({ ...current, [field]: value }));
   };
 
   const modelRateLimitRules = normalizeModelRateLimits(limitForm.modelRateLimits);
@@ -890,6 +941,55 @@ const AdminPage = ({ collapsed }) => {
             </SnapshotGrid>
           </Panel>
         </TwoCol>
+
+        <Panel>
+          <PanelHeader>
+            <div>
+              <PanelTitle>Shared artifact AI</PanelTitle>
+              <PanelText>Controls the model used when signed-in viewers interact with public artifacts. Artifact viewing stays public when AI is disabled or the viewer is signed out.</PanelText>
+            </div>
+            <Button $primary onClick={handleSaveArtifactChatConfig} disabled={savingArtifactChatConfig}>
+              {savingArtifactChatConfig ? 'Saving...' : 'Save artifact AI'}
+            </Button>
+          </PanelHeader>
+
+          <DeepResearchGrid>
+            <Field>
+              <FieldLabel>Model</FieldLabel>
+              <Select
+                value={formatOptionValue(artifactChatConfigForm.model)}
+                onChange={(e) => handleArtifactChatConfigFieldChange('model', e.target.value)}
+              >
+                {artifactChatModelOptions.map((model) => (
+                  <option key={`artifact-chat-${model.id}`} value={model.id}>
+                    {model.id}{model.provider ? ` (${model.provider})` : ''}
+                  </option>
+                ))}
+              </Select>
+              <Helper>Default is gpt-5.4-mini. Pick a cheaper fast model for quizzes and lightweight interactive artifacts.</Helper>
+            </Field>
+
+            <Field>
+              <FieldLabel>Provider</FieldLabel>
+              <Select
+                value={formatOptionValue(artifactChatConfigForm.provider)}
+                onChange={(e) => handleArtifactChatConfigFieldChange('provider', e.target.value)}
+              >
+                <option value="openai">openai</option>
+                <option value="openrouter">openrouter</option>
+                <option value="gemini">gemini</option>
+                <option value="anthropic">anthropic</option>
+              </Select>
+              <Helper>Provider can be inferred from model id, but this keeps routing explicit.</Helper>
+            </Field>
+
+            <LimitCard>
+              <SmallLabel>Current artifact AI</SmallLabel>
+              <BigValue>{artifactChatConfig.model || DEFAULT_ARTIFACT_CHAT_CONFIG.model}</BigValue>
+              <Helper style={{ marginTop: 0 }}>{artifactChatConfig.provider || DEFAULT_ARTIFACT_CHAT_CONFIG.provider}</Helper>
+            </LimitCard>
+          </DeepResearchGrid>
+        </Panel>
 
         <Panel>
           <PanelHeader>

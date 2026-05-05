@@ -74,6 +74,20 @@ const StatusText = styled.span`
   font-size: 12px;
 `;
 
+const ToggleLabel = styled.label`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: ${props => props.theme.text};
+  opacity: 0.7;
+  font-size: 12px;
+  white-space: nowrap;
+
+  input {
+    margin: 0;
+  }
+`;
+
 const ActionButton = styled.button`
   border: 1px solid ${props => props.theme.border};
   background: ${props => props.theme.inputBackground || 'transparent'};
@@ -135,6 +149,7 @@ const HtmlArtifactModal = ({
   const iframeRef = useRef(null);
   const [shareStatus, setShareStatus] = useState('');
   const [isSharing, setIsSharing] = useState(false);
+  const [allowModelChat, setAllowModelChat] = useState(true);
   const artifactDocument = useMemo(() => buildArtifactDocument(htmlContent), [htmlContent]);
 
   useEffect(() => {
@@ -186,6 +201,13 @@ const HtmlArtifactModal = ({
   };
 
   const handleShare = async () => {
+    const confirmed = window.confirm(
+      allowModelChat
+        ? 'Share this artifact? Anyone with the link can view it. Signed-in users will be able to use AI inside it.'
+        : 'Share this artifact? Anyone with the link can view it. AI interaction will be disabled.'
+    );
+    if (!confirmed) return;
+
     setIsSharing(true);
     setShareStatus('');
 
@@ -194,7 +216,8 @@ const HtmlArtifactModal = ({
         title,
         html: htmlContent,
         sourceChatId,
-        sourceMessageId
+        sourceMessageId,
+        allowModelChat
       });
       const shareUrl = getSharedArtifactUrl(result);
       await navigator.clipboard.writeText(shareUrl);
@@ -218,6 +241,14 @@ const HtmlArtifactModal = ({
           </Brand>
           <HeaderActions>
             {shareStatus && <StatusText>{shareStatus}</StatusText>}
+            <ToggleLabel title="Allow signed-in viewers to use AI inside the shared artifact">
+              <input
+                type="checkbox"
+                checked={allowModelChat}
+                onChange={(event) => setAllowModelChat(event.target.checked)}
+              />
+              AI
+            </ToggleLabel>
             <ActionButton onClick={handleShare} disabled={isSharing}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>

@@ -1,8 +1,6 @@
 import { getBackendApiBase } from './backendConfig';
 
 const SAME_ORIGIN_API_BASE = '/api';
-const DEFAULT_ARTIFACT_MODEL = 'gpt-5.5';
-
 const buildApiUrlWithBase = (base, endpoint) => {
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
 
@@ -55,6 +53,14 @@ export const buildAuthHeaders = () => {
 
   return { Authorization: `Bearer ${token}` };
 };
+
+export class AuthRequiredError extends Error {
+  constructor(message = 'Sign in to chat with this artifact') {
+    super(message);
+    this.name = 'AuthRequiredError';
+    this.code = 'auth_required';
+  }
+}
 
 const normalizePublicShareUrl = (rawUrl, fallbackPath) => {
   const path = fallbackPath || '/';
@@ -143,7 +149,7 @@ export const fetchSharedArtifact = async (artifactId) => {
   return parseJsonResponse(response);
 };
 
-export const sendArtifactChat = async ({ artifactTitle, artifactId, html, prompt }) => {
+export const sendArtifactChat = async ({ artifactTitle, artifactId, html, prompt, shared = false }) => {
   const content = typeof prompt === 'string' ? prompt.trim() : '';
 
   if (!content) {
@@ -151,34 +157,53 @@ export const sendArtifactChat = async ({ artifactTitle, artifactId, html, prompt
   }
 
   if (!getCurrentUserSession()?.accessToken) {
-    throw new Error('Sign in to chat with this artifact');
+    throw new AuthRequiredError();
   }
 
+  const sharedArtifactId = shared && typeof artifactId === 'string' && artifactId
+    ? artifactId
+    : null;
+
+  const endpoint = sharedArtifactId
+    ? `/shares/artifacts/${encodeURIComponent(sharedArtifactId)}/chat`
+    : '/v1/chat/completions';
+
   const clippedHtml = typeof html === 'string' ? html.slice(0, 50000) : '';
-  const response = await fetchWithFallback('/v1/chat/completions', {
+  const body = sharedArtifactId
+    ? { prompt: content }
+    : {
+        model: 'gpt-5.4-mini',
+        provider: 'openai',
+        stream: false,
+        messages: [
+          {
+            role: 'user',
+            content:
+              `You are helping inside a Sculptor interactive artifact.\n` +
+              `Artifact title: ${artifactTitle || 'Untitled artifact'}\n` +
+              `Artifact id: ${artifactId || 'local'}\n\n` +
+              `Artifact HTML, clipped for context:\n${clippedHtml}\n\n` +
+              `User request:\n${content}`
+          }
+        ]
+      };
+
+  const response = await fetchWithFallback(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...buildAuthHeaders()
     },
-    body: JSON.stringify({
-      model: DEFAULT_ARTIFACT_MODEL,
-      provider: 'openai',
-      stream: false,
-      messages: [
-        {
-          role: 'user',
-          content:
-            `You are helping inside a Sculptor interactive artifact.\n` +
-            `Artifact title: ${artifactTitle || 'Untitled artifact'}\n` +
-            `Artifact id: ${artifactId || 'local'}\n\n` +
-            `Artifact HTML, clipped for context:\n${clippedHtml}\n\n` +
-            `User request:\n${content}`
-        }
-      ]
-    })
+    body: JSON.stringify(body)
   });
 
+  if (response.status === 401 || response.status === 403) {
+    const data = await response.json().catch(() => ({}));
+    if ((data.error || '').toLowerCase().includes('auth') || response.status === 401) {
+      throw new AuthRequiredError(data.error || data.message || undefined);
+    }
+  }
+
   const data = await parseJsonResponse(response);
-  return data.choices?.[0]?.message?.content || data.response || '';
+  return data.content || data.choices?.[0]?.message?.content || data.response || '';
 };
