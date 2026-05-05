@@ -144,6 +144,13 @@ function normalizeReasoningEffort(reasoningEffort) {
   }
 }
 
+function normalizeReasoningSummary(reasoningSummary) {
+  if (typeof reasoningSummary !== 'string') return 'auto';
+
+  const normalized = reasoningSummary.trim().toLowerCase();
+  return ['auto', 'concise', 'detailed'].includes(normalized) ? normalized : 'auto';
+}
+
 function convertFunctionToolsToOpenAI(tools) {
   if (!Array.isArray(tools) || tools.length === 0) {
     return [];
@@ -210,7 +217,10 @@ function buildOpenAIResponsesBody(body) {
 
   const normalizedReasoningEffort = normalizeReasoningEffort(body.reasoning_effort);
   if (normalizedReasoningEffort) {
-    requestBody.reasoning = { effort: normalizedReasoningEffort };
+    requestBody.reasoning = {
+      effort: normalizedReasoningEffort,
+      summary: normalizeReasoningSummary(body.reasoning_summary)
+    };
   }
 
   if (body.temperature !== undefined) requestBody.temperature = body.temperature;
@@ -238,6 +248,10 @@ function buildOpenAIResponsesBody(body) {
   }
 
   return requestBody;
+}
+
+function emitSse(controller, encoder, payload) {
+  controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
 }
 
 async function extractOpenAIError(response) {
@@ -409,6 +423,275 @@ function parseOpenAIResponse(result) {
   };
 }
 
+function getOpenAIUsage(responseLike) {
+  if (!responseLike?.usage) return null;
+
+  return {
+    prompt_tokens: responseLike.usage.input_tokens,
+    completion_tokens: responseLike.usage.output_tokens,
+    total_tokens: responseLike.usage.total_tokens
+  };
+}
+
+function emitOpenAICodeExecution(controller, encoder, execution, emittedCodeExecutions) {
+  if (!execution || (!execution.code && !execution.output)) {
+    return;
+  }
+
+  const key = `${execution.language || 'python'}\n${execution.code || ''}\n${execution.output || ''}`;
+  if (emittedCodeExecutions.has(key)) {
+    return;
+  }
+  emittedCodeExecutions.add(key);
+
+  if (execution.code) {
+    emitSse(controller, encoder, {
+      type: 'code_execution',
+      language: execution.language || 'python',
+      code: execution.code
+    });
+  }
+
+  if (execution.output) {
+    emitSse(controller, encoder, {
+      type: 'code_execution_result',
+      outcome: 'OUTCOME_OK',
+      output: execution.output
+    });
+  }
+}
+
+function extractOpenAIReasoningDelta(event) {
+  const candidates = [
+    event?.delta,
+    event?.delta?.text,
+    event?.text,
+    event?.summary?.text,
+    event?.part?.text
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.length > 0) {
+      return candidate;
+    }
+  }
+
+  return '';
+}
+
+function createOpenAIResponsesStreamTransformer(encoder) {
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let textStarted = false;
+  let reasoningStarted = false;
+  let doneSent = false;
+  const emittedCodeExecutions = new Set();
+
+  const sendDone = (controller) => {
+    if (!doneSent) {
+      controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+      doneSent = true;
+    }
+  };
+
+  const handleEvent = (event, controller) => {
+    if (!event || typeof event !== 'object') {
+      return;
+    }
+
+    switch (event.type) {
+      case 'response.output_text.delta':
+      case 'response.refusal.delta':
+        if (typeof event.delta === 'string' && event.delta.length > 0) {
+          textStarted = true;
+          emitSse(controller, encoder, {
+            choices: [{
+              delta: { content: event.delta },
+              finish_reason: null
+            }]
+          });
+        }
+        return;
+
+      case 'response.output_text.done':
+        if (!textStarted && typeof event.text === 'string' && event.text.length > 0) {
+          textStarted = true;
+          for (const textChunk of chunkText(event.text)) {
+            emitSse(controller, encoder, {
+              choices: [{
+                delta: { content: textChunk },
+                finish_reason: null
+              }]
+            });
+          }
+        }
+        return;
+
+      case 'response.reasoning_summary_text.delta':
+      case 'response.reasoning_summary.delta':
+      case 'response.reasoning_text.delta': {
+        const reasoningDelta = extractOpenAIReasoningDelta(event);
+        if (reasoningDelta) {
+          reasoningStarted = true;
+          emitSse(controller, encoder, {
+            choices: [{
+              delta: { reasoning_content: reasoningDelta },
+              finish_reason: null
+            }]
+          });
+        }
+        return;
+      }
+
+      case 'response.reasoning_summary_part.done':
+      case 'response.reasoning_text.done': {
+        const reasoningText = extractOpenAIReasoningDelta(event);
+        if (!reasoningStarted && reasoningText) {
+          reasoningStarted = true;
+          emitSse(controller, encoder, {
+            choices: [{
+              delta: { reasoning_content: reasoningText },
+              finish_reason: null
+            }]
+          });
+        }
+        return;
+      }
+
+      case 'response.output_item.done':
+        if (event.item?.type === 'reasoning' && !reasoningStarted) {
+          const reasoningText = extractReasoningText(event.item);
+          if (reasoningText) {
+            reasoningStarted = true;
+            emitSse(controller, encoder, {
+              choices: [{
+                delta: { reasoning_content: reasoningText },
+                finish_reason: null
+              }]
+            });
+          }
+        }
+        if (event.item?.type === 'code_interpreter_call') {
+          emitOpenAICodeExecution(controller, encoder, {
+            language: event.item.language || 'python',
+            code: event.item.code || '',
+            output: normalizeCodeInterpreterOutput(event.item.outputs)
+          }, emittedCodeExecutions);
+        }
+        return;
+
+      case 'response.completed': {
+        const parsed = parseOpenAIResponse(event.response);
+        if (!reasoningStarted && parsed.reasoning) {
+          reasoningStarted = true;
+          emitSse(controller, encoder, {
+            choices: [{
+              delta: { reasoning_content: parsed.reasoning },
+              finish_reason: null
+            }]
+          });
+        }
+
+        for (const execution of parsed.codeExecutions) {
+          emitOpenAICodeExecution(controller, encoder, execution, emittedCodeExecutions);
+        }
+
+        if (!textStarted && parsed.text) {
+          textStarted = true;
+          for (const textChunk of chunkText(parsed.text)) {
+            emitSse(controller, encoder, {
+              choices: [{
+                delta: { content: textChunk },
+                finish_reason: null
+              }]
+            });
+          }
+        }
+
+        if (parsed.sources.length > 0) {
+          emitSse(controller, encoder, {
+            type: 'sources',
+            sources: parsed.sources
+          });
+        }
+
+        const usage = getOpenAIUsage(event.response);
+        if (usage) {
+          emitSse(controller, encoder, { usage });
+        }
+        return;
+      }
+
+      case 'response.failed': {
+        const message = event.response?.error?.message || event.error?.message || 'OpenAI response failed';
+        emitSse(controller, encoder, { error: { message } });
+        sendDone(controller);
+        return;
+      }
+
+      case 'response.incomplete': {
+        const reason = event.response?.incomplete_details?.reason || 'incomplete';
+        emitSse(controller, encoder, {
+          choices: [{
+            delta: {},
+            finish_reason: reason
+          }]
+        });
+        return;
+      }
+
+      default:
+        return;
+    }
+  };
+
+  return new TransformStream({
+    transform(chunk, controller) {
+      buffer += decoder.decode(chunk, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) {
+          continue;
+        }
+
+        const data = line.slice(6).trim();
+        if (!data) {
+          continue;
+        }
+
+        if (data === '[DONE]') {
+          sendDone(controller);
+          continue;
+        }
+
+        try {
+          handleEvent(JSON.parse(data), controller);
+        } catch (error) {
+          console.warn('Failed to parse OpenAI Responses stream event:', error?.message || error);
+        }
+      }
+    },
+    flush(controller) {
+      if (buffer.trim().startsWith('data: ')) {
+        const data = buffer.trim().slice(6).trim();
+        if (data === '[DONE]') {
+          sendDone(controller);
+        } else if (data) {
+          try {
+            handleEvent(JSON.parse(data), controller);
+          } catch (error) {
+            console.warn('Failed to parse final OpenAI Responses stream event:', error?.message || error);
+          }
+        }
+      }
+
+      sendDone(controller);
+    }
+  });
+}
+
 function chunkText(text, chunkSize = 700) {
   const value = typeof text === 'string' ? text : '';
   if (!value) return [];
@@ -418,68 +701,6 @@ function chunkText(text, chunkSize = 700) {
     chunks.push(value.slice(index, index + chunkSize));
   }
   return chunks;
-}
-
-function createSyntheticOpenAIStream(parsed, usage = null) {
-  const encoder = new TextEncoder();
-
-  return new ReadableStream({
-    start(controller) {
-      const send = (payload) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
-      };
-
-      if (parsed.reasoning) {
-        send({
-          choices: [{
-            delta: { reasoning_content: parsed.reasoning },
-            finish_reason: null
-          }]
-        });
-      }
-
-      for (const execution of parsed.codeExecutions) {
-        if (execution.code) {
-          send({
-            type: 'code_execution',
-            language: execution.language,
-            code: execution.code
-          });
-        }
-
-        if (execution.output) {
-          send({
-            type: 'code_execution_result',
-            outcome: 'OUTCOME_OK',
-            output: execution.output
-          });
-        }
-      }
-
-      for (const textChunk of chunkText(parsed.text)) {
-        send({
-          choices: [{
-            delta: { content: textChunk },
-            finish_reason: null
-          }]
-        });
-      }
-
-      if (parsed.sources.length > 0) {
-        send({
-          type: 'sources',
-          sources: parsed.sources
-        });
-      }
-
-      if (usage) {
-        send({ usage });
-      }
-
-      controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-      controller.close();
-    }
-  });
 }
 
 function formatOpenAINonStreamingResponse(model, parsed, usage = null) {
@@ -505,6 +726,10 @@ function mapAspectRatioToSoraSize(aspectRatio = '16:9') {
 
 export async function handleOpenAIChat(c, body, apiKey) {
   const openAIBody = buildOpenAIResponsesBody(body);
+  const shouldStream = body.stream !== false;
+  if (shouldStream) {
+    openAIBody.stream = true;
+  }
 
   console.log(
     `OpenAI Responses request for model: ${openAIBody.model}, web_search=${body.web_search === true}, code_execution=${body.code_execution === true}, computer_use=${body.computer_use === true}`
@@ -526,27 +751,22 @@ export async function handleOpenAIChat(c, body, apiKey) {
       return c.json({ error: errorMessage }, response.status);
     }
 
-    const result = await response.json();
-    const parsed = parseOpenAIResponse(result);
-    const usage = result?.usage
-      ? {
-          prompt_tokens: result.usage.input_tokens,
-          completion_tokens: result.usage.output_tokens,
-          total_tokens: result.usage.total_tokens
-        }
-      : null;
+    if (shouldStream) {
+      const encoder = new TextEncoder();
+      const transformedStream = response.body.pipeThrough(createOpenAIResponsesStreamTransformer(encoder));
 
-    if (body.stream === false) {
-      return c.json(formatOpenAINonStreamingResponse(openAIBody.model, parsed, usage));
+      return new Response(transformedStream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive'
+        }
+      });
     }
 
-    return new Response(createSyntheticOpenAIStream(parsed, usage), {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive'
-      }
-    });
+    const result = await response.json();
+    const parsed = parseOpenAIResponse(result);
+    return c.json(formatOpenAINonStreamingResponse(openAIBody.model, parsed, getOpenAIUsage(result)));
   } catch (error) {
     console.error('OpenAI handler error:', error);
     return c.json({ error: 'Internal server error' }, 500);

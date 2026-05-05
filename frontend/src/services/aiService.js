@@ -233,8 +233,30 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     let buffer = '';
     let sourcesReceived = false;
     let hasReceivedContent = false;
+    let hasReceivedReasoning = false;
     let fullContent = ''; // Track full content for link parsing
     let collectedSources = []; // Collect sources to send at the end
+
+    const getReasoningDelta = (parsed) => {
+      const delta = parsed?.choices?.[0]?.delta || {};
+      const candidates = [
+        delta.reasoning_content,
+        delta.reasoning,
+        delta.thinking,
+        delta.reasoning_summary,
+        parsed?.reasoning_delta,
+        parsed?.thinking_delta,
+        parsed?.delta
+      ];
+
+      for (const candidate of candidates) {
+        if (typeof candidate === 'string' && candidate.length > 0) {
+          return candidate;
+        }
+      }
+
+      return '';
+    };
 
     // Process the stream
     while (true) {
@@ -333,10 +355,12 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
             }
 
             // Handle provider-native reasoning/thinking deltas
-            if (parsed.choices?.[0]?.delta?.reasoning_content) {
+            const reasoningDelta = getReasoningDelta(parsed);
+            if (reasoningDelta) {
+              hasReceivedReasoning = true;
               yield {
                 type: 'reasoning',
-                content: parsed.choices[0].delta.reasoning_content
+                content: reasoningDelta
               };
               continue;
             }
@@ -388,10 +412,12 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
           if (data !== '[DONE]') {
             try {
               const parsed = JSON.parse(data);
-              if (parsed.choices?.[0]?.delta?.reasoning_content) {
+              const reasoningDelta = getReasoningDelta(parsed);
+              if (reasoningDelta) {
+                hasReceivedReasoning = true;
                 yield {
                   type: 'reasoning',
-                  content: parsed.choices[0].delta.reasoning_content
+                  content: reasoningDelta
                 };
               }
               if (parsed.choices?.[0]?.delta?.content) {
@@ -406,7 +432,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     }
     
     // If no content was received, log a warning
-    if (!hasReceivedContent) {
+    if (!hasReceivedContent && !hasReceivedReasoning) {
       console.warn('[sendMessageToBackendStream] No content received from backend');
     }
 
@@ -601,7 +627,9 @@ export const sendMessageToBackend = async (modelId, message, search = false, cod
   const chunks = [];
   try {
     for await (const chunk of sendMessageToBackendStream(message, modelId, conversationHistory, imageData, fileTextContent, search, codeExecution, imageGen, systemPrompt, requestOptions)) {
-      chunks.push(chunk);
+      if (typeof chunk === 'string') {
+        chunks.push(chunk);
+      }
     }
     return { response: chunks.join('') };
   } catch (error) {

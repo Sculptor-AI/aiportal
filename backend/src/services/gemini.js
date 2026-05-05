@@ -392,13 +392,16 @@ function createGeminiStreamTransformer(encoder) {
                 const candidate = data.candidates?.[0];
 
                 if (candidate) {
-                  // Extract text content
-                  const textParts = candidate.content?.parts?.filter(p => p.text) || [];
-                  const text = textParts.map(p => p.text).join('');
+                  const parts = candidate.content?.parts || [];
 
-                  // Extract thinking/reasoning
-                  const thoughtParts = candidate.content?.parts?.filter(p => p.thought) || [];
-                  const thinking = thoughtParts.map(p => p.thought).join('');
+                  // Gemini marks thought summaries with thought: true and stores
+                  // the actual summary text in part.text.
+                  const thoughtParts = parts.filter(p => p.thought === true && typeof p.text === 'string' && p.text);
+                  const thinking = thoughtParts.map(p => p.text).join('');
+
+                  // Keep thought summaries out of the visible answer stream.
+                  const textParts = parts.filter(p => p.thought !== true && typeof p.text === 'string' && p.text);
+                  const text = textParts.map(p => p.text).join('');
 
                   // Extract function calls
                   const functionCalls = candidate.content?.parts?.filter(p => p.functionCall) || [];
