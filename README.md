@@ -135,6 +135,7 @@ GEMINI_API_KEY=...
 ANTHROPIC_API_KEY=...
 OPENAI_API_KEY=...
 CORS_ALLOWED_ORIGINS=https://sculptorai.org,http://localhost:3009
+SCULPTOR_AI_SYSTEM_PROMPT="The assistant is Sculptor, created by SculptorAI."
 
 # Optional deep research overrides
 DEEP_RESEARCH_PLANNER_MODEL=gemini-3.1-pro
@@ -142,6 +143,12 @@ DEEP_RESEARCH_RESEARCHER_MODEL=gemini-3-flash
 DEEP_RESEARCH_WRITER_MODEL=claude-sonnet-4.6
 DEEP_RESEARCH_MAX_AGENTS=12
 ```
+
+`SCULPTOR_AI_SYSTEM_PROMPT` is the platform-wide base system prompt. Set it as
+a Cloudflare Pages/Worker variable to update Sculptor's default instructions
+without rebuilding the frontend. Custom model prompts, project instructions,
+project knowledge, and flowchart instructions are appended after this base
+prompt.
 </details>
 
 ### Backend Setup

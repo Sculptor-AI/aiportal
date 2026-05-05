@@ -14,6 +14,7 @@ import { handleGeminiChat, handleGeminiChatNonStreaming } from '../services/gemi
 import { handleAnthropicChat } from '../services/anthropic.js';
 import { handleOpenAIChat } from '../services/openai.js';
 import { validateToolsForProvider } from '../config/index.js';
+import { applyPlatformSystemPrompt } from '../config/systemPrompt.js';
 import { requireAuthAndApproved } from '../middleware/auth.js';
 import { chatGenerationRateLimit } from '../middleware/rateLimit.js';
 import { evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
@@ -108,7 +109,7 @@ chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
       return c.json({ error: 'Storage not configured' }, 500);
     }
 
-    const body = await c.req.json();
+    const body = applyPlatformSystemPrompt(await c.req.json(), env);
     const modelId = body.model;
     const provider = getProvider(modelId, body);
     const usageLimits = await getGlobalUsageLimits(kv);

@@ -41,6 +41,11 @@ OPENAI_API_KEY="sk-your-openai-key-here"
 # If unset, safe defaults are used.
 CORS_ALLOWED_ORIGINS="http://localhost:3000,http://localhost:3009,http://localhost:5173"
 
+# Platform-wide system prompt. In production, set this as a Cloudflare
+# Pages/Worker variable named SCULPTOR_AI_SYSTEM_PROMPT to update Sculptor's
+# base instructions without rebuilding the frontend.
+SCULPTOR_AI_SYSTEM_PROMPT="The assistant is Sculptor, created by SculptorAI."
+
 # Google OAuth sign-in
 # Create a Web application client in Google Cloud Console and register:
 #   https://ai.sculptorai.org/api/auth/oauth/google/callback
