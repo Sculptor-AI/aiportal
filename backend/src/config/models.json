@@ -8,50 +8,10 @@
     "openai": {
       "models": {
         "gpt-5.5": "gpt-5.5",
-        "gpt-5.5-pro": "gpt-5.5-pro",
-        "gpt-5.4": "gpt-5.4",
-        "gpt-5.4-pro": "gpt-5.4-pro",
-        "gpt-5.4-mini": "gpt-5.4-mini",
-        "gpt-5.4-nano": "gpt-5.4-nano",
-        "chatgpt-5.3-instant": "gpt-5.3-chat-latest",
-        "gpt-5.3-instant": "gpt-5.3-chat-latest",
-        "chatgpt-5.4-thinking": "gpt-5.4"
+        "gpt-5.4-mini": "gpt-5.4-mini"
       },
       "modelCapabilities": {
         "gpt-5.5": {
-          "reasoning_effort": true,
-          "reasoning_effort_levels": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "xhigh"
-          ],
-          "reasoning_effort_default": "medium"
-        },
-        "gpt-5.5-pro": {
-          "reasoning_effort": true,
-          "reasoning_effort_levels": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "xhigh"
-          ],
-          "reasoning_effort_default": "high"
-        },
-        "gpt-5.4": {
-          "reasoning_effort": true,
-          "reasoning_effort_levels": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "xhigh"
-          ],
-          "reasoning_effort_default": "medium"
-        },
-        "gpt-5.4-pro": {
           "reasoning_effort": true,
           "reasoning_effort_levels": [
             "none",
@@ -71,29 +31,7 @@
             "high",
             "xhigh"
           ],
-          "reasoning_effort_default": "medium"
-        },
-        "gpt-5.4-nano": {
-          "reasoning_effort": true,
-          "reasoning_effort_levels": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "xhigh"
-          ],
-          "reasoning_effort_default": "low"
-        },
-        "chatgpt-5.4-thinking": {
-          "reasoning_effort": true,
-          "reasoning_effort_levels": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "xhigh"
-          ],
-          "reasoning_effort_default": "medium"
+          "reasoning_effort_default": "none"
         }
       },
       "capabilities": {

@@ -27,19 +27,22 @@ health.get('/health', (c) => c.json({ ok: true, time: nowIso() }));
  */
 health.get('/models', (c) => {
   const chatModels = listChatModels();
+  const publicChatModelIds = new Set(['gpt-5.5', 'gpt-5.4-mini']);
   
   // Format for API response - include capabilities for frontend
-  const models = chatModels.map(m => ({
-    id: m.id,
-    apiId: m.apiId,
-    provider: m.provider,
-    isDefault: m.isDefault,
-    capabilities: m.capabilities || {}
-  }));
+  const models = chatModels
+    .filter(m => m.provider === 'openai' && publicChatModelIds.has(m.id))
+    .map(m => ({
+      id: m.id,
+      apiId: m.apiId,
+      provider: m.provider,
+      isDefault: m.isDefault,
+      capabilities: m.capabilities || {}
+    }));
 
   return c.json({ 
     models,
-    _note: 'Model mappings are defined in src/config/models.json. Update that file when providers release new models.'
+    _note: 'Public chat model list is intentionally limited to the latest GPT thinking and instant models.'
   });
 });
 
