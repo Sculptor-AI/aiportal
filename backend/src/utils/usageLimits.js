@@ -3,7 +3,8 @@ const USAGE_LIMITS_KEY = 'settings:usage-limits';
 export const DEFAULT_USAGE_LIMITS = Object.freeze({
   turns: null,
   images: null,
-  videos: null
+  videos: null,
+  modelRateLimits: []
 });
 
 export const DEFAULT_USER_USAGE = Object.freeze({
@@ -15,6 +16,7 @@ export const DEFAULT_USER_USAGE = Object.freeze({
 });
 
 const USAGE_FIELDS = ['turns', 'images', 'videos'];
+const MODEL_RATE_LIMIT_MAX_WINDOW_SECONDS = 60 * 60 * 24 * 31;
 
 const normalizeCount = (value) => {
   const numericValue = Number(value);
@@ -38,6 +40,89 @@ const normalizeLimitValue = (value) => {
   return Math.floor(numericValue);
 };
 
+const normalizePositiveInteger = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue <= 0 || !Number.isInteger(numericValue)) {
+    return null;
+  }
+
+  return numericValue;
+};
+
+const normalizeModelId = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.trim().slice(0, 200);
+};
+
+const normalizeRuleId = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.trim().replace(/[^a-zA-Z0-9:_-]/g, '-').slice(0, 120);
+};
+
+const createModelRateLimitId = (modelId, limit, windowSeconds, index) => {
+  const safeModelId = modelId.replace(/[^a-zA-Z0-9:_-]/g, '-').slice(0, 80) || 'model';
+  return `${safeModelId}:${limit}:${windowSeconds}:${index}`;
+};
+
+const normalizeModelRateLimitRule = (rawRule, index = 0, { strict = false } = {}) => {
+  const modelId = normalizeModelId(rawRule?.modelId ?? rawRule?.model);
+  const limit = normalizePositiveInteger(rawRule?.limit);
+  const windowSeconds = normalizePositiveInteger(rawRule?.windowSeconds);
+
+  if (!modelId) {
+    if (strict) throw new Error('Model rate limit rules need a model.');
+    return null;
+  }
+
+  if (limit === null) {
+    if (strict) throw new Error(`Rate limit for ${modelId} must be a positive whole number.`);
+    return null;
+  }
+
+  if (windowSeconds === null || windowSeconds > MODEL_RATE_LIMIT_MAX_WINDOW_SECONDS) {
+    if (strict) throw new Error(`Rate limit window for ${modelId} must be between 1 second and 31 days.`);
+    return null;
+  }
+
+  const id = normalizeRuleId(rawRule?.id) || createModelRateLimitId(modelId, limit, windowSeconds, index);
+
+  return {
+    id,
+    modelId,
+    limit,
+    windowSeconds
+  };
+};
+
+export const normalizeModelRateLimits = (rawRules = []) => {
+  const sourceRules = Array.isArray(rawRules)
+    ? rawRules
+    : Object.entries(rawRules || {}).map(([modelId, rule]) => ({
+      ...(typeof rule === 'object' && rule !== null ? rule : {}),
+      modelId
+    }));
+  const seenIds = new Set();
+  const normalizedRules = [];
+
+  sourceRules.forEach((rule, index) => {
+    const normalizedRule = normalizeModelRateLimitRule(rule, index);
+    if (!normalizedRule || seenIds.has(normalizedRule.id)) {
+      return;
+    }
+
+    seenIds.add(normalizedRule.id);
+    normalizedRules.push(normalizedRule);
+  });
+
+  return normalizedRules;
+};
+
 const normalizeTimestamp = (value) => {
   if (!value || typeof value !== 'string') {
     return null;
@@ -50,7 +135,8 @@ const normalizeTimestamp = (value) => {
 export const normalizeUsageLimits = (rawLimits = {}) => ({
   turns: normalizeLimitValue(rawLimits.turns),
   images: normalizeLimitValue(rawLimits.images),
-  videos: normalizeLimitValue(rawLimits.videos)
+  videos: normalizeLimitValue(rawLimits.videos),
+  modelRateLimits: normalizeModelRateLimits(rawLimits.modelRateLimits)
 });
 
 export const parseUsageLimitsInput = (rawLimits = {}) => {
@@ -73,6 +159,25 @@ export const parseUsageLimitsInput = (rawLimits = {}) => {
     }
 
     parsedLimits[field] = numericValue;
+  }
+
+  if ('modelRateLimits' in rawLimits) {
+    const sourceRules = Array.isArray(rawLimits.modelRateLimits)
+      ? rawLimits.modelRateLimits
+      : Object.entries(rawLimits.modelRateLimits || {}).map(([modelId, rule]) => ({
+        ...(typeof rule === 'object' && rule !== null ? rule : {}),
+        modelId
+      }));
+    const seenIds = new Set();
+
+    parsedLimits.modelRateLimits = sourceRules.map((rule, index) => {
+      const normalizedRule = normalizeModelRateLimitRule(rule, index, { strict: true });
+      if (seenIds.has(normalizedRule.id)) {
+        throw new Error(`Duplicate model rate limit rule id: ${normalizedRule.id}`);
+      }
+      seenIds.add(normalizedRule.id);
+      return normalizedRule;
+    });
   }
 
   return parsedLimits;
@@ -191,6 +296,77 @@ export const evaluateUsageRequest = ({ user, limits, requested = {} }) => {
     usage,
     limits: normalizedLimits,
     requested: normalizedRequested
+  };
+};
+
+const getMatchingModelRateLimitRules = (limits, modelId) => {
+  const normalizedModelId = normalizeModelId(modelId);
+  if (!normalizedModelId) {
+    return [];
+  }
+
+  return normalizeModelRateLimits(limits?.modelRateLimits).filter((rule) => rule.modelId === normalizedModelId);
+};
+
+export const evaluateModelRateLimits = async ({ kv, userId, modelId, limits }) => {
+  const rules = getMatchingModelRateLimitRules(limits, modelId);
+  if (!kv || !userId || rules.length === 0) {
+    return {
+      allowed: true,
+      modelId: normalizeModelId(modelId),
+      rules: []
+    };
+  }
+
+  const now = Date.now();
+  const evaluatedRules = [];
+
+  for (const rule of rules) {
+    const key = `ratelimit:model:${rule.id}:user:${userId}`;
+    const windowMs = rule.windowSeconds * 1000;
+    let state = await kv.get(key, 'json');
+
+    if (!state || typeof state.resetAt !== 'number' || state.resetAt <= now || state.windowSeconds !== rule.windowSeconds) {
+      state = {
+        count: 0,
+        resetAt: now + windowMs,
+        windowSeconds: rule.windowSeconds
+      };
+    }
+
+    state.count += 1;
+
+    const ttlSeconds = Math.max(1, Math.ceil((state.resetAt - now) / 1000));
+    await kv.put(key, JSON.stringify(state), { expirationTtl: ttlSeconds });
+
+    evaluatedRules.push({
+      ...rule,
+      used: state.count,
+      remaining: Math.max(0, rule.limit - state.count),
+      resetAt: new Date(state.resetAt).toISOString(),
+      retryAfterSeconds: ttlSeconds,
+      exceeded: state.count > rule.limit
+    });
+  }
+
+  const exceededRules = evaluatedRules.filter((rule) => rule.exceeded);
+  if (exceededRules.length > 0) {
+    exceededRules.sort((a, b) => b.retryAfterSeconds - a.retryAfterSeconds);
+    const blockingRule = exceededRules[0];
+
+    return {
+      allowed: false,
+      modelId: normalizeModelId(modelId),
+      blockingRule,
+      rules: evaluatedRules,
+      message: `This account has reached the rate limit for ${blockingRule.modelId}. Try again after ${blockingRule.resetAt}.`
+    };
+  }
+
+  return {
+    allowed: true,
+    modelId: normalizeModelId(modelId),
+    rules: evaluatedRules
   };
 };
 

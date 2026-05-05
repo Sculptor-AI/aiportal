@@ -44,7 +44,14 @@ export const createRateLimiter = ({ keyPrefix, limit, windowSeconds }) => {
     if (state.count > limit) {
       c.header('Retry-After', String(ttlSeconds));
       return c.json({
-        error: 'Too many requests. Please try again later.'
+        error: 'Too many requests. Please try again later.',
+        code: 'rate_limit_exceeded',
+        limit,
+        windowSeconds,
+        used: state.count,
+        remaining: 0,
+        resetAt: new Date(state.resetAt).toISOString(),
+        retryAfterSeconds: ttlSeconds
       }, 429);
     }
 

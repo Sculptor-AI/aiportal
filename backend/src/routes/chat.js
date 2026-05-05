@@ -17,7 +17,7 @@ import { validateToolsForProvider } from '../config/index.js';
 import { applyPlatformSystemPrompt } from '../config/systemPrompt.js';
 import { requireAuthAndApproved } from '../middleware/auth.js';
 import { chatGenerationRateLimit } from '../middleware/rateLimit.js';
-import { evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
+import { evaluateModelRateLimits, evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
 
 const chat = new Hono();
 
@@ -129,6 +129,29 @@ chat.post('/chat/completions', chatGenerationRateLimit, async (c) => {
         limits: usageEvaluation.limits,
         requested: usageEvaluation.requested,
         exceeded: usageEvaluation.field
+      }, 429);
+    }
+
+    const modelRateEvaluation = await evaluateModelRateLimits({
+      kv,
+      userId: user.id,
+      modelId,
+      limits: usageLimits
+    });
+
+    if (!modelRateEvaluation.allowed) {
+      c.header('Retry-After', String(modelRateEvaluation.blockingRule.retryAfterSeconds));
+      return c.json({
+        error: modelRateEvaluation.message,
+        code: 'model_rate_limit_exceeded',
+        model: modelRateEvaluation.modelId,
+        limit: modelRateEvaluation.blockingRule.limit,
+        windowSeconds: modelRateEvaluation.blockingRule.windowSeconds,
+        used: modelRateEvaluation.blockingRule.used,
+        remaining: modelRateEvaluation.blockingRule.remaining,
+        resetAt: modelRateEvaluation.blockingRule.resetAt,
+        retryAfterSeconds: modelRateEvaluation.blockingRule.retryAfterSeconds,
+        rules: modelRateEvaluation.rules
       }, 429);
     }
 

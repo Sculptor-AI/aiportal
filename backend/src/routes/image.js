@@ -10,11 +10,11 @@
 import { Hono } from 'hono';
 import { generateImageWithImagen } from '../services/gemini.js';
 import { generateImageWithDALLE, editImageWithDALLE } from '../services/openai.js';
-import { listImageModels, getDefaultImageModel } from '../config/index.js';
+import { listImageModels } from '../config/index.js';
 import modelsConfig from '../config/models.json';
 import { requireAuthAndApproved } from '../middleware/auth.js';
 import { imageGenerationRateLimit } from '../middleware/rateLimit.js';
-import { evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
+import { evaluateModelRateLimits, evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
 
 const image = new Hono();
 
@@ -49,6 +49,31 @@ function resolveImageModel(modelName) {
   return { provider: 'google', apiId: modelName };
 }
 
+const getImageRateLimitModelId = (model, selectedProvider, resolvedApiId) => {
+  if (model) return model;
+  const providerKey = selectedProvider === 'openai' || selectedProvider === 'dalle' ? 'openai' : 'google';
+  const providerConfig = modelsConfig.image?.[providerKey];
+  const globalDefault = modelsConfig.image?.default;
+  if (providerConfig?.models?.[globalDefault]) return globalDefault;
+  return Object.keys(providerConfig?.models || {})[0] || resolvedApiId || 'image-default';
+};
+
+const modelRateLimitResponse = (c, evaluation) => {
+  c.header('Retry-After', String(evaluation.blockingRule.retryAfterSeconds));
+  return c.json({
+    error: evaluation.message,
+    code: 'model_rate_limit_exceeded',
+    model: evaluation.modelId,
+    limit: evaluation.blockingRule.limit,
+    windowSeconds: evaluation.blockingRule.windowSeconds,
+    used: evaluation.blockingRule.used,
+    remaining: evaluation.blockingRule.remaining,
+    resetAt: evaluation.blockingRule.resetAt,
+    retryAfterSeconds: evaluation.blockingRule.retryAfterSeconds,
+    rules: evaluation.rules
+  }, 429);
+};
+
 /**
  * Generate image
  * 
@@ -82,6 +107,13 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
       return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
     }
 
+    // Resolve model to get provider and API ID
+    const resolved = resolveImageModel(model);
+
+    // Use explicit provider if given, otherwise use resolved provider
+    let selectedProvider = provider || resolved.provider;
+    const resolvedApiId = resolved.apiId;
+    const rateLimitModelId = getImageRateLimitModelId(model, selectedProvider, resolvedApiId);
     const usageLimits = await getGlobalUsageLimits(kv);
     const usageEvaluation = evaluateUsageRequest({
       user,
@@ -100,12 +132,16 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
       }, 429);
     }
 
-    // Resolve model to get provider and API ID
-    const resolved = resolveImageModel(model);
-    
-    // Use explicit provider if given, otherwise use resolved provider
-    let selectedProvider = provider || resolved.provider;
-    const resolvedApiId = resolved.apiId;
+    const modelRateEvaluation = await evaluateModelRateLimits({
+      kv,
+      userId: user.id,
+      modelId: rateLimitModelId,
+      limits: usageLimits
+    });
+
+    if (!modelRateEvaluation.allowed) {
+      return modelRateLimitResponse(c, modelRateEvaluation);
+    }
 
     console.log(`Image generation: provider=${selectedProvider}, model=${model || 'default'}, apiId=${resolvedApiId}`);
 
@@ -221,6 +257,7 @@ image.post('/edit', imageGenerationRateLimit, async (c) => {
       return c.json({ error: 'Prompt is required' }, 400);
     }
 
+    const rateLimitModelId = model || 'gpt-image-1';
     const usageLimits = await getGlobalUsageLimits(kv);
     const usageEvaluation = evaluateUsageRequest({
       user,
@@ -237,6 +274,17 @@ image.post('/edit', imageGenerationRateLimit, async (c) => {
         requested: usageEvaluation.requested,
         exceeded: usageEvaluation.field
       }, 429);
+    }
+
+    const modelRateEvaluation = await evaluateModelRateLimits({
+      kv,
+      userId: user.id,
+      modelId: rateLimitModelId,
+      limits: usageLimits
+    });
+
+    if (!modelRateEvaluation.allowed) {
+      return modelRateLimitResponse(c, modelRateEvaluation);
     }
 
     const result = await editImageWithDALLE(imageData, prompt, apiKey, {

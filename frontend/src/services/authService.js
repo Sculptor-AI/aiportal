@@ -590,6 +590,25 @@ export const getChatModels = async () => {
   }
 };
 
+export const getImageModels = async () => {
+  try {
+    const response = await fetchWithFallback('/image/models', {
+      method: 'GET'
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch available image models');
+    }
+    if (Array.isArray(data.models)) {
+      return data.models;
+    }
+    return [];
+  } catch (error) {
+    console.error('Get image models error:', error);
+    throw error;
+  }
+};
+
 export const updateDeepResearchConfig = async (config) => {
   try {
     const response = await fetchWithFallback('/admin/deep-research/config', {

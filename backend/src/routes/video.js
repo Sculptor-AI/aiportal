@@ -10,7 +10,7 @@ import { requireAuthAndApproved } from '../middleware/auth.js';
 import { videoGenerationRateLimit } from '../middleware/rateLimit.js';
 import { validateOutboundUrl } from '../utils/urlValidation.js';
 import { canUserAccessVideo, createVideoOwnershipRecord, getVideoOwnershipRecord } from '../utils/videoOwnership.js';
-import { evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
+import { evaluateModelRateLimits, evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
 
 const video = new Hono();
 const VIDEO_DOWNLOAD_HOST_ALLOWLIST = [
@@ -23,6 +23,22 @@ const VIDEO_DOWNLOAD_HOST_ALLOWLIST = [
 ];
 
 const isRedirectStatus = (status) => status >= 300 && status < 400;
+
+const modelRateLimitResponse = (c, evaluation) => {
+  c.header('Retry-After', String(evaluation.blockingRule.retryAfterSeconds));
+  return c.json({
+    error: evaluation.message,
+    code: 'model_rate_limit_exceeded',
+    model: evaluation.modelId,
+    limit: evaluation.blockingRule.limit,
+    windowSeconds: evaluation.blockingRule.windowSeconds,
+    used: evaluation.blockingRule.used,
+    remaining: evaluation.blockingRule.remaining,
+    resetAt: evaluation.blockingRule.resetAt,
+    retryAfterSeconds: evaluation.blockingRule.retryAfterSeconds,
+    rules: evaluation.rules
+  }, 429);
+};
 
 const requireTrackedVideoAccess = async (c, videoId) => {
   const kv = c.env.KV;
@@ -73,7 +89,7 @@ video.post('/generate', videoGenerationRateLimit, async (c) => {
 
   try {
     const body = await c.req.json();
-    const { prompt, aspectRatio } = body;
+    const { prompt, aspectRatio, model } = body;
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
       return c.json({ error: 'Prompt is required and must be a non-empty string' }, 400);
@@ -101,9 +117,20 @@ video.post('/generate', videoGenerationRateLimit, async (c) => {
       }, 429);
     }
 
+    const modelRateEvaluation = await evaluateModelRateLimits({
+      kv,
+      userId: user.id,
+      modelId: model || 'sora-2',
+      limits: usageLimits
+    });
+
+    if (!modelRateEvaluation.allowed) {
+      return modelRateLimitResponse(c, modelRateEvaluation);
+    }
+
     console.log('Sora video generation request received');
 
-    const result = await generateVideoWithSora(prompt, apiKey, { aspectRatio });
+    const result = await generateVideoWithSora(prompt, apiKey, { aspectRatio, model });
 
     if (!result.success) {
       console.error('Video generation provider failure:', result.error);

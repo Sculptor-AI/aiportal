@@ -10,6 +10,7 @@ import {
   updateUsageLimits,
   getDeepResearchConfig,
   getChatModels,
+  getImageModels,
   updateDeepResearchConfig,
   updateUserDetails,
   updateUserStatus
@@ -18,7 +19,7 @@ import AdminLoginModal from '../components/AdminLoginModal';
 
 const STATUS_LABELS = { active: 'Active', pending: 'Pending', suspended: 'Suspended', banned: 'Banned' };
 const ROLE_LABELS = { admin: 'Admin', user: 'User' };
-const DEFAULT_LIMITS = { turns: null, images: null, videos: null };
+const DEFAULT_LIMITS = { turns: null, images: null, videos: null, modelRateLimits: [] };
 const DEFAULT_DEEP_RESEARCH_CONFIG = {
   plannerModel: 'gemini-3.1-pro',
   researcherModel: 'gemini-3-flash',
@@ -59,7 +60,9 @@ const DEEP_RESEARCH_FORM_FIELD_KEYS = {
   requestTimeoutMs: 'requestTimeoutMs',
   allowWriterModelOverride: 'allowWriterModelOverride'
 };
-const EMPTY_LIMIT_FORM = { turns: '', images: '', videos: '' };
+const EMPTY_LIMIT_FORM = { turns: '', images: '', videos: '', modelRateLimits: [] };
+const EMPTY_MODEL_RATE_DRAFT = { modelId: '', limit: '', windowAmount: '5', windowUnit: 'minutes' };
+const WINDOW_UNIT_SECONDS = { seconds: 1, minutes: 60, hours: 3600, days: 86400 };
 
 const Page = styled.div`
   flex: 1; min-height: 100vh; min-width: 0; color: ${p => p.theme.text}; overflow-y: auto; overflow-x: hidden;
@@ -136,6 +139,23 @@ const SnapshotGrid = styled.div`
   display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;
   @media (max-width: 520px) { grid-template-columns:1fr; }
 `;
+const RateLimitSection = styled.div`
+  border:1px solid ${p => p.theme.border}; border-radius:12px; padding:14px; background:${p => p.theme.inputBackground || p.theme.background};
+`;
+const RateLimitFormGrid = styled.div`
+  display:grid; grid-template-columns:minmax(220px,1fr) 130px 130px 140px auto; gap:10px; align-items:end;
+  @media (max-width: 980px) { grid-template-columns:1fr 1fr; }
+  @media (max-width: 560px) { grid-template-columns:1fr; }
+`;
+const RateRuleList = styled.div`display:flex; flex-direction:column; gap:8px; margin-top:12px;`;
+const RateRuleRow = styled.div`
+  display:grid; grid-template-columns:minmax(220px,1fr) 160px 180px auto; gap:10px; align-items:center; padding:10px;
+  border:1px solid ${p => p.theme.border}; border-radius:10px; background:${p => p.theme.sidebar};
+  @media (max-width: 760px) { grid-template-columns:1fr; }
+`;
+const RuleModel = styled.div`display:flex; flex-direction:column; gap:3px; min-width:0;`;
+const RuleModelId = styled.span`font-weight:700; font-size:0.9rem; overflow-wrap:anywhere;`;
+const RuleMeta = styled.span`font-size:0.78rem; opacity:0.66;`;
 const Controls = styled.div`
   display:grid; grid-template-columns:minmax(220px,1fr) 180px 180px auto; gap:10px; margin-bottom:14px;
   @media (max-width: 980px) { grid-template-columns:1fr 1fr; }
@@ -276,7 +296,61 @@ const formatLimitValue = (value) => value === null || value === undefined ? 'Unl
 const formatUsageValue = (used, limit) => limit === null || limit === undefined ? `${used.toLocaleString('en-US')} used` : `${used.toLocaleString('en-US')} / ${limit.toLocaleString('en-US')}`;
 const getUsageTone = (used, limit) => { if (limit === null || limit === undefined) return 'neutral'; if (limit === 0) return used > 0 ? 'danger' : 'safe'; const ratio = used / limit; if (ratio >= 1) return 'danger'; if (ratio >= 0.8) return 'warning'; return 'safe'; };
 const getUsageProgress = (used, limit) => { if (limit === null || limit === undefined) return null; if (limit === 0) return used > 0 ? 100 : 0; return Math.max(0, Math.min(100, Math.round((used / limit) * 100))); };
-const syncLimitForm = (limits) => ({ turns: toLimitInput(limits?.turns), images: toLimitInput(limits?.images), videos: toLimitInput(limits?.videos) });
+const normalizeModelRateLimits = (rules = []) => {
+  const sourceRules = Array.isArray(rules)
+    ? rules
+    : Object.entries(rules || {}).map(([modelId, rule]) => ({
+      ...(typeof rule === 'object' && rule !== null ? rule : {}),
+      modelId
+    }));
+  const seen = new Set();
+
+  return sourceRules.reduce((items, rule, index) => {
+    const modelId = typeof rule?.modelId === 'string' ? rule.modelId.trim() : '';
+    const limit = Number(rule?.limit);
+    const windowSeconds = Number(rule?.windowSeconds);
+    const id = typeof rule?.id === 'string' && rule.id.trim()
+      ? rule.id.trim()
+      : `${modelId.replace(/[^a-zA-Z0-9:_-]/g, '-')}-${limit}-${windowSeconds}-${index}`;
+
+    if (!modelId || !Number.isInteger(limit) || limit <= 0 || !Number.isInteger(windowSeconds) || windowSeconds <= 0 || seen.has(id)) {
+      return items;
+    }
+
+    seen.add(id);
+    items.push({ id, modelId, limit, windowSeconds });
+    return items;
+  }, []);
+};
+const normalizeLimits = (limits = {}) => ({ ...DEFAULT_LIMITS, ...limits, modelRateLimits: normalizeModelRateLimits(limits.modelRateLimits) });
+const syncLimitForm = (limits) => {
+  const normalizedLimits = normalizeLimits(limits);
+  return {
+    turns: toLimitInput(normalizedLimits.turns),
+    images: toLimitInput(normalizedLimits.images),
+    videos: toLimitInput(normalizedLimits.videos),
+    modelRateLimits: normalizedLimits.modelRateLimits
+  };
+};
+const getWindowSeconds = (amount, unit) => {
+  const numericAmount = Number(amount);
+  const unitSeconds = WINDOW_UNIT_SECONDS[unit] || WINDOW_UNIT_SECONDS.minutes;
+  if (!Number.isInteger(numericAmount) || numericAmount <= 0) return null;
+  return numericAmount * unitSeconds;
+};
+const formatDuration = (seconds) => {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value <= 0) return 'unknown window';
+  const units = [
+    ['day', 86400],
+    ['hour', 3600],
+    ['minute', 60],
+    ['second', 1]
+  ];
+  const [label, size] = units.find(([, unitSeconds]) => value % unitSeconds === 0) || ['second', 1];
+  const amount = value / size;
+  return `${amount.toLocaleString('en-US')} ${label}${amount === 1 ? '' : 's'}`;
+};
 
 const AdminPage = ({ collapsed }) => {
   const { adminUser } = useAuth();
@@ -287,6 +361,8 @@ const AdminPage = ({ collapsed }) => {
   const [deepResearchConfig, setDeepResearchConfig] = useState(DEFAULT_DEEP_RESEARCH_CONFIG);
   const [deepResearchConfigForm, setDeepResearchConfigForm] = useState(DEFAULT_DEEP_RESEARCH_CONFIG);
   const [chatModels, setChatModels] = useState([]);
+  const [imageModels, setImageModels] = useState([]);
+  const [modelRateDraft, setModelRateDraft] = useState(EMPTY_MODEL_RATE_DRAFT);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -309,15 +385,16 @@ const AdminPage = ({ collapsed }) => {
     setError('');
 
     try {
-      const [usersData, statsData, limitsData, deepResearchConfigData, chatModelData] = await Promise.all([
+      const [usersData, statsData, limitsData, deepResearchConfigData, chatModelData, imageModelData] = await Promise.all([
         getAllUsers(),
         getDashboardStats(),
         getUsageLimits(),
         getDeepResearchConfig(),
-        getChatModels().catch(() => [])
+        getChatModels().catch(() => []),
+        getImageModels().catch(() => [])
       ]);
       const nextUsers = (usersData || []).map(normalizeUser);
-      const nextLimits = limitsData || statsData?.usageLimits || DEFAULT_LIMITS;
+      const nextLimits = normalizeLimits(limitsData || statsData?.usageLimits || DEFAULT_LIMITS);
       const nextDeepResearchConfig = deepResearchConfigData || DEFAULT_DEEP_RESEARCH_CONFIG;
       setUsers(nextUsers);
       setStats({ totalUsers: 0, pendingUsers: 0, activeUsers: 0, adminUsers: 0, suspendedUsers: 0, totalTurnsUsed: 0, totalImagesUsed: 0, totalVideosUsed: 0, ...(statsData || {}) });
@@ -329,6 +406,7 @@ const AdminPage = ({ collapsed }) => {
         ...nextDeepResearchConfig
       });
       setChatModels(Array.isArray(chatModelData) ? chatModelData : []);
+      setImageModels(Array.isArray(imageModelData) ? imageModelData : []);
       return nextUsers;
     } catch (err) {
       setError(err.message || 'Failed to load admin data.');
@@ -343,6 +421,26 @@ const AdminPage = ({ collapsed }) => {
     if (!adminUser) return;
     loadData(false);
   }, [adminUser, loadData]);
+
+  const rateLimitModelOptions = useMemo(() => {
+    const seen = new Set();
+    const options = [];
+    const addModel = (model, kind) => {
+      if (!model?.id || seen.has(model.id)) return;
+      seen.add(model.id);
+      options.push({ ...model, kind });
+    };
+
+    (Array.isArray(chatModels) ? chatModels : []).forEach((model) => addModel(model, 'chat'));
+    (Array.isArray(imageModels) ? imageModels : []).forEach((model) => addModel(model, 'image'));
+    addModel({ id: 'sora-2', provider: 'openai' }, 'video');
+    return options;
+  }, [chatModels, imageModels]);
+
+  useEffect(() => {
+    if (modelRateDraft.modelId || rateLimitModelOptions.length === 0) return;
+    setModelRateDraft((current) => current.modelId ? current : { ...current, modelId: rateLimitModelOptions[0].id });
+  }, [rateLimitModelOptions, modelRateDraft.modelId]);
 
   const filteredUsers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -376,6 +474,11 @@ const AdminPage = ({ collapsed }) => {
 
     return { nearingLimitUsers, cappedOutUsers };
   }, [users, limits]);
+
+  const modelMetaById = useMemo(() => {
+    const entries = rateLimitModelOptions.map((model) => [model.id, model]);
+    return new Map(entries);
+  }, [rateLimitModelOptions]);
 
   const beginEdit = (user) => {
     setError('');
@@ -429,9 +532,14 @@ const AdminPage = ({ collapsed }) => {
     setError('');
     setSuccess('');
     try {
-      const nextLimits = await updateUsageLimits({ turns: limitForm.turns.trim(), images: limitForm.images.trim(), videos: limitForm.videos.trim() });
-      setLimits(nextLimits || DEFAULT_LIMITS);
-      setLimitForm(syncLimitForm(nextLimits || DEFAULT_LIMITS));
+      const nextLimits = normalizeLimits(await updateUsageLimits({
+        turns: limitForm.turns.trim(),
+        images: limitForm.images.trim(),
+        videos: limitForm.videos.trim(),
+        modelRateLimits: normalizeModelRateLimits(limitForm.modelRateLimits)
+      }) || DEFAULT_LIMITS);
+      setLimits(nextLimits);
+      setLimitForm(syncLimitForm(nextLimits));
       await loadData(true);
       setSuccess('Global usage limits updated.');
     } catch (err) {
@@ -439,6 +547,50 @@ const AdminPage = ({ collapsed }) => {
     } finally {
       setSavingLimits(false);
     }
+  };
+
+  const handleAddModelRateLimit = () => {
+    const modelId = modelRateDraft.modelId.trim();
+    const limit = Number(modelRateDraft.limit);
+    const windowSeconds = getWindowSeconds(modelRateDraft.windowAmount, modelRateDraft.windowUnit);
+
+    setError('');
+    setSuccess('');
+
+    if (!modelId) {
+      setError('Choose a model for the rate limit.');
+      return;
+    }
+
+    if (!Number.isInteger(limit) || limit <= 0) {
+      setError('Rate limit requests must be a positive whole number.');
+      return;
+    }
+
+    if (!windowSeconds) {
+      setError('Rate limit window must be a positive whole number.');
+      return;
+    }
+
+    const nextRule = {
+      id: `${modelId.replace(/[^a-zA-Z0-9:_-]/g, '-')}-${limit}-${windowSeconds}-${Date.now()}`,
+      modelId,
+      limit,
+      windowSeconds
+    };
+
+    setLimitForm((current) => ({
+      ...current,
+      modelRateLimits: [...normalizeModelRateLimits(current.modelRateLimits), nextRule]
+    }));
+    setModelRateDraft((current) => ({ ...current, limit: '' }));
+  };
+
+  const handleRemoveModelRateLimit = (ruleId) => {
+    setLimitForm((current) => ({
+      ...current,
+      modelRateLimits: normalizeModelRateLimits(current.modelRateLimits).filter((rule) => rule.id !== ruleId)
+    }));
   };
 
   const handleSaveDeepResearchConfig = async () => {
@@ -541,6 +693,8 @@ const AdminPage = ({ collapsed }) => {
     }
   };
 
+  const modelRateLimitRules = normalizeModelRateLimits(limitForm.modelRateLimits);
+
   if (!adminUser) {
     return (
       <Page $collapsed={collapsed}>
@@ -617,9 +771,85 @@ const AdminPage = ({ collapsed }) => {
               </LimitCard>
             </LimitGrid>
 
+            <RateLimitSection>
+              <DRSectionHead>
+                <div>
+                  <DRSectionTitle>Model rate limits</DRSectionTitle>
+                  <Helper style={{ marginTop: 4 }}>Each rule applies per user account. Add more than one rule to enforce multiple reset windows for the same model.</Helper>
+                </div>
+              </DRSectionHead>
+
+              <RateLimitFormGrid>
+                <Field>
+                  <FieldLabel>Model</FieldLabel>
+                  <Input
+                    list="admin-model-rate-limit-models"
+                    placeholder="Model id"
+                    value={modelRateDraft.modelId}
+                    onChange={(e) => setModelRateDraft((current) => ({ ...current, modelId: e.target.value }))}
+                  />
+                  <datalist id="admin-model-rate-limit-models">
+                    {rateLimitModelOptions.map((model) => (
+                      <option key={model.id} value={model.id}>{`${model.kind || 'model'} ${model.provider || ''}`.trim()}</option>
+                    ))}
+                  </datalist>
+                </Field>
+                <Field>
+                  <FieldLabel>Requests</FieldLabel>
+                  <Input
+                    inputMode="numeric"
+                    placeholder="10"
+                    value={modelRateDraft.limit}
+                    onChange={(e) => setModelRateDraft((current) => ({ ...current, limit: e.target.value }))}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Window</FieldLabel>
+                  <Input
+                    inputMode="numeric"
+                    placeholder="5"
+                    value={modelRateDraft.windowAmount}
+                    onChange={(e) => setModelRateDraft((current) => ({ ...current, windowAmount: e.target.value }))}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Unit</FieldLabel>
+                  <Select
+                    value={modelRateDraft.windowUnit}
+                    onChange={(e) => setModelRateDraft((current) => ({ ...current, windowUnit: e.target.value }))}
+                  >
+                    <option value="seconds">Seconds</option>
+                    <option value="minutes">Minutes</option>
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                  </Select>
+                </Field>
+                <Button type="button" onClick={handleAddModelRateLimit} disabled={savingLimits}>Add rule</Button>
+              </RateLimitFormGrid>
+
+              <RateRuleList>
+                {modelRateLimitRules.length === 0 ? (
+                  <Helper>No model-specific rate limits configured.</Helper>
+                ) : modelRateLimitRules.map((rule) => {
+                  const modelMeta = modelMetaById.get(rule.modelId);
+                  return (
+                    <RateRuleRow key={rule.id}>
+                      <RuleModel>
+                        <RuleModelId>{rule.modelId}</RuleModelId>
+                        <RuleMeta>{[modelMeta?.kind, modelMeta?.provider].filter(Boolean).join(' / ') || 'custom model'}</RuleMeta>
+                      </RuleModel>
+                      <div>{rule.limit.toLocaleString('en-US')} requests</div>
+                      <div>per {formatDuration(rule.windowSeconds)}</div>
+                      <DangerButton type="button" onClick={() => handleRemoveModelRateLimit(rule.id)} disabled={savingLimits}>Remove</DangerButton>
+                    </RateRuleRow>
+                  );
+                })}
+              </RateRuleList>
+            </RateLimitSection>
+
             <Actions style={{ justifyContent: 'space-between' }}>
               <Helper style={{ marginTop: 0 }}>
-                Lowering a limit below current usage does not erase history. It simply blocks new requests until usage is reset.
+                Lowering a limit below current usage does not erase history. Rate limits reset automatically at the end of each configured window.
               </Helper>
               <Button onClick={() => setLimitForm(EMPTY_LIMIT_FORM)} disabled={savingLimits}>Clear form</Button>
             </Actions>
@@ -651,6 +881,11 @@ const AdminPage = ({ collapsed }) => {
                 <SmallLabel>Media limits</SmallLabel>
                 <BigValue>{`${formatLimitValue(limits.images)} / ${formatLimitValue(limits.videos)}`}</BigValue>
                 <Helper style={{ marginTop: 0 }}>Images first, videos second.</Helper>
+              </LimitCard>
+              <LimitCard>
+                <SmallLabel>Model rate rules</SmallLabel>
+                <BigValue>{(limits.modelRateLimits || []).length.toLocaleString('en-US')}</BigValue>
+                <Helper style={{ marginTop: 0 }}>Each active rule has its own reset window.</Helper>
               </LimitCard>
             </SnapshotGrid>
           </Panel>
