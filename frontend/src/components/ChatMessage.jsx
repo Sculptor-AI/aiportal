@@ -1585,25 +1585,23 @@ const SourceFavicon = styled.img`
 
 // Add a ThinkingDropdown component
 const ThinkingDropdownContainer = styled.div`
-  margin: 10px 0 12px;
-  border-radius: 12px;
+  margin: 1px 0 12px;
   overflow: hidden;
-  border: 1px solid ${props => props.theme.border || '#e1e5e9'};
-  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(24, 24, 27, 0.45)' : 'rgba(248, 249, 251, 0.8)')};
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  width: 100%;
 `;
 
 const ThinkingHeader = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 9px 12px;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0 0 4px;
   cursor: pointer;
   user-select: none;
   font-weight: 500;
-  font-size: 0.85rem;
-  color: ${props => `${props.theme.text}88`};
+  font-size: 0.98rem;
+  line-height: 1.35;
+  color: ${props => `${props.theme.text}96`};
   transition: color 0.15s ease;
   
   &:hover {
@@ -1614,24 +1612,8 @@ const ThinkingHeader = styled.div`
 const ThinkingHeaderTitle = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
   min-width: 0;
-  flex: 1;
-`;
-
-const ThinkingBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid ${props => `${props.theme.text}22`};
-  background: ${props => `${props.theme.text}10`};
-  color: ${props => `${props.theme.text}dd`};
-  font-size: 0.74rem;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  white-space: nowrap;
+  flex: 0 1 auto;
 `;
 
 const ThinkingPreview = styled.div`
@@ -1639,27 +1621,27 @@ const ThinkingPreview = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.82rem;
-  color: ${props => `${props.theme.text}aa`};
+  color: inherit;
 `;
 
 const ThinkingArrow = styled.span`
   transition: transform 0.2s ease;
-  transform: ${props => props.expanded ? 'rotate(180deg)' : 'rotate(0deg)'};
-  font-size: 12px;
+  transform: ${props => props.expanded ? 'rotate(90deg)' : 'rotate(0deg)'};
+  font-size: 1.25rem;
+  line-height: 1;
   display: inline-block;
-  width: 14px;
+  width: 16px;
   text-align: center;
-  opacity: 0.8;
+  opacity: 0.65;
+  flex-shrink: 0;
 `;
 
 const ThinkingContent = styled.div`
-  padding: ${props => props.expanded ? '10px 12px 12px 12px' : '0 12px'};
+  padding: ${props => props.expanded ? '6px 0 2px 0' : '0'};
   max-height: ${props => props.expanded ? '1000px' : '0'};
   opacity: ${props => props.expanded ? '1' : '0'};
   transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.25s ease;
   overflow: hidden;
-  border-top: ${props => props.expanded ? `1px solid ${props.theme.border || '#e1e5e9'}40` : 'none'};
   font-size: 0.88rem;
   color: ${props => `${props.theme.text}cc`};
 `;
@@ -1969,6 +1951,7 @@ const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls
     ? `${normalizedThinkingPreview.slice(0, 140)}...`
     : normalizedThinkingPreview;
   const thinkingLabel = t('composer.chip.thinking', 'Thinking');
+  const headerText = clippedThinkingPreview || (isStreaming ? t('chat.status.thinking') : getHeaderTitle());
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -1984,14 +1967,11 @@ const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls
     <ThinkingDropdownContainer>
       <ThinkingHeader onClick={toggleExpanded}>
         <ThinkingHeaderTitle>
-          <ThinkingBadge>{thinkingLabel}</ThinkingBadge>
-          {!expanded && (
-            <ThinkingPreview>
-              {clippedThinkingPreview || (isStreaming ? t('chat.status.thinking') : getHeaderTitle())}
-            </ThinkingPreview>
-          )}
+          <ThinkingPreview>
+            {headerText}
+          </ThinkingPreview>
         </ThinkingHeaderTitle>
-        <ThinkingArrow expanded={expanded}>v</ThinkingArrow>
+        <ThinkingArrow expanded={expanded}>›</ThinkingArrow>
       </ThinkingHeader>
       <ThinkingContent expanded={expanded}>
         {hasToolActivity && (
