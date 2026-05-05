@@ -360,19 +360,34 @@ const useMessageSender = ({
     let currentImageData = null;
     let currentFileText = null;
     let allFiles = [];
+    let attachmentContexts = [];
     
     if (attachedFile) {
       if (Array.isArray(attachedFile)) {
         allFiles = attachedFile;
         // For backward compatibility, use the first image and first text file
         const firstImage = attachedFile.find(f => f.type === 'image');
-        const firstText = attachedFile.find(f => f.type === 'text' || f.type === 'pdf');
+        const textFiles = attachedFile.filter(f => (f.type === 'text' || f.type === 'pdf') && f.text);
         currentImageData = firstImage?.dataUrl || null;
-        currentFileText = firstText?.text || null;
+        attachmentContexts = textFiles.map(file => ({
+          type: file.type,
+          name: file.name || 'uploaded file',
+          text: file.text
+        }));
+        currentFileText = attachmentContexts
+          .map(file => `<file name="${file.name}" type="${file.type}">\n${file.text}\n</file>`)
+          .join('\n\n') || null;
       } else {
         allFiles = [attachedFile];
         currentImageData = attachedFile?.type === 'image' ? attachedFile.dataUrl : null;
         currentFileText = (attachedFile?.type === 'text' || attachedFile?.type === 'pdf') ? attachedFile.text : null;
+        attachmentContexts = currentFileText
+          ? [{
+            type: attachedFile.type,
+            name: attachedFile.name || 'uploaded file',
+            text: currentFileText
+          }]
+          : [];
       }
     }
 
@@ -434,6 +449,25 @@ const useMessageSender = ({
         type: file.type,
         name: file.name
       }));
+      const persistentAttachments = allFiles.reduce((items, file) => {
+        if ((file.type === 'text' || file.type === 'pdf') && file.text) {
+          items.push({
+            type: file.type,
+            name: file.name || 'uploaded file',
+            text: file.text
+          });
+        } else if (file.type === 'image' && file.dataUrl) {
+          items.push({
+            type: file.type,
+            name: file.name || 'uploaded image',
+            dataUrl: file.dataUrl
+          });
+        }
+        return items;
+      }, []);
+      if (persistentAttachments.length > 0) {
+        userMessage.attachments = persistentAttachments;
+      }
       // For backward compatibility, keep the old file property for single files
       if (allFiles.length === 1) {
         userMessage.file = {
@@ -561,20 +595,42 @@ const useMessageSender = ({
       return;
     }
 
+    const getMessageContentWithAttachments = (msg) => {
+      const baseContent = typeof msg.content === 'string' ? msg.content : '';
+      const textAttachments = Array.isArray(msg.attachments)
+        ? msg.attachments.filter(file => (file.type === 'text' || file.type === 'pdf') && file.text)
+        : [];
+
+      if (msg.role !== 'user' || textAttachments.length === 0) {
+        return baseContent;
+      }
+
+      const attachmentContext = textAttachments
+        .map(file => `<file name="${file.name || 'uploaded file'}" type="${file.type}">\n${file.text}\n</file>`)
+        .join('\n\n');
+
+      return `Previously uploaded file context:\n${attachmentContext}\n\nUser Message:\n${baseContent}`;
+    };
+
     const formattedHistory = currentHistory
       .filter(msg => msg.role !== 'system') // Filter out system messages
-      .map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        ...(msg.image && { image: msg.image })
-      }));
+      .map(msg => {
+        const imageAttachment = Array.isArray(msg.attachments)
+          ? msg.attachments.find(file => file.type === 'image' && file.dataUrl)
+          : null;
+        return {
+          role: msg.role,
+          content: getMessageContentWithAttachments(msg),
+          ...((msg.image || imageAttachment?.dataUrl) && { image: msg.image || imageAttachment.dataUrl })
+        };
+      });
 
     // Convert history to API format (exclude images for backend API calls)
     const apiHistory = currentHistory
       .filter(msg => msg.role !== 'system') // Filter out system messages
       .map(msg => ({
         role: msg.role,
-        content: msg.content
+        content: getMessageContentWithAttachments(msg)
       }));
 
     const aiMessageId = generateId();

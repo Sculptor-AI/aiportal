@@ -75,11 +75,28 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     // Validate and filter history messages
     const validHistory = (history || []).filter(msg => {
       // Filter out system messages as Claude API expects them as top-level parameter
-      return msg && msg.role && msg.role !== 'system' && msg.content && typeof msg.content === 'string';
-    }).map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
+      return msg && msg.role && msg.role !== 'system' && typeof msg.content === 'string' && (msg.content || msg.image);
+    }).map(msg => {
+      if (msg.image) {
+        return {
+          role: msg.role,
+          content: [
+            { type: 'text', text: msg.content },
+            {
+              type: 'image_url',
+              image_url: {
+                url: msg.image
+              }
+            }
+          ]
+        };
+      }
+
+      return {
+        role: msg.role,
+        content: msg.content
+      };
+    });
 
     // Prepare messages array
     let messages = [...validHistory];
@@ -87,11 +104,6 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     // Prepare user message content
     let userContent = message || '';
     
-    // Add file content if provided
-    if (fileTextContent) {
-      userContent = `File Content:\n---\n${fileTextContent}\n---\n\nUser Message:\n${userContent}`;
-    }
-
     // Handle image data
     if (imageData) {
       const base64Data = imageData.split(',')[1];
