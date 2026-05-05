@@ -19,6 +19,18 @@ const withCacheControl = (response, cacheControl) => {
   });
 };
 
+const isHtmlResponse = (response) => (
+  (response.headers.get('content-type') || '').toLowerCase().includes('text/html')
+);
+
+const missingAssetResponse = () => new Response('Asset not found', {
+  status: 404,
+  headers: {
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': NO_CACHE_HEADERS
+  }
+});
+
 /**
  * Handle static assets and SPA fallback
  */
@@ -42,6 +54,10 @@ staticRoutes.get('*', async (c) => {
     url.pathname.includes('.')) {
     try {
       const assetResponse = await env.ASSETS.fetch(c.req.raw);
+
+      if (url.pathname.startsWith('/assets/') && isHtmlResponse(assetResponse)) {
+        return missingAssetResponse();
+      }
 
       if (url.pathname === '/sw.js' || url.pathname === '/index.html') {
         return withCacheControl(assetResponse, NO_CACHE_HEADERS);

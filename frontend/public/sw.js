@@ -1,5 +1,5 @@
 // Service Worker for AI Portal PWA
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_PREFIX = 'ai-portal';
 const STATIC_CACHE_NAME = `${CACHE_PREFIX}-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `${CACHE_PREFIX}-dynamic-${CACHE_VERSION}`;
@@ -24,6 +24,8 @@ const DYNAMIC_CACHE_PATTERNS = [
   /^https:\/\/fonts\.gstatic\.com/,
   /\.(?:js|css|woff2?|ttf|otf)$/
 ];
+
+const BUILD_ASSET_PATTERN = /^\/assets\/.*\.(?:js|mjs|css|wasm)$/;
 
 // Network-first patterns (API calls, etc.)
 const NETWORK_FIRST_PATTERNS = [
@@ -105,7 +107,9 @@ self.addEventListener('fetch', (event) => {
   }
   
   // Handle different caching strategies
-  if (isNetworkFirst(url)) {
+  if (isBuildAsset(url)) {
+    event.respondWith(networkFirstBuildAsset(request));
+  } else if (isNetworkFirst(url)) {
     event.respondWith(networkFirst(request));
   } else if (isDynamicAsset(url)) {
     event.respondWith(staleWhileRevalidate(request));
@@ -122,6 +126,24 @@ function isNetworkFirst(url) {
 // Check if URL is a dynamic asset
 function isDynamicAsset(url) {
   return DYNAMIC_CACHE_PATTERNS.some(pattern => pattern.test(url.href));
+}
+
+function isBuildAsset(url) {
+  return url.origin === self.location.origin && BUILD_ASSET_PATTERN.test(url.pathname);
+}
+
+function isHtmlResponse(response) {
+  return (response.headers.get('content-type') || '').toLowerCase().includes('text/html');
+}
+
+function missingAssetResponse() {
+  return new Response('Asset not found', {
+    status: 404,
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
+    }
+  });
 }
 
 // Cache-first strategy (for static assets)
@@ -230,8 +252,12 @@ async function staleWhileRevalidate(request) {
   try {
     const networkResponse = await fetch(request);
 
-    if (networkResponse.ok) {
+    if (networkResponse.ok && !isHtmlResponse(networkResponse)) {
       await cache.put(request, networkResponse.clone());
+    }
+
+    if (isHtmlResponse(networkResponse) && (request.destination === 'script' || request.destination === 'style')) {
+      return missingAssetResponse();
     }
 
     return cachedResponse || networkResponse;
@@ -239,6 +265,36 @@ async function staleWhileRevalidate(request) {
     console.log('[SW] Asset fetch failed, trying cache:', error);
 
     if (cachedResponse) {
+      return cachedResponse;
+    }
+
+    return new Response('', {
+      status: 504,
+      statusText: 'Gateway Timeout'
+    });
+  }
+}
+
+async function networkFirstBuildAsset(request) {
+  const cache = await caches.open(DYNAMIC_CACHE_NAME);
+
+  try {
+    const networkResponse = await fetch(request, { cache: 'no-cache' });
+
+    if (networkResponse.ok && !isHtmlResponse(networkResponse)) {
+      await cache.put(request, networkResponse.clone());
+    }
+
+    if (isHtmlResponse(networkResponse)) {
+      return missingAssetResponse();
+    }
+
+    return networkResponse;
+  } catch (error) {
+    console.log('[SW] Build asset fetch failed, trying cache:', error);
+
+    const cachedResponse = await cache.match(request);
+    if (cachedResponse && !isHtmlResponse(cachedResponse)) {
       return cachedResponse;
     }
 

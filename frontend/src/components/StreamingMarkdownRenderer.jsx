@@ -331,15 +331,63 @@ const HorizontalRule = styled.hr`
 `;
 
 const InlineArtifact = styled.div`
-  margin: 0.75rem 0;
+  margin: 1rem 0 1.1rem;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   color: ${props => props.theme.text};
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 
   svg {
     display: block;
-    max-width: 100%;
-    height: auto;
+    width: 100% !important;
+    min-width: 640px;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0;
   }
+
+  .nodeLabel,
+  .edgeLabel,
+  .actor,
+  .messageText,
+  .label {
+    font-size: 16px !important;
+  }
+
+  @media (max-width: 640px) {
+    svg {
+      min-width: 520px;
+    }
+  }
+`;
+
+const MermaidError = styled.div`
+  margin: 0.75rem 0;
+  color: ${props => props.theme.text};
+  font-size: 0.92rem;
+  line-height: 1.5;
+`;
+
+const MermaidErrorSummary = styled.div`
+  color: ${props => props.theme.error || '#b42318'};
+  margin-bottom: 0.35rem;
+`;
+
+const MermaidSource = styled.pre`
+  margin: 0.45rem 0 0;
+  padding: 0;
+  overflow-x: auto;
+  white-space: pre;
+  color: ${props => `${props.theme.text || '#111827'}cc`};
+  background: transparent;
+  border: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
 `;
 
 const Cursor = styled.span`
@@ -363,14 +411,96 @@ const isMermaidLanguage = (language) => (
   ['mermaid', 'mmd'].includes(String(language || '').toLowerCase())
 );
 
-const MermaidArtifact = ({ chart, theme = {} }) => {
+const normalizeMermaidSource = (chart) => String(chart || '')
+  .replace(/\r\n/g, '\n')
+  .replace(/^\s*```(?:mermaid|mmd)?\s*/i, '')
+  .replace(/\s*```\s*$/i, '')
+  .trim();
+
+const prepareMermaidSvg = (renderedSvg) => String(renderedSvg || '').replace(/<svg\b([^>]*)>/i, (match, attrs) => {
+  let nextAttrs = attrs
+    .replace(/\swidth="[^"]*"/i, '')
+    .replace(/\sheight="[^"]*"/i, '')
+    .replace(/\sstyle="([^"]*)"/i, (_, styleValue) => {
+      const cleanedStyle = styleValue
+        .split(';')
+        .map(part => part.trim())
+        .filter(Boolean)
+        .filter(part => !/^(max-width|width|height)\s*:/i.test(part))
+        .join('; ');
+
+      return cleanedStyle ? ` style="${cleanedStyle}"` : '';
+    });
+
+  if (!/\srole=/i.test(nextAttrs)) {
+    nextAttrs += ' role="img"';
+  }
+
+  if (!/\saria-label=/i.test(nextAttrs)) {
+    nextAttrs += ' aria-label="Generated diagram"';
+  }
+
+  if (!/\spreserveAspectRatio=/i.test(nextAttrs)) {
+    nextAttrs += ' preserveAspectRatio="xMidYMid meet"';
+  }
+
+  return `<svg${nextAttrs} width="100%">`;
+});
+
+const getMermaidThemeVariables = (theme = {}) => {
+  const isDark = Boolean(theme.isDark);
+  const text = theme.text || (isDark ? '#f3f4f6' : '#111827');
+  const border = theme.border || (isDark ? '#4b5563' : '#d1d5db');
+  const surface = isDark ? '#1f2937' : '#f8fafc';
+  const mutedSurface = isDark ? '#111827' : '#ffffff';
+
+  return {
+    fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontSize: '16px',
+    primaryColor: surface,
+    primaryTextColor: text,
+    primaryBorderColor: border,
+    lineColor: border,
+    secondaryColor: mutedSurface,
+    tertiaryColor: surface,
+    background: 'transparent',
+    mainBkg: surface,
+    secondBkg: mutedSurface,
+    clusterBkg: 'transparent',
+    clusterBorder: border,
+    edgeLabelBackground: mutedSurface,
+    actorBkg: surface,
+    actorBorder: border,
+    actorTextColor: text,
+    noteBkgColor: mutedSurface,
+    noteTextColor: text,
+    noteBorderColor: border
+  };
+};
+
+const getMermaidErrorLabel = (error) => {
+  const firstLine = String(error || 'Unable to render diagram')
+    .split('\n')
+    .map(line => line.trim())
+    .find(Boolean);
+
+  return firstLine && !/^syntax error in text$/i.test(firstLine)
+    ? firstLine
+    : 'Diagram syntax issue';
+};
+
+const MermaidArtifact = ({ chart, theme = {}, isStreaming = false }) => {
   const [svg, setSvg] = useState('');
   const [error, setError] = useState('');
   const id = useMemo(() => `mermaid-${Math.random().toString(36).slice(2)}`, [chart]);
+  const mermaidThemeVariables = useMemo(
+    () => getMermaidThemeVariables(theme),
+    [theme?.isDark, theme?.text, theme?.border]
+  );
 
   useEffect(() => {
     let cancelled = false;
-    const source = String(chart || '').trim();
+    const source = normalizeMermaidSource(chart);
 
     if (!source) {
       setSvg('');
@@ -381,38 +511,50 @@ const MermaidArtifact = ({ chart, theme = {} }) => {
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'strict',
-      theme: theme?.isDark ? 'dark' : 'default'
+      theme: 'base',
+      flowchart: {
+        useMaxWidth: false,
+        htmlLabels: false,
+        padding: 18
+      },
+      sequence: {
+        useMaxWidth: false,
+        mirrorActors: false
+      },
+      gantt: {
+        useMaxWidth: false
+      },
+      themeVariables: mermaidThemeVariables
     });
 
     mermaid.render(id, source)
       .then(({ svg: renderedSvg }) => {
         if (!cancelled) {
-          setSvg(renderedSvg);
+          setSvg(prepareMermaidSvg(renderedSvg));
           setError('');
         }
       })
       .catch((renderError) => {
         if (!cancelled) {
           setSvg('');
-          setError(renderError?.message || 'Unable to render diagram');
+          setError(isStreaming ? '' : (renderError?.message || 'Unable to render diagram'));
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [chart, id, theme?.isDark]);
+  }, [chart, id, isStreaming, mermaidThemeVariables]);
 
   if (error) {
     return (
-      <CodeBlock theme={theme}>
-        <CodeHeader theme={theme}>
-          <CodeLanguage theme={theme}>mermaid</CodeLanguage>
-        </CodeHeader>
-        <Pre theme={theme}>
-          <code style={{ color: theme.text }}>{chart}</code>
-        </Pre>
-      </CodeBlock>
+      <MermaidError theme={theme}>
+        <MermaidErrorSummary theme={theme}>{getMermaidErrorLabel(error)}</MermaidErrorSummary>
+        <details>
+          <summary>Show Mermaid source</summary>
+          <MermaidSource theme={theme}>{normalizeMermaidSource(chart)}</MermaidSource>
+        </details>
+      </MermaidError>
     );
   }
 
@@ -473,7 +615,7 @@ const StreamingMarkdownRenderer = ({
       const language = match ? match[1] : '';
       if (!inline) {
         if (isMermaidLanguage(language)) {
-          return <MermaidArtifact chart={children} theme={theme} />;
+          return <MermaidArtifact chart={children} theme={theme} isStreaming={isStreaming} />;
         }
 
         if (enableCodeExecution && isLanguageExecutable && isLanguageExecutable(language)) {
