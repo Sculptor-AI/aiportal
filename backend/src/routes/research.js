@@ -165,8 +165,7 @@ const handleDeepResearchRequest = async (c) => {
   });
 };
 
-research.use('/*', requireAuthAndApproved);
-research.post('/deep-research', deepResearchRateLimit, handleDeepResearchRequest);
-research.post('/v1/research/deep', deepResearchRateLimit, handleDeepResearchRequest);
+research.post('/deep-research', requireAuthAndApproved, deepResearchRateLimit, handleDeepResearchRequest);
+research.post('/v1/research/deep', requireAuthAndApproved, deepResearchRateLimit, handleDeepResearchRequest);
 
 export default research;
