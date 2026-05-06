@@ -14,7 +14,7 @@ import { listImageModels } from '../config/index.js';
 import modelsConfig from '../config/models.json';
 import { requireAuthAndApproved } from '../middleware/auth.js';
 import { imageGenerationRateLimit } from '../middleware/rateLimit.js';
-import { evaluateModelRateLimits, evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
+import { evaluateTierRateLimit, evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
 
 const image = new Hono();
 
@@ -58,19 +58,20 @@ const getImageRateLimitModelId = (model, selectedProvider, resolvedApiId) => {
   return Object.keys(providerConfig?.models || {})[0] || resolvedApiId || 'image-default';
 };
 
-const modelRateLimitResponse = (c, evaluation) => {
-  c.header('Retry-After', String(evaluation.blockingRule.retryAfterSeconds));
+const tierRateLimitResponse = (c, evaluation) => {
+  c.header('Retry-After', String(evaluation.rule.retryAfterSeconds));
   return c.json({
     error: evaluation.message,
-    code: 'model_rate_limit_exceeded',
+    code: 'tier_rate_limit_exceeded',
     model: evaluation.modelId,
-    limit: evaluation.blockingRule.limit,
-    windowSeconds: evaluation.blockingRule.windowSeconds,
-    used: evaluation.blockingRule.used,
-    remaining: evaluation.blockingRule.remaining,
-    resetAt: evaluation.blockingRule.resetAt,
-    retryAfterSeconds: evaluation.blockingRule.retryAfterSeconds,
-    rules: evaluation.rules
+    tier: evaluation.tier,
+    tierLabel: evaluation.rule.label,
+    limit: evaluation.rule.limit,
+    windowSeconds: evaluation.rule.windowSeconds,
+    used: evaluation.rule.used,
+    remaining: evaluation.rule.remaining,
+    resetAt: evaluation.rule.resetAt,
+    retryAfterSeconds: evaluation.rule.retryAfterSeconds
   }, 429);
 };
 
@@ -132,15 +133,16 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
       }, 429);
     }
 
-    const modelRateEvaluation = await evaluateModelRateLimits({
+    const tierRateEvaluation = await evaluateTierRateLimit({
       kv,
       userId: user.id,
       modelId: rateLimitModelId,
+      kind: 'image',
       limits: usageLimits
     });
 
-    if (!modelRateEvaluation.allowed) {
-      return modelRateLimitResponse(c, modelRateEvaluation);
+    if (!tierRateEvaluation.allowed) {
+      return tierRateLimitResponse(c, tierRateEvaluation);
     }
 
     console.log(`Image generation: provider=${selectedProvider}, model=${model || 'default'}, apiId=${resolvedApiId}`);
@@ -276,15 +278,16 @@ image.post('/edit', imageGenerationRateLimit, async (c) => {
       }, 429);
     }
 
-    const modelRateEvaluation = await evaluateModelRateLimits({
+    const tierRateEvaluation = await evaluateTierRateLimit({
       kv,
       userId: user.id,
       modelId: rateLimitModelId,
+      kind: 'image',
       limits: usageLimits
     });
 
-    if (!modelRateEvaluation.allowed) {
-      return modelRateLimitResponse(c, modelRateEvaluation);
+    if (!tierRateEvaluation.allowed) {
+      return tierRateLimitResponse(c, tierRateEvaluation);
     }
 
     const result = await editImageWithDALLE(imageData, prompt, apiKey, {

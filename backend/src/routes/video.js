@@ -10,7 +10,8 @@ import { requireAuthAndApproved } from '../middleware/auth.js';
 import { videoGenerationRateLimit } from '../middleware/rateLimit.js';
 import { validateOutboundUrl } from '../utils/urlValidation.js';
 import { canUserAccessVideo, createVideoOwnershipRecord, getVideoOwnershipRecord } from '../utils/videoOwnership.js';
-import { evaluateModelRateLimits, evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
+import { evaluateTierRateLimit, evaluateUsageRequest, getGlobalUsageLimits, incrementUserUsage } from '../utils/usageLimits.js';
+import { listVideoModels } from '../config/index.js';
 
 const video = new Hono();
 const VIDEO_DOWNLOAD_HOST_ALLOWLIST = [
@@ -24,19 +25,20 @@ const VIDEO_DOWNLOAD_HOST_ALLOWLIST = [
 
 const isRedirectStatus = (status) => status >= 300 && status < 400;
 
-const modelRateLimitResponse = (c, evaluation) => {
-  c.header('Retry-After', String(evaluation.blockingRule.retryAfterSeconds));
+const tierRateLimitResponse = (c, evaluation) => {
+  c.header('Retry-After', String(evaluation.rule.retryAfterSeconds));
   return c.json({
     error: evaluation.message,
-    code: 'model_rate_limit_exceeded',
+    code: 'tier_rate_limit_exceeded',
     model: evaluation.modelId,
-    limit: evaluation.blockingRule.limit,
-    windowSeconds: evaluation.blockingRule.windowSeconds,
-    used: evaluation.blockingRule.used,
-    remaining: evaluation.blockingRule.remaining,
-    resetAt: evaluation.blockingRule.resetAt,
-    retryAfterSeconds: evaluation.blockingRule.retryAfterSeconds,
-    rules: evaluation.rules
+    tier: evaluation.tier,
+    tierLabel: evaluation.rule.label,
+    limit: evaluation.rule.limit,
+    windowSeconds: evaluation.rule.windowSeconds,
+    used: evaluation.rule.used,
+    remaining: evaluation.rule.remaining,
+    resetAt: evaluation.rule.resetAt,
+    retryAfterSeconds: evaluation.rule.retryAfterSeconds
   }, 429);
 };
 
@@ -62,12 +64,26 @@ const requireTrackedVideoAccess = async (c, videoId) => {
   return { error: null, record };
 };
 
-// Apply auth middleware to all video routes
-video.use('/*', requireAuthAndApproved);
+/**
+ * List available video models (public; needed by admin panel rate-limit assignment).
+ */
+video.get('/models', (c) => {
+  const models = listVideoModels();
+  return c.json({
+    models,
+    _note: 'Model list is defined in src/config/models.json'
+  });
+});
+
+// Apply auth selectively — /models is public.
+video.use('/generate', requireAuthAndApproved);
+video.use('/status', requireAuthAndApproved);
+video.use('/status/*', requireAuthAndApproved);
+video.use('/download', requireAuthAndApproved);
 
 /**
  * Generate video
- * 
+ *
  * POST /api/video/generate
  * Body:
  * - prompt: string (required)
@@ -117,15 +133,16 @@ video.post('/generate', videoGenerationRateLimit, async (c) => {
       }, 429);
     }
 
-    const modelRateEvaluation = await evaluateModelRateLimits({
+    const tierRateEvaluation = await evaluateTierRateLimit({
       kv,
       userId: user.id,
       modelId: model || 'sora-2',
+      kind: 'video',
       limits: usageLimits
     });
 
-    if (!modelRateEvaluation.allowed) {
-      return modelRateLimitResponse(c, modelRateEvaluation);
+    if (!tierRateEvaluation.allowed) {
+      return tierRateLimitResponse(c, tierRateEvaluation);
     }
 
     console.log('Sora video generation request received');

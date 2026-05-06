@@ -11,6 +11,7 @@ import { parseAllowedOrigins } from '../middleware/cors.js';
 import { authLoginRateLimit, authRegisterRateLimit } from '../middleware/rateLimit.js';
 import { addUserSessionIndex, findUserByEmail, findUserByOAuthAccount, removeUserSessionIndex } from '../utils/helpers.js';
 import { createPkceChallenge, createSignedToken, generatePkceVerifier, generateRandomToken, getOAuthProviderConfig, isSupportedOAuthProvider, verifySignedToken } from '../utils/oauth.js';
+import { getGlobalUsageLimits, peekUserTierRateLimits } from '../utils/usageLimits.js';
 
 const auth = new Hono();
 const MAX_PASSWORD_LENGTH = 128;
@@ -859,6 +860,25 @@ auth.get('/me', requireAuth, async (c) => {
     success: true,
     data: { user: sanitizeUser(user) }
   });
+});
+
+/**
+ * Get current user's tier rate-limit consumption (without incrementing).
+ * Powers the "rate limits remaining" panel in the profile dropdown.
+ * GET /api/auth/usage/rate-limits
+ */
+auth.get('/usage/rate-limits', requireAuth, async (c) => {
+  const kv = c.env.KV;
+  const user = c.get('user');
+
+  if (!kv) {
+    return c.json({ error: 'Storage not configured' }, 500);
+  }
+
+  const limits = await getGlobalUsageLimits(kv);
+  const { buckets } = await peekUserTierRateLimits({ kv, userId: user.id, limits });
+
+  return c.json({ success: true, data: { buckets } });
 });
 
 /**

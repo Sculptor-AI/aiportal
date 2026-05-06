@@ -674,6 +674,49 @@ export const getImageModels = async () => {
   }
 };
 
+export const getVideoModels = async () => {
+  try {
+    const response = await fetchWithFallback('/video/models', {
+      method: 'GET'
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch available video models');
+    }
+    if (Array.isArray(data.models)) {
+      return data.models;
+    }
+    return [];
+  } catch (error) {
+    console.error('Get video models error:', error);
+    throw error;
+  }
+};
+
+export const getUserRateLimits = async () => {
+  try {
+    const user = getCurrentUser();
+    if (!user || !user.accessToken) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetchWithFallback('/auth/usage/rate-limits', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${user.accessToken}`
+      }
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch rate limits');
+    }
+    return Array.isArray(data?.data?.buckets) ? data.data.buckets : [];
+  } catch (error) {
+    console.error('Get user rate limits error:', error);
+    throw error;
+  }
+};
+
 export const updateDeepResearchConfig = async (config) => {
   try {
     const response = await fetchWithFallback('/admin/deep-research/config', {

@@ -1,10 +1,27 @@
 const USAGE_LIMITS_KEY = 'settings:usage-limits';
 
+export const TIER_NAMES = Object.freeze(['pro', 'lite', 'image', 'video']);
+export const TIER_LABELS = Object.freeze({
+  pro: 'Pro',
+  lite: 'Lite',
+  image: 'Image',
+  video: 'Video'
+});
+
+const DEFAULT_TIER_LIMIT = Object.freeze({ limit: null, windowSeconds: null });
+const DEFAULT_TIER_LIMITS = Object.freeze({
+  pro: { ...DEFAULT_TIER_LIMIT },
+  lite: { ...DEFAULT_TIER_LIMIT },
+  image: { ...DEFAULT_TIER_LIMIT },
+  video: { ...DEFAULT_TIER_LIMIT }
+});
+
 export const DEFAULT_USAGE_LIMITS = Object.freeze({
   turns: null,
   images: null,
   videos: null,
-  modelRateLimits: []
+  tiers: { ...DEFAULT_TIER_LIMITS },
+  modelTiers: {}
 });
 
 export const DEFAULT_USER_USAGE = Object.freeze({
@@ -16,7 +33,7 @@ export const DEFAULT_USER_USAGE = Object.freeze({
 });
 
 const USAGE_FIELDS = ['turns', 'images', 'videos'];
-const MODEL_RATE_LIMIT_MAX_WINDOW_SECONDS = 60 * 60 * 24 * 31;
+const TIER_MAX_WINDOW_SECONDS = 60 * 60 * 24 * 31;
 
 const normalizeCount = (value) => {
   const numericValue = Number(value);
@@ -49,6 +66,12 @@ const normalizePositiveInteger = (value) => {
   return numericValue;
 };
 
+const normalizeTierName = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().toLowerCase();
+  return TIER_NAMES.includes(trimmed) ? trimmed : null;
+};
+
 const normalizeModelId = (value) => {
   if (typeof value !== 'string') {
     return '';
@@ -57,70 +80,110 @@ const normalizeModelId = (value) => {
   return value.trim().slice(0, 200);
 };
 
-const normalizeRuleId = (value) => {
-  if (typeof value !== 'string') {
-    return '';
+const normalizeTierLimit = (rawTier) => {
+  const limit = normalizePositiveInteger(rawTier?.limit);
+  const windowSeconds = normalizePositiveInteger(rawTier?.windowSeconds);
+
+  if (limit === null || windowSeconds === null || windowSeconds > TIER_MAX_WINDOW_SECONDS) {
+    return { ...DEFAULT_TIER_LIMIT };
   }
 
-  return value.trim().replace(/[^a-zA-Z0-9:_-]/g, '-').slice(0, 120);
+  return { limit, windowSeconds };
 };
 
-const createModelRateLimitId = (modelId, limit, windowSeconds, index) => {
-  const safeModelId = modelId.replace(/[^a-zA-Z0-9:_-]/g, '-').slice(0, 80) || 'model';
-  return `${safeModelId}:${limit}:${windowSeconds}:${index}`;
+const normalizeTierLimits = (rawTiers = {}) => {
+  const out = {};
+  for (const tier of TIER_NAMES) {
+    out[tier] = normalizeTierLimit(rawTiers?.[tier]);
+  }
+  return out;
 };
 
-const normalizeModelRateLimitRule = (rawRule, index = 0, { strict = false } = {}) => {
-  const modelId = normalizeModelId(rawRule?.modelId ?? rawRule?.model);
-  const limit = normalizePositiveInteger(rawRule?.limit);
-  const windowSeconds = normalizePositiveInteger(rawRule?.windowSeconds);
-
-  if (!modelId) {
-    if (strict) throw new Error('Model rate limit rules need a model.');
-    return null;
+const parseTierLimitsInput = (rawTiers) => {
+  if (rawTiers === null || rawTiers === undefined) {
+    return undefined;
+  }
+  if (typeof rawTiers !== 'object') {
+    throw new Error('tiers must be an object keyed by tier name.');
   }
 
-  if (limit === null) {
-    if (strict) throw new Error(`Rate limit for ${modelId} must be a positive whole number.`);
-    return null;
-  }
-
-  if (windowSeconds === null || windowSeconds > MODEL_RATE_LIMIT_MAX_WINDOW_SECONDS) {
-    if (strict) throw new Error(`Rate limit window for ${modelId} must be between 1 second and 31 days.`);
-    return null;
-  }
-
-  const id = normalizeRuleId(rawRule?.id) || createModelRateLimitId(modelId, limit, windowSeconds, index);
-
-  return {
-    id,
-    modelId,
-    limit,
-    windowSeconds
-  };
-};
-
-export const normalizeModelRateLimits = (rawRules = []) => {
-  const sourceRules = Array.isArray(rawRules)
-    ? rawRules
-    : Object.entries(rawRules || {}).map(([modelId, rule]) => ({
-      ...(typeof rule === 'object' && rule !== null ? rule : {}),
-      modelId
-    }));
-  const seenIds = new Set();
-  const normalizedRules = [];
-
-  sourceRules.forEach((rule, index) => {
-    const normalizedRule = normalizeModelRateLimitRule(rule, index);
-    if (!normalizedRule || seenIds.has(normalizedRule.id)) {
-      return;
+  const parsed = {};
+  for (const tier of TIER_NAMES) {
+    const raw = rawTiers[tier];
+    if (raw === undefined) {
+      parsed[tier] = { ...DEFAULT_TIER_LIMIT };
+      continue;
     }
 
-    seenIds.add(normalizedRule.id);
-    normalizedRules.push(normalizedRule);
-  });
+    if (raw === null) {
+      parsed[tier] = { ...DEFAULT_TIER_LIMIT };
+      continue;
+    }
 
-  return normalizedRules;
+    const blank =
+      raw.limit === '' || raw.limit === null || raw.limit === undefined ||
+      raw.windowSeconds === '' || raw.windowSeconds === null || raw.windowSeconds === undefined;
+
+    if (blank) {
+      parsed[tier] = { ...DEFAULT_TIER_LIMIT };
+      continue;
+    }
+
+    const limit = normalizePositiveInteger(raw.limit);
+    if (limit === null) {
+      throw new Error(`Limit for the ${TIER_LABELS[tier]} tier must be a positive whole number.`);
+    }
+
+    const windowSeconds = normalizePositiveInteger(raw.windowSeconds);
+    if (windowSeconds === null || windowSeconds > TIER_MAX_WINDOW_SECONDS) {
+      throw new Error(`Window for the ${TIER_LABELS[tier]} tier must be between 1 second and 31 days.`);
+    }
+
+    parsed[tier] = { limit, windowSeconds };
+  }
+
+  return parsed;
+};
+
+const normalizeModelTiers = (rawMap = {}) => {
+  if (!rawMap || typeof rawMap !== 'object') {
+    return {};
+  }
+
+  const out = {};
+  for (const [rawModelId, rawTier] of Object.entries(rawMap)) {
+    const modelId = normalizeModelId(rawModelId);
+    const tier = normalizeTierName(rawTier);
+    if (!modelId || !tier) continue;
+    out[modelId] = tier;
+  }
+  return out;
+};
+
+const parseModelTiersInput = (rawMap) => {
+  if (rawMap === null || rawMap === undefined) {
+    return undefined;
+  }
+  if (typeof rawMap !== 'object') {
+    throw new Error('modelTiers must be an object keyed by model id.');
+  }
+
+  const out = {};
+  for (const [rawModelId, rawTier] of Object.entries(rawMap)) {
+    const modelId = normalizeModelId(rawModelId);
+    if (!modelId) continue;
+
+    if (rawTier === '' || rawTier === null || rawTier === undefined) {
+      continue;
+    }
+
+    const tier = normalizeTierName(rawTier);
+    if (!tier) {
+      throw new Error(`Unknown tier "${rawTier}" assigned to ${modelId}. Valid tiers: ${TIER_NAMES.join(', ')}.`);
+    }
+    out[modelId] = tier;
+  }
+  return out;
 };
 
 const normalizeTimestamp = (value) => {
@@ -136,7 +199,8 @@ export const normalizeUsageLimits = (rawLimits = {}) => ({
   turns: normalizeLimitValue(rawLimits.turns),
   images: normalizeLimitValue(rawLimits.images),
   videos: normalizeLimitValue(rawLimits.videos),
-  modelRateLimits: normalizeModelRateLimits(rawLimits.modelRateLimits)
+  tiers: normalizeTierLimits(rawLimits.tiers),
+  modelTiers: normalizeModelTiers(rawLimits.modelTiers)
 });
 
 export const parseUsageLimitsInput = (rawLimits = {}) => {
@@ -161,23 +225,18 @@ export const parseUsageLimitsInput = (rawLimits = {}) => {
     parsedLimits[field] = numericValue;
   }
 
-  if ('modelRateLimits' in rawLimits) {
-    const sourceRules = Array.isArray(rawLimits.modelRateLimits)
-      ? rawLimits.modelRateLimits
-      : Object.entries(rawLimits.modelRateLimits || {}).map(([modelId, rule]) => ({
-        ...(typeof rule === 'object' && rule !== null ? rule : {}),
-        modelId
-      }));
-    const seenIds = new Set();
+  if ('tiers' in rawLimits) {
+    const parsedTiers = parseTierLimitsInput(rawLimits.tiers);
+    if (parsedTiers !== undefined) {
+      parsedLimits.tiers = parsedTiers;
+    }
+  }
 
-    parsedLimits.modelRateLimits = sourceRules.map((rule, index) => {
-      const normalizedRule = normalizeModelRateLimitRule(rule, index, { strict: true });
-      if (seenIds.has(normalizedRule.id)) {
-        throw new Error(`Duplicate model rate limit rule id: ${normalizedRule.id}`);
-      }
-      seenIds.add(normalizedRule.id);
-      return normalizedRule;
-    });
+  if ('modelTiers' in rawLimits) {
+    const parsedTiers = parseModelTiersInput(rawLimits.modelTiers);
+    if (parsedTiers !== undefined) {
+      parsedLimits.modelTiers = parsedTiers;
+    }
   }
 
   return parsedLimits;
@@ -223,18 +282,15 @@ export const summarizeUsageTotals = (users = []) => {
 
 export const getGlobalUsageLimits = async (kv) => {
   if (!kv) {
-    return { ...DEFAULT_USAGE_LIMITS };
+    return { ...DEFAULT_USAGE_LIMITS, tiers: { ...DEFAULT_TIER_LIMITS }, modelTiers: {} };
   }
 
   try {
     const storedLimits = await kv.get(USAGE_LIMITS_KEY, 'json');
-    return {
-      ...DEFAULT_USAGE_LIMITS,
-      ...normalizeUsageLimits(storedLimits || {})
-    };
+    return normalizeUsageLimits(storedLimits || {});
   } catch (error) {
     console.error('Error reading usage limits:', error);
-    return { ...DEFAULT_USAGE_LIMITS };
+    return { ...DEFAULT_USAGE_LIMITS, tiers: { ...DEFAULT_TIER_LIMITS }, modelTiers: {} };
   }
 };
 
@@ -244,9 +300,12 @@ export const updateGlobalUsageLimits = async (kv, rawLimits = {}) => {
   }
 
   const currentLimits = await getGlobalUsageLimits(kv);
+  const parsed = parseUsageLimitsInput(rawLimits);
   const nextLimits = {
     ...currentLimits,
-    ...parseUsageLimitsInput(rawLimits)
+    ...parsed,
+    tiers: parsed.tiers ?? currentLimits.tiers,
+    modelTiers: parsed.modelTiers ?? currentLimits.modelTiers
   };
 
   await kv.put(USAGE_LIMITS_KEY, JSON.stringify(nextLimits));
@@ -299,75 +358,127 @@ export const evaluateUsageRequest = ({ user, limits, requested = {} }) => {
   };
 };
 
-const getMatchingModelRateLimitRules = (limits, modelId) => {
+const resolveTierForModel = (limits, modelId, kind) => {
   const normalizedModelId = normalizeModelId(modelId);
-  if (!normalizedModelId) {
-    return [];
+  const fromMap = limits?.modelTiers?.[normalizedModelId];
+  if (fromMap && TIER_NAMES.includes(fromMap)) {
+    return fromMap;
   }
-
-  return normalizeModelRateLimits(limits?.modelRateLimits).filter((rule) => rule.modelId === normalizedModelId);
+  if (kind === 'image' || kind === 'video') {
+    return kind;
+  }
+  return null;
 };
 
-export const evaluateModelRateLimits = async ({ kv, userId, modelId, limits }) => {
-  const rules = getMatchingModelRateLimitRules(limits, modelId);
-  if (!kv || !userId || rules.length === 0) {
+const tierStateKey = (tier, userId) => `ratelimit:tier:${tier}:user:${userId}`;
+
+export const evaluateTierRateLimit = async ({ kv, userId, modelId, kind, limits }) => {
+  const tier = resolveTierForModel(limits, modelId, kind);
+  const tierConfig = tier ? limits?.tiers?.[tier] : null;
+  const hasLimit = tierConfig && tierConfig.limit && tierConfig.windowSeconds;
+
+  if (!kv || !userId || !tier || !hasLimit) {
     return {
       allowed: true,
+      tier,
       modelId: normalizeModelId(modelId),
-      rules: []
+      rule: null
     };
   }
 
   const now = Date.now();
-  const evaluatedRules = [];
+  const key = tierStateKey(tier, userId);
+  const windowMs = tierConfig.windowSeconds * 1000;
+  let state = await kv.get(key, 'json');
 
-  for (const rule of rules) {
-    const key = `ratelimit:model:${rule.id}:user:${userId}`;
-    const windowMs = rule.windowSeconds * 1000;
-    let state = await kv.get(key, 'json');
-
-    if (!state || typeof state.resetAt !== 'number' || state.resetAt <= now || state.windowSeconds !== rule.windowSeconds) {
-      state = {
-        count: 0,
-        resetAt: now + windowMs,
-        windowSeconds: rule.windowSeconds
-      };
-    }
-
-    state.count += 1;
-
-    const ttlSeconds = Math.max(1, Math.ceil((state.resetAt - now) / 1000));
-    await kv.put(key, JSON.stringify(state), { expirationTtl: ttlSeconds });
-
-    evaluatedRules.push({
-      ...rule,
-      used: state.count,
-      remaining: Math.max(0, rule.limit - state.count),
-      resetAt: new Date(state.resetAt).toISOString(),
-      retryAfterSeconds: ttlSeconds,
-      exceeded: state.count > rule.limit
-    });
+  if (
+    !state ||
+    typeof state.resetAt !== 'number' ||
+    state.resetAt <= now ||
+    state.windowSeconds !== tierConfig.windowSeconds
+  ) {
+    state = {
+      count: 0,
+      resetAt: now + windowMs,
+      windowSeconds: tierConfig.windowSeconds
+    };
   }
 
-  const exceededRules = evaluatedRules.filter((rule) => rule.exceeded);
-  if (exceededRules.length > 0) {
-    exceededRules.sort((a, b) => b.retryAfterSeconds - a.retryAfterSeconds);
-    const blockingRule = exceededRules[0];
+  state.count += 1;
 
+  const ttlSeconds = Math.max(1, Math.ceil((state.resetAt - now) / 1000));
+  await kv.put(key, JSON.stringify(state), { expirationTtl: ttlSeconds });
+
+  const rule = {
+    tier,
+    label: TIER_LABELS[tier],
+    limit: tierConfig.limit,
+    windowSeconds: tierConfig.windowSeconds,
+    used: state.count,
+    remaining: Math.max(0, tierConfig.limit - state.count),
+    resetAt: new Date(state.resetAt).toISOString(),
+    retryAfterSeconds: ttlSeconds,
+    exceeded: state.count > tierConfig.limit
+  };
+
+  if (rule.exceeded) {
     return {
       allowed: false,
+      tier,
       modelId: normalizeModelId(modelId),
-      blockingRule,
-      rules: evaluatedRules,
-      message: `This account has reached the rate limit for ${blockingRule.modelId}. Try again after ${blockingRule.resetAt}.`
+      rule,
+      message: `This account has reached the rate limit for the ${TIER_LABELS[tier]} tier. Try again after ${rule.resetAt}.`
     };
   }
 
   return {
     allowed: true,
+    tier,
     modelId: normalizeModelId(modelId),
-    rules: evaluatedRules
+    rule
   };
+};
+
+export const peekUserTierRateLimits = async ({ kv, userId, limits }) => {
+  const normalizedLimits = normalizeUsageLimits(limits || {});
+  const buckets = [];
+
+  for (const tier of TIER_NAMES) {
+    const config = normalizedLimits.tiers?.[tier] || { ...DEFAULT_TIER_LIMIT };
+    let used = 0;
+    let resetAt = null;
+    let windowSeconds = config.windowSeconds || null;
+
+    if (kv && userId && config.limit && config.windowSeconds) {
+      const state = await kv.get(tierStateKey(tier, userId), 'json');
+      const now = Date.now();
+      if (
+        state &&
+        typeof state.resetAt === 'number' &&
+        state.resetAt > now &&
+        state.windowSeconds === config.windowSeconds
+      ) {
+        used = normalizeCount(state.count);
+        resetAt = new Date(state.resetAt).toISOString();
+      } else {
+        used = 0;
+        resetAt = null;
+      }
+    }
+
+    buckets.push({
+      tier,
+      label: TIER_LABELS[tier],
+      limit: config.limit ?? null,
+      windowSeconds,
+      used,
+      remaining: config.limit ? Math.max(0, config.limit - used) : null,
+      resetAt,
+      configured: !!(config.limit && config.windowSeconds)
+    });
+  }
+
+  return { buckets };
 };
 
 const persistUserUsage = async (kv, userId, transformUsage) => {
