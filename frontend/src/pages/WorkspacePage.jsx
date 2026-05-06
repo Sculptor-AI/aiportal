@@ -1,26 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import styled, { createGlobalStyle, keyframes } from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
 import { DEFAULT_CUSTOM_BASE_MODEL_ID, getPreferredModelId } from '../config/modelConfig';
 
 // ============================================================================
-// TYPOGRAPHY — small dose of flavor layered onto the theme font
-// ============================================================================
-
-const WorkspaceFonts = createGlobalStyle`
-  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
-`;
-
-const MONO = `'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
-const DISPLAY = `'Instrument Serif', 'Cormorant Garamond', Georgia, serif`;
-
-// ============================================================================
-// MOTION — one page-level settle, nothing cascading
+// ANIMATIONS
 // ============================================================================
 
 const fadeIn = keyframes`
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
+`;
+
+const scaleIn = keyframes`
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+`;
+
+const slideUp = keyframes`
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const float = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 `;
 
 // ============================================================================
@@ -33,11 +37,11 @@ const PageContainer = styled.div`
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  color: ${p => p.theme.text};
+  color: ${props => props.theme.text};
   overflow-y: auto;
   overflow-x: hidden;
+  padding-left: ${props => (props.$collapsed ? '0' : '280px')};
   transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1);
-  padding-left: ${p => p.$collapsed ? '0' : '280px'};
 
   @media (max-width: 1024px) {
     padding-left: 0;
@@ -45,13 +49,12 @@ const PageContainer = styled.div`
 `;
 
 const ContentWrapper = styled.div`
-  max-width: 1080px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 72px 48px 96px;
-  animation: ${fadeIn} 0.35s ease-out;
+  padding: 48px 40px 80px;
 
   @media (max-width: 768px) {
-    padding: 40px 20px 64px;
+    padding: 32px 20px 60px;
   }
 `;
 
@@ -59,249 +62,236 @@ const ContentWrapper = styled.div`
 // HEADER
 // ============================================================================
 
-const Eyebrow = styled.div`
+const Header = styled.div`
   display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-  font-family: ${MONO};
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}70`};
-`;
-
-const EyebrowDot = styled.span`
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: ${p => p.theme.accentColor || p.theme.primary};
-  display: inline-block;
-  box-shadow: 0 0 0 3px ${p => p.theme.accentSurface || `${p.theme.primary}14`};
-`;
-
-const TitleRow = styled.div`
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  flex-wrap: wrap;
-`;
-
-const PageTitle = styled.h1`
-  font-size: 2rem;
-  font-weight: 500;
-  letter-spacing: -0.028em;
-  line-height: 1.05;
-  margin: 0;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 40px;
+  gap: 24px;
+  animation: ${fadeIn} 0.5s ease-out;
 
   @media (max-width: 640px) {
-    font-size: 1.625rem;
+    flex-direction: column;
+    gap: 20px;
   }
 `;
 
-const TitleCount = styled.span`
-  font-family: ${DISPLAY};
-  font-style: italic;
-  font-weight: 400;
-  font-size: 1.75rem;
-  letter-spacing: -0.01em;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}55`};
+const TitleSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const Title = styled.h1`
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0;
 
   @media (max-width: 640px) {
-    font-size: 1.375rem;
+    font-size: 1.875rem;
   }
 `;
 
 const Subtitle = styled.p`
   font-size: 0.9375rem;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}75`};
-  margin: 10px 0 0;
-  max-width: 520px;
-  line-height: 1.55;
-`;
-
-// ============================================================================
-// TOOLBAR — filters left, search + create right
-// ============================================================================
-
-const Toolbar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 40px;
-  margin-bottom: 20px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid ${p => p.theme.border};
-  flex-wrap: wrap;
-`;
-
-const FilterRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 2px;
-`;
-
-const FilterTab = styled.button`
-  position: relative;
-  padding: 7px 12px 9px;
-  background: transparent;
-  border: none;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: -0.005em;
-  color: ${p => p.$active
-    ? p.theme.text
-    : (p.theme.textSecondary || `${p.theme.text}65`)};
-  cursor: pointer;
-  transition: color 0.15s ease;
-
-  &:hover { color: ${p => p.theme.text}; }
-
-  &::after {
-    content: '';
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: -14px;
-    height: 1px;
-    background: ${p => p.$active ? (p.theme.accentColor || p.theme.primary) : 'transparent'};
-    transition: background 0.15s ease;
-  }
-`;
-
-const FilterCount = styled.span`
-  display: inline-block;
-  margin-left: 6px;
-  font-family: ${MONO};
-  font-size: 10.5px;
-  font-weight: 500;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}55`};
-`;
-
-const ToolbarRight = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const SearchContainer = styled.div`
-  position: relative;
-  width: 220px;
-
-  @media (max-width: 640px) {
-    width: 100%;
-    flex: 1;
-  }
-`;
-
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 7px 10px 7px 30px;
-  background: transparent;
-  border: 1px solid ${p => p.theme.border};
-  border-radius: 6px;
-  color: ${p => p.theme.text};
-  font-size: 0.8125rem;
-  transition: border-color 0.15s ease, background 0.15s ease;
-
-  &:focus {
-    outline: none;
-    border-color: ${p => p.theme.textSecondary || `${p.theme.text}50`};
-    background: ${p => p.theme.inputBackground || 'transparent'};
-  }
-
-  &::placeholder {
-    color: ${p => p.theme.textSecondary || `${p.theme.text}50`};
-  }
-`;
-
-const SearchIcon = styled.svg`
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 13px;
-  height: 13px;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}50`};
-  pointer-events: none;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  margin: 0;
+  letter-spacing: -0.01em;
 `;
 
 const CreateButton = styled.button`
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  background: ${p => p.theme.text};
-  color: ${p => p.theme.sidebar || '#fff'};
-  border: 1px solid ${p => p.theme.text};
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  letter-spacing: -0.005em;
+  gap: 8px;
+  padding: 10px 20px;
+  background: ${props => props.theme.accentBackground || props.theme.primary};
+  color: ${props => props.theme.accentText || '#fff'};
+  border: none;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
 
-  &:hover { opacity: 0.88; }
-  &:active { opacity: 0.75; }
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px ${props => props.theme.accentColor || props.theme.primary}40;
+  }
 
-  svg { width: 13px; height: 13px; }
+  &:active {
+    transform: translateY(0);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `;
 
 // ============================================================================
-// MODEL GRID — hairline seams instead of card shadows
+// SEARCH + FILTERS
+// ============================================================================
+
+const SearchAndFilters = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  animation: ${slideUp} 0.5s ease-out;
+  animation-delay: 0.1s;
+  animation-fill-mode: backwards;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+const SearchWrapper = styled.div`
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+
+  @media (max-width: 640px) {
+    max-width: 100%;
+  }
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 10px 16px 10px 42px;
+  background: ${props => props.theme.inputBackground || props.theme.sidebar};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 12px;
+  color: ${props => props.theme.text};
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+  }
+
+  &::placeholder {
+    color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+  }
+`;
+
+const SearchIcon = styled.div`
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const FilterTabs = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const FilterTab = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: ${props => props.$active
+    ? (props.theme.accentSurface || `${props.theme.primary}15`)
+    : 'transparent'};
+  color: ${props => props.$active
+    ? (props.theme.accentColor || props.theme.primary)
+    : (props.theme.textSecondary || `${props.theme.text}80`)};
+  border: 1px solid ${props => props.$active
+    ? (props.theme.accentColor || props.theme.primary)
+    : props.theme.border};
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    color: ${props => props.theme.accentColor || props.theme.primary};
+  }
+`;
+
+const FilterCount = styled.span`
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.75;
+`;
+
+// ============================================================================
+// MODEL GRID
 // ============================================================================
 
 const ModelsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1px;
-  background: ${p => p.theme.border};
-  border: 1px solid ${p => p.theme.border};
-  border-radius: 8px;
-  overflow: hidden;
+  gap: 24px;
 
-  @media (max-width: 640px) {
+  @media (max-width: 480px) {
     grid-template-columns: 1fr;
+    gap: 16px;
   }
 `;
 
 const ModelCard = styled.article`
-  background: ${p => p.theme.sidebar || p.theme.chat};
-  padding: 18px 20px;
+  background: ${props => props.theme.sidebar};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 16px;
+  padding: 24px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 148px;
+  min-height: 180px;
+  animation: ${scaleIn} 0.4s ease-out;
+  animation-delay: ${props => (props.$index || 0) * 0.04}s;
+  animation-fill-mode: backwards;
 
   &:hover {
-    background: ${p => p.theme.hover || p.theme.inputBackground};
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px ${props => props.theme.shadow || 'rgba(0,0,0,0.15)'};
+    border-color: ${props => props.theme.accentColor || props.theme.primary}40;
   }
 `;
 
 const CardHeader = styled.div`
   display: flex;
-  gap: 12px;
   align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
 `;
 
 const ModelAvatar = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 7px;
-  background: ${p => p.theme.inputBackground || `${p.theme.text}08`};
-  border: 1px solid ${p => p.theme.border};
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 1.0625rem;
+  font-size: 1.5rem;
   overflow: hidden;
-  color: ${p => p.theme.text};
+  color: ${props => props.theme.text};
 
   img { width: 100%; height: 100%; object-fit: cover; }
 `;
@@ -315,33 +305,33 @@ const ModelNameRow = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 3px;
-`;
-
-const StatusDot = styled.span`
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: ${p => p.$enabled ? (p.theme.accentColor || p.theme.primary) : 'transparent'};
-  border: 1px solid ${p => p.$enabled ? 'transparent' : p.theme.border};
-  flex-shrink: 0;
-  ${p => p.$enabled && `box-shadow: 0 0 0 3px ${p.theme.accentSurface || `${p.theme.primary}12`};`}
+  margin-bottom: 4px;
 `;
 
 const ModelName = styled.h3`
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
   font-weight: 600;
   margin: 0;
-  letter-spacing: -0.015em;
-  color: ${p => p.theme.text};
+  letter-spacing: -0.02em;
+  color: ${props => props.theme.text};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
+const StatusDot = styled.span`
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: ${props => props.$enabled ? (props.theme.accentColor || props.theme.primary) : 'transparent'};
+  border: 1px solid ${props => props.$enabled ? 'transparent' : (props.theme.textSecondary || `${props.theme.text}50`)};
+  flex-shrink: 0;
+  ${props => props.$enabled && `box-shadow: 0 0 0 3px ${props.theme.accentSurface || `${props.theme.primary}20`};`}
+`;
+
 const ModelDescription = styled.p`
-  font-size: 0.8125rem;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}70`};
+  font-size: 0.875rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   margin: 0;
   line-height: 1.5;
   display: -webkit-box;
@@ -352,78 +342,88 @@ const ModelDescription = styled.p`
 
 const CardFooter = styled.div`
   margin-top: auto;
-  padding-top: 14px;
+  padding-top: 16px;
+  border-top: 1px solid ${props => props.theme.border};
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 `;
 
-const BaseModelTag = styled.span`
-  font-family: ${MONO};
-  font-size: 10.5px;
-  letter-spacing: -0.003em;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}70`};
+const BaseModelTag = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}60`};
   max-width: 200px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
 `;
 
 const CardActions = styled.div`
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
 `;
 
 const ToggleSwitch = styled.button`
   position: relative;
-  width: 26px;
-  height: 15px;
-  border-radius: 8px;
-  border: 1px solid ${p => p.$enabled
-    ? (p.theme.accentColor || p.theme.primary)
-    : p.theme.border};
-  background: ${p => p.$enabled
-    ? (p.theme.accentColor || p.theme.primary)
+  width: 32px;
+  height: 18px;
+  border-radius: 10px;
+  border: 1px solid ${props => props.$enabled
+    ? (props.theme.accentColor || props.theme.primary)
+    : props.theme.border};
+  background: ${props => props.$enabled
+    ? (props.theme.accentColor || props.theme.primary)
     : 'transparent'};
   cursor: pointer;
-  transition: background 0.18s ease, border-color 0.18s ease;
+  transition: all 0.18s ease;
   padding: 0;
   flex-shrink: 0;
 
   &::after {
     content: '';
     position: absolute;
-    top: 1px;
-    left: ${p => p.$enabled ? '12px' : '1px'};
-    width: 11px;
-    height: 11px;
+    top: 2px;
+    left: ${props => props.$enabled ? '15px' : '2px'};
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    background: ${p => p.$enabled ? '#fff' : (p.theme.textSecondary || `${p.theme.text}55`)};
-    transition: left 0.18s ease, background 0.18s ease;
+    background: ${props => props.$enabled ? '#fff' : (props.theme.textSecondary || `${props.theme.text}55`)};
+    transition: all 0.18s ease;
   }
 `;
 
 const IconButton = styled.button`
-  width: 26px;
-  height: 26px;
-  border-radius: 5px;
-  border: none;
-  background: transparent;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}65`};
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.inputBackground || 'transparent'};
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: all 0.15s ease;
 
   &:hover {
-    background: ${p => p.theme.inputBackground || `${p.theme.text}08`};
-    color: ${p => p.theme.text};
+    background: ${props => props.theme.hover || 'rgba(128,128,128,0.08)'};
+    color: ${props => props.theme.text};
+    border-color: ${props => props.theme.border};
   }
 
-  svg { width: 13px; height: 13px; }
+  svg { width: 14px; height: 14px; }
 `;
 
 // ============================================================================
@@ -435,59 +435,42 @@ const EmptyState = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 84px 32px;
+  padding: 80px 40px;
   text-align: center;
-  border: 1px dashed ${p => p.theme.border};
-  border-radius: 10px;
+  animation: ${fadeIn} 0.5s ease-out;
 `;
 
-const EmptyMark = styled.div`
-  font-family: ${DISPLAY};
-  font-style: italic;
-  font-size: 2.5rem;
-  font-weight: 400;
-  line-height: 1;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}35`};
-  margin-bottom: 12px;
-  letter-spacing: -0.02em;
+const EmptyIcon = styled.div`
+  width: 120px;
+  height: 120px;
+  border-radius: 32px;
+  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  animation: ${float} 3s ease-in-out infinite;
+
+  svg {
+    width: 56px;
+    height: 56px;
+    color: ${props => props.theme.accentColor || props.theme.primary};
+  }
 `;
 
 const EmptyTitle = styled.h2`
-  font-size: 1rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  margin: 0 0 6px;
-  letter-spacing: -0.015em;
-  color: ${p => p.theme.text};
+  margin: 0 0 12px;
+  letter-spacing: -0.02em;
 `;
 
 const EmptyDescription = styled.p`
-  font-size: 0.875rem;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}70`};
-  margin: 0 0 22px;
-  max-width: 380px;
-  line-height: 1.55;
-`;
-
-const EmptyAction = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  background: transparent;
-  color: ${p => p.theme.text};
-  border: 1px solid ${p => p.theme.border};
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
-
-  &:hover {
-    border-color: ${p => p.theme.textSecondary || `${p.theme.text}50`};
-    background: ${p => p.theme.inputBackground || `${p.theme.text}06`};
-  }
-
-  svg { width: 12px; height: 12px; }
+  font-size: 0.9375rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
+  margin: 0 0 32px;
+  max-width: 420px;
+  line-height: 1.6;
 `;
 
 // ============================================================================
@@ -497,16 +480,16 @@ const EmptyAction = styled.button`
 const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  opacity: ${p => p.$visible ? 1 : 0};
-  pointer-events: ${p => p.$visible ? 'auto' : 'none'};
+  padding: 20px;
+  opacity: ${props => (props.$visible ? 1 : 0)};
+  pointer-events: ${props => (props.$visible ? 'auto' : 'none')};
   transition: opacity 0.2s ease;
 
   @media (max-width: 640px) {
@@ -519,23 +502,22 @@ const ModalDialog = styled.div`
   position: relative;
   width: 100%;
   max-width: 600px;
-  max-height: 88vh;
-  background: ${p => p.theme.sidebar || p.theme.chat};
-  border: 1px solid ${p => p.theme.border};
-  border-radius: 10px;
+  max-height: 90vh;
+  background: ${props => props.theme.sidebar};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   overflow: hidden;
-  transform: ${p => p.$visible ? 'translateY(0)' : 'translateY(6px)'};
-  opacity: ${p => p.$visible ? 1 : 0};
-  transition: transform 0.2s ease, opacity 0.2s ease;
+  transform: ${props => (props.$visible ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.98)')};
+  opacity: ${props => (props.$visible ? 1 : 0)};
+  transition: all 0.25s ease;
 
   @media (max-width: 640px) {
     max-width: 100%;
     max-height: 92vh;
-    border-radius: 10px 10px 0 0;
-    border-bottom: none;
+    border-radius: 16px 16px 0 0;
   }
 `;
 
@@ -543,47 +525,40 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 22px 24px 18px;
-  border-bottom: 1px solid ${p => p.theme.border};
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid ${props => props.theme.border};
+  gap: 16px;
 `;
 
 const ModalTitleGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-`;
-
-const ModalEyebrow = styled.div`
-  font-family: ${MONO};
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}55`};
-  margin-bottom: 4px;
+  gap: 6px;
+  min-width: 0;
 `;
 
 const ModalTitle = styled.h2`
-  font-size: 1.125rem;
+  font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
   letter-spacing: -0.02em;
-  color: ${p => p.theme.text};
+  color: ${props => props.theme.text};
 `;
 
 const ModalSubtitle = styled.p`
-  font-size: 0.8125rem;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}70`};
+  font-size: 0.9rem;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}70`};
   margin: 0;
+  line-height: 1.5;
 `;
 
 const CloseButton = styled.button`
-  width: 28px;
-  height: 28px;
-  border-radius: 5px;
-  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid transparent;
   background: transparent;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}60`};
+  color: ${props => props.theme.textSecondary || `${props.theme.text}80`};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -592,25 +567,25 @@ const CloseButton = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    background: ${p => p.theme.inputBackground || `${p.theme.text}08`};
-    color: ${p => p.theme.text};
+    background: ${props => props.theme.hover || 'rgba(128,128,128,0.08)'};
+    color: ${props => props.theme.text};
   }
 
-  svg { width: 14px; height: 14px; }
+  svg { width: 16px; height: 16px; }
 `;
 
 const ModalContent = styled.div`
   flex: 1;
-  padding: 22px 24px;
+  padding: 24px 28px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 
   &::-webkit-scrollbar { width: 6px; }
   &::-webkit-scrollbar-track { background: transparent; }
   &::-webkit-scrollbar-thumb {
-    background: ${p => p.theme.border};
+    background: ${props => props.theme.border};
     border-radius: 3px;
   }
 `;
@@ -619,8 +594,8 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 24px;
-  border-top: 1px solid ${p => p.theme.border};
+  padding: 16px 28px;
+  border-top: 1px solid ${props => props.theme.border};
   flex-shrink: 0;
   gap: 12px;
 `;
@@ -632,7 +607,7 @@ const ModalFooter = styled.div`
 const FormRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 16px;
 
   @media (max-width: 500px) {
     grid-template-columns: 1fr;
@@ -642,94 +617,91 @@ const FormRow = styled.div`
 const FormGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 `;
 
 const Label = styled.label`
-  font-family: ${MONO};
-  font-size: 10px;
+  font-size: 0.875rem;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}65`};
+  color: ${props => props.theme.text};
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 9px 12px;
-  background: transparent;
-  border: 1px solid ${p => p.theme.border};
-  border-radius: 6px;
-  color: ${p => p.theme.text};
-  font-size: 0.875rem;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  padding: 12px 14px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 10px;
+  color: ${props => props.theme.text};
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: ${p => p.theme.textSecondary || `${p.theme.text}55`};
-    background: ${p => p.theme.inputBackground || 'transparent'};
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}20`};
   }
 
   &::placeholder {
-    color: ${p => p.theme.textSecondary || `${p.theme.text}50`};
+    color: ${props => props.theme.textSecondary || `${props.theme.text}50`};
   }
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 10px 12px;
-  background: transparent;
-  border: 1px solid ${p => p.theme.border};
-  border-radius: 6px;
-  color: ${p => p.theme.text};
-  font-size: 0.875rem;
+  padding: 12px 14px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 10px;
+  color: ${props => props.theme.text};
+  font-size: 0.95rem;
   resize: vertical;
-  min-height: 72px;
-  line-height: 1.55;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  min-height: 80px;
+  line-height: 1.5;
+  transition: all 0.2s ease;
   font-family: inherit;
 
   &:focus {
     outline: none;
-    border-color: ${p => p.theme.textSecondary || `${p.theme.text}55`};
-    background: ${p => p.theme.inputBackground || 'transparent'};
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}20`};
   }
 
   &::placeholder {
-    color: ${p => p.theme.textSecondary || `${p.theme.text}50`};
+    color: ${props => props.theme.textSecondary || `${props.theme.text}50`};
   }
 `;
 
 const SystemPromptArea = styled(TextArea)`
-  min-height: 148px;
-  font-family: ${MONO};
-  font-size: 0.8125rem;
-  line-height: 1.65;
+  min-height: 160px;
+  font-size: 0.9rem;
+  line-height: 1.6;
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 9px 32px 9px 12px;
-  background: transparent;
-  border: 1px solid ${p => p.theme.border};
-  border-radius: 6px;
-  color: ${p => p.theme.text};
-  font-size: 0.875rem;
+  padding: 12px 36px 12px 14px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 10px;
+  color: ${props => props.theme.text};
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: all 0.2s ease;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
+  background-position: right 12px center;
 
   &:focus {
     outline: none;
-    border-color: ${p => p.theme.textSecondary || `${p.theme.text}55`};
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    box-shadow: 0 0 0 3px ${props => props.theme.accentSurface || `${props.theme.primary}20`};
   }
 
   option {
-    background: ${p => p.theme.sidebar || p.theme.chat};
-    color: ${p => p.theme.text};
+    background: ${props => props.theme.sidebar || props.theme.chat};
+    color: ${props => props.theme.text};
   }
 `;
 
@@ -740,29 +712,28 @@ const Select = styled.select`
 const AvatarSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid ${p => p.theme.border};
+  gap: 16px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid ${props => props.theme.border};
 `;
 
 const AvatarRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 `;
 
 const LargeAvatar = styled.div`
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
-  background: ${p => p.theme.inputBackground || `${p.theme.text}08`};
-  border: 1px solid ${p => p.theme.border};
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: ${props => props.theme.accentSurface || `${props.theme.primary}15`};
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
+  font-size: 1.875rem;
   overflow: hidden;
-  color: ${p => p.theme.text};
+  color: ${props => props.theme.text};
   flex-shrink: 0;
 
   img { width: 100%; height: 100%; object-fit: cover; }
@@ -777,7 +748,7 @@ const AvatarControls = styled.div`
 
 const AvatarButtonRow = styled.div`
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
   flex-wrap: wrap;
 `;
@@ -785,65 +756,69 @@ const AvatarButtonRow = styled.div`
 const UploadButton = styled.label`
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  background: transparent;
-  border: 1px solid ${p => p.theme.border};
-  border-radius: 5px;
-  font-size: 0.75rem;
+  gap: 6px;
+  padding: 8px 14px;
+  background: ${props => props.theme.inputBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 10px;
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: ${p => p.theme.text};
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
-
-  &:hover {
-    border-color: ${p => p.theme.textSecondary || `${p.theme.text}50`};
-    background: ${p => p.theme.inputBackground || `${p.theme.text}06`};
-  }
-
-  input { display: none; }
-  svg { width: 11px; height: 11px; }
-`;
-
-const RemoveImageButton = styled.button`
-  padding: 6px 10px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}60`};
+  color: ${props => props.theme.text};
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
-    color: #c53030;
-    background: rgba(197, 48, 48, 0.06);
+    background: ${props => props.theme.hover || 'rgba(128,128,128,0.08)'};
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+  }
+
+  input { display: none; }
+  svg { width: 13px; height: 13px; }
+`;
+
+const RemoveImageButton = styled.button`
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: ${props => props.theme.textSecondary || `${props.theme.text}70`};
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.08);
   }
 `;
 
 const EmojiGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
+  gap: 6px;
 `;
 
 const EmojiButton = styled.button`
   aspect-ratio: 1;
-  border-radius: 5px;
-  border: 1px solid ${p => p.$selected
-    ? (p.theme.accentColor || p.theme.primary)
-    : 'transparent'};
-  background: ${p => p.$selected
-    ? (p.theme.accentSurface || `${p.theme.primary}12`)
-    : 'transparent'};
+  border-radius: 10px;
+  border: 2px solid ${props => props.$selected
+    ? (props.theme.accentColor || props.theme.primary)
+    : props.theme.border};
+  background: ${props => props.$selected
+    ? (props.theme.accentSurface || `${props.theme.primary}15`)
+    : props.theme.inputBackground};
   cursor: pointer;
-  font-size: 1.05rem;
-  transition: all 0.12s ease;
+  font-size: 1.2rem;
+  transition: all 0.15s ease;
   padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
-    background: ${p => p.theme.inputBackground || `${p.theme.text}08`};
+    border-color: ${props => props.theme.accentColor || props.theme.primary};
+    transform: scale(1.05);
   }
 `;
 
@@ -852,57 +827,61 @@ const EmojiButton = styled.button`
 // ============================================================================
 
 const Button = styled.button`
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
   border: 1px solid transparent;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  letter-spacing: -0.005em;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   white-space: nowrap;
 `;
 
 const PrimaryButton = styled(Button)`
-  background: ${p => p.theme.text};
-  color: ${p => p.theme.sidebar || '#fff'};
-  border-color: ${p => p.theme.text};
+  background: ${props => props.theme.accentBackground || props.theme.primary};
+  color: ${props => props.theme.accentText || '#fff'};
+  font-weight: 600;
+  border-color: transparent;
 
-  &:hover { opacity: 0.88; }
-  &:active { opacity: 0.75; }
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px ${props => props.theme.accentColor || props.theme.primary}40;
+  }
+  &:active { transform: translateY(0); }
 
   &:disabled {
-    opacity: 0.35;
+    opacity: 0.4;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
   }
 `;
 
 const SecondaryButton = styled(Button)`
   background: transparent;
-  color: ${p => p.theme.text};
-  border-color: ${p => p.theme.border};
+  color: ${props => props.theme.text};
+  border-color: ${props => props.theme.border};
 
   &:hover {
-    border-color: ${p => p.theme.textSecondary || `${p.theme.text}50`};
-    background: ${p => p.theme.inputBackground || `${p.theme.text}06`};
+    background: ${props => props.theme.hover || 'rgba(128,128,128,0.08)'};
+    border-color: ${props => props.theme.textSecondary || `${props.theme.text}50`};
   }
 `;
 
 const DeleteButton = styled(Button)`
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   background: transparent;
-  color: ${p => p.theme.textSecondary || `${p.theme.text}70`};
+  color: ${props => props.theme.textSecondary || `${props.theme.text}70`};
   border-color: transparent;
-  padding: 8px 10px;
 
   &:hover {
-    color: #c53030;
-    background: rgba(197, 48, 48, 0.06);
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.08);
   }
 
-  svg { width: 12px; height: 12px; }
+  svg { width: 14px; height: 14px; }
 `;
 
 // ============================================================================
@@ -936,9 +915,9 @@ const WorkspacePage = ({ collapsed }) => {
   const disabledCount = models.length - enabledCount;
 
   const filters = [
-    { id: 'all', label: 'All', count: models.length },
-    { id: 'enabled', label: 'Enabled', count: enabledCount },
-    { id: 'disabled', label: 'Disabled', count: disabledCount },
+    { id: 'all', label: t('workspace.filter.all', 'All'), count: models.length },
+    { id: 'enabled', label: t('workspace.filter.enabled', 'Enabled'), count: enabledCount },
+    { id: 'disabled', label: t('workspace.filter.disabled', 'Disabled'), count: disabledCount },
   ];
 
   // Load available base models
@@ -1202,24 +1181,39 @@ const WorkspacePage = ({ collapsed }) => {
 
   return (
     <PageContainer $collapsed={collapsed}>
-      <WorkspaceFonts />
       <ContentWrapper>
-        <Eyebrow>
-          <EyebrowDot />
-          Workspace
-        </Eyebrow>
+        <Header>
+          <TitleSection>
+            <Title>{t('workspace.title')}</Title>
+            <Subtitle>
+              {t('workspace.subtitle', 'Private models shaped by your own system prompts and base configuration.')}
+            </Subtitle>
+          </TitleSection>
+          <CreateButton onClick={handleNewModel}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            {t('workspace.button.newModel')}
+          </CreateButton>
+        </Header>
 
-        <TitleRow>
-          <PageTitle>{t('workspace.title')}</PageTitle>
-          <TitleCount>{models.length}</TitleCount>
-        </TitleRow>
-
-        <Subtitle>
-          Private models shaped by your own system prompts and base configuration.
-        </Subtitle>
-
-        <Toolbar>
-          <FilterRow>
+        <SearchAndFilters>
+          <SearchWrapper>
+            <SearchIcon>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+            </SearchIcon>
+            <SearchInput
+              type="text"
+              placeholder={t('workspace.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </SearchWrapper>
+          <FilterTabs>
             {filters.map(filter => (
               <FilterTab
                 key={filter.id}
@@ -1230,56 +1224,42 @@ const WorkspacePage = ({ collapsed }) => {
                 <FilterCount>{filter.count}</FilterCount>
               </FilterTab>
             ))}
-          </FilterRow>
-
-          <ToolbarRight>
-            <SearchContainer>
-              <SearchIcon xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
-              </SearchIcon>
-              <SearchInput
-                type="text"
-                placeholder={t('workspace.searchPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </SearchContainer>
-
-            <CreateButton onClick={handleNewModel}>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              {t('workspace.button.newModel')}
-            </CreateButton>
-          </ToolbarRight>
-        </Toolbar>
+          </FilterTabs>
+        </SearchAndFilters>
 
         {filteredModels.length === 0 ? (
           <EmptyState>
-            <EmptyMark>—</EmptyMark>
+            <EmptyIcon>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <circle cx="9" cy="10" r="1.5" />
+                <circle cx="15" cy="10" r="1.5" />
+                <path d="M8 15c1.333 1 2.667 1.5 4 1.5s2.667-.5 4-1.5" />
+              </svg>
+            </EmptyIcon>
             <EmptyTitle>
-              {models.length === 0 ? 'No models yet' : 'Nothing matches'}
+              {models.length === 0
+                ? t('workspace.empty.title', 'Create your first model')
+                : t('workspace.empty.noResults', 'No models match')}
             </EmptyTitle>
             <EmptyDescription>
               {models.length === 0
-                ? 'Configure a custom AI with its own instructions, persona, and base model.'
-                : 'Try adjusting the filter or search above.'}
+                ? t('workspace.empty.description', 'Configure a custom AI with its own instructions, persona, and base model.')
+                : t('workspace.empty.tryAdjusting', 'Try adjusting the filter or search above.')}
             </EmptyDescription>
             {models.length === 0 && (
-              <EmptyAction onClick={handleNewModel}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
+              <CreateButton onClick={handleNewModel}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
-                New model
-              </EmptyAction>
+                {t('workspace.button.newModel')}
+              </CreateButton>
             )}
           </EmptyState>
         ) : (
           <ModelsGrid>
-            {filteredModels.map((model) => {
+            {filteredModels.map((model, index) => {
               const baseModelInfo = availableBaseModels.find(m => m.id === model.baseModel);
               const baseModelName = baseModelInfo
                 ? `${baseModelInfo.name}`
@@ -1288,6 +1268,7 @@ const WorkspacePage = ({ collapsed }) => {
               return (
                 <ModelCard
                   key={model.id}
+                  $index={index}
                   onClick={() => handleEditModel(model)}
                 >
                   <CardHeader>
@@ -1303,13 +1284,20 @@ const WorkspacePage = ({ collapsed }) => {
                         <StatusDot $enabled={model.enabled} />
                         <ModelName>{model.name}</ModelName>
                       </ModelNameRow>
-                      <ModelDescription>{model.description || 'No description'}</ModelDescription>
+                      <ModelDescription>
+                        {model.description || t('workspace.noDescription', 'No description')}
+                      </ModelDescription>
                     </ModelInfo>
                   </CardHeader>
 
                   <CardFooter>
                     <BaseModelTag title={baseModelName}>
-                      {baseModelName}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                      </svg>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{baseModelName}</span>
                     </BaseModelTag>
                     <CardActions>
                       <IconButton
@@ -1319,9 +1307,9 @@ const WorkspacePage = ({ collapsed }) => {
                         }}
                         title={t('workspace.actions.edit')}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                         </svg>
                       </IconButton>
                       <ToggleSwitch
@@ -1343,28 +1331,24 @@ const WorkspacePage = ({ collapsed }) => {
         <ModalDialog $visible={panelVisible} onClick={e => e.stopPropagation()}>
           <ModalHeader>
             <ModalTitleGroup>
-              <ModalEyebrow>
-                {editingModel ? 'Edit' : 'New'}
-              </ModalEyebrow>
               <ModalTitle>
                 {editingModel ? t('workspace.modal.titleEdit') : t('workspace.modal.titleCreate')}
               </ModalTitle>
               <ModalSubtitle>
                 {editingModel
-                  ? `Editing "${editingModel.name}"`
-                  : 'Configure a new AI personality with custom instructions'}
+                  ? t('workspace.modal.subtitleEdit', `Editing "${editingModel.name}"`)
+                  : t('workspace.modal.subtitleCreate', 'Configure a new AI personality with custom instructions')}
               </ModalSubtitle>
             </ModalTitleGroup>
             <CloseButton onClick={handleClosePanel}>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </CloseButton>
           </ModalHeader>
 
           <ModalContent>
-            {/* Avatar Section */}
             <AvatarSection>
               <AvatarRow>
                 <LargeAvatar>
@@ -1378,12 +1362,12 @@ const WorkspacePage = ({ collapsed }) => {
                   <Label>{t('workspace.modal.fieldAvatar')}</Label>
                   <AvatarButtonRow>
                     <UploadButton>
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
                       </svg>
-                      Upload
+                      {t('workspace.modal.button.upload', 'Upload')}
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -1393,7 +1377,7 @@ const WorkspacePage = ({ collapsed }) => {
                     </UploadButton>
                     {formData.avatarImage && (
                       <RemoveImageButton onClick={handleRemoveImage}>
-                        Remove
+                        {t('workspace.modal.button.remove', 'Remove')}
                       </RemoveImageButton>
                     )}
                   </AvatarButtonRow>
@@ -1416,7 +1400,6 @@ const WorkspacePage = ({ collapsed }) => {
               )}
             </AvatarSection>
 
-            {/* Name + Base Model row */}
             <FormRow>
               <FormGroup>
                 <Label>{t('workspace.modal.fieldName')}</Label>
@@ -1453,7 +1436,7 @@ const WorkspacePage = ({ collapsed }) => {
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder={t('workspace.modal.placeholderDescription')}
-                style={{ minHeight: '64px' }}
+                style={{ minHeight: '80px' }}
               />
             </FormGroup>
 
@@ -1470,12 +1453,12 @@ const WorkspacePage = ({ collapsed }) => {
           <ModalFooter>
             {editingModel ? (
               <DeleteButton onClick={handleDeleteModel}>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6"/>
-                  <path d="M14 11v6"/>
-                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                 </svg>
                 {t('workspace.modal.button.delete')}
               </DeleteButton>
