@@ -82,6 +82,11 @@ const BRIDGE_SCRIPT = `
 })();
 </script>`;
 
+export const artifactUsesModelChat = (html = '') => {
+  const source = String(html || '');
+  return /\b(?:window\.)?Sculptor\s*\.\s*chat\s*\(/.test(source);
+};
+
 export const buildArtifactDocument = (html = '') => {
   let source = String(html || '');
 

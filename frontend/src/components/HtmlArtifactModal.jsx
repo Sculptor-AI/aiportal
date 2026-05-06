@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { buildArtifactDocument, postArtifactChatResult } from '../utils/artifactBridge';
+import { artifactUsesModelChat, buildArtifactDocument, postArtifactChatResult } from '../utils/artifactBridge';
 import { createSharedArtifact, getSharedArtifactUrl, sendArtifactChat } from '../services/shareService';
 
 const ModalOverlay = styled.div`
@@ -150,7 +150,14 @@ const HtmlArtifactModal = ({
   const [shareStatus, setShareStatus] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [allowModelChat, setAllowModelChat] = useState(true);
+  const supportsModelChat = useMemo(() => artifactUsesModelChat(htmlContent), [htmlContent]);
   const artifactDocument = useMemo(() => buildArtifactDocument(htmlContent), [htmlContent]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setAllowModelChat(supportsModelChat);
+    }
+  }, [isOpen, supportsModelChat]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -201,10 +208,11 @@ const HtmlArtifactModal = ({
   };
 
   const handleShare = async () => {
+    const sharedWithModelChat = supportsModelChat && allowModelChat;
     const confirmed = window.confirm(
-      allowModelChat
+      sharedWithModelChat
         ? 'Share this artifact? Anyone with the link can view it. Signed-in users will be able to use AI inside it.'
-        : 'Share this artifact? Anyone with the link can view it. AI interaction will be disabled.'
+        : 'Share this artifact? Anyone with the link can view it.'
     );
     if (!confirmed) return;
 
@@ -217,7 +225,7 @@ const HtmlArtifactModal = ({
         html: htmlContent,
         sourceChatId,
         sourceMessageId,
-        allowModelChat
+        allowModelChat: sharedWithModelChat
       });
       const shareUrl = getSharedArtifactUrl(result);
       await navigator.clipboard.writeText(shareUrl);
@@ -241,14 +249,16 @@ const HtmlArtifactModal = ({
           </Brand>
           <HeaderActions>
             {shareStatus && <StatusText>{shareStatus}</StatusText>}
-            <ToggleLabel title="Allow signed-in viewers to use AI inside the shared artifact">
-              <input
-                type="checkbox"
-                checked={allowModelChat}
-                onChange={(event) => setAllowModelChat(event.target.checked)}
-              />
-              AI
-            </ToggleLabel>
+            {supportsModelChat && (
+              <ToggleLabel title="Allow signed-in viewers to use AI inside the shared artifact">
+                <input
+                  type="checkbox"
+                  checked={allowModelChat}
+                  onChange={(event) => setAllowModelChat(event.target.checked)}
+                />
+                AI
+              </ToggleLabel>
+            )}
             <ActionButton onClick={handleShare} disabled={isSharing}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>

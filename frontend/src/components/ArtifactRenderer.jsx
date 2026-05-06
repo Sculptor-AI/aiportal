@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { Code2, Copy, Download, Eye, FileCode2, PanelRightOpen, Share2, X } from 'lucide-react';
-import { buildArtifactDocument, postArtifactChatResult } from '../utils/artifactBridge';
+import { artifactUsesModelChat, buildArtifactDocument, postArtifactChatResult } from '../utils/artifactBridge';
 import { createSharedArtifact, getSharedArtifactUrl, sendArtifactChat } from '../services/shareService';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -337,13 +337,15 @@ const ArtifactPanel = ({ open, onClose, code, title, theme = {} }) => {
   const [status, setStatus] = useState('');
   const [allowModelChat, setAllowModelChat] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
+  const supportsModelChat = useMemo(() => artifactUsesModelChat(code), [code]);
 
   useEffect(() => {
     if (open) {
       setView('preview');
       setStatus('');
+      setAllowModelChat(supportsModelChat);
     }
-  }, [open]);
+  }, [open, supportsModelChat]);
 
   const showStatus = (message) => {
     setStatus(message);
@@ -366,10 +368,11 @@ const ArtifactPanel = ({ open, onClose, code, title, theme = {} }) => {
 
   const handleShare = async () => {
     if (isSharing) return;
+    const sharedWithModelChat = supportsModelChat && allowModelChat;
     const confirmed = window.confirm(
-      allowModelChat
+      sharedWithModelChat
         ? 'Share this artifact? Anyone with the link can view it. Signed-in users will be able to use AI inside it.'
-        : 'Share this artifact? Anyone with the link can view it. AI interaction will be disabled.'
+        : 'Share this artifact? Anyone with the link can view it.'
     );
     if (!confirmed) return;
 
@@ -378,7 +381,7 @@ const ArtifactPanel = ({ open, onClose, code, title, theme = {} }) => {
       const result = await createSharedArtifact({
         title,
         html: code,
-        allowModelChat
+        allowModelChat: sharedWithModelChat
       });
       const shareUrl = getSharedArtifactUrl(result);
       await copyText(shareUrl);
@@ -406,14 +409,16 @@ const ArtifactPanel = ({ open, onClose, code, title, theme = {} }) => {
           </TitleGroup>
           <HeaderActions>
             {status && <StatusText>{status}</StatusText>}
-            <ToggleLabel title="Allow signed-in viewers to use AI inside the shared artifact">
-              <input
-                type="checkbox"
-                checked={allowModelChat}
-                onChange={(event) => setAllowModelChat(event.target.checked)}
-              />
-              AI
-            </ToggleLabel>
+            {supportsModelChat && (
+              <ToggleLabel title="Allow signed-in viewers to use AI inside the shared artifact">
+                <input
+                  type="checkbox"
+                  checked={allowModelChat}
+                  onChange={(event) => setAllowModelChat(event.target.checked)}
+                />
+                AI
+              </ToggleLabel>
+            )}
             <Segmented theme={theme} role="tablist" aria-label="Artifact view">
               <SegmentButton
                 type="button"

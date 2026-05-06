@@ -75,6 +75,8 @@ const stripUploadedFileContext = (value) => {
     .trim();
 };
 
+const artifactUsesModelChat = (html = '') => /\b(?:window\.)?Sculptor\s*\.\s*chat\s*\(/.test(String(html || ''));
+
 const sanitizeSharedMessages = (messages) => {
   if (!Array.isArray(messages)) return [];
 
@@ -239,6 +241,7 @@ shares.post('/artifacts', requireAuthAndApproved, async (c) => {
   }
 
   const id = createShareId();
+  const supportsModelChat = artifactUsesModelChat(html);
   const record = {
     id,
     type: 'artifact',
@@ -246,7 +249,7 @@ shares.post('/artifacts', requireAuthAndApproved, async (c) => {
     html,
     sourceChatId: typeof body.sourceChatId === 'string' ? trimString(body.sourceChatId, 120) : undefined,
     sourceMessageId: typeof body.sourceMessageId === 'string' ? trimString(body.sourceMessageId, 120) : undefined,
-    allowModelChat: body.allowModelChat !== false,
+    allowModelChat: supportsModelChat && body.allowModelChat !== false,
     createdAt: new Date().toISOString(),
     ownerUserId: user.id
   };
