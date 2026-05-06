@@ -4,6 +4,7 @@ import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import { createSharedChat, getSharedChatUrl } from '../services/shareService';
+import { getUserRateLimits } from '../services/authService';
 
 // Styled Components - Updated for Grok.com-inspired design
 const SidebarContainer = styled.div.attrs({ 'data-shadow': 'sidebar' })`
@@ -841,6 +842,70 @@ const ProfileDropdownItem = styled.button`
   }
 `;
 
+const RateLimitsToggle = styled.button`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
+  font-size: var(--font-size, 1rem);
+  font-weight: 400;
+  cursor: pointer;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
+  text-align: left;
+  justify-content: flex-start;
+
+  &:hover {
+    background: ${props => props.theme.name === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'};
+  }
+
+  > svg.icon {
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+    flex-shrink: 0;
+    color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : 'currentColor'};
+  }
+
+  > svg.chevron {
+    margin-left: auto;
+    width: 14px;
+    height: 14px;
+    opacity: 0.55;
+    flex-shrink: 0;
+    transition: transform 0.18s ease;
+    transform: ${props => props.$open ? 'rotate(180deg)' : 'rotate(0deg)'};
+  }
+`;
+
+const RateLimitItem = styled.div`
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  color: ${props => props.theme.name === 'lakeside' ? 'rgb(232, 196, 138)' : props.theme.text};
+  font-size: var(--font-size, 1rem);
+  font-weight: 400;
+  font-family: ${props => props.theme?.fontFamily || 'var(--font-family)'};
+
+  > svg {
+    margin-right: 8px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+`;
+
+const RateLimitMeta = styled.span`
+  margin-left: auto;
+  opacity: 0.62;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+`;
+
 const ProfileAvatar = styled.div`
   width: 16px;
   height: 16px;
@@ -860,6 +925,50 @@ const ProfileAvatar = styled.div`
 `;
 
 // --- React Component ---
+
+const Speedometer = ({ pct, tone }) => {
+  const cx = 8;
+  const cy = 13;
+  const r = 6.5;
+  const safePct = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
+  const angle = Math.PI * (1 - safePct / 100);
+  const fillEndX = cx + r * Math.cos(angle);
+  const fillEndY = cy - r * Math.sin(angle);
+  const needleX = cx + (r - 1.2) * Math.cos(angle);
+  const needleY = cy - (r - 1.2) * Math.sin(angle);
+  const fillColor = tone === 'danger' ? '#dc2626' : tone === 'warning' ? '#d97706' : '#059669';
+
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} stroke="currentColor" strokeOpacity="0.22" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      {safePct > 0 && (
+        <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${fillEndX.toFixed(2)} ${fillEndY.toFixed(2)}`} stroke={fillColor} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      )}
+      <line x1={cx} y1={cy} x2={needleX.toFixed(2)} y2={needleY.toFixed(2)} stroke={fillColor} strokeWidth="1.2" strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r="1.1" fill={fillColor} />
+    </svg>
+  );
+};
+
+const formatRateLimitReset = (resetAt) => {
+  if (!resetAt) return null;
+  const date = new Date(resetAt);
+  if (Number.isNaN(date.getTime())) return null;
+  const diffMs = date.getTime() - Date.now();
+  if (diffMs <= 0) return 'now';
+  const totalMinutes = Math.round(diffMs / 60000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const totalHours = Math.round(totalMinutes / 60);
+  if (totalHours < 48) return `${totalHours}h`;
+  const totalDays = Math.round(totalHours / 24);
+  return `${totalDays}d`;
+};
+
+const rateLimitTone = (pct) => {
+  if (pct >= 100) return 'danger';
+  if (pct >= 80) return 'warning';
+  return 'safe';
+};
 
 const Sidebar = ({
   chats = [], // Default to empty array
@@ -888,6 +997,13 @@ const Sidebar = ({
   const [showHamburger, setShowHamburger] = useState(true); // Show hamburger
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isRateLimitsOpen, setIsRateLimitsOpen] = useState(true);
+  const [rateLimitBuckets, setRateLimitBuckets] = useState([
+    { tier: 'pro', label: 'Pro', limit: null, used: 0, remaining: null, resetAt: null, configured: false },
+    { tier: 'lite', label: 'Lite', limit: null, used: 0, remaining: null, resetAt: null, configured: false },
+    { tier: 'image', label: 'Image', limit: null, used: 0, remaining: null, resetAt: null, configured: false },
+    { tier: 'video', label: 'Video', limit: null, used: 0, remaining: null, resetAt: null, configured: false }
+  ]);
   const [copyStatus, setCopyStatus] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [profilePicture, setProfilePicture] = useState(
@@ -927,6 +1043,20 @@ const Sidebar = ({
       window.removeEventListener('profilePictureChanged', handleProfilePictureChange);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isProfileDropdownOpen || !isLoggedIn) return;
+    let cancelled = false;
+    getUserRateLimits()
+      .then((buckets) => {
+        if (cancelled) return;
+        if (Array.isArray(buckets) && buckets.length > 0) {
+          setRateLimitBuckets(buckets);
+        }
+      })
+      .catch(() => { /* keep current defaults if API fails */ });
+    return () => { cancelled = true; };
+  }, [isProfileDropdownOpen, isLoggedIn]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -1387,6 +1517,45 @@ const Sidebar = ({
 
                 {/* Profile Dropdown Menu */}
                 <ProfileDropdown $isOpen={isProfileDropdownOpen}>
+                  {isLoggedIn && rateLimitBuckets.length > 0 && (
+                    <>
+                      <RateLimitsToggle
+                        type="button"
+                        $open={isRateLimitsOpen}
+                        onClick={() => setIsRateLimitsOpen((open) => !open)}
+                        aria-expanded={isRateLimitsOpen}
+                      >
+                        <svg className="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 12a9 9 0 1 1 18 0"></path>
+                          <path d="M12 12l4-4"></path>
+                          <circle cx="12" cy="12" r="1.2" fill="currentColor"></circle>
+                        </svg>
+                        <span>Rate limits</span>
+                        <svg className="chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </RateLimitsToggle>
+                      {isRateLimitsOpen && rateLimitBuckets.map((bucket) => {
+                        const used = Number(bucket.used) || 0;
+                        const limit = Number(bucket.limit) || 0;
+                        const isConfigured = bucket.configured && limit > 0;
+                        const remaining = isConfigured ? Math.max(0, limit - used) : 0;
+                        const pct = isConfigured ? (used / limit) * 100 : 0;
+                        const reset = formatRateLimitReset(bucket.resetAt);
+                        return (
+                          <RateLimitItem key={bucket.tier}>
+                            <Speedometer pct={pct} tone={isConfigured ? rateLimitTone(pct) : 'safe'} />
+                            <span>{bucket.label || bucket.tier}</span>
+                            <RateLimitMeta>
+                              {isConfigured
+                                ? `${remaining.toLocaleString('en-US')} left${reset ? ` · ${reset}` : ''}`
+                                : 'Unlimited'}
+                            </RateLimitMeta>
+                          </RateLimitItem>
+                        );
+                      })}
+                    </>
+                  )}
                   <ProfileDropdownItem onClick={handleSettingsClick}>
                     {isRetro ? (
                       retroIcon('/images/retroTheme/settingsIcon.png', 'Settings')

@@ -156,5 +156,14 @@
         "gpt-image": "gpt-image-1"
       }
     }
+  },
+
+  "video": {
+    "default": "sora-2",
+    "openai": {
+      "models": {
+        "sora-2": "sora-2"
+      }
+    }
   }
 }

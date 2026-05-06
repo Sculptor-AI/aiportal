@@ -12,6 +12,7 @@ import {
   getArtifactChatConfig,
   getChatModels,
   getImageModels,
+  getVideoModels,
   updateArtifactChatConfig,
   updateDeepResearchConfig,
   updateUserDetails,
@@ -21,7 +22,29 @@ import AdminLoginModal from '../components/AdminLoginModal';
 
 const STATUS_LABELS = { active: 'Active', pending: 'Pending', suspended: 'Suspended', banned: 'Banned' };
 const ROLE_LABELS = { admin: 'Admin', user: 'User' };
-const DEFAULT_LIMITS = { turns: null, images: null, videos: null, modelRateLimits: [] };
+const TIER_KEYS = ['pro', 'lite', 'image', 'video'];
+const TIER_LABELS = { pro: 'Pro', lite: 'Lite', image: 'Image', video: 'Video' };
+const TIER_DESCRIPTIONS = {
+  pro: 'Higher-intelligence chat models you mark as Pro.',
+  lite: 'Faster / lighter chat models you mark as Lite.',
+  image: 'All image generation requests.',
+  video: 'All video generation requests.'
+};
+const EMPTY_TIER_LIMIT_FORM = { limit: '', windowAmount: '', windowUnit: 'hours' };
+const EMPTY_TIER_LIMIT_FORM_MAP = TIER_KEYS.reduce((acc, key) => {
+  acc[key] = { ...EMPTY_TIER_LIMIT_FORM };
+  return acc;
+}, {});
+const DEFAULT_LIMITS = {
+  turns: null,
+  images: null,
+  videos: null,
+  tiers: TIER_KEYS.reduce((acc, key) => {
+    acc[key] = { limit: null, windowSeconds: null };
+    return acc;
+  }, {}),
+  modelTiers: {}
+};
 const DEFAULT_DEEP_RESEARCH_CONFIG = {
   plannerModel: 'gemini-3.1-pro',
   researcherModel: 'gemini-3-flash',
@@ -62,9 +85,15 @@ const DEEP_RESEARCH_FORM_FIELD_KEYS = {
   requestTimeoutMs: 'requestTimeoutMs',
   allowWriterModelOverride: 'allowWriterModelOverride'
 };
-const EMPTY_LIMIT_FORM = { turns: '', images: '', videos: '', modelRateLimits: [] };
-const EMPTY_MODEL_RATE_DRAFT = { modelId: '', limit: '', windowAmount: '5', windowUnit: 'minutes' };
-const WINDOW_UNIT_SECONDS = { seconds: 1, minutes: 60, hours: 3600, days: 86400 };
+const EMPTY_LIMIT_FORM = {
+  turns: '',
+  images: '',
+  videos: '',
+  tiers: { ...EMPTY_TIER_LIMIT_FORM_MAP },
+  modelTiers: {}
+};
+const WINDOW_UNIT_SECONDS = { minutes: 60, hours: 3600, days: 86400, weeks: 604800 };
+const WINDOW_UNIT_LABELS = { minutes: 'Minutes', hours: 'Hours', days: 'Days', weeks: 'Weeks' };
 
 const Page = styled.div`
   flex: 1; min-height: 100vh; min-width: 0; color: ${p => p.theme.text}; overflow-y: auto; overflow-x: hidden;
@@ -142,22 +171,42 @@ const SnapshotGrid = styled.div`
   @media (max-width: 520px) { grid-template-columns:1fr; }
 `;
 const RateLimitSection = styled.div`
-  border:1px solid ${p => p.theme.border}; border-radius:12px; padding:14px; background:${p => p.theme.inputBackground || p.theme.background};
+  border:1px solid ${p => p.theme.border}; border-radius:12px; padding:16px; background:${p => p.theme.inputBackground || p.theme.background};
+  display:flex; flex-direction:column; gap:14px;
 `;
-const RateLimitFormGrid = styled.div`
-  display:grid; grid-template-columns:minmax(220px,1fr) 130px 130px 140px auto; gap:10px; align-items:end;
-  @media (max-width: 980px) { grid-template-columns:1fr 1fr; }
-  @media (max-width: 560px) { grid-template-columns:1fr; }
+const TierGrid = styled.div`
+  display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px;
+  @media (max-width: 720px) { grid-template-columns:1fr; }
 `;
-const RateRuleList = styled.div`display:flex; flex-direction:column; gap:8px; margin-top:12px;`;
-const RateRuleRow = styled.div`
-  display:grid; grid-template-columns:minmax(220px,1fr) 160px 180px auto; gap:10px; align-items:center; padding:10px;
-  border:1px solid ${p => p.theme.border}; border-radius:10px; background:${p => p.theme.sidebar};
-  @media (max-width: 760px) { grid-template-columns:1fr; }
+const TierCard = styled.div`
+  border:1px solid ${p => p.theme.border}; border-radius:12px; padding:14px;
+  background:${p => p.theme.sidebar};
+  display:flex; flex-direction:column; gap:10px;
 `;
-const RuleModel = styled.div`display:flex; flex-direction:column; gap:3px; min-width:0;`;
-const RuleModelId = styled.span`font-weight:700; font-size:0.9rem; overflow-wrap:anywhere;`;
-const RuleMeta = styled.span`font-size:0.78rem; opacity:0.66;`;
+const TierCardHead = styled.div`display:flex; justify-content:space-between; align-items:flex-start; gap:10px;`;
+const TierName = styled.div`font-size:0.96rem; font-weight:700; letter-spacing:-0.01em;`;
+const TierMeta = styled.div`font-size:0.78rem; opacity:0.7; line-height:1.4;`;
+const TierFieldRow = styled.div`
+  display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); gap:8px;
+`;
+const TierClearButton = styled.button`
+  background:none; border:none; cursor:pointer; padding:0; font-size:0.78rem;
+  color:${p => p.theme.text}; opacity:0.6; text-decoration:underline;
+  &:hover:not(:disabled){opacity:0.95;}
+  &:disabled{cursor:not-allowed; opacity:0.35;}
+`;
+const ModelTierGroup = styled.div`display:flex; flex-direction:column; gap:8px;`;
+const ModelTierGroupTitle = styled.div`font-size:0.78rem; opacity:0.65; letter-spacing:0.06em; text-transform:uppercase;`;
+const ModelTierList = styled.div`
+  display:grid; grid-template-columns:1fr 180px; gap:8px 12px; align-items:center;
+  @media (max-width: 600px) { grid-template-columns:1fr; }
+`;
+const ModelTierRow = styled.div`display:contents;`;
+const ModelTierLabel = styled.div`
+  display:flex; flex-direction:column; gap:2px; min-width:0; padding:6px 0;
+`;
+const ModelTierName = styled.span`font-size:0.9rem; font-weight:600; overflow-wrap:anywhere;`;
+const ModelTierMeta = styled.span`font-size:0.76rem; opacity:0.62;`;
 const Controls = styled.div`
   display:grid; grid-template-columns:minmax(220px,1fr) 180px 180px auto; gap:10px; margin-bottom:14px;
   @media (max-width: 980px) { grid-template-columns:1fr 1fr; }
@@ -298,49 +347,70 @@ const formatLimitValue = (value) => value === null || value === undefined ? 'Unl
 const formatUsageValue = (used, limit) => limit === null || limit === undefined ? `${used.toLocaleString('en-US')} used` : `${used.toLocaleString('en-US')} / ${limit.toLocaleString('en-US')}`;
 const getUsageTone = (used, limit) => { if (limit === null || limit === undefined) return 'neutral'; if (limit === 0) return used > 0 ? 'danger' : 'safe'; const ratio = used / limit; if (ratio >= 1) return 'danger'; if (ratio >= 0.8) return 'warning'; return 'safe'; };
 const getUsageProgress = (used, limit) => { if (limit === null || limit === undefined) return null; if (limit === 0) return used > 0 ? 100 : 0; return Math.max(0, Math.min(100, Math.round((used / limit) * 100))); };
-const normalizeModelRateLimits = (rules = []) => {
-  const sourceRules = Array.isArray(rules)
-    ? rules
-    : Object.entries(rules || {}).map(([modelId, rule]) => ({
-      ...(typeof rule === 'object' && rule !== null ? rule : {}),
-      modelId
-    }));
-  const seen = new Set();
-
-  return sourceRules.reduce((items, rule, index) => {
-    const modelId = typeof rule?.modelId === 'string' ? rule.modelId.trim() : '';
-    const limit = Number(rule?.limit);
-    const windowSeconds = Number(rule?.windowSeconds);
-    const id = typeof rule?.id === 'string' && rule.id.trim()
-      ? rule.id.trim()
-      : `${modelId.replace(/[^a-zA-Z0-9:_-]/g, '-')}-${limit}-${windowSeconds}-${index}`;
-
-    if (!modelId || !Number.isInteger(limit) || limit <= 0 || !Number.isInteger(windowSeconds) || windowSeconds <= 0 || seen.has(id)) {
-      return items;
-    }
-
-    seen.add(id);
-    items.push({ id, modelId, limit, windowSeconds });
-    return items;
-  }, []);
-};
 const DEFAULT_ARTIFACT_CHAT_CONFIG = {
   model: 'gpt-5.4-mini',
   provider: 'openai'
 };
-const normalizeLimits = (limits = {}) => ({ ...DEFAULT_LIMITS, ...limits, modelRateLimits: normalizeModelRateLimits(limits.modelRateLimits) });
+const normalizeTierLimits = (tiers = {}) => {
+  const out = {};
+  for (const key of TIER_KEYS) {
+    const raw = tiers?.[key] || {};
+    const limit = Number(raw.limit);
+    const windowSeconds = Number(raw.windowSeconds);
+    out[key] = {
+      limit: Number.isInteger(limit) && limit > 0 ? limit : null,
+      windowSeconds: Number.isInteger(windowSeconds) && windowSeconds > 0 ? windowSeconds : null
+    };
+  }
+  return out;
+};
+const normalizeModelTiers = (map = {}) => {
+  if (!map || typeof map !== 'object') return {};
+  const out = {};
+  for (const [modelId, tier] of Object.entries(map)) {
+    if (typeof modelId !== 'string' || !modelId.trim()) continue;
+    if (typeof tier !== 'string' || !TIER_KEYS.includes(tier)) continue;
+    out[modelId.trim()] = tier;
+  }
+  return out;
+};
+const normalizeLimits = (limits = {}) => ({
+  ...DEFAULT_LIMITS,
+  ...limits,
+  tiers: normalizeTierLimits(limits.tiers),
+  modelTiers: normalizeModelTiers(limits.modelTiers)
+});
+const pickWindowUnit = (windowSeconds) => {
+  if (!Number.isFinite(windowSeconds) || windowSeconds <= 0) return 'hours';
+  const candidates = ['weeks', 'days', 'hours', 'minutes'];
+  for (const unit of candidates) {
+    const unitSeconds = WINDOW_UNIT_SECONDS[unit];
+    if (windowSeconds % unitSeconds === 0) return unit;
+  }
+  return 'hours';
+};
+const tierFormFromLimit = ({ limit, windowSeconds }) => {
+  if (!limit || !windowSeconds) return { ...EMPTY_TIER_LIMIT_FORM };
+  const unit = pickWindowUnit(windowSeconds);
+  const amount = Math.max(1, Math.round(windowSeconds / WINDOW_UNIT_SECONDS[unit]));
+  return { limit: String(limit), windowAmount: String(amount), windowUnit: unit };
+};
 const syncLimitForm = (limits) => {
   const normalizedLimits = normalizeLimits(limits);
   return {
     turns: toLimitInput(normalizedLimits.turns),
     images: toLimitInput(normalizedLimits.images),
     videos: toLimitInput(normalizedLimits.videos),
-    modelRateLimits: normalizedLimits.modelRateLimits
+    tiers: TIER_KEYS.reduce((acc, key) => {
+      acc[key] = tierFormFromLimit(normalizedLimits.tiers[key] || {});
+      return acc;
+    }, {}),
+    modelTiers: { ...normalizedLimits.modelTiers }
   };
 };
 const getWindowSeconds = (amount, unit) => {
   const numericAmount = Number(amount);
-  const unitSeconds = WINDOW_UNIT_SECONDS[unit] || WINDOW_UNIT_SECONDS.minutes;
+  const unitSeconds = WINDOW_UNIT_SECONDS[unit] || WINDOW_UNIT_SECONDS.hours;
   if (!Number.isInteger(numericAmount) || numericAmount <= 0) return null;
   return numericAmount * unitSeconds;
 };
@@ -348,6 +418,7 @@ const formatDuration = (seconds) => {
   const value = Number(seconds);
   if (!Number.isFinite(value) || value <= 0) return 'unknown window';
   const units = [
+    ['week', 604800],
     ['day', 86400],
     ['hour', 3600],
     ['minute', 60],
@@ -356,6 +427,16 @@ const formatDuration = (seconds) => {
   const [label, size] = units.find(([, unitSeconds]) => value % unitSeconds === 0) || ['second', 1];
   const amount = value / size;
   return `${amount.toLocaleString('en-US')} ${label}${amount === 1 ? '' : 's'}`;
+};
+const tierForKind = (kind) => {
+  if (kind === 'image') return 'image';
+  if (kind === 'video') return 'video';
+  return 'lite';
+};
+const tiersAvailableForKind = (kind) => {
+  if (kind === 'image') return ['image'];
+  if (kind === 'video') return ['video'];
+  return ['pro', 'lite'];
 };
 
 const AdminPage = ({ collapsed }) => {
@@ -370,7 +451,7 @@ const AdminPage = ({ collapsed }) => {
   const [artifactChatConfigForm, setArtifactChatConfigForm] = useState(DEFAULT_ARTIFACT_CHAT_CONFIG);
   const [chatModels, setChatModels] = useState([]);
   const [imageModels, setImageModels] = useState([]);
-  const [modelRateDraft, setModelRateDraft] = useState(EMPTY_MODEL_RATE_DRAFT);
+  const [videoModels, setVideoModels] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -394,14 +475,15 @@ const AdminPage = ({ collapsed }) => {
     setError('');
 
     try {
-      const [usersData, statsData, limitsData, deepResearchConfigData, artifactChatConfigData, chatModelData, imageModelData] = await Promise.all([
+      const [usersData, statsData, limitsData, deepResearchConfigData, artifactChatConfigData, chatModelData, imageModelData, videoModelData] = await Promise.all([
         getAllUsers(),
         getDashboardStats(),
         getUsageLimits(),
         getDeepResearchConfig(),
         getArtifactChatConfig(),
         getChatModels().catch(() => []),
-        getImageModels().catch(() => [])
+        getImageModels().catch(() => []),
+        getVideoModels().catch(() => [])
       ]);
       const nextUsers = (usersData || []).map(normalizeUser);
       const nextLimits = normalizeLimits(limitsData || statsData?.usageLimits || DEFAULT_LIMITS);
@@ -426,6 +508,7 @@ const AdminPage = ({ collapsed }) => {
       });
       setChatModels(Array.isArray(chatModelData) ? chatModelData : []);
       setImageModels(Array.isArray(imageModelData) ? imageModelData : []);
+      setVideoModels(Array.isArray(videoModelData) ? videoModelData : []);
       return nextUsers;
     } catch (err) {
       setError(err.message || 'Failed to load admin data.');
@@ -452,14 +535,9 @@ const AdminPage = ({ collapsed }) => {
 
     (Array.isArray(chatModels) ? chatModels : []).forEach((model) => addModel(model, 'chat'));
     (Array.isArray(imageModels) ? imageModels : []).forEach((model) => addModel(model, 'image'));
-    addModel({ id: 'sora-2', provider: 'openai' }, 'video');
+    (Array.isArray(videoModels) ? videoModels : []).forEach((model) => addModel(model, 'video'));
     return options;
-  }, [chatModels, imageModels]);
-
-  useEffect(() => {
-    if (modelRateDraft.modelId || rateLimitModelOptions.length === 0) return;
-    setModelRateDraft((current) => current.modelId ? current : { ...current, modelId: rateLimitModelOptions[0].id });
-  }, [rateLimitModelOptions, modelRateDraft.modelId]);
+  }, [chatModels, imageModels, videoModels]);
 
   const filteredUsers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -493,11 +571,6 @@ const AdminPage = ({ collapsed }) => {
 
     return { nearingLimitUsers, cappedOutUsers };
   }, [users, limits]);
-
-  const modelMetaById = useMemo(() => {
-    const entries = rateLimitModelOptions.map((model) => [model.id, model]);
-    return new Map(entries);
-  }, [rateLimitModelOptions]);
 
   const beginEdit = (user) => {
     setError('');
@@ -551,11 +624,36 @@ const AdminPage = ({ collapsed }) => {
     setError('');
     setSuccess('');
     try {
+      const tiersPayload = {};
+      for (const key of TIER_KEYS) {
+        const form = limitForm.tiers?.[key] || EMPTY_TIER_LIMIT_FORM;
+        const limitRaw = String(form.limit ?? '').trim();
+        const amountRaw = String(form.windowAmount ?? '').trim();
+
+        if (!limitRaw && !amountRaw) {
+          tiersPayload[key] = { limit: '', windowSeconds: '' };
+          continue;
+        }
+
+        const limitNum = Number(limitRaw);
+        if (!Number.isInteger(limitNum) || limitNum <= 0) {
+          throw new Error(`The ${TIER_LABELS[key]} tier limit must be a positive whole number, or leave both fields blank.`);
+        }
+
+        const windowSeconds = getWindowSeconds(amountRaw, form.windowUnit);
+        if (!windowSeconds) {
+          throw new Error(`The ${TIER_LABELS[key]} tier window must be a positive whole number, or leave both fields blank.`);
+        }
+
+        tiersPayload[key] = { limit: limitNum, windowSeconds };
+      }
+
       const nextLimits = normalizeLimits(await updateUsageLimits({
-        turns: limitForm.turns.trim(),
-        images: limitForm.images.trim(),
-        videos: limitForm.videos.trim(),
-        modelRateLimits: normalizeModelRateLimits(limitForm.modelRateLimits)
+        turns: String(limitForm.turns ?? '').trim(),
+        images: String(limitForm.images ?? '').trim(),
+        videos: String(limitForm.videos ?? '').trim(),
+        tiers: tiersPayload,
+        modelTiers: limitForm.modelTiers || {}
       }) || DEFAULT_LIMITS);
       setLimits(nextLimits);
       setLimitForm(syncLimitForm(nextLimits));
@@ -568,48 +666,40 @@ const AdminPage = ({ collapsed }) => {
     }
   };
 
-  const handleAddModelRateLimit = () => {
-    const modelId = modelRateDraft.modelId.trim();
-    const limit = Number(modelRateDraft.limit);
-    const windowSeconds = getWindowSeconds(modelRateDraft.windowAmount, modelRateDraft.windowUnit);
-
-    setError('');
-    setSuccess('');
-
-    if (!modelId) {
-      setError('Choose a model for the rate limit.');
-      return;
-    }
-
-    if (!Number.isInteger(limit) || limit <= 0) {
-      setError('Rate limit requests must be a positive whole number.');
-      return;
-    }
-
-    if (!windowSeconds) {
-      setError('Rate limit window must be a positive whole number.');
-      return;
-    }
-
-    const nextRule = {
-      id: `${modelId.replace(/[^a-zA-Z0-9:_-]/g, '-')}-${limit}-${windowSeconds}-${Date.now()}`,
-      modelId,
-      limit,
-      windowSeconds
-    };
-
-    setLimitForm((current) => ({
-      ...current,
-      modelRateLimits: [...normalizeModelRateLimits(current.modelRateLimits), nextRule]
-    }));
-    setModelRateDraft((current) => ({ ...current, limit: '' }));
+  const handleTierFieldChange = (tier, field, value) => {
+    setLimitForm((current) => {
+      const currentTiers = current.tiers || { ...EMPTY_TIER_LIMIT_FORM_MAP };
+      const currentTier = currentTiers[tier] || { ...EMPTY_TIER_LIMIT_FORM };
+      return {
+        ...current,
+        tiers: {
+          ...currentTiers,
+          [tier]: { ...currentTier, [field]: value }
+        }
+      };
+    });
   };
 
-  const handleRemoveModelRateLimit = (ruleId) => {
+  const handleClearTier = (tier) => {
     setLimitForm((current) => ({
       ...current,
-      modelRateLimits: normalizeModelRateLimits(current.modelRateLimits).filter((rule) => rule.id !== ruleId)
+      tiers: {
+        ...(current.tiers || {}),
+        [tier]: { ...EMPTY_TIER_LIMIT_FORM }
+      }
     }));
+  };
+
+  const handleModelTierChange = (modelId, tier) => {
+    setLimitForm((current) => {
+      const next = { ...(current.modelTiers || {}) };
+      if (!tier) {
+        delete next[modelId];
+      } else {
+        next[modelId] = tier;
+      }
+      return { ...current, modelTiers: next };
+    });
   };
 
   const handleSaveDeepResearchConfig = async () => {
@@ -744,7 +834,23 @@ const AdminPage = ({ collapsed }) => {
     setArtifactChatConfigForm((current) => ({ ...current, [field]: value }));
   };
 
-  const modelRateLimitRules = normalizeModelRateLimits(limitForm.modelRateLimits);
+  const groupedRateLimitModels = useMemo(() => {
+    const groups = { chat: [], image: [], video: [] };
+    rateLimitModelOptions.forEach((model) => {
+      const kind = model.kind || 'chat';
+      if (!groups[kind]) groups[kind] = [];
+      groups[kind].push(model);
+    });
+    return groups;
+  }, [rateLimitModelOptions]);
+
+  const tierAssignmentCounts = useMemo(() => {
+    const counts = TIER_KEYS.reduce((acc, key) => { acc[key] = 0; return acc; }, {});
+    Object.values(limitForm.modelTiers || {}).forEach((tier) => {
+      if (counts[tier] !== undefined) counts[tier] += 1;
+    });
+    return counts;
+  }, [limitForm.modelTiers]);
 
   if (!adminUser) {
     return (
@@ -825,77 +931,127 @@ const AdminPage = ({ collapsed }) => {
             <RateLimitSection>
               <DRSectionHead>
                 <div>
-                  <DRSectionTitle>Model rate limits</DRSectionTitle>
-                  <Helper style={{ marginTop: 4 }}>Each rule applies per user account. Add more than one rule to enforce multiple reset windows for the same model.</Helper>
+                  <DRSectionTitle>Tier rate limits</DRSectionTitle>
+                  <Helper style={{ marginTop: 4 }}>
+                    Each tier has its own rolling window. Pro and Lite cover chat models you assign below; Image and Video cover all generations on those routes.
+                  </Helper>
                 </div>
               </DRSectionHead>
 
-              <RateLimitFormGrid>
-                <Field>
-                  <FieldLabel>Model</FieldLabel>
-                  <Input
-                    list="admin-model-rate-limit-models"
-                    placeholder="Model id"
-                    value={modelRateDraft.modelId}
-                    onChange={(e) => setModelRateDraft((current) => ({ ...current, modelId: e.target.value }))}
-                  />
-                  <datalist id="admin-model-rate-limit-models">
-                    {rateLimitModelOptions.map((model) => (
-                      <option key={model.id} value={model.id}>{`${model.kind || 'model'} ${model.provider || ''}`.trim()}</option>
-                    ))}
-                  </datalist>
-                </Field>
-                <Field>
-                  <FieldLabel>Requests</FieldLabel>
-                  <Input
-                    inputMode="numeric"
-                    placeholder="10"
-                    value={modelRateDraft.limit}
-                    onChange={(e) => setModelRateDraft((current) => ({ ...current, limit: e.target.value }))}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel>Window</FieldLabel>
-                  <Input
-                    inputMode="numeric"
-                    placeholder="5"
-                    value={modelRateDraft.windowAmount}
-                    onChange={(e) => setModelRateDraft((current) => ({ ...current, windowAmount: e.target.value }))}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel>Unit</FieldLabel>
-                  <Select
-                    value={modelRateDraft.windowUnit}
-                    onChange={(e) => setModelRateDraft((current) => ({ ...current, windowUnit: e.target.value }))}
-                  >
-                    <option value="seconds">Seconds</option>
-                    <option value="minutes">Minutes</option>
-                    <option value="hours">Hours</option>
-                    <option value="days">Days</option>
-                  </Select>
-                </Field>
-                <Button type="button" onClick={handleAddModelRateLimit} disabled={savingLimits}>Add rule</Button>
-              </RateLimitFormGrid>
-
-              <RateRuleList>
-                {modelRateLimitRules.length === 0 ? (
-                  <Helper>No model-specific rate limits configured.</Helper>
-                ) : modelRateLimitRules.map((rule) => {
-                  const modelMeta = modelMetaById.get(rule.modelId);
+              <TierGrid>
+                {TIER_KEYS.map((tier) => {
+                  const tierForm = limitForm.tiers?.[tier] || EMPTY_TIER_LIMIT_FORM;
+                  const savedTier = limits.tiers?.[tier] || {};
+                  const savedSummary = savedTier.limit && savedTier.windowSeconds
+                    ? `${savedTier.limit.toLocaleString('en-US')} per ${formatDuration(savedTier.windowSeconds)}`
+                    : 'No limit set';
                   return (
-                    <RateRuleRow key={rule.id}>
-                      <RuleModel>
-                        <RuleModelId>{rule.modelId}</RuleModelId>
-                        <RuleMeta>{[modelMeta?.kind, modelMeta?.provider].filter(Boolean).join(' / ') || 'custom model'}</RuleMeta>
-                      </RuleModel>
-                      <div>{rule.limit.toLocaleString('en-US')} requests</div>
-                      <div>per {formatDuration(rule.windowSeconds)}</div>
-                      <DangerButton type="button" onClick={() => handleRemoveModelRateLimit(rule.id)} disabled={savingLimits}>Remove</DangerButton>
-                    </RateRuleRow>
+                    <TierCard key={tier}>
+                      <TierCardHead>
+                        <div>
+                          <TierName>{TIER_LABELS[tier]}</TierName>
+                          <TierMeta>{TIER_DESCRIPTIONS[tier]}</TierMeta>
+                        </div>
+                        <TierClearButton
+                          type="button"
+                          onClick={() => handleClearTier(tier)}
+                          disabled={savingLimits || (!tierForm.limit && !tierForm.windowAmount)}
+                        >
+                          Clear
+                        </TierClearButton>
+                      </TierCardHead>
+
+                      <BigValue style={{ margin: 0 }}>{savedSummary}</BigValue>
+
+                      <TierFieldRow>
+                        <Field>
+                          <FieldLabel>Requests</FieldLabel>
+                          <Input
+                            inputMode="numeric"
+                            placeholder="Unlimited"
+                            value={tierForm.limit}
+                            onChange={(e) => handleTierFieldChange(tier, 'limit', e.target.value)}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel>Window</FieldLabel>
+                          <Input
+                            inputMode="numeric"
+                            placeholder="1"
+                            value={tierForm.windowAmount}
+                            onChange={(e) => handleTierFieldChange(tier, 'windowAmount', e.target.value)}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel>Unit</FieldLabel>
+                          <Select
+                            value={tierForm.windowUnit}
+                            onChange={(e) => handleTierFieldChange(tier, 'windowUnit', e.target.value)}
+                          >
+                            {Object.keys(WINDOW_UNIT_SECONDS).map((unit) => (
+                              <option key={unit} value={unit}>{WINDOW_UNIT_LABELS[unit] || unit}</option>
+                            ))}
+                          </Select>
+                        </Field>
+                      </TierFieldRow>
+
+                      <Helper style={{ marginTop: 0 }}>
+                        {tier === 'image' || tier === 'video'
+                          ? `${tierAssignmentCounts[tier] || 0} model${(tierAssignmentCounts[tier] || 0) === 1 ? '' : 's'} mapped (image/video routes default to this tier).`
+                          : `${tierAssignmentCounts[tier] || 0} chat model${(tierAssignmentCounts[tier] || 0) === 1 ? '' : 's'} assigned.`
+                        }
+                      </Helper>
+                    </TierCard>
                   );
                 })}
-              </RateRuleList>
+              </TierGrid>
+
+              <DRSectionHead>
+                <div>
+                  <DRSectionTitle>Model assignments</DRSectionTitle>
+                  <Helper style={{ marginTop: 4 }}>
+                    Pick the tier each model counts against. Chat models default to none (no limit). Image and video models inherit their route's tier when set to none.
+                  </Helper>
+                </div>
+              </DRSectionHead>
+
+              {[
+                { kind: 'chat', label: 'Chat models' },
+                { kind: 'image', label: 'Image models' },
+                { kind: 'video', label: 'Video models' }
+              ].map(({ kind, label }) => {
+                const list = groupedRateLimitModels[kind] || [];
+                if (list.length === 0) return null;
+                return (
+                  <ModelTierGroup key={kind}>
+                    <ModelTierGroupTitle>{label}</ModelTierGroupTitle>
+                    <ModelTierList>
+                      {list.map((model) => {
+                        const assigned = limitForm.modelTiers?.[model.id] || '';
+                        const choices = tiersAvailableForKind(model.kind);
+                        return (
+                          <ModelTierRow key={model.id}>
+                            <ModelTierLabel>
+                              <ModelTierName>{model.id}</ModelTierName>
+                              <ModelTierMeta>{[model.provider, model.apiId].filter(Boolean).join(' · ') || 'custom model'}</ModelTierMeta>
+                            </ModelTierLabel>
+                            <Select
+                              value={assigned}
+                              onChange={(e) => handleModelTierChange(model.id, e.target.value)}
+                              disabled={savingLimits}
+                            >
+                              <option value="">No limit</option>
+                              {choices.map((choice) => (
+                                <option key={choice} value={choice}>{TIER_LABELS[choice]}</option>
+                              ))}
+                            </Select>
+                          </ModelTierRow>
+                        );
+                      })}
+                    </ModelTierList>
+                  </ModelTierGroup>
+                );
+              })}
             </RateLimitSection>
 
             <Actions style={{ justifyContent: 'space-between' }}>
@@ -934,9 +1090,11 @@ const AdminPage = ({ collapsed }) => {
                 <Helper style={{ marginTop: 0 }}>Images first, videos second.</Helper>
               </LimitCard>
               <LimitCard>
-                <SmallLabel>Model rate rules</SmallLabel>
-                <BigValue>{(limits.modelRateLimits || []).length.toLocaleString('en-US')}</BigValue>
-                <Helper style={{ marginTop: 0 }}>Each active rule has its own reset window.</Helper>
+                <SmallLabel>Tier rate limits</SmallLabel>
+                <BigValue>
+                  {TIER_KEYS.filter((key) => limits.tiers?.[key]?.limit && limits.tiers?.[key]?.windowSeconds).length}/{TIER_KEYS.length}
+                </BigValue>
+                <Helper style={{ marginTop: 0 }}>Tiers with a configured limit and window.</Helper>
               </LimitCard>
             </SnapshotGrid>
           </Panel>

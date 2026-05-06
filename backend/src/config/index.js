@@ -101,6 +101,29 @@ export function listImageModels() {
 }
 
 /**
+ * Get available video models (names)
+ */
+export function listVideoModels() {
+  const models = [];
+  const videoDefault = modelsConfig.video?.default;
+
+  for (const [provider, config] of Object.entries(modelsConfig.video || {})) {
+    if (provider === 'default') continue;
+
+    for (const [name, apiId] of Object.entries(config.models || {})) {
+      models.push({
+        id: name,
+        apiId: apiId,
+        provider,
+        isDefault: name === videoDefault
+      });
+    }
+  }
+
+  return models;
+}
+
+/**
  * Get default image model API ID for a provider
  */
 export function getDefaultImageModel(provider) {
