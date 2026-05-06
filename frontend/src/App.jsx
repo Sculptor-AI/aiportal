@@ -1223,9 +1223,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
               isOpen={isEquationEditorOpen}
               onClose={() => setIsEquationEditorOpen(false)}
               onSubmit={(latex) => {
-                // Handle equation submission - add to chat input
                 if (chatWindowRef.current && chatWindowRef.current.appendToInput) {
-                  chatWindowRef.current.appendToInput(`$$\n${latex}\n$$ `);
+                  chatWindowRef.current.appendToInput(`$$${latex}$$ `);
                 }
                 setIsEquationEditorOpen(false);
               }}
