@@ -1219,13 +1219,15 @@ const ThinkingContainer = styled.div`
 `;
 
 const SpinnerIcon = styled.div`
-  width: 16px;
-  height: 16px;
-  border: 2px solid ${props => props.theme.text}40;
-  border-top: 2px solid ${props => props.theme.text};
+  width: 14px;
+  height: 14px;
+  border: 1.75px solid ${props => `${props.theme.text}26`};
+  border-top-color: ${props => props.theme.text};
   border-radius: 50%;
   margin-right: 8px;
-  animation: ${spin} 1s linear infinite;
+  flex-shrink: 0;
+  animation: ${spin} 0.85s linear infinite;
+  box-sizing: border-box;
 `;
 
 const LoadingDots = styled.span`
@@ -1594,7 +1596,7 @@ const ThinkingHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
+  gap: 8px;
   padding: 0 0 4px;
   cursor: pointer;
   user-select: none;
@@ -1603,17 +1605,29 @@ const ThinkingHeader = styled.div`
   line-height: 1.35;
   color: ${props => `${props.theme.text}96`};
   transition: color 0.15s ease;
-  
+
   &:hover {
     color: ${props => props.theme.text};
   }
+`;
+
+const HeaderSpinner = styled.span`
+  width: 13px;
+  height: 13px;
+  border: 1.75px solid ${props => `${props.theme.text}26`};
+  border-top-color: ${props => props.theme.text};
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  animation: ${spin} 0.85s linear infinite;
 `;
 
 const ThinkingHeaderTitle = styled.div`
   display: flex;
   align-items: center;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
 `;
 
 const ThinkingPreview = styled.div`
@@ -1627,13 +1641,17 @@ const ThinkingPreview = styled.div`
 const ThinkingArrow = styled.span`
   transition: transform 0.2s ease;
   transform: ${props => props.expanded ? 'rotate(90deg)' : 'rotate(0deg)'};
-  font-size: 1.25rem;
-  line-height: 1;
-  display: inline-block;
-  width: 16px;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
   opacity: 0.65;
   flex-shrink: 0;
+
+  svg {
+    display: block;
+  }
 `;
 
 const ThinkingContent = styled.div`
@@ -1966,12 +1984,17 @@ const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls
   return (
     <ThinkingDropdownContainer>
       <ThinkingHeader onClick={toggleExpanded}>
+        {isStreaming && <HeaderSpinner aria-hidden="true" />}
         <ThinkingHeaderTitle>
           <ThinkingPreview>
             {headerText}
           </ThinkingPreview>
         </ThinkingHeaderTitle>
-        <ThinkingArrow expanded={expanded}>›</ThinkingArrow>
+        <ThinkingArrow expanded={expanded} aria-hidden="true">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3.5 2L6.5 5L3.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </ThinkingArrow>
       </ThinkingHeader>
       <ThinkingContent expanded={expanded}>
         {hasToolActivity && (
