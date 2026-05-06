@@ -81,7 +81,8 @@ export default defineConfig(({ mode }) => {
       headers: {
         'Content-Security-Policy': [
           "default-src 'self' https://73.118.140.130:3000;",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;",
+          "worker-src 'self' blob:;",
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
           "img-src 'self' data: blob: https://*.googleusercontent.com https://images.unsplash.com https://image.pollinations.ai https://loremflickr.com https://picsum.photos;",
           "font-src 'self' data: https://fonts.gstatic.com;",

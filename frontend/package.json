@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@pkasila/react-katex": "^1.2.2",
     "@react-three/drei": "^10.4.2",

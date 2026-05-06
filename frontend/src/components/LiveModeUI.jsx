@@ -7,7 +7,7 @@ import { DEFAULT_CHAT_MODEL_ID, DEEP_RESEARCH_MODEL_ID } from '../config/modelCo
 import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
 import { sendMessage } from '../services/aiService';
 import {
-  BrowserSpeechRecognitionSession,
+  createSpeechRecognitionSession,
   detectSpeechRecognitionSupport,
 } from '../services/browserSpeechRecognition';
 import kokoroTTSService, { DEFAULT_KOKORO_VOICE } from '../services/kokoroTTSService';
@@ -453,6 +453,19 @@ const ErrorBanner = styled.div`
   text-align: center;
 `;
 
+const Disclaimer = styled.div`
+  max-width: 520px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px dashed ${props => props.theme.isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.14)'};
+  background: ${props => props.theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)'};
+  color: ${props => props.theme.textSecondary || props.theme.text};
+  font-size: 0.78rem;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0.85;
+`;
+
 const MAX_TRANSCRIPT_TURNS = 10;
 
 const createTurnId = () => {
@@ -515,6 +528,9 @@ const LiveModeUI = ({ selectedModel, availableModels = [], onModelChange, onClos
   const [response, setResponse] = useState('');
   const [speechError, setSpeechError] = useState('');
   const [speechSupported, setSpeechSupported] = useState(null);
+  const [speechMode, setSpeechMode] = useState(null);
+  const [whisperProgress, setWhisperProgress] = useState(0);
+  const [whisperProgressLabel, setWhisperProgressLabel] = useState('');
 
   const cameraVideoRef = useRef(null);
   const screenVideoRef = useRef(null);
@@ -618,11 +634,13 @@ const LiveModeUI = ({ selectedModel, availableModels = [], onModelChange, onClos
       .then((support) => {
         if (mountedRef.current) {
           setSpeechSupported(Boolean(support.supported));
+          setSpeechMode(support.mode || null);
         }
       })
       .catch(() => {
         if (mountedRef.current) {
           setSpeechSupported(false);
+          setSpeechMode(null);
         }
       });
 
@@ -737,19 +755,20 @@ const LiveModeUI = ({ selectedModel, availableModels = [], onModelChange, onClos
   }, [modelIdForChat, speakAssistantText, ttsStatus]);
 
   const startRecording = useCallback(async () => {
-    if (isRecording || status === 'processing' || status === 'responding') {
+    if (isRecording || status === 'processing' || status === 'responding' || status === 'transcribing') {
       return;
     }
 
     const support = await detectSpeechRecognitionSupport('en-US');
     setSpeechSupported(Boolean(support.supported));
+    setSpeechMode(support.mode || null);
 
     if (!support.supported) {
-      setSpeechError('Speech recognition is not supported in this browser. Try Chrome or Edge for browser speech input.');
+      setSpeechError('Speech recognition is not supported in this browser. Try Chrome or Edge.');
       return;
     }
 
-    const recognitionSession = new BrowserSpeechRecognitionSession({
+    const recognitionSession = createSpeechRecognitionSession(support.mode, {
       language: 'en-US',
       onStart: () => {
         setIsRecording(true);
@@ -761,9 +780,34 @@ const LiveModeUI = ({ selectedModel, availableModels = [], onModelChange, onClos
       onTranscription: ({ transcript: nextTranscript }) => {
         setInputTranscription(nextTranscript || '');
       },
+      onProcessing: ({ status: processingStatus }) => {
+        if (processingStatus === 'transcribing') {
+          setIsRecording(false);
+          setStatus('transcribing');
+        }
+      },
+      onModelProgress: (event) => {
+        const value = typeof event?.progress === 'number'
+          ? (event.progress > 1 ? event.progress / 100 : event.progress)
+          : (typeof event?.loaded === 'number' && typeof event?.total === 'number' && event.total > 0
+            ? event.loaded / event.total
+            : null);
+
+        if (typeof value === 'number') {
+          setWhisperProgress(Math.max(0, Math.min(1, value)));
+        }
+
+        if (typeof event?.file === 'string') {
+          setWhisperProgressLabel(event.file.split('/').pop());
+        } else if (typeof event?.status === 'string') {
+          setWhisperProgressLabel(event.status.replace(/_/g, ' '));
+        }
+      },
       onEnd: ({ transcript: finalTranscript, error: recognitionError }) => {
         speechRecognitionRef.current = null;
         setIsRecording(false);
+        setWhisperProgress(0);
+        setWhisperProgressLabel('');
 
         if (recognitionError) {
           if (recognitionError.code !== 'no-speech') {
@@ -863,18 +907,21 @@ const LiveModeUI = ({ selectedModel, availableModels = [], onModelChange, onClos
   const liveDraft = normalizeText(inputTranscription);
   const liveResponse = normalizeText(response);
 
-  const orbActive = isRecording || isSpeaking || status === 'processing' || status === 'responding';
+  const orbActive = isRecording || isSpeaking || status === 'processing' || status === 'responding' || status === 'transcribing';
 
   const statusInfo = useMemo(() => {
     if (isSpeaking) return { text: 'Speaking', showDots: false };
     if (status === 'processing' || status === 'responding') {
       return { text: t('liveMode.status.thinking', 'Thinking'), showDots: true };
     }
+    if (status === 'transcribing') {
+      return { text: whisperProgressLabel || 'Transcribing', showDots: true };
+    }
     if (isRecording) return { text: t('liveMode.status.listening', 'Listening'), showDots: true };
     if (ttsStatus === 'loading') return { text: ttsProgressLabel, showDots: true };
     if (speechSupported === false) return { text: 'Speech input unavailable', showDots: false };
     return { text: isMuted ? 'Muted' : t('liveMode.status.ready', 'Tap the mic to start'), showDots: false };
-  }, [isMuted, isRecording, isSpeaking, speechSupported, status, t, ttsProgressLabel, ttsStatus]);
+  }, [isMuted, isRecording, isSpeaking, speechSupported, status, t, ttsProgressLabel, ttsStatus, whisperProgressLabel]);
 
   const transcriptText = useMemo(() => {
     if (isRecording && liveDraft) return liveDraft;
@@ -939,8 +986,20 @@ const LiveModeUI = ({ selectedModel, availableModels = [], onModelChange, onClos
             </LoadingBar>
           )}
 
+          {status === 'transcribing' && whisperProgress > 0 && whisperProgress < 1 && (
+            <LoadingBar>
+              <LoadingFill $value={whisperProgress} />
+            </LoadingBar>
+          )}
+
           {transcriptText && (
             <Transcript>{transcriptText}</Transcript>
+          )}
+
+          {speechMode === 'whisper' && !speechError && (
+            <Disclaimer>
+              Your browser doesn't support native voice input. Using on-device Whisper instead — the first recording downloads a model (~40&nbsp;MB) and may feel slow.
+            </Disclaimer>
           )}
 
           {activeError && <ErrorBanner>{activeError}</ErrorBanner>}
