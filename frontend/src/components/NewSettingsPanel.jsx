@@ -30,6 +30,7 @@ const SettingsContainer = styled.div`
     props.theme.sidebar || props.theme.background || '#f5f5f7'};
   color: ${props => props.theme.text};
   border-radius: 16px;
+  overflow: hidden;
   width: 900px;
   height: 650px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
@@ -269,7 +270,7 @@ const NavItem = styled.div`
   cursor: pointer;
   transition: background-color 0.2s;
   background-color: ${props => props.$active ? props.theme.accentSurface : 'transparent'};
-  color: ${props => props.$active ? props.theme.accentText : props.theme.text};
+  color: ${props => props.$active ? (props.theme.accentColor || props.theme.text) : props.theme.text};
   border-left: 3px solid ${props => props.$active ? props.theme.accentColor : 'transparent'};
   font-weight: ${props => props.$active ? '500' : 'normal'};
   
@@ -1429,30 +1430,7 @@ const SettingDescription = styled.p`
           {activeSection === 'general' && (
             <div>
               <SectionTitle>{t('settings.sections.general')}</SectionTitle>
-              
-              <SettingsRow>
-                <SettingsLabel>{t('settings.general.theme.label')}</SettingsLabel>
-                <SelectBox 
-                  value={localSettings.theme || 'light'}
-                  onChange={(e) => handleChange('theme', e.target.value)}
-                >
-                  {themeOptionValues.map(value => (
-                    <option key={value} value={value}>
-                      {getThemeLabel(value)}
-                    </option>
-                  ))}
-                </SelectBox>
-              </SettingsRow>
-              {localSettings.theme === 'custom' && (
-                <SettingGroup>
-                  <SettingLabel>Custom Theme Studio</SettingLabel>
-                  <CustomThemeEditor
-                    value={customThemeValues}
-                    onChange={handleCustomThemeChange}
-                  />
-                </SettingGroup>
-              )}
-              
+
               <SettingsRow>
                 <SettingsLabel>{t('settings.general.language.label')}</SettingsLabel>
                 <SelectBox 
@@ -1480,7 +1458,30 @@ const SettingDescription = styled.p`
           {activeSection === 'appearance' && (
             <div>
               <SectionTitle>{t('settings.sections.appearance')}</SectionTitle>
-              
+
+              <SettingGroup>
+                <SettingLabel>{t('settings.general.theme.label')}</SettingLabel>
+                <SelectBox
+                  value={localSettings.theme || 'light'}
+                  onChange={(e) => handleChange('theme', e.target.value)}
+                >
+                  {themeOptionValues.map(value => (
+                    <option key={value} value={value}>
+                      {getThemeLabel(value)}
+                    </option>
+                  ))}
+                </SelectBox>
+              </SettingGroup>
+              {localSettings.theme === 'custom' && (
+                <SettingGroup>
+                  <SettingLabel>Custom Theme Studio</SettingLabel>
+                  <CustomThemeEditor
+                    value={customThemeValues}
+                    onChange={handleCustomThemeChange}
+                  />
+                </SettingGroup>
+              )}
+
               <SettingGroup>
                 <SettingLabel>{t('settings.appearance.fontSize.label')}</SettingLabel>
                 <RadioGroup>
