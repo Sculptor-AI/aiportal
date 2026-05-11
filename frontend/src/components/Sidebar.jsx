@@ -3,7 +3,7 @@ import styled, { withTheme } from 'styled-components';
 import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
-import { createSharedChat, getSharedChatUrl } from '../services/shareService';
+import { copyToClipboard, createSharedChat, getSharedChatUrl } from '../services/shareService';
 import { getUserRateLimits } from '../services/authService';
 
 // Styled Components - Updated for Grok.com-inspired design
@@ -1115,17 +1115,27 @@ const Sidebar = ({
     const confirmed = window.confirm('Share this chat? The public page will include text only. Uploaded files, images, and hidden file context are removed.');
     if (!confirmed) return;
 
+    let shareUrl;
     try {
       const result = await createSharedChat(chat);
-      const shareUrl = getSharedChatUrl(result);
-      await navigator.clipboard.writeText(shareUrl);
-      setCopyStatus(t('sidebar.copySuccess'));
-      setTimeout(() => setCopyStatus(''), 3000);
+      shareUrl = getSharedChatUrl(result);
     } catch (err) {
-      console.error('Failed to copy share link: ', err);
+      console.error('Failed to create share link:', err);
       setCopyStatus(t('sidebar.copyFailure'));
       setTimeout(() => setCopyStatus(''), 3000);
+      return;
     }
+
+    const copied = await copyToClipboard(shareUrl);
+    if (copied) {
+      setCopyStatus(t('sidebar.copySuccess'));
+    } else {
+      // Auto-copy failed (insecure context, lost user activation, etc).
+      // Show the URL so the user can copy it manually.
+      window.prompt('Copy this share link:', shareUrl);
+      setCopyStatus(t('sidebar.copyFailure'));
+    }
+    setTimeout(() => setCopyStatus(''), 3000);
   };
 
   // Handle search functionality
