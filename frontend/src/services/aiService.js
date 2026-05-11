@@ -655,8 +655,9 @@ export const generateChatTitle = async (userPrompt, assistantResponse) => {
     return null;
   }
   
-  const titlePrompt = `Summarize the following conversation in 3-4 words for a chat title.\n` +
-    `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\nTitle:`;
+  const titlePrompt = `Summarize the following conversation in a 3-5 word chat title. ` +
+    `Respond with ONLY the title text - no quotes, no punctuation, no explanation, no prefix.\n\n` +
+    `USER: ${userPrompt}\nASSISTANT: ${assistantResponse}\n\nTitle:`;
   try {
     const result = await sendMessageToBackend(
       TITLE_GENERATION_MODEL_ID,
