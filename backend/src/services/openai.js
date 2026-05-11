@@ -8,6 +8,7 @@
 
 import { resolveModel, getDefaultImageModel } from '../config/index.js';
 import { providerInternalError } from '../utils/providerErrors.js';
+import { fetchWithProviderRetries } from '../utils/providerFetch.js';
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
 const OPENAI_DEFAULT_CHAT_MODEL = 'gpt-5.5';
@@ -737,7 +738,7 @@ export async function handleOpenAIChat(c, body, apiKey) {
   );
 
   try {
-    const response = await fetch(`${OPENAI_BASE_URL}/responses`, {
+    const response = await fetchWithProviderRetries(`${OPENAI_BASE_URL}/responses`, {
       method: 'POST',
       headers: getOpenAIHeaders(apiKey),
       body: JSON.stringify(openAIBody)

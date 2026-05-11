@@ -17,6 +17,7 @@
 
 import { resolveModel, getDefaultModel, getModelThinkingConfig } from '../config/index.js';
 import { providerInternalError } from '../utils/providerErrors.js';
+import { fetchWithProviderRetries } from '../utils/providerFetch.js';
 
 const ANTHROPIC_BASE_URL = 'https://api.anthropic.com/v1';
 const ANTHROPIC_VERSION = '2023-06-01';
@@ -734,7 +735,7 @@ export async function handleAnthropicChat(c, body, apiKey) {
   console.log(`Anthropic request for model: ${anthropicBody.model}, web_search: ${options.web_search}, code_execution: ${options.code_execution}, computer_use: ${options.computer_use}, url_context: ${options.url_context}`);
 
   try {
-    const response = await fetch(`${ANTHROPIC_BASE_URL}/messages`, {
+    const response = await fetchWithProviderRetries(`${ANTHROPIC_BASE_URL}/messages`, {
       method: 'POST',
       headers: getAnthropicHeaders(apiKey, options),
       body: JSON.stringify(anthropicBody)

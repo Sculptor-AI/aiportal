@@ -8,6 +8,7 @@ import MobileFileUpload from './MobileFileUpload';
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 import { DEEP_RESEARCH_MODEL_ID } from '../../config/modelConfig';
+import { shouldIncludeMessageInModelHistory } from '../../utils/chatHistory';
 
 pdfjsLib.GlobalWorkerOptions.workerPort = new PdfWorker();
 
@@ -573,11 +574,13 @@ const MobileChatWindow = ({
         }
       } else {
         // Client-side API
-        const formattedHistory = currentHistory.map(msg => ({
-          role: msg.role,
-          content: msg.content,
-          ...(msg.image && { image: msg.image })
-        }));
+        const formattedHistory = currentHistory
+          .filter(shouldIncludeMessageInModelHistory)
+          .map(msg => ({
+            role: msg.role,
+            content: msg.content,
+            ...(msg.image && { image: msg.image })
+          }));
 
         const messageGenerator = sendMessage(
           messageToSend,

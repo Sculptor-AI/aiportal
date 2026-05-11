@@ -8,6 +8,7 @@ import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
 import { hasIncompleteCodeBlock, validateCodeBlockSyntax } from '../utils/codeBlockProcessor';
 import { DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
 import { getKnowledgeContentsForProject } from '../services/knowledgeStore';
+import { shouldIncludeMessageInModelHistory } from '../utils/chatHistory';
 
 // Helper function (can be outside or passed in if it uses external context like toast)
 const generateId = () => {
@@ -613,8 +614,9 @@ const useMessageSender = ({
       return `Previously uploaded file context:\n${attachmentContext}\n\nUser Message:\n${baseContent}`;
     };
 
-    const formattedHistory = currentHistory
-      .filter(msg => msg.role !== 'system') // Filter out system messages
+    const historyForModel = currentHistory.filter(shouldIncludeMessageInModelHistory);
+
+    const formattedHistory = historyForModel
       .map(msg => {
         const imageAttachment = Array.isArray(msg.attachments)
           ? msg.attachments.find(file => file.type === 'image' && file.dataUrl)
@@ -627,8 +629,7 @@ const useMessageSender = ({
       });
 
     // Convert history to API format (exclude images for backend API calls)
-    const apiHistory = currentHistory
-      .filter(msg => msg.role !== 'system') // Filter out system messages
+    const apiHistory = historyForModel
       .map(msg => ({
         role: msg.role,
         content: getMessageContentWithAttachments(msg)

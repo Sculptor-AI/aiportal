@@ -14,6 +14,7 @@
  */
 
 import { providerInternalError } from '../utils/providerErrors.js';
+import { fetchWithProviderRetries } from '../utils/providerFetch.js';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
@@ -144,7 +145,7 @@ export async function handleOpenRouterChat(c, body, apiKey) {
   console.log(`OpenRouter request for model: ${body.model}`);
 
   try {
-    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    const response = await fetchWithProviderRetries(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: getOpenRouterHeaders(apiKey),
       body: JSON.stringify(payload)

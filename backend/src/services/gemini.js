@@ -17,6 +17,7 @@
 
 import { resolveModel, getImageModelFallbacks, getModelThinkingConfig } from '../config/index.js';
 import { providerInternalError } from '../utils/providerErrors.js';
+import { fetchWithProviderRetries } from '../utils/providerFetch.js';
 
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 
@@ -533,7 +534,7 @@ export async function handleGeminiChat(c, body, apiKey) {
   const url = `${GEMINI_BASE_URL}/models/${targetModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithProviderRetries(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(geminiBody)
@@ -583,7 +584,7 @@ export async function handleGeminiChatNonStreaming(c, body, apiKey) {
   const url = `${GEMINI_BASE_URL}/models/${targetModel}:generateContent?key=${apiKey}`;
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithProviderRetries(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(geminiBody)

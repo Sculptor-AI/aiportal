@@ -3,6 +3,7 @@
 // All models now go through backend API - no direct API configurations needed
 import { TITLE_GENERATION_MODEL_ID } from '../config/modelConfig';
 import { getBackendApiBase, getRemoteBackendHost } from './backendConfig';
+import { readBackendErrorMessage } from '../utils/backendError';
 
 // Helper function to parse SSE data chunks
 // This needs to handle different formats potentially sent by APIs
@@ -203,25 +204,7 @@ export async function* sendMessageToBackendStream(message, modelId, history, ima
     });
 
     if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        const bodyText = await response.text().catch(() => '');
-        const statusLabel = response.statusText || `status ${response.status}`;
-        const cleanedBody = bodyText
-          ? bodyText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300)
-          : '';
-        errorData = {
-          error: {
-            message: cleanedBody || `Backend returned ${statusLabel}`
-          }
-        };
-      }
-      
-      const backendErrorMessage =
-        (typeof errorData.error === 'string' ? errorData.error : errorData.error?.message) ||
-        errorData.message;
+      const backendErrorMessage = await readBackendErrorMessage(response);
 
       let errorMessage = backendErrorMessage || `Backend request failed (HTTP ${response.status})`;
       if (response.status === 401) {
