@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled, { withTheme } from 'styled-components';
 import { useTranslation } from '../../contexts/TranslationContext';
 import ModelIcon from '../ModelIcon';
-import { createSharedChat, getSharedChatUrl } from '../../services/shareService';
+import { copyToClipboard, createSharedChat, getSharedChatUrl } from '../../services/shareService';
 
 const SidebarOverlay = styled.div`
   position: fixed;
@@ -291,14 +291,23 @@ const MobileSidebar = ({
     const confirmed = window.confirm('Share this chat? The public page will include text only. Uploaded files, images, and hidden file context are removed.');
     if (!confirmed) return;
 
+    let shareUrl;
     try {
       const result = await createSharedChat(chat);
-      const shareUrl = getSharedChatUrl(result);
-      await navigator.clipboard.writeText(shareUrl);
-      alert(t('sidebar.copySuccess'));
+      shareUrl = getSharedChatUrl(result);
     } catch (err) {
-      console.error('Failed to copy share link: ', err);
+      console.error('Failed to create share link:', err);
       alert(t('sidebar.copyFailure'));
+      return;
+    }
+
+    const copied = await copyToClipboard(shareUrl);
+    if (copied) {
+      alert(t('sidebar.copySuccess'));
+    } else {
+      // Auto-copy failed (insecure context, lost user activation, etc).
+      // Show the URL so the user can copy it manually.
+      window.prompt('Copy this share link:', shareUrl);
     }
   };
 
