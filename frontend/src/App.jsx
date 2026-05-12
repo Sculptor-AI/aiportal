@@ -16,6 +16,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import GlobalStylesProvider from './styles/GlobalStylesProvider';
 import SharedChatView from './components/SharedChatView';
 import SharedArtifactView from './components/SharedArtifactView';
+import SharedModelView from './components/SharedModelView';
 import { keyframes } from 'styled-components';
 import { ToastProvider, useToast } from './contexts/ToastContext';
 import { TranslationProvider } from './contexts/TranslationContext';
@@ -1030,7 +1031,8 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const isPublicSharedRoute =
     location.pathname === '/share-view' ||
     location.pathname.startsWith('/share/') ||
-    location.pathname.startsWith('/artifact/');
+    location.pathname.startsWith('/artifact/') ||
+    location.pathname.startsWith('/model/');
 
   if (isPublicSharedRoute) {
     return (
@@ -1041,6 +1043,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
             <Route path="/share/:shareId" element={<SharedChatView />} />
             <Route path="/share-view" element={<SharedChatView />} />
             <Route path="/artifact/:artifactId" element={<SharedArtifactView />} />
+            <Route path="/model/:shareId" element={<SharedModelView />} />
           </Routes>
         </GlobalStylesProvider>
       </ThemeProvider>

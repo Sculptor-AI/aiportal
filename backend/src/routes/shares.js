@@ -15,9 +15,18 @@ const MAX_MESSAGE_LENGTH = 20000;
 const MAX_ARTIFACT_HTML_LENGTH = 350000;
 const MAX_ARTIFACT_CHAT_PROMPT_LENGTH = 8000;
 const MAX_ARTIFACT_CHAT_HTML_CONTEXT = 50000;
+const MAX_MODEL_NAME_LENGTH = 120;
+const MAX_MODEL_DESCRIPTION_LENGTH = 500;
+const MAX_MODEL_SYSTEM_PROMPT_LENGTH = 20000;
+const MAX_MODEL_BASE_MODEL_LENGTH = 200;
+const MAX_MODEL_AVATAR_LENGTH = 32;
+const MAX_MODEL_AVATAR_IMAGE_LENGTH = 200000;
+const MAX_MODEL_AVATAR_COLOR_LENGTH = 32;
+const MAX_MODEL_AUTHOR_LENGTH = 120;
 
 const CHAT_SHARE_PREFIX = 'share:chat:';
 const ARTIFACT_SHARE_PREFIX = 'share:artifact:';
+const MODEL_SHARE_PREFIX = 'share:model:';
 
 const textResponse = (c, message, status = 400) => c.json({ error: message }, status);
 
@@ -284,6 +293,93 @@ shares.get('/artifacts/:id', async (c) => {
     ...publicRecord,
     allowModelChat: record.allowModelChat !== false
   });
+});
+
+const sanitizeAvatarImage = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(trimmed)) {
+    return null;
+  }
+  if (trimmed.length > MAX_MODEL_AVATAR_IMAGE_LENGTH) return null;
+  return trimmed;
+};
+
+const sanitizeSharedModel = (input) => {
+  if (!input || typeof input !== 'object') return null;
+
+  const name = trimString(input.name, MAX_MODEL_NAME_LENGTH);
+  if (!name) return null;
+
+  const systemPrompt = trimString(input.systemPrompt, MAX_MODEL_SYSTEM_PROMPT_LENGTH);
+  if (!systemPrompt) return null;
+
+  const baseModel = trimString(input.baseModel, MAX_MODEL_BASE_MODEL_LENGTH);
+  if (!baseModel) return null;
+
+  return {
+    name,
+    description: trimString(input.description, MAX_MODEL_DESCRIPTION_LENGTH),
+    avatar: trimString(input.avatar, MAX_MODEL_AVATAR_LENGTH),
+    avatarImage: sanitizeAvatarImage(input.avatarImage),
+    avatarColor: trimString(input.avatarColor, MAX_MODEL_AVATAR_COLOR_LENGTH),
+    systemPrompt,
+    baseModel,
+    author: trimString(input.author, MAX_MODEL_AUTHOR_LENGTH)
+  };
+};
+
+shares.post('/models', requireAuthAndApproved, async (c) => {
+  const kv = c.env.KV;
+  const user = c.get('user');
+
+  if (!kv) {
+    return textResponse(c, 'Storage not configured', 500);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const source = body?.model || body || {};
+  const cleaned = sanitizeSharedModel(source);
+
+  if (!cleaned) {
+    return textResponse(c, 'Model name, system prompt, and base model are required');
+  }
+
+  const id = createShareId();
+  const record = {
+    id,
+    type: 'model',
+    ...cleaned,
+    author: cleaned.author || user?.name || user?.username || 'Sculptor user',
+    createdAt: new Date().toISOString(),
+    ownerUserId: user.id
+  };
+
+  await kv.put(`${MODEL_SHARE_PREFIX}${id}`, JSON.stringify(record));
+
+  return c.json({
+    id,
+    url: getShareUrl(c, `/model/${id}`),
+    data: { ...record, ownerUserId: undefined }
+  });
+});
+
+shares.get('/models/:id', async (c) => {
+  const kv = c.env.KV;
+  const id = c.req.param('id');
+
+  if (!kv) {
+    return textResponse(c, 'Storage not configured', 500);
+  }
+
+  const record = await kv.get(`${MODEL_SHARE_PREFIX}${id}`, 'json');
+  if (!record) {
+    return textResponse(c, 'Shared model not found', 404);
+  }
+
+  const { ownerUserId, ...publicRecord } = record;
+  return c.json(publicRecord);
 });
 
 shares.post('/artifacts/:id/chat', requireAuthAndApproved, async (c) => {

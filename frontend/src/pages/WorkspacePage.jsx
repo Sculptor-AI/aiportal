@@ -2,6 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useTranslation } from '../contexts/TranslationContext';
 import { DEFAULT_CUSTOM_BASE_MODEL_ID, getPreferredModelId } from '../config/modelConfig';
+import {
+  copyToClipboard,
+  createSharedModel,
+  getSharedModelUrl,
+  isShareChatAvailable
+} from '../services/shareService';
 
 // ============================================================================
 // ANIMATIONS
@@ -25,6 +31,16 @@ const slideUp = keyframes`
 const float = keyframes`
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
+`;
+
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
+
+const toastIn = keyframes`
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 `;
 
 // ============================================================================
@@ -417,13 +433,39 @@ const IconButton = styled.button`
   justify-content: center;
   transition: all 0.15s ease;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${props => props.theme.hover || 'rgba(128,128,128,0.08)'};
     color: ${props => props.theme.text};
     border-color: ${props => props.theme.border};
   }
 
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:disabled svg {
+    animation: ${spin} 1s linear infinite;
+  }
+
   svg { width: 14px; height: 14px; }
+`;
+
+const ShareToast = styled.div`
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  z-index: 1100;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: ${props => props.theme.sidebar};
+  color: ${props => props.theme.text};
+  border: 1px solid ${props => props.theme.border};
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+  font-size: 0.875rem;
+  font-weight: 500;
+  animation: ${toastIn} 0.2s ease-out;
+  max-width: min(360px, calc(100vw - 64px));
 `;
 
 // ============================================================================
@@ -897,6 +939,8 @@ const WorkspacePage = ({ collapsed }) => {
   const [panelVisible, setPanelVisible] = useState(false);
   const [editingModel, setEditingModel] = useState(null);
   const [availableBaseModels, setAvailableBaseModels] = useState([]);
+  const [shareStatus, setShareStatus] = useState('');
+  const [sharingModelId, setSharingModelId] = useState(null);
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -977,6 +1021,63 @@ const WorkspacePage = ({ collapsed }) => {
 
     setFilteredModels(filtered);
   }, [searchQuery, models, activeFilter]);
+
+  const flashShareStatus = (message) => {
+    setShareStatus(message);
+    setTimeout(() => setShareStatus(''), 3000);
+  };
+
+  const handleShareModel = async (e, model) => {
+    e.stopPropagation();
+
+    if (!isShareChatAvailable()) {
+      flashShareStatus(t('workspace.share.signInRequired', 'Sign in to share models.'));
+      return;
+    }
+
+    if (sharingModelId) return;
+
+    const confirmed = window.confirm(
+      t(
+        'workspace.share.confirm',
+        'Share this model? Anyone with the link can preview the system prompt and copy this model into their own workspace.'
+      )
+    );
+    if (!confirmed) return;
+
+    setSharingModelId(model.id);
+
+    let shareUrl;
+    try {
+      const payload = {
+        name: model.name,
+        description: model.description || '',
+        avatar: model.avatar || '🤖',
+        avatarImage: model.avatarImage || null,
+        avatarColor: model.avatarColor || '',
+        systemPrompt: model.systemPrompt || '',
+        baseModel: model.baseModel || '',
+        author: model.author || ''
+      };
+      const result = await createSharedModel(payload);
+      shareUrl = getSharedModelUrl(result);
+    } catch (shareError) {
+      console.error('Failed to create model share link:', shareError);
+      flashShareStatus(t('workspace.share.failure', 'Could not create share link.'));
+      setSharingModelId(null);
+      return;
+    }
+
+    const copied = await copyToClipboard(shareUrl);
+    if (copied) {
+      flashShareStatus(t('workspace.share.success', 'Share link copied to clipboard.'));
+    } else {
+      window.prompt(t('workspace.share.copyManual', 'Copy this share link:'), shareUrl);
+      flashShareStatus(t('workspace.share.copyFailure', 'Could not auto-copy — link shown above.'));
+    }
+
+    setSharingModelId(null);
+  };
 
   const toggleModel = (e, modelId) => {
     e.stopPropagation();
@@ -1301,6 +1402,32 @@ const WorkspacePage = ({ collapsed }) => {
                     </BaseModelTag>
                     <CardActions>
                       <IconButton
+                        onClick={(e) => handleShareModel(e, model)}
+                        disabled={sharingModelId === model.id}
+                        title={t('workspace.actions.share', 'Share model')}
+                      >
+                        {sharingModelId === model.id ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="2" x2="12" y2="6" />
+                            <line x1="12" y1="18" x2="12" y2="22" />
+                            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+                            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+                            <line x1="2" y1="12" x2="6" y2="12" />
+                            <line x1="18" y1="12" x2="22" y2="12" />
+                            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
+                            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="18" cy="5" r="3" />
+                            <circle cx="6" cy="12" r="3" />
+                            <circle cx="18" cy="19" r="3" />
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                          </svg>
+                        )}
+                      </IconButton>
+                      <IconButton
                         onClick={(e) => {
                           e.stopPropagation();
                           handleEditModel(model);
@@ -1325,6 +1452,8 @@ const WorkspacePage = ({ collapsed }) => {
           </ModelsGrid>
         )}
       </ContentWrapper>
+
+      {shareStatus && <ShareToast role="status">{shareStatus}</ShareToast>}
 
       {/* Edit/Create Modal */}
       <ModalOverlay $visible={panelVisible} onClick={handleClosePanel}>
