@@ -859,17 +859,13 @@ const useMessageSender = ({
         error.message.includes('session has expired');
       
       if (isAuthError) {
-        const authErrorMessage = 'Your session has expired. Please log in again to continue.';
+        // The auth:session-expired event dispatched by aiService.js will
+        // clear the user in AuthContext, which causes the ForcedLoginScreen
+        // to render. Skip the alert/toast so the user is redirected cleanly
+        // instead of having to dismiss a "session expired" dialog first.
         updateMessage(currentChatId, aiMessageId, {
-          content: authErrorMessage,
+          content: 'Your session has expired. Redirecting to sign in…',
           isLoading: false, isError: true
-        });
-        addAlert({
-          message: authErrorMessage,
-          type: 'error',
-          autoHide: false,
-          actionText: 'Log In',
-          onAction: () => { window.location.href = '/login'; }
         });
       } else {
         const errorMessage = currentModelObj?.isCustomModel 

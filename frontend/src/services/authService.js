@@ -1,5 +1,5 @@
 // authService.js
-// Backend authentication service for AI Portal
+// Backend authentication service for AI Portal.
 
 import { getBackendApiBase } from './backendConfig';
 
@@ -194,6 +194,32 @@ export const getCurrentUser = () => {
   } catch (error) {
     localStorage.removeItem('ai_portal_current_user');
     return null;
+  }
+};
+
+// Verify the stored access token is still valid by hitting /auth/me.
+// Returns the user on success, null if the token is rejected (and clears
+// localStorage). Network errors leave the existing user in place.
+export const validateSession = async () => {
+  const user = getCurrentUser();
+  if (!user?.accessToken) return null;
+
+  try {
+    const response = await fetchWithFallback('/auth/me', {
+      method: 'GET',
+      headers: buildAuthHeaders(user.accessToken)
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem('ai_portal_current_user');
+      window.dispatchEvent(new CustomEvent('auth:session-expired'));
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    console.warn('[authService] Session validation network error:', error?.message || error);
+    return user;
   }
 };
 
