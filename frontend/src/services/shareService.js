@@ -91,6 +91,11 @@ export const getSharedArtifactUrl = (shareResult) => normalizePublicShareUrl(
   shareResult?.id ? `/artifact/${encodeURIComponent(shareResult.id)}` : '/artifact'
 );
 
+export const getSharedModelUrl = (shareResult) => normalizePublicShareUrl(
+  shareResult?.url,
+  shareResult?.id ? `/model/${encodeURIComponent(shareResult.id)}` : '/model'
+);
+
 export const copyToClipboard = async (text) => {
   if (typeof text !== 'string' || !text) {
     return false;
@@ -190,6 +195,27 @@ export const createSharedArtifact = async ({ title, html, sourceChatId, sourceMe
 
 export const fetchSharedArtifact = async (artifactId) => {
   const response = await fetchWithFallback(`/shares/artifacts/${encodeURIComponent(artifactId)}`, {
+    method: 'GET'
+  });
+
+  return parseJsonResponse(response);
+};
+
+export const createSharedModel = async (model) => {
+  const response = await fetchWithFallback('/shares/models', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeaders()
+    },
+    body: JSON.stringify({ model })
+  });
+
+  return parseJsonResponse(response);
+};
+
+export const fetchSharedModel = async (shareId) => {
+  const response = await fetchWithFallback(`/shares/models/${encodeURIComponent(shareId)}`, {
     method: 'GET'
   });
 
