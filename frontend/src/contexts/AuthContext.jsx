@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getCurrentUser, loginUser, logoutUser, registerUser, updateUserSettings, loginWithGoogle, adminLogin, adminLogout, getCurrentAdminUser } from '../services/authService';
+import { getCurrentUser, loginUser, logoutUser, registerUser, updateUserSettings, loginWithGoogle, adminLogin, adminLogout, getCurrentAdminUser, validateSession } from '../services/authService';
+
+const SESSION_REVALIDATE_INTERVAL_MS = 60_000;
 
 // Create the Auth Context
 const AuthContext = createContext();
@@ -16,23 +18,36 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Check if user is already logged in
+  // Check if user is already logged in, then verify the token with the backend
+  // so an expired session redirects to the login screen before any user action.
   useEffect(() => {
+    let cancelled = false;
+
     const checkUser = async () => {
       try {
         const currentUser = getCurrentUser();
         const currentAdminUser = getCurrentAdminUser();
-        setUser(currentUser);
-        setAdminUser(currentAdminUser);
+        if (!cancelled) {
+          setUser(currentUser);
+          setAdminUser(currentAdminUser);
+        }
+
+        if (currentUser?.accessToken) {
+          const validated = await validateSession();
+          if (!cancelled && !validated) {
+            setUser(null);
+          }
+        }
       } catch (err) {
         console.error('Authentication error:', err);
-        setError(err.message);
+        if (!cancelled) setError(err.message);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     checkUser();
+    return () => { cancelled = true; };
   }, []);
 
   // Listen for session expiry events dispatched by API services
@@ -45,6 +60,33 @@ export const AuthProvider = ({ children }) => {
     window.addEventListener('auth:session-expired', handleSessionExpired);
     return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
   }, []);
+
+  // Keep the session check warm: revalidate on tab focus and on a periodic
+  // timer, so an expired token is detected without waiting for the user to
+  // send a message.
+  useEffect(() => {
+    if (!user?.accessToken) return undefined;
+
+    let cancelled = false;
+
+    const revalidate = async () => {
+      const validated = await validateSession();
+      if (!cancelled && !validated) {
+        setUser(null);
+      }
+    };
+
+    const handleFocus = () => { revalidate(); };
+
+    window.addEventListener('focus', handleFocus);
+    const intervalId = setInterval(revalidate, SESSION_REVALIDATE_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
+    };
+  }, [user?.accessToken]);
 
   // Login function
   const login = async (username, password) => {
