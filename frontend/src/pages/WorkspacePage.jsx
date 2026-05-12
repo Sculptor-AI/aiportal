@@ -8,6 +8,7 @@ import {
   getSharedModelUrl,
   isShareChatAvailable
 } from '../services/shareService';
+import { safeAvatarImageSrc } from '../utils/avatarImage';
 
 // ============================================================================
 // ANIMATIONS
@@ -1374,11 +1375,12 @@ const WorkspacePage = ({ collapsed }) => {
                 >
                   <CardHeader>
                     <ModelAvatar>
-                      {model.avatarImage ? (
-                        <img src={model.avatarImage} alt={model.name} />
-                      ) : (
-                        model.avatar || model.name.charAt(0).toUpperCase()
-                      )}
+                      {(() => {
+                        const safeAvatar = safeAvatarImageSrc(model.avatarImage);
+                        return safeAvatar
+                          ? <img src={safeAvatar} alt={model.name} />
+                          : (model.avatar || model.name.charAt(0).toUpperCase());
+                      })()}
                     </ModelAvatar>
                     <ModelInfo>
                       <ModelNameRow>
@@ -1481,11 +1483,12 @@ const WorkspacePage = ({ collapsed }) => {
             <AvatarSection>
               <AvatarRow>
                 <LargeAvatar>
-                  {formData.avatarImage ? (
-                    <img src={formData.avatarImage} alt="Avatar preview" />
-                  ) : (
-                    formData.avatar || '🤖'
-                  )}
+                  {(() => {
+                    const safeAvatar = safeAvatarImageSrc(formData.avatarImage);
+                    return safeAvatar
+                      ? <img src={safeAvatar} alt="Avatar preview" />
+                      : (formData.avatar || '🤖');
+                  })()}
                 </LargeAvatar>
                 <AvatarControls>
                   <Label>{t('workspace.modal.fieldAvatar')}</Label>

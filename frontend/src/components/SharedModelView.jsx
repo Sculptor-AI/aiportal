@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { fetchSharedModel } from '../services/shareService';
 import { DEFAULT_CUSTOM_BASE_MODEL_ID, getPreferredModelId } from '../config/modelConfig';
 import { fetchModelsFromBackend } from '../services/aiService';
+import { safeAvatarImageSrc } from '../utils/avatarImage';
 
 const Page = styled.main`
   min-height: 100vh;
@@ -318,7 +319,7 @@ const SharedModelView = () => {
         name: model.name,
         description: model.description || '',
         avatar: model.avatar || '🤖',
-        avatarImage: model.avatarImage || null,
+        avatarImage: safeAvatarImageSrc(model.avatarImage),
         avatarColor: model.avatarColor || '',
         systemPrompt: model.systemPrompt || '',
         baseModel: resolvedBaseModelId || model.baseModel || DEFAULT_CUSTOM_BASE_MODEL_ID,
@@ -371,11 +372,12 @@ const SharedModelView = () => {
         <Card>
           <HeroRow>
             <Avatar>
-              {model.avatarImage ? (
-                <img src={model.avatarImage} alt={model.name} />
-              ) : (
-                model.avatar || (model.name ? model.name.charAt(0).toUpperCase() : '🤖')
-              )}
+              {(() => {
+                const safeAvatar = safeAvatarImageSrc(model.avatarImage);
+                return safeAvatar
+                  ? <img src={safeAvatar} alt={model.name} />
+                  : (model.avatar || (model.name ? model.name.charAt(0).toUpperCase() : '🤖'));
+              })()}
             </Avatar>
             <HeroInfo>
               <ModelName>{model.name}</ModelName>

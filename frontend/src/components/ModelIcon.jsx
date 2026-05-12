@@ -1,6 +1,7 @@
 import React from 'react';
 import styled, { useTheme } from 'styled-components';
 import { modelThemes } from '../styles/themes';
+import { safeAvatarImageSrc } from '../utils/avatarImage';
 
 // Moved sizeMap to module scope
 const sizeMap = {
@@ -143,8 +144,9 @@ const ModelIcon = ({ modelId, provider, size = 'medium', $inMessage = false }) =
         const modelNumericId = modelId.replace('custom-', '');
         const customModel = customModels.find(m => m.id.toString() === modelNumericId);
 
-        if (customModel?.avatarImage) {
-          imageUrl = customModel.avatarImage;
+        const safeCustomAvatar = safeAvatarImageSrc(customModel?.avatarImage);
+        if (safeCustomAvatar) {
+          imageUrl = safeCustomAvatar;
         } else if (customModel?.avatar) {
           iconComponent = <span style={{ fontSize: '1.2em' }}>{customModel.avatar}</span>;
           iconBackground = 'transparent';
