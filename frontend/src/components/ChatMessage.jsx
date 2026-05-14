@@ -14,6 +14,7 @@ import 'katex/dist/katex.min.css';
 import { useTranslation } from '../contexts/TranslationContext';
 import { downloadGeneratedVideo } from '../services/videoService';
 import kokoroTTSService from '../services/kokoroTTSService';
+import { THINKING_PREVIEW_TIMER_ENABLED, isReasoningEffortAboveMedium } from '../config/modelConfig';
 
 // Helper function to parse and render LaTeX
 const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
@@ -1638,6 +1639,27 @@ const ThinkingPreview = styled.div`
   color: inherit;
 `;
 
+const ThinkingTimerBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid ${props => props.theme.accentColor || props.theme.primary || props.theme.text}33;
+  background: ${props => props.theme.accentSurface || `${props.theme.text}10`};
+  color: ${props => props.theme.accentColor || props.theme.primary || props.theme.text};
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  box-shadow: inset 0 0 0 1px ${props => `${props.theme.text}08`};
+`;
+
+
 const ThinkingArrow = styled.span`
   transition: transform 0.2s ease;
   transform: ${props => props.expanded ? 'rotate(90deg)' : 'rotate(0deg)'};
@@ -1941,7 +1963,55 @@ const ThinkingSectionHeader = styled.div`
   gap: 6px;
 `;
 
-const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls, isStreaming = false, theme = {} }) => {
+const formatThinkingElapsed = (elapsedMs) => {
+  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const ThinkingTimer = ({ startedAt, completedAt, isStreaming }) => {
+  const parsedStart = Date.parse(startedAt);
+  const parsedCompleted = Date.parse(completedAt);
+  const startTime = Number.isFinite(parsedStart) ? parsedStart : Date.now();
+  const endTime = Number.isFinite(parsedCompleted) ? parsedCompleted : null;
+  const [now, setNow] = useState(() => endTime || Date.now());
+
+  useEffect(() => {
+    if (!isStreaming || endTime) {
+      setNow(endTime || Date.now());
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [endTime, isStreaming]);
+
+  return (
+    <ThinkingTimerBadge aria-label={`Thinking time ${formatThinkingElapsed((endTime || now) - startTime)}`}>
+      {formatThinkingElapsed((endTime || now) - startTime)}
+    </ThinkingTimerBadge>
+  );
+};
+
+const ThinkingDropdown = ({
+  thinkingContent,
+  thinkingPreviewText = '',
+  toolCalls,
+  isStreaming = false,
+  theme = {},
+  showTimer = false,
+  thinkingStartedAt,
+  thinkingCompletedAt,
+  forcePreview = false
+}) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
@@ -1952,14 +2022,15 @@ const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls
   const hasThinking = thinkingContent && thinkingContent.toString().trim();
   const hasToolActivity = toolCalls && toolCalls.length > 0;
 
-  if (!hasThinking && !hasToolActivity) {
+  if (!hasThinking && !hasToolActivity && !forcePreview) {
     return null;
   }
 
   const getHeaderTitle = () => {
     if (hasThinking && hasToolActivity) return t('chat.thinking.header.thoughtsAndTools');
     if (hasThinking) return t('chat.thinking.header.thoughts');
-    return t('chat.thinking.header.tools');
+    if (hasToolActivity) return t('chat.thinking.header.tools');
+    return t('chat.thinking.header.thoughts');
   };
 
   const normalizedThinkingPreview = typeof thinkingPreviewText === 'string'
@@ -1987,6 +2058,13 @@ const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls
             {processInlineFormatting(headerText, theme)}
           </ThinkingPreview>
         </ThinkingHeaderTitle>
+        {showTimer && (
+          <ThinkingTimer
+            startedAt={thinkingStartedAt}
+            completedAt={thinkingCompletedAt}
+            isStreaming={isStreaming}
+          />
+        )}
         <ThinkingArrow expanded={expanded} aria-hidden="true">
           <svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3.5 2L6.5 5L3.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -2055,10 +2133,14 @@ const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
   const { t } = useTranslation();
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace, reasoningEffort, thinkingStartedAt, thinkingCompletedAt } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [deepResearchDetailsOpen, setDeepResearchDetailsOpen] = useState(false);
+  const shouldShowThinkingTimer =
+    THINKING_PREVIEW_TIMER_ENABLED &&
+    isReasoningEffortAboveMedium(reasoningEffort) &&
+    Boolean(thinkingStartedAt || timestamp);
 
   // Debug logging
   if (role === 'assistant' && sources) {
@@ -2796,6 +2878,22 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                 !(typeof reasoningTrace === 'string' && reasoningTrace.trim()) &&
                 !(toolCalls && toolCalls.length > 0)
               ) {
+                if (shouldShowThinkingTimer) {
+                  return (
+                    <ThinkingDropdown
+                      thinkingContent={null}
+                      thinkingPreviewText=""
+                      toolCalls={toolCalls}
+                      isStreaming={isLoading}
+                      theme={theme}
+                      showTimer={shouldShowThinkingTimer}
+                      thinkingStartedAt={thinkingStartedAt || timestamp}
+                      thinkingCompletedAt={thinkingCompletedAt}
+                      forcePreview
+                    />
+                  );
+                }
+
                 return (
                   <ThinkingContainer>
                     <SpinnerIcon />
@@ -2826,6 +2924,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                       toolCalls={toolCalls}
                       isStreaming={isLoading}
                       theme={theme}
+                      showTimer={shouldShowThinkingTimer}
+                      thinkingStartedAt={thinkingStartedAt || timestamp}
+                      thinkingCompletedAt={thinkingCompletedAt}
                     />
                     <StreamingMarkdownRenderer
                       text={mainContentWithoutThinking}
@@ -2841,6 +2942,19 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
 
               return (
                 <>
+                  {!hasToolActivity && shouldShowThinkingTimer && isLoading && (
+                    <ThinkingDropdown
+                      thinkingContent={null}
+                      thinkingPreviewText=""
+                      toolCalls={toolCalls}
+                      isStreaming={isLoading}
+                      theme={theme}
+                      showTimer={shouldShowThinkingTimer}
+                      thinkingStartedAt={thinkingStartedAt || timestamp}
+                      thinkingCompletedAt={thinkingCompletedAt}
+                      forcePreview
+                    />
+                  )}
                   {hasToolActivity && (
                     <ThinkingDropdown
                       thinkingContent={null}
@@ -2848,6 +2962,9 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                       toolCalls={toolCalls}
                       isStreaming={isLoading}
                       theme={theme}
+                      showTimer={shouldShowThinkingTimer}
+                      thinkingStartedAt={thinkingStartedAt || timestamp}
+                      thinkingCompletedAt={thinkingCompletedAt}
                     />
                   )}
 
