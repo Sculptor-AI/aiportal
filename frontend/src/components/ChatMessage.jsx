@@ -1941,7 +1941,7 @@ const ThinkingSectionHeader = styled.div`
   gap: 6px;
 `;
 
-const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls, isStreaming = false }) => {
+const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls, isStreaming = false, theme = {} }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
@@ -1965,11 +1965,8 @@ const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls
   const normalizedThinkingPreview = typeof thinkingPreviewText === 'string'
     ? thinkingPreviewText.replace(/\s+/g, ' ').trim()
     : '';
-  const clippedThinkingPreview = normalizedThinkingPreview.length > 140
-    ? `${normalizedThinkingPreview.slice(0, 140)}...`
-    : normalizedThinkingPreview;
   const thinkingLabel = t('composer.chip.thinking', 'Thinking');
-  const headerText = clippedThinkingPreview || (isStreaming ? t('chat.status.thinking') : getHeaderTitle());
+  const headerText = normalizedThinkingPreview || (isStreaming ? t('chat.status.thinking') : getHeaderTitle());
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -1987,7 +1984,7 @@ const ThinkingDropdown = ({ thinkingContent, thinkingPreviewText = '', toolCalls
         {isStreaming && <HeaderSpinner aria-hidden="true" />}
         <ThinkingHeaderTitle>
           <ThinkingPreview>
-            {headerText}
+            {processInlineFormatting(headerText, theme)}
           </ThinkingPreview>
         </ThinkingHeaderTitle>
         <ThinkingArrow expanded={expanded} aria-hidden="true">
@@ -2828,6 +2825,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                       thinkingPreviewText={combinedThinkingText}
                       toolCalls={toolCalls}
                       isStreaming={isLoading}
+                      theme={theme}
                     />
                     <StreamingMarkdownRenderer
                       text={mainContentWithoutThinking}
@@ -2849,6 +2847,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                       thinkingPreviewText=""
                       toolCalls={toolCalls}
                       isStreaming={isLoading}
+                      theme={theme}
                     />
                   )}
 

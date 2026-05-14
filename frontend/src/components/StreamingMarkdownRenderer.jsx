@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import ReactKatex from '@pkasila/react-katex';
 import 'katex/dist/katex.min.css';
@@ -396,6 +396,100 @@ const MermaidSource = styled.pre`
   line-height: 1.45;
 `;
 
+
+const ArtifactPreviewShell = styled.div`
+  margin: 0.85rem 0 1rem;
+  border: 1px solid ${props => props.theme.border || (props.theme.isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)')};
+  border-radius: 16px;
+  background: ${props => props.theme.codeBlockBg || (props.theme.isDark ? 'rgba(30, 30, 30, 0.82)' : 'rgba(246, 248, 250, 0.92)')};
+  overflow: hidden;
+  box-shadow: ${props => props.theme.isDark ? 'none' : '0 8px 24px rgba(15, 23, 42, 0.06)'};
+`;
+
+const ArtifactPreviewHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: ${props => props.theme.text || '#111'};
+  border-bottom: 1px solid ${props => props.theme.border || 'rgba(0,0,0,0.12)'};
+  background: ${props => props.theme.codeBlockHeaderBg || (props.theme.isDark ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.025)')};
+`;
+
+const ArtifactPreviewIcon = styled.span`
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid ${props => props.theme.border || 'rgba(0,0,0,0.12)'};
+  border-radius: 9px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  opacity: 0.78;
+  flex-shrink: 0;
+`;
+
+const ArtifactPreviewTitleGroup = styled.div`
+  min-width: 0;
+  flex: 1;
+`;
+
+const ArtifactPreviewTitle = styled.div`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+  font-weight: 560;
+`;
+
+const ArtifactPreviewSubtitle = styled.div`
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  opacity: 0.58;
+`;
+
+const ArtifactPreviewStatus = styled.span`
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: ${props => props.theme.accentColor || props.theme.primary || '#3b82f6'};
+  box-shadow: 0 0 0 4px ${props => `${props.theme.accentColor || props.theme.primary || '#3b82f6'}18`};
+  flex-shrink: 0;
+`;
+
+const ArtifactPreviewCode = styled.pre`
+  margin: 0;
+  min-height: 120px;
+  max-height: 240px;
+  padding: 14px 16px;
+  overflow: auto;
+  white-space: pre;
+  color: ${props => props.theme.text || '#111'};
+  font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  background: transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border || 'rgba(0,0,0,0.2)'};
+    border-radius: 999px;
+  }
+`;
+
 const Cursor = styled.span`
   opacity: ${props => props.$show ? 1 : 0};
   transition: opacity 0.1s ease-in-out;
@@ -576,6 +670,154 @@ const MermaidArtifact = ({ chart, theme = {}, isStreaming = false }) => {
   );
 };
 
+
+const ARTIFACT_OPEN_TAG_REGEX = /<sculptor[-_]artifact\b([^>]*)>/gi;
+const ARTIFACT_CLOSE_TAG_REGEX = /<\/sculptor[-_]artifact\s*>/i;
+const FENCE_LINE_REGEX = /^```([^\n`]*)\n?/gm;
+
+const getArtifactLanguageSetMatch = (language) => (
+  isInlineArtifactLanguage(language) || isSideArtifactLanguage(language)
+);
+
+const findIncompleteTaggedArtifact = (source) => {
+  let match;
+  ARTIFACT_OPEN_TAG_REGEX.lastIndex = 0;
+
+  while ((match = ARTIFACT_OPEN_TAG_REGEX.exec(source)) !== null) {
+    const codeStart = ARTIFACT_OPEN_TAG_REGEX.lastIndex;
+    const remainder = source.slice(codeStart);
+    const closeMatch = remainder.match(ARTIFACT_CLOSE_TAG_REGEX);
+
+    if (!closeMatch) {
+      const artifact = createArtifact({
+        rawContent: remainder,
+        attributes: parseArtifactAttributesForPreview(match[1] || ''),
+        fallbackPlacement: 'side',
+        fallbackTitle: 'Artifact'
+      });
+
+      return {
+        type: 'artifact-preview',
+        start: match.index,
+        code: remainder.replace(/^\n/, ''),
+        title: artifact.title,
+        placement: artifact.placement,
+        language: artifact.language
+      };
+    }
+
+    ARTIFACT_OPEN_TAG_REGEX.lastIndex = codeStart + closeMatch.index + closeMatch[0].length;
+  }
+
+  return null;
+};
+
+const parseArtifactAttributesForPreview = (rawAttributes = '') => {
+  const attributes = {};
+  const attributeRegex = /([a-zA-Z_:][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
+  let match;
+
+  while ((match = attributeRegex.exec(rawAttributes)) !== null) {
+    const key = match[1]?.toLowerCase();
+    const value = match[2] ?? match[3] ?? match[4] ?? '';
+    if (key) attributes[key] = value.trim();
+  }
+
+  return attributes;
+};
+
+const findIncompleteFencedArtifact = (source) => {
+  let activeFence = null;
+  let match;
+  FENCE_LINE_REGEX.lastIndex = 0;
+
+  while ((match = FENCE_LINE_REGEX.exec(source)) !== null) {
+    if (activeFence) {
+      activeFence = null;
+      continue;
+    }
+
+    const language = String(match[1] || '').trim().split(/\s+/)[0];
+    activeFence = {
+      start: match.index,
+      codeStart: FENCE_LINE_REGEX.lastIndex,
+      language
+    };
+  }
+
+  if (!activeFence || !getArtifactLanguageSetMatch(activeFence.language)) {
+    return null;
+  }
+
+  const placement = isInlineArtifactLanguage(activeFence.language) ? 'inline' : 'side';
+  const code = source.slice(activeFence.codeStart).replace(/^\n/, '');
+  const artifact = createArtifactFromCodeBlock(activeFence.language, code, placement);
+
+  return {
+    type: 'artifact-preview',
+    start: activeFence.start,
+    code,
+    title: artifact.title,
+    placement,
+    language: activeFence.language || artifact.language
+  };
+};
+
+const getStreamingArtifactSegments = (source, isStreaming) => {
+  if (!isStreaming) {
+    return extractArtifactSegments(source);
+  }
+
+  const candidates = [
+    findIncompleteTaggedArtifact(source),
+    findIncompleteFencedArtifact(source)
+  ].filter(Boolean);
+
+  if (candidates.length === 0) {
+    return extractArtifactSegments(source);
+  }
+
+  const activeArtifact = candidates.reduce((latest, candidate) => (
+    !latest || candidate.start > latest.start ? candidate : latest
+  ), null);
+  const before = source.slice(0, activeArtifact.start);
+
+  return [
+    ...extractArtifactSegments(before).filter(segment => segment.type !== 'text' || String(segment.content || '').trim()),
+    {
+      ...activeArtifact,
+      key: `artifact-preview-${activeArtifact.start}`
+    }
+  ];
+};
+
+const ArtifactStreamingPreview = ({ code = '', title = 'Artifact', placement = 'side', language = 'html', theme = {} }) => {
+  const codeRef = useRef(null);
+
+  useEffect(() => {
+    if (codeRef.current) {
+      codeRef.current.scrollTop = codeRef.current.scrollHeight;
+    }
+  }, [code]);
+
+  const normalizedLanguage = String(language || 'html').toUpperCase();
+  const placementLabel = placement === 'inline' ? 'inline preview' : 'sidebar preview';
+
+  return (
+    <ArtifactPreviewShell theme={theme} aria-label={`Generating ${title}`}>
+      <ArtifactPreviewHeader theme={theme}>
+        <ArtifactPreviewIcon theme={theme}>HTML</ArtifactPreviewIcon>
+        <ArtifactPreviewTitleGroup>
+          <ArtifactPreviewTitle>{title}</ArtifactPreviewTitle>
+          <ArtifactPreviewSubtitle>{`Creating ${placementLabel} · ${normalizedLanguage} streaming`}</ArtifactPreviewSubtitle>
+        </ArtifactPreviewTitleGroup>
+        <ArtifactPreviewStatus theme={theme} aria-hidden="true" />
+      </ArtifactPreviewHeader>
+      <ArtifactPreviewCode ref={codeRef} theme={theme}>{code || 'Waiting for artifact code…'}</ArtifactPreviewCode>
+    </ArtifactPreviewShell>
+  );
+};
+
 const createArtifactFromCodeBlock = (language, codeContent, placement) => createArtifact({
   rawContent: codeContent,
   attributes: {
@@ -593,7 +835,7 @@ const StreamingMarkdownRenderer = ({
   enableCodeExecution = true
 }) => {
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
-  const artifactSegments = useMemo(() => extractArtifactSegments(text), [text]);
+  const artifactSegments = useMemo(() => getStreamingArtifactSegments(text, isStreaming), [text, isStreaming]);
 
   if (!text) {
     return isStreaming && showCursor ? <Cursor $show={true} theme={theme}>|</Cursor> : null;
@@ -682,6 +924,19 @@ const StreamingMarkdownRenderer = ({
       color: theme.text || '#000'
     }}>
       {artifactSegments.map((segment, index) => {
+        if (segment.type === 'artifact-preview') {
+          return (
+            <ArtifactStreamingPreview
+              key={segment.key || `artifact-preview-${index}`}
+              code={segment.code}
+              title={segment.title}
+              placement={segment.placement}
+              language={segment.language}
+              theme={theme}
+            />
+          );
+        }
+
         if (segment.type === 'artifact') {
           if (segment.placement === 'inline') {
             return (
