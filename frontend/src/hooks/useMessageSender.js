@@ -6,7 +6,7 @@ import { getFlowchartSystemPrompt } from '../utils/flowchartTools';
 import { useToast } from '../contexts/ToastContext'; // If addAlert is used directly or via prop
 import { SCULPTOR_AI_SYSTEM_PROMPT } from '../prompts/sculptorAI-system-prompt';
 import { hasIncompleteCodeBlock, validateCodeBlockSyntax } from '../utils/codeBlockProcessor';
-import { DEEP_RESEARCH_MODEL_ID } from '../config/modelConfig';
+import { DEEP_RESEARCH_MODEL_ID, isReasoningEffortAboveMedium } from '../config/modelConfig';
 import { getKnowledgeContentsForProject } from '../services/knowledgeStore';
 import { shouldIncludeMessageInModelHistory } from '../utils/chatHistory';
 
@@ -636,14 +636,18 @@ const useMessageSender = ({
       }));
 
     const aiMessageId = generateId();
+    const showThinkingTimerForMessage = isReasoningEffortAboveMedium(selectedReasoningEffort);
+    const thinkingStartedAt = new Date().toISOString();
     const aiMessage = {
       id: aiMessageId,
       role: 'assistant',
       content: '',
       reasoningTrace: '',
       isLoading: true,
-      timestamp: new Date().toISOString(),
+      timestamp: thinkingStartedAt,
       modelId: currentModel,
+      ...(selectedReasoningEffort ? { reasoningEffort: selectedReasoningEffort } : {}),
+      ...(showThinkingTimerForMessage ? { thinkingStartedAt } : {}),
     };
     addMessage(currentChatId, aiMessage);
 
@@ -828,7 +832,11 @@ const useMessageSender = ({
         finalAssistantContent = streamedContent;
         streamSucceeded = true;
         
-        const messageUpdates = { content: streamedContent, isLoading: false };
+        const messageUpdates = {
+          content: streamedContent,
+          isLoading: false,
+          ...(showThinkingTimerForMessage ? { thinkingCompletedAt: new Date().toISOString() } : {})
+        };
 
         if (reasoningTrace) {
           messageUpdates.reasoningTrace = reasoningTrace;

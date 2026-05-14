@@ -1,4 +1,24 @@
 export const DEFAULT_CHAT_MODEL_ID = 'gpt-5.4-mini';
+export const THINKING_PREVIEW_TIMER_ENABLED = true;
+export const THINKING_PREVIEW_TIMER_MIN_REASONING_EFFORT = 'medium';
+
+const REASONING_EFFORT_RANKS = {
+  none: 0,
+  minimal: 1,
+  low: 2,
+  medium: 3,
+  high: 4,
+  xhigh: 5,
+  max: 6
+};
+
+export function isReasoningEffortAboveMedium(reasoningEffort) {
+  const normalizedEffort = typeof reasoningEffort === 'string'
+    ? reasoningEffort.trim().toLowerCase()
+    : '';
+  return (REASONING_EFFORT_RANKS[normalizedEffort] || 0) > (REASONING_EFFORT_RANKS[THINKING_PREVIEW_TIMER_MIN_REASONING_EFFORT] || REASONING_EFFORT_RANKS.medium);
+}
+
 export const DEFAULT_CUSTOM_BASE_MODEL_ID = 'gpt-5.5';
 // Pinned to a small, cheap, non-thinking model so chat title summarization stays
 // fast and doesn't drift when DEFAULT_CHAT_MODEL_ID changes.
