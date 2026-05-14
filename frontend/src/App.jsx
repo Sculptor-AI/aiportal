@@ -24,6 +24,8 @@ import { getDefaultChatTitle, isDefaultChatTitle } from './utils/chatLocalizatio
 import { fetchModelsFromBackend } from './services/aiService';
 import NewSettingsPanel from './components/NewSettingsPanel';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { getChatIdFromPathname, getChatPath } from './utils/chatRoutes';
+import { loadMigratedLocalChats } from './utils/chatStorage';
 import MediaPage from './pages/MediaPage';
 import NewsPage from './pages/NewsPage';
 import AdminPage from './pages/AdminPage';
@@ -253,43 +255,14 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const [hasAttachment, setHasAttachment] = useState(false);
 
   // Chat state
-  const [chats, setChats] = useState(() => {
-    try {
-      const savedChats = localStorage.getItem('chats');
-      if (savedChats) {
-        const parsed = JSON.parse(savedChats);
-        // Validate the parsed data is an array and has valid chat objects
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(chat => chat.id && chat.title)) {
-          console.log("Loaded chats from localStorage:", parsed);
-          return parsed;
-        }
-      }
-    } catch (err) {
-      console.error("Error loading chats from localStorage:", err);
-    }
-    // Default chat if nothing valid in localStorage
-    const defaultChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
-    console.log("Using default chat:", defaultChat);
-    return [defaultChat];
-  });
+  const [chats, setChats] = useState(() => loadMigratedLocalChats(() => ({
+    id: uuidv4(),
+    title: getDefaultChatTitle(getLanguagePreference()),
+    messages: []
+  })));
 
-  const [activeChat, setActiveChat] = useState(() => {
-    try {
-      const savedActiveChat = localStorage.getItem('activeChat');
-      if (savedActiveChat) {
-        const parsedActiveChat = JSON.parse(savedActiveChat);
-        // Validate that the saved activeChat exists in the loaded chats
-        const chatExists = chats.some(chat => chat.id === parsedActiveChat);
-        if (chatExists) {
-          return parsedActiveChat;
-        }
-      }
-    } catch (err) {
-      console.error("Error loading activeChat from localStorage:", err);
-    }
-    // Default to first chat if no valid activeChat
-    return chats[0]?.id || null;
-  });
+  const routeChatId = getChatIdFromPathname(location.pathname);
+  const [activeChat, setActiveChat] = useState(routeChatId || null);
 
   // Project state
   const [projects, setProjects] = useState(() => {
@@ -501,23 +474,20 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   // Save chats to localStorage whenever they change
   // Note: Individual functions handle localStorage saving to avoid cyclic references
 
-  // Validate activeChat and ensure we always have a valid chat
+  // Persist chats locally; the URL, not localStorage, is the active chat source of truth.
   useEffect(() => {
-    const currentChat = chats.find(chat => chat.id === activeChat);
-    if (!currentChat && chats.length > 0) {
-      // If activeChat doesn't exist but we have chats, set to first chat
-      setActiveChat(chats[0].id);
-    } else if (!currentChat && chats.length === 0) {
-      // If no chats exist, create a new one
-      const newChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
-      setChats([newChat]);
-      setActiveChat(newChat.id);
-    }
-  }, [chats, activeChat]);
+    writeLocalStorageItem('chats', safeStringify(chats));
+  }, [chats]);
 
   useEffect(() => {
-    writeLocalStorageItem('activeChat', JSON.stringify(activeChat));
-  }, [activeChat]);
+    removeLocalStorageItem('activeChat');
+  }, []);
+
+  useEffect(() => {
+    if (routeChatId && activeChat !== routeChatId) {
+      setActiveChat(routeChatId);
+    }
+  }, [routeChatId, activeChat]);
 
   useEffect(() => {
     writeLocalStorageItem('projects', JSON.stringify(projects));
@@ -613,7 +583,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   const createNewChat = (projectId = null, options = {}) => {
     const currentLanguage = settings?.language || getLanguagePreference();
     const newChat = {
-      id: uuidv4(),
+      id: options.id || uuidv4(),
       title: getDefaultChatTitle(currentLanguage),
       messages: [],
       projectId: projectId,
@@ -629,13 +599,26 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       setPendingMessage(options.initialMessage);
     }
 
-    // Navigate to chat tab unless caller explicitly keeps the current view.
-    if (!options.stayOnCurrentRoute && location.pathname !== '/') {
-      navigate('/');
+    // Navigate directly to the local chat URL unless caller explicitly keeps the current view.
+    if (!options.stayOnCurrentRoute) {
+      navigate(getChatPath(newChat.id), { replace: !!options.replaceRoute });
     }
 
     return newChat;
   };
+
+  useEffect(() => {
+    if (loading || !user) return;
+
+    if (location.pathname === '/') {
+      createNewChat(null, { replaceRoute: true });
+      return;
+    }
+
+    if (routeChatId && !chats.some(chat => chat.id === routeChatId)) {
+      createNewChat(null, { id: routeChatId, replaceRoute: true });
+    }
+  }, [location.pathname, routeChatId, loading, user, chats]);
 
   const createNewProject = (projectData) => {
     const newProject = {
@@ -754,13 +737,18 @@ const AppContent = ({ onSettingsLanguageChange }) => {
       setChats([newChat]);
       setActiveChat(newChat.id);
       writeLocalStorageItem('chats', safeStringify([newChat]));
+      if (chatId === routeChatId) {
+        navigate(getChatPath(newChat.id), { replace: true });
+      }
     } else {
       setChats(updatedChats);
       writeLocalStorageItem('chats', safeStringify(updatedChats));
 
-      // If the deleted chat was the active one, set a new active chat
-      if (chatId === activeChat) {
-        setActiveChat(updatedChats.length > 0 ? updatedChats[0].id : null);
+      // If the deleted chat was shown by URL, move to the next local chat URL.
+      if (chatId === routeChatId) {
+        const nextChatId = updatedChats[0]?.id;
+        setActiveChat(nextChatId || null);
+        navigate(nextChatId ? getChatPath(nextChatId) : '/', { replace: true });
       }
     }
   };
@@ -824,7 +812,10 @@ const AppContent = ({ onSettingsLanguageChange }) => {
   };
 
   const getCurrentChat = () => {
-    return chats.find(chat => chat.id === activeChat) || null;
+    if (routeChatId) {
+      return chats.find(chat => chat.id === routeChatId) || null;
+    }
+    return null;
   };
 
   // Modal toggles
@@ -927,6 +918,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
     // Clear localStorage to start fresh
     removeLocalStorageItem('chats');
     removeLocalStorageItem('activeChat');
+    navigate(getChatPath(newChat.id), { replace: true });
     console.log('Chats reset to fresh state');
   };
 
@@ -1140,7 +1132,7 @@ const AppContent = ({ onSettingsLanguageChange }) => {
             />
             {console.log('Available models for ChatWindow:', availableModels)}
             <Routes>
-              <Route path="/" element={
+              <Route path="/:chatId?" element={
                 <ChatWindow
                   ref={chatWindowRef}
                   chat={currentChat}

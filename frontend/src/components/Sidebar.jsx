@@ -4,6 +4,7 @@ import ModelIcon from './ModelIcon'; // Assuming ModelIcon is correctly imported
 import { NavLink as RouterNavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import { copyToClipboard, createSharedChat, getSharedChatUrl } from '../services/shareService';
+import { getChatIdFromPathname, getChatPath } from '../utils/chatRoutes';
 import { getUserRateLimits } from '../services/authService';
 
 // Styled Components - Updated for Grok.com-inspired design
@@ -1167,11 +1168,12 @@ const Sidebar = ({
 
   const getChatTitle = (chat) => chat.title || t('chat.list.untitled', 'Chat {{id}}', { id: chat.id.substring(0, 4) });
 
+  const currentRouteChatId = getChatIdFromPathname(location.pathname);
+  const displayedActiveChat = currentRouteChatId || activeChat;
+
   const handleChatClick = (chatId) => {
     setActiveChat(chatId);
-    if (location.pathname !== '/') {
-      navigate('/', { replace: false });
-    }
+    navigate(getChatPath(chatId), { replace: false });
   };
 
   // Filter chats based on search term
@@ -1298,7 +1300,7 @@ const Sidebar = ({
         {/* New Chat Button Section */}
         {(!$collapsed || (theme && theme.name === 'retro')) && (
                 <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
-                  <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
+                  <SidebarButton onClick={() => createNewChat()} aria-label={t('sidebar.newChat')}>
               {isRetro ? (
                 retroIcon('/images/retroTheme/createIcon.png', 'New Chat')
               ) : (
@@ -1396,7 +1398,7 @@ const Sidebar = ({
               {/* New Chat Button for Mobile */}
               <div className="mobile-only" style={{ display: 'none' }}>
             <SidebarSection style={{ paddingTop: '8px', paddingBottom: '4px', borderTop: 'none' }} aria-label={t('sidebar.newChat')}>
-              <SidebarButton onClick={createNewChat} aria-label={t('sidebar.newChat')}>
+              <SidebarButton onClick={() => createNewChat()} aria-label={t('sidebar.newChat')}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 20h9"></path>
                       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
@@ -1449,7 +1451,7 @@ const Sidebar = ({
                   return (
                   <ChatItem
                     key={chat.id}
-                    $active={activeChat === chat.id}
+                    $active={displayedActiveChat === chat.id}
                   onClick={() => handleChatClick(chat.id)}
                     $collapsed={$collapsed}
                     title={chatTitle}
