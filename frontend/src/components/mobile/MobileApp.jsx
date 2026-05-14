@@ -17,6 +17,9 @@ import { getDefaultChatTitle, isDefaultChatTitle } from '../../utils/chatLocaliz
 import { useTranslation } from '../../contexts/TranslationContext';
 import { appendDeepResearchModel, getPreferredModelId } from '../../config/modelConfig';
 import { setBackendMode, shouldUseRealBackend } from '../../services/backendConfig';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { getChatIdFromPathname, getChatPath } from '../../utils/chatRoutes';
+import { loadMigratedLocalChats } from '../../utils/chatStorage';
 import {
   readLocalStorageItem,
   readLocalStorageJSON,
@@ -332,39 +335,17 @@ const MobileAppContent = () => {
   };
   
   // State management
-  const [chats, setChats] = useState(() => {
-    try {
-      const savedChats = localStorage.getItem('chats');
-      if (savedChats) {
-        const parsed = JSON.parse(savedChats);
-        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(chat => chat.id && chat.title)) {
-          return parsed;
-        }
-      }
-    } catch (err) {
-      console.error("Error loading chats from localStorage:", err);
-    }
-    const defaultChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
-    return [defaultChat];
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const routeChatId = getChatIdFromPathname(location.pathname);
+
+  const [chats, setChats] = useState(() => loadMigratedLocalChats(() => ({
+    id: uuidv4(),
+    title: getDefaultChatTitle(getLanguagePreference()),
+    messages: []
+  })));
   
-  const [activeChat, setActiveChat] = useState(() => {
-    try {
-      const savedActiveChat = localStorage.getItem('activeChat');
-      if (savedActiveChat) {
-        const parsedActiveChat = JSON.parse(savedActiveChat);
-        // Validate that the saved activeChat exists in the loaded chats
-        const chatExists = chats.some(chat => chat.id === parsedActiveChat);
-        if (chatExists) {
-          return parsedActiveChat;
-        }
-      }
-    } catch (err) {
-      console.error("Error loading activeChat from localStorage:", err);
-    }
-    // Default to first chat if no valid activeChat
-    return chats[0]?.id || null;
-  });
+  const [activeChat, setActiveChat] = useState(routeChatId || null);
 
   const [availableModels, setAvailableModels] = useState([]);
   
@@ -421,29 +402,20 @@ const MobileAppContent = () => {
     getBackendModels();
   }, []);
 
-  // Save to localStorage
-  
-  // Validate activeChat and ensure we always have a valid chat
-  useEffect(() => {
-    const currentChat = chats.find(chat => chat.id === activeChat);
-    if (!currentChat && chats.length > 0) {
-      // If activeChat doesn't exist but we have chats, set to first chat
-      setActiveChat(chats[0].id);
-    } else if (!currentChat && chats.length === 0) {
-      // If no chats exist, create a new one
-      const newChat = { id: uuidv4(), title: getDefaultChatTitle(getLanguagePreference()), messages: [] };
-      setChats([newChat]);
-      setActiveChat(newChat.id);
-    }
-  }, [chats, activeChat]);
-
+  // Save chats locally; the URL is the active chat source of truth.
   useEffect(() => {
     writeLocalStorageItem('chats', JSON.stringify(chats));
   }, [chats]);
 
   useEffect(() => {
-    writeLocalStorageItem('activeChat', JSON.stringify(activeChat));
-  }, [activeChat]);
+    removeLocalStorageItem('activeChat');
+  }, []);
+
+  useEffect(() => {
+    if (routeChatId && activeChat !== routeChatId) {
+      setActiveChat(routeChatId);
+    }
+  }, [routeChatId, activeChat]);
 
   useEffect(() => {
     writeLocalStorageItem('selectedModel', selectedModel);
@@ -528,17 +500,32 @@ const MobileAppContent = () => {
   };
 
   // Chat management functions
-  const createNewChat = () => {
+  const createNewChat = (options = {}) => {
     const currentLanguage = settings?.language || getLanguagePreference();
     const newChat = {
-      id: uuidv4(),
+      id: options.id || uuidv4(),
       title: getDefaultChatTitle(currentLanguage),
       messages: []
     };
-    setChats([newChat, ...chats]);
+    setChats(prevChats => [newChat, ...prevChats]);
     setActiveChat(newChat.id);
     setIsSidebarOpen(false); // Close sidebar after creating new chat
+    navigate(getChatPath(newChat.id), { replace: !!options.replaceRoute });
+    return newChat;
   };
+
+  useEffect(() => {
+    if (loading || !user) return;
+
+    if (location.pathname === '/') {
+      createNewChat({ replaceRoute: true });
+      return;
+    }
+
+    if (routeChatId && !chats.some(chat => chat.id === routeChatId)) {
+      createNewChat({ id: routeChatId, replaceRoute: true });
+    }
+  }, [location.pathname, routeChatId, loading, user, chats]);
 
   const deleteChat = (chatId) => {
     const updatedChats = chats.filter(chat => chat.id !== chatId);
@@ -552,11 +539,16 @@ const MobileAppContent = () => {
       };
       setChats([newChat]);
       setActiveChat(newChat.id);
+      if (chatId === routeChatId) {
+        navigate(getChatPath(newChat.id), { replace: true });
+      }
     } else {
       setChats(updatedChats);
       
-      if (chatId === activeChat) {
-        setActiveChat(updatedChats.length > 0 ? updatedChats[0].id : null);
+      if (chatId === routeChatId) {
+        const nextChatId = updatedChats[0]?.id;
+        setActiveChat(nextChatId || null);
+        navigate(nextChatId ? getChatPath(nextChatId) : '/', { replace: true });
       }
     }
   };
@@ -609,7 +601,10 @@ const MobileAppContent = () => {
   };
 
   const getCurrentChat = () => {
-    return chats.find(chat => chat.id === activeChat) || null;
+    if (routeChatId) {
+      return chats.find(chat => chat.id === routeChatId) || null;
+    }
+    return null;
   };
 
   // Modal toggles
@@ -658,6 +653,7 @@ const MobileAppContent = () => {
     // Clear localStorage to start fresh
     removeLocalStorageItem('chats');
     removeLocalStorageItem('activeChat');
+    navigate(getChatPath(newChat.id), { replace: true });
     console.log('Chats reset to fresh state');
   };
 
@@ -713,7 +709,7 @@ const MobileAppContent = () => {
           </MobileHeaderCenter>
           
           <MobileHeaderRight>
-            <NewChatButton onClick={createNewChat}>
+            <NewChatButton onClick={() => createNewChat()}>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>

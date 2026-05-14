@@ -3,6 +3,8 @@ import styled, { withTheme } from 'styled-components';
 import { useTranslation } from '../../contexts/TranslationContext';
 import ModelIcon from '../ModelIcon';
 import { copyToClipboard, createSharedChat, getSharedChatUrl } from '../../services/shareService';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { getChatIdFromPathname, getChatPath } from '../../utils/chatRoutes';
 
 const SidebarOverlay = styled.div`
   position: fixed;
@@ -258,6 +260,10 @@ const MobileSidebar = ({
 }) => {
   const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentRouteChatId = getChatIdFromPathname(location.pathname);
+  const displayedActiveChat = currentRouteChatId || activeChat;
 
   useEffect(() => {
     if (isOpen) {
@@ -273,6 +279,7 @@ const MobileSidebar = ({
 
   const handleChatSelect = (chatId) => {
     setActiveChat(chatId);
+    navigate(getChatPath(chatId));
     onClose();
   };
 
@@ -376,11 +383,11 @@ const MobileSidebar = ({
             {chats.map(chat => (
               <ChatItem 
                 key={chat.id} 
-                $active={chat.id === activeChat} 
+                $active={chat.id === displayedActiveChat}
                 onClick={() => handleChatSelect(chat.id)}
               >
                 <ChatItemContent>
-                  <ChatTitle $active={chat.id === activeChat}>{chat.title}</ChatTitle>
+                  <ChatTitle $active={chat.id === displayedActiveChat}>{chat.title}</ChatTitle>
                   <ChatPreview>{getLastMessage(chat)}</ChatPreview>
                 </ChatItemContent>
                 <ChatActions>
@@ -397,7 +404,7 @@ const MobileSidebar = ({
         </SidebarContent>
         
         <SidebarFooter>
-          <FooterButton onClick={createNewChat}>
+          <FooterButton onClick={() => createNewChat()}>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
