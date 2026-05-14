@@ -6,6 +6,7 @@
  */
 
 import modelsConfig from './models.json';
+import { formatModelSlugName } from '../utils/modelNames.js';
 
 /**
  * Get all model configurations
@@ -90,6 +91,7 @@ export function listImageModels() {
     for (const [name, apiId] of Object.entries(config.models || {})) {
       models.push({
         id: name,
+        name: formatModelSlugName(name),
         apiId: apiId,
         provider,
         isDefault: name === imageDefault
@@ -113,6 +115,7 @@ export function listVideoModels() {
     for (const [name, apiId] of Object.entries(config.models || {})) {
       models.push({
         id: name,
+        name: formatModelSlugName(name),
         apiId: apiId,
         provider,
         isDefault: name === videoDefault
@@ -193,6 +196,7 @@ export function listChatModels() {
 
       models.push({
         id: name,
+        name: formatModelSlugName(name),
         apiId: apiId,
         provider,
         isDefault: name === globalDefault,

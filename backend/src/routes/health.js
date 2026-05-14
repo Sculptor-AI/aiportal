@@ -34,6 +34,7 @@ health.get('/models', (c) => {
     .filter(m => m.provider !== 'openai' || publicChatModelIds.has(m.id))
     .map(m => ({
       id: m.id,
+      name: m.name,
       apiId: m.apiId,
       provider: m.provider,
       isDefault: m.isDefault,
