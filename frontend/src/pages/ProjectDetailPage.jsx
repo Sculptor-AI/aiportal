@@ -4,6 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../contexts/TranslationContext';
 import ModelSelector from '../components/ModelSelector';
 import { parseFile } from '../services/fileParser';
+import { getChatPath } from '../utils/chatRoutes';
 
 const PAGE_SIDEBAR_OFFSET = 280;
 const KNOWLEDGE_CAPACITY_BYTES = 10 * 1024 * 1024;
@@ -648,7 +649,7 @@ const ProjectDetailPage = (props) => {
 
   const handleChatClick = (chat) => {
     setActiveChat(chat.id);
-    navigate('/');
+    navigate(getChatPath(chat.id));
   };
 
   const handleFiles = useCallback(async (fileList) => {
