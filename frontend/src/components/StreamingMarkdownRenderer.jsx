@@ -827,6 +827,25 @@ const createArtifactFromCodeBlock = (language, codeContent, placement) => create
   fallbackTitle: placement === 'inline' ? 'Inline artifact' : 'Artifact'
 });
 
+
+const normalizeLatexDelimiters = (source = '') => {
+  const text = String(source || '');
+  if (!text.includes('\\(') && !text.includes('\\[')) {
+    return text;
+  }
+
+  const segments = text.split(/(```[\s\S]*?```|`[^`\n]*`)/g);
+  return segments.map((segment) => {
+    if (!segment || segment.startsWith('```') || segment.startsWith('`')) {
+      return segment;
+    }
+
+    return segment
+      .replace(/\\\[([\s\S]*?)\\\]/g, (_match, math) => `$$${math}$$`)
+      .replace(/\\\(([\s\S]*?)\\\)/g, (_match, math) => `$${math}$`);
+  }).join('');
+};
+
 const StreamingMarkdownRenderer = ({ 
   text = '', 
   isStreaming = false,
@@ -835,9 +854,10 @@ const StreamingMarkdownRenderer = ({
   enableCodeExecution = true
 }) => {
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
-  const artifactSegments = useMemo(() => getStreamingArtifactSegments(text, isStreaming), [text, isStreaming]);
+  const normalizedText = useMemo(() => normalizeLatexDelimiters(text), [text]);
+  const artifactSegments = useMemo(() => getStreamingArtifactSegments(normalizedText, isStreaming), [normalizedText, isStreaming]);
 
-  if (!text) {
+  if (!normalizedText) {
     return isStreaming && showCursor ? <Cursor $show={true} theme={theme}>|</Cursor> : null;
   }
 
@@ -871,7 +891,10 @@ const StreamingMarkdownRenderer = ({
     code({node, inline, className, children, ...props}) {
       const match = /language-([^\s]+)/.exec(className || '');
       const language = match ? match[1] : '';
-      if (!inline) {
+      const position = node?.position;
+      const spansMultipleLines = Boolean(position && position.start?.line !== position.end?.line);
+      const isBlockCode = inline === false || Boolean(className) || spansMultipleLines;
+      if (isBlockCode) {
         if (isMermaidLanguage(language)) {
           return <MermaidArtifact chart={children} theme={theme} isStreaming={isStreaming} />;
         }
