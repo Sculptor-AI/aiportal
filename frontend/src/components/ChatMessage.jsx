@@ -15,6 +15,7 @@ import { useTranslation } from '../contexts/TranslationContext';
 import { downloadGeneratedVideo } from '../services/videoService';
 import kokoroTTSService from '../services/kokoroTTSService';
 import { THINKING_PREVIEW_TIMER_ENABLED, isReasoningEffortAboveMedium } from '../config/modelConfig';
+import { copyToClipboard, createSharedChat, getSharedChatUrl } from '../services/shareService';
 
 // Helper function to parse and render LaTeX
 const renderLatex = (latex, displayMode, keyPrefix = 'latex') => (
@@ -2140,12 +2141,14 @@ const ThinkingDropdown = ({
   );
 };
 
-const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
+const ChatMessage = ({ message, chat = null, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
   const { t } = useTranslation();
   const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace, reasoningPreviewText, reasoningEffort, thinkingStartedAt, thinkingCompletedAt } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [deepResearchDetailsOpen, setDeepResearchDetailsOpen] = useState(false);
+  const [isSharingChat, setIsSharingChat] = useState(false);
+  const [shareStatus, setShareStatus] = useState('');
   const shouldShowThinkingTimer =
     THINKING_PREVIEW_TIMER_ENABLED &&
     isReasoningEffortAboveMedium(reasoningEffort) &&
@@ -2290,6 +2293,65 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
       setIsSpeaking(false);
     };
   }, [content, cleanedContent]);
+
+
+  const showShareStatus = useCallback((message) => {
+    setShareStatus(message);
+    window.setTimeout(() => setShareStatus(''), 2600);
+  }, []);
+
+  const buildShareChatPayload = useCallback(() => {
+    if (!chat || !Array.isArray(chat.messages)) {
+      return null;
+    }
+
+    const currentMessageIndex = chat.messages.findIndex((chatMessage) => chatMessage?.id === id);
+    const messages = currentMessageIndex >= 0
+      ? chat.messages.slice(0, currentMessageIndex + 1)
+      : chat.messages;
+
+    return {
+      ...chat,
+      messages
+    };
+  }, [chat, id]);
+
+  const handleShareChat = useCallback(async () => {
+    if (isSharingChat) return;
+
+    const chatPayload = buildShareChatPayload();
+    if (!chatPayload || chatPayload.messages.length === 0) {
+      showShareStatus(t('chat.share.unavailable', 'Nothing to share yet'));
+      return;
+    }
+
+    const confirmed = window.confirm(
+      t(
+        'chat.share.confirm',
+        'Share this chat? Anyone with the link can view the text-only conversation. Uploaded files, images, and hidden file context are removed.'
+      )
+    );
+    if (!confirmed) return;
+
+    setIsSharingChat(true);
+    try {
+      const result = await createSharedChat(chatPayload);
+      const shareUrl = getSharedChatUrl(result);
+      const copied = await copyToClipboard(shareUrl);
+
+      if (copied) {
+        showShareStatus(t('chat.share.copied', 'Share link copied'));
+      } else {
+        window.prompt(t('chat.share.copyManual', 'Copy this share link:'), shareUrl);
+        showShareStatus(t('chat.share.copyShown', 'Share link ready'));
+      }
+    } catch (error) {
+      console.error('Failed to share chat:', error);
+      showShareStatus(error.message || t('chat.share.failed', 'Share failed'));
+    } finally {
+      setIsSharingChat(false);
+    }
+  }, [buildShareChatPayload, isSharingChat, showShareStatus, t]);
 
   const handleExportDeepResearchPdf = useCallback(async () => {
     if (!contentToProcess || status !== 'completed' || isExportingPdf) return;
@@ -3074,15 +3136,12 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                 </svg>
               </ActionButton>
-              <ActionButton onClick={() => {
-                // Share functionality
-                if (navigator.share) {
-                  navigator.share({
-                    title: t('chat.share.title', 'AI Chat Message'),
-                    text: contentToProcess
-                  });
-                }
-              }}>
+              <ActionButton
+                onClick={handleShareChat}
+                disabled={isSharingChat || !chat}
+                aria-label={t('chat.share.action', 'Share chat')}
+                title={shareStatus || t('chat.share.action', 'Share chat')}
+              >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="18" cy="5" r="3"></circle>
                   <circle cx="6" cy="12" r="3"></circle>
@@ -3091,6 +3150,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                   <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                 </svg>
               </ActionButton>
+              {shareStatus && <Timestamp role="status" aria-live="polite">{shareStatus}</Timestamp>}
               {role === 'assistant' && (
                 <>
                   <ActionButton onClick={() => console.log('Thumbs up')}>

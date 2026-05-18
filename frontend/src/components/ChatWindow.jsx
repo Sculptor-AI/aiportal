@@ -716,6 +716,7 @@ const ChatWindow = forwardRef(({
           <ChatMessage
             key={message.id}
             message={message}
+            chat={chat}
             showModelIcons={settings.showModelIcons}
             settings={settings}
             theme={theme}
