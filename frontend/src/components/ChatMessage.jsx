@@ -1644,19 +1644,14 @@ const ThinkingTimerBadge = styled.span`
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  min-width: 44px;
   margin-left: auto;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid ${props => props.theme.accentColor || props.theme.primary || props.theme.text}33;
-  background: ${props => props.theme.accentSurface || `${props.theme.text}10`};
-  color: ${props => props.theme.accentColor || props.theme.primary || props.theme.text};
+  padding: 0;
+  color: ${props => `${props.theme.text}72`};
   font-variant-numeric: tabular-nums;
-  font-size: 0.78rem;
-  font-weight: 650;
-  letter-spacing: 0.01em;
-  line-height: 1.25;
-  box-shadow: inset 0 0 0 1px ${props => `${props.theme.text}08`};
+  font-size: 0.98rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.35;
 `;
 
 
@@ -1977,6 +1972,16 @@ const formatThinkingElapsed = (elapsedMs) => {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
+
+const getThinkingPreviewFromLatestText = (text = '') => {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+
+  const words = normalized.split(' ');
+  const previewWords = words.slice(-18);
+  return previewWords.join(' ');
+};
+
 const ThinkingTimer = ({ startedAt, completedAt, isStreaming }) => {
   const parsedStart = Date.parse(startedAt);
   const parsedCompleted = Date.parse(completedAt);
@@ -2004,6 +2009,7 @@ const ThinkingTimer = ({ startedAt, completedAt, isStreaming }) => {
 const ThinkingDropdown = ({
   thinkingContent,
   thinkingPreviewText = '',
+  latestThinkingPreviewText = '',
   toolCalls,
   isStreaming = false,
   theme = {},
@@ -2033,11 +2039,14 @@ const ThinkingDropdown = ({
     return t('chat.thinking.header.thoughts');
   };
 
-  const normalizedThinkingPreview = typeof thinkingPreviewText === 'string'
-    ? thinkingPreviewText.replace(/\s+/g, ' ').trim()
+  const explicitLatestPreview = typeof latestThinkingPreviewText === 'string'
+    ? latestThinkingPreviewText.replace(/\s+/g, ' ').trim()
     : '';
+  const normalizedThinkingPreview = explicitLatestPreview || getThinkingPreviewFromLatestText(thinkingPreviewText);
   const thinkingLabel = t('composer.chip.thinking', 'Thinking');
-  const headerText = normalizedThinkingPreview || (isStreaming ? t('chat.status.thinking') : getHeaderTitle());
+  const headerText = isStreaming
+    ? (normalizedThinkingPreview || t('chat.status.thinking'))
+    : getHeaderTitle();
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -2133,7 +2142,7 @@ const ThinkingDropdown = ({
 
 const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}, userProfilePicture = null, showProfileIcon = true }) => {
   const { t } = useTranslation();
-  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace, reasoningEffort, thinkingStartedAt, thinkingCompletedAt } = message;
+  const { role, content, timestamp, isError, isLoading, modelId, image, file, sources, type, status, imageUrl, prompt: imagePrompt, flowchartData, id, toolCalls, availableTools, codeExecution, codeExecutionResult, reasoningTrace, reasoningPreviewText, reasoningEffort, thinkingStartedAt, thinkingCompletedAt } = message;
   const { supportedLanguages, isLanguageExecutable } = useSupportedLanguages();
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [deepResearchDetailsOpen, setDeepResearchDetailsOpen] = useState(false);
@@ -2921,6 +2930,7 @@ const ChatMessage = ({ message, showModelIcons = true, settings = {}, theme = {}
                     <ThinkingDropdown
                       thinkingContent={formattedThinkingContent}
                       thinkingPreviewText={combinedThinkingText}
+                      latestThinkingPreviewText={isLoading ? reasoningPreviewText : ''}
                       toolCalls={toolCalls}
                       isStreaming={isLoading}
                       theme={theme}

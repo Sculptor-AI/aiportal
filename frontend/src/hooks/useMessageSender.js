@@ -643,6 +643,7 @@ const useMessageSender = ({
       role: 'assistant',
       content: '',
       reasoningTrace: '',
+      reasoningPreviewText: '',
       isLoading: true,
       timestamp: thinkingStartedAt,
       modelId: currentModel,
@@ -717,10 +718,12 @@ const useMessageSender = ({
 
           // Handle provider-native reasoning deltas
           if (typeof chunk === 'object' && chunk.type === 'reasoning') {
-            reasoningTrace += chunk.content || '';
+            const reasoningDelta = chunk.content || '';
+            reasoningTrace += reasoningDelta;
             updateMessage(currentChatId, aiMessageId, {
               content: streamedContent,
               reasoningTrace,
+              reasoningPreviewText: reasoningDelta,
               isLoading: true,
               toolCalls: toolCalls.length > 0 ? [...toolCalls] : undefined
             });
@@ -840,6 +843,7 @@ const useMessageSender = ({
 
         if (reasoningTrace) {
           messageUpdates.reasoningTrace = reasoningTrace;
+          messageUpdates.reasoningPreviewText = '';
         }
         
         // Add tool calls if we have them
