@@ -2,7 +2,7 @@ const DEEP_RESEARCH_SETTINGS_KEY = 'settings:deep-research';
 
 export const DEEP_RESEARCH_SETTINGS_DEFAULTS = Object.freeze({
   plannerModel: 'gemini-3.1-pro',
-  researcherModel: 'gemini-3-flash',
+  researcherModel: 'gemini-3.5-flash',
   writerModel: 'claude-sonnet-4.6',
   reportLength: 'standard',
   reportDepth: 'standard',

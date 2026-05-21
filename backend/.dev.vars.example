@@ -74,7 +74,7 @@ DEEP_RESEARCH_ENABLED="true"
 
 # Planner / researcher / writer model names (mapped through src/config/models.json)
 DEEP_RESEARCH_PLANNER_MODEL="gemini-3.1-pro"
-DEEP_RESEARCH_RESEARCHER_MODEL="gemini-3-flash"
+DEEP_RESEARCH_RESEARCHER_MODEL="gemini-3.5-flash"
 DEEP_RESEARCH_WRITER_MODEL="claude-sonnet-4.6"
 DEEP_RESEARCH_REPORT_LENGTH="standard"
 DEEP_RESEARCH_REPORT_DEPTH="standard"

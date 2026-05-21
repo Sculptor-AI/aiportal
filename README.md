@@ -139,7 +139,7 @@ SCULPTOR_AI_SYSTEM_PROMPT="The assistant is Sculptor, created by SculptorAI."
 
 # Optional deep research overrides
 DEEP_RESEARCH_PLANNER_MODEL=gemini-3.1-pro
-DEEP_RESEARCH_RESEARCHER_MODEL=gemini-3-flash
+DEEP_RESEARCH_RESEARCHER_MODEL=gemini-3.5-flash
 DEEP_RESEARCH_WRITER_MODEL=claude-sonnet-4.6
 DEEP_RESEARCH_MAX_AGENTS=12
 ```
