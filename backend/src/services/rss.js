@@ -97,7 +97,7 @@ function cleanText(text) {
   let prev;
   do {
     prev = text;
-    text = text.replace(/<[^>]*>/g, '');
+    text = text.replace(/<\/?[a-zA-Z][a-zA-Z0-9:-]*(?:\s[^<>]*)?>/g, '');
   } while (text !== prev);
   
   const entityMap = {
