@@ -108,7 +108,7 @@ const cleanText = (text) => {
   text = text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
   
   // Remove HTML tags
-  text = text.replace(/<[^>]*>/g, '');
+  text = text.replace(/<\/?[a-zA-Z][a-zA-Z0-9:-]*(?:\s[^<>]*)?>/g, '');
   
   // Decode HTML entities
   const entityMap = {
