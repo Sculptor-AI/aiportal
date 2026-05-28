@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { formatModelSlugName } from './modelNames.js';
 
 test('formatModelSlugName formats dash-delimited Claude model slugs', () => {
+  assert.equal(formatModelSlugName('claude-opus-4.8'), 'Claude Opus 4.8');
   assert.equal(formatModelSlugName('claude-opus-4.7'), 'Claude Opus 4.7');
   assert.equal(formatModelSlugName('claude-sonnet-4.6'), 'Claude Sonnet 4.6');
 });
@@ -14,6 +15,7 @@ test('formatModelSlugName formats slugs consistently across model families', () 
 });
 
 test('formatModelSlugName treats consecutive numeric dash segments as dotted versions', () => {
+  assert.equal(formatModelSlugName('claude-opus-4-8'), 'Claude Opus 4.8');
   assert.equal(formatModelSlugName('claude-opus-4-7'), 'Claude Opus 4.7');
   assert.equal(formatModelSlugName('gpt-5-4-mini'), 'GPT 5.4 Mini');
 });

@@ -1,6 +1,6 @@
 {
   "_description": "Centralized model configuration. Update this file when models change.",
-  "_lastUpdated": "2026-05-05",
+  "_lastUpdated": "2026-05-28",
 
   "default": "gpt-5.5",
 
@@ -44,11 +44,27 @@
 
     "anthropic": {
       "models": {
+        "claude-opus-4.8": "claude-opus-4-8",
         "claude-opus-4.7": "claude-opus-4-7",
         "claude-sonnet-4.6": "claude-sonnet-4-6",
         "claude-haiku-4.5": "claude-haiku-4-5-20251001"
       },
       "modelCapabilities": {
+        "claude-opus-4.8": {
+          "reasoning_effort": true,
+          "reasoning_effort_levels": [
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max"
+          ],
+          "reasoning_effort_default": "medium",
+          "thinking_style": "adaptive",
+          "adaptive_thinking_only": true,
+          "default_thinking_display": "summarized",
+          "supports_task_budgets": true
+        },
         "claude-opus-4.7": {
           "reasoning_effort": true,
           "reasoning_effort_levels": [

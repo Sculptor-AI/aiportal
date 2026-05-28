@@ -687,6 +687,11 @@ export const modelThemes = {
     secondary: '#EA4335',
     gradient: 'linear-gradient(135deg, #1B72E8, #EA4335)',
   },
+  'claude-opus-4.8': {
+    primary: '#4C1D95',
+    secondary: '#6D28D9',
+    gradient: 'linear-gradient(135deg, #4C1D95, #6D28D9)',
+  },
   'claude-opus-4.7': {
     primary: '#5B21B6',
     secondary: '#7C3AED',
