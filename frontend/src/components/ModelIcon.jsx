@@ -66,10 +66,12 @@ const MODEL_LOGOS = {
 
   // Claude models
   'claude-3.7-sonnet': '/images/claude-logo.png',
+  'claude-opus-4.8': '/images/claude-logo.png',
   'claude-opus-4.7': '/images/claude-logo.png',
   'anthropic/claude-3-haiku': '/images/claude-logo.png',
   'anthropic/claude-3-opus': '/images/claude-logo.png',
   'anthropic/claude-3-sonnet': '/images/claude-logo.png',
+  'claude-opus-4-8': '/images/claude-logo.png',
   'claude-opus-4-7': '/images/claude-logo.png',
 
   // Grok models
