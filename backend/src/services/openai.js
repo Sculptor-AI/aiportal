@@ -791,7 +791,7 @@ export async function generateImageWithDALLE(prompt, apiKey, options = {}) {
     requestBody.n = 1;
   }
 
-  if (model === 'gpt-image-1.5' || model === 'gpt-image-2' || model === 'chatgpt-image-latest') {
+  if (model === 'gpt-image-2') {
     if (options.background) requestBody.background = options.background;
     if (options.moderation) requestBody.moderation = options.moderation;
     if (options.output_compression) requestBody.output_compression = options.output_compression;
