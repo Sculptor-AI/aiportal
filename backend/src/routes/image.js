@@ -154,7 +154,7 @@ image.post('/generate', imageGenerationRateLimit, async (c) => {
       }
 
       const result = await generateImageWithDALLE(prompt, apiKey, {
-        model: resolvedApiId || 'gpt-image-1',
+        model: resolvedApiId || 'gpt-image-2',
         size: body.size || '1024x1024',
         quality: body.quality || 'auto',
         style: body.style || 'auto',
@@ -259,7 +259,7 @@ image.post('/edit', imageGenerationRateLimit, async (c) => {
       return c.json({ error: 'Prompt is required' }, 400);
     }
 
-    const rateLimitModelId = model || 'gpt-image-1';
+    const rateLimitModelId = model || 'gpt-image-2';
     const usageLimits = await getGlobalUsageLimits(kv);
     const usageEvaluation = evaluateUsageRequest({
       user,
@@ -294,7 +294,7 @@ image.post('/edit', imageGenerationRateLimit, async (c) => {
       mask,
       size: size || '1024x1024',
       n: imageCount,
-      model: model || 'gpt-image-1'
+      model: model || 'gpt-image-2'
     });
 
     if (!result.success) {
