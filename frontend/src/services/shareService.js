@@ -245,7 +245,7 @@ export const sendArtifactChat = async ({ artifactTitle, artifactId, html, prompt
   const body = sharedArtifactId
     ? { prompt: content }
     : {
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.6-luna',
         provider: 'openai',
         stream: false,
         messages: [

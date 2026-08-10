@@ -46,8 +46,8 @@ const DEFAULT_LIMITS = {
   modelTiers: {}
 };
 const DEFAULT_DEEP_RESEARCH_CONFIG = {
-  plannerModel: 'gemini-3.1-pro',
-  researcherModel: 'gemini-3.5-flash',
+  plannerModel: 'gemini-3.5-flash',
+  researcherModel: 'gemini-3.6-flash',
   writerModel: 'claude-sonnet-4.6',
   reportLength: 'standard',
   reportDepth: 'standard',
@@ -348,7 +348,7 @@ const formatUsageValue = (used, limit) => limit === null || limit === undefined 
 const getUsageTone = (used, limit) => { if (limit === null || limit === undefined) return 'neutral'; if (limit === 0) return used > 0 ? 'danger' : 'safe'; const ratio = used / limit; if (ratio >= 1) return 'danger'; if (ratio >= 0.8) return 'warning'; return 'safe'; };
 const getUsageProgress = (used, limit) => { if (limit === null || limit === undefined) return null; if (limit === 0) return used > 0 ? 100 : 0; return Math.max(0, Math.min(100, Math.round((used / limit) * 100))); };
 const DEFAULT_ARTIFACT_CHAT_CONFIG = {
-  model: 'gpt-5.4-mini',
+  model: 'gpt-5.6-luna',
   provider: 'openai'
 };
 const normalizeTierLimits = (tiers = {}) => {
@@ -1124,7 +1124,7 @@ const AdminPage = ({ collapsed }) => {
                   </option>
                 ))}
               </Select>
-              <Helper>Default is gpt-5.4-mini. Pick a cheaper fast model for quizzes and lightweight interactive artifacts.</Helper>
+              <Helper>Default is gpt-5.6-luna. Pick a cheaper fast model for quizzes and lightweight interactive artifacts.</Helper>
             </Field>
 
             <Field>

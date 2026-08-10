@@ -11,7 +11,7 @@ import { providerInternalError } from '../utils/providerErrors.js';
 import { fetchWithProviderRetries } from '../utils/providerFetch.js';
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
-const OPENAI_DEFAULT_CHAT_MODEL = 'gpt-5.5';
+const OPENAI_DEFAULT_CHAT_MODEL = 'gpt-5.6-terra';
 const OPENAI_VIDEO_DEFAULT_MODEL = 'sora-2';
 const OPENAI_RESPONSE_INCLUDE = [
   'web_search_call.action.sources',
@@ -775,7 +775,7 @@ export async function handleOpenAIChat(c, body, apiKey) {
 }
 
 export async function generateImageWithDALLE(prompt, apiKey, options = {}) {
-  const model = options.model || getDefaultImageModel('openai') || 'gpt-image-1';
+  const model = options.model || getDefaultImageModel('openai') || 'gpt-image-2';
 
   const requestBody = {
     model,
@@ -791,7 +791,7 @@ export async function generateImageWithDALLE(prompt, apiKey, options = {}) {
     requestBody.n = 1;
   }
 
-  if (model === 'gpt-image-1' || model === 'gpt-image-1.5' || model === 'gpt-image-2' || model === 'chatgpt-image-latest') {
+  if (model === 'gpt-image-1.5' || model === 'gpt-image-2' || model === 'chatgpt-image-latest') {
     if (options.background) requestBody.background = options.background;
     if (options.moderation) requestBody.moderation = options.moderation;
     if (options.output_compression) requestBody.output_compression = options.output_compression;
@@ -835,7 +835,7 @@ export async function editImageWithDALLE(image, prompt, apiKey, options = {}) {
   }
 
   formData.append('prompt', prompt);
-  formData.append('model', options.model || 'gpt-image-1');
+  formData.append('model', options.model || 'gpt-image-2');
   formData.append('n', String(options.n || 1));
   formData.append('size', options.size || '1024x1024');
 

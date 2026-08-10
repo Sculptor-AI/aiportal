@@ -1,7 +1,7 @@
 const ARTIFACT_CHAT_SETTINGS_KEY = 'settings:artifact_chat';
 
 export const DEFAULT_ARTIFACT_CHAT_SETTINGS = Object.freeze({
-  model: 'gpt-5.4-mini',
+  model: 'gpt-5.6-luna',
   provider: 'openai'
 });
 
