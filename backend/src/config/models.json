@@ -1,14 +1,11 @@
 {
   "_description": "Centralized model configuration. Update this file when models change.",
   "_lastUpdated": "2026-08-10",
-
-  "default": "gpt-5.6-terra",
-
+  "default": "gpt-5.6-sol",
   "chat": {
     "openai": {
       "models": {
         "gpt-5.6-sol": "gpt-5.6-sol",
-        "gpt-5.6-terra": "gpt-5.6-terra",
         "gpt-5.6-luna": "gpt-5.6-luna"
       },
       "modelCapabilities": {
@@ -23,18 +20,6 @@
             "max"
           ],
           "reasoning_effort_default": "high"
-        },
-        "gpt-5.6-terra": {
-          "reasoning_effort": true,
-          "reasoning_effort_levels": [
-            "none",
-            "low",
-            "medium",
-            "high",
-            "xhigh",
-            "max"
-          ],
-          "reasoning_effort_default": "medium"
         },
         "gpt-5.6-luna": {
           "reasoning_effort": true,
@@ -56,31 +41,13 @@
         "url_context": false
       }
     },
-
     "anthropic": {
       "models": {
-        "claude-fable-5": "claude-fable-5",
         "claude-opus-5": "claude-opus-5",
         "claude-sonnet-5": "claude-sonnet-5",
         "claude-haiku-4.5": "claude-haiku-4-5-20251001"
       },
       "modelCapabilities": {
-        "claude-fable-5": {
-          "reasoning_effort": true,
-          "reasoning_effort_levels": [
-            "low",
-            "medium",
-            "high",
-            "xhigh",
-            "max"
-          ],
-          "reasoning_effort_default": "high",
-          "thinking_style": "adaptive",
-          "adaptive_thinking_only": true,
-          "thinking_always_on": true,
-          "default_thinking_display": "summarized",
-          "supports_task_budgets": true
-        },
         "claude-opus-5": {
           "reasoning_effort": true,
           "reasoning_effort_levels": [
@@ -119,26 +86,13 @@
         "url_context": true
       }
     },
-
     "gemini": {
       "models": {
         "gemini-3.6-flash": "gemini-3.6-flash",
-        "gemini-3.5-flash": "gemini-3.5-flash",
         "gemini-3.5-flash-lite": "gemini-3.5-flash-lite"
       },
       "modelCapabilities": {
         "gemini-3.6-flash": {
-          "reasoning_effort": true,
-          "reasoning_effort_levels": [
-            "minimal",
-            "low",
-            "medium",
-            "high"
-          ],
-          "reasoning_effort_default": "medium",
-          "thinking_style": "level"
-        },
-        "gemini-3.5-flash": {
           "reasoning_effort": true,
           "reasoning_effort_levels": [
             "minimal",
@@ -169,7 +123,6 @@
       }
     }
   },
-
   "image": {
     "default": "gemini-3.1-flash-image",
     "google": {
@@ -195,7 +148,6 @@
       }
     }
   },
-
   "video": {
     "_note": "sora-2 and the OpenAI Videos API are deprecated and shut down 2026-09-24.",
     "default": "sora-2",

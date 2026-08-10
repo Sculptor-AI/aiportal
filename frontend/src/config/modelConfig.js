@@ -1,4 +1,4 @@
-export const DEFAULT_CHAT_MODEL_ID = 'gpt-5.6-terra';
+export const DEFAULT_CHAT_MODEL_ID = 'gpt-5.6-sol';
 export const THINKING_PREVIEW_TIMER_ENABLED = true;
 export const THINKING_PREVIEW_TIMER_MIN_REASONING_EFFORT = 'medium';
 
@@ -19,7 +19,7 @@ export function isReasoningEffortAboveMedium(reasoningEffort) {
   return (REASONING_EFFORT_RANKS[normalizedEffort] || 0) > (REASONING_EFFORT_RANKS[THINKING_PREVIEW_TIMER_MIN_REASONING_EFFORT] || REASONING_EFFORT_RANKS.medium);
 }
 
-export const DEFAULT_CUSTOM_BASE_MODEL_ID = 'gpt-5.6-terra';
+export const DEFAULT_CUSTOM_BASE_MODEL_ID = 'gpt-5.6-sol';
 // Pinned to a small, cheap, non-thinking model so chat title summarization stays
 // fast and doesn't drift when DEFAULT_CHAT_MODEL_ID changes.
 export const TITLE_GENERATION_MODEL_ID = 'gemini-3.5-flash-lite';

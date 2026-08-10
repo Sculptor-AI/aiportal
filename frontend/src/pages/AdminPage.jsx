@@ -46,7 +46,7 @@ const DEFAULT_LIMITS = {
   modelTiers: {}
 };
 const DEFAULT_DEEP_RESEARCH_CONFIG = {
-  plannerModel: 'gemini-3.5-flash',
+  plannerModel: 'gemini-3.6-flash',
   researcherModel: 'gemini-3.6-flash',
   writerModel: 'claude-sonnet-4.6',
   reportLength: 'standard',

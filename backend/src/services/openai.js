@@ -11,7 +11,7 @@ import { providerInternalError } from '../utils/providerErrors.js';
 import { fetchWithProviderRetries } from '../utils/providerFetch.js';
 
 const OPENAI_BASE_URL = 'https://api.openai.com/v1';
-const OPENAI_DEFAULT_CHAT_MODEL = 'gpt-5.6-terra';
+const OPENAI_DEFAULT_CHAT_MODEL = 'gpt-5.6-sol';
 const OPENAI_VIDEO_DEFAULT_MODEL = 'sora-2';
 const OPENAI_RESPONSE_INCLUDE = [
   'web_search_call.action.sources',

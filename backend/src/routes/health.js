@@ -27,7 +27,7 @@ health.get('/health', (c) => c.json({ ok: true, time: nowIso() }));
  */
 health.get('/models', (c) => {
   const chatModels = listChatModels();
-  const publicChatModelIds = new Set(['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna']);
+  const publicChatModelIds = new Set(['gpt-5.6-sol', 'gpt-5.6-luna']);
   
   // Format for API response - include capabilities for frontend
   const models = chatModels
